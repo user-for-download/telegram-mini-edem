@@ -15,6 +15,7 @@ import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { shareTrip } from "@/helpers/tripShare";
 import { haptic } from "@/utils/haptics";
 import { dayLabel } from "@/utils/date";
+import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import {
   useCancelBookingMutation,
   useMyBookingsQuery,
@@ -214,6 +215,17 @@ export function TripsPage() {
     });
 
   const driverItems = driverTrips.data?.pages.flatMap((page) => page.items) ?? [];
+
+  // Сентинел автодогрузки водительских поездок (тот же
+  // useInfiniteMyTripsQuery, контракт не меняется; SSR — тихий фолбэк).
+  const driverSentinelRef = useInfiniteSentinel({
+    hasNextPage: driverTrips.hasNextPage,
+    isFetchingNextPage: driverTrips.isFetchingNextPage,
+    fetchNextPage: () => {
+      void driverTrips.fetchNextPage();
+    },
+    disabled: segment !== "driver",
+  });
 
   const pickSegment = (next: Segment) => {
     if (next === segment) return;
@@ -493,15 +505,35 @@ export function TripsPage() {
                 );
               })}
               {driverTrips.hasNextPage && (
-                <Button
-                  stretched
-                  mode="bezeled"
-                  loading={driverTrips.isFetchingNextPage}
-                  disabled={driverTrips.isFetchingNextPage}
-                  onClick={() => void driverTrips.fetchNextPage()}
-                >
-                  Показать ещё
-                </Button>
+                <>
+                  {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
+                      высота (min-h-12) держит скролл от прыжков. */}
+                  <div
+                    ref={driverSentinelRef}
+                    aria-hidden="true"
+                    className="flex min-h-12 items-center justify-center"
+                    style={{ overflowAnchor: "none" }}
+                  />
+                  {driverTrips.isFetchingNextPage && (
+                    <div
+                      role="status"
+                      aria-label="Загрузка ещё поездок"
+                      className="flex flex-col gap-3"
+                    >
+                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                    </div>
+                  )}
+                  <Button
+                    stretched
+                    mode="bezeled"
+                    loading={driverTrips.isFetchingNextPage}
+                    disabled={driverTrips.isFetchingNextPage}
+                    onClick={() => void driverTrips.fetchNextPage()}
+                  >
+                    Показать ещё
+                  </Button>
+                </>
               )}
               <Button size="l" mode="filled" onClick={() => navigate("/trips/my/new")}>
                 + Создать ещё поездку

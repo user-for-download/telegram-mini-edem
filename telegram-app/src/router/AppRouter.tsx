@@ -16,6 +16,7 @@ import {
 import { AppHeader } from "@/components/AppHeader";
 import { AppTabbar, type AppTabId } from "@/components/AppTabbar";
 import { useSettingsButton } from "@/hooks/useSettingsButton";
+import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
 import { HomePage } from "@/pages/HomePage";
 import { SearchPage } from "@/pages/SearchPage";
@@ -40,13 +41,18 @@ export { parseTripStartParam };
 
 const ROOT_ROUTES = new Set(["/", "/trips", "/bookings", "/profile"]);
 
-function Shell() {
+export function Shell() {
   const location = useLocation();
   const navigate = useNavigate();
   const didHandleStartParam = useRef(false);
   const launchParams = useLaunchParams(true);
   const startParam = launchParams.tgWebAppStartParam;
   const isRoot = ROOT_ROUTES.has(location.pathname);
+
+  // P2 list-perf: скролл списка по ключу маршрута — Back из route-модалки
+  // возвращает на место списка. State-модалки (handleModalBack ниже)
+  // локацию не меняют, хук их не трогает.
+  useScrollRestore(routeScrollKey(location.pathname, location.search));
 
   useEffect(() => {
     const handleBack = () => {
@@ -94,7 +100,7 @@ function Shell() {
   return (
     <div className="AppShell">
       {isRoot && <AppHeader />}
-      <main className="AppShell__content">
+      <main className="AppShell__content" tabIndex={-1}>
         <motion.div
           key={location.pathname + location.search}
           initial={{ opacity: 0, y: 4 }}

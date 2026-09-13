@@ -1,7 +1,7 @@
-import { Avatar } from "@telegram-apps/telegram-ui";
 import { Star } from "lucide-react";
 import { REVIEW_STATUS, type Review } from "@edem/contracts";
 import type { MyReview } from "@/api/reviews.api";
+import { LazyAvatar } from "@/components/LazyAvatar";
 
 /** Подпись и тон статус-пилюли — только для непубличных отзывов. */
 export function reviewStatusBadge(
@@ -25,10 +25,11 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
     <div className="p-3.5 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <Avatar
+          <LazyAvatar
             size={28}
             src={review.author.avatar}
             acronym={review.author.name.slice(0, 1).toUpperCase()}
+            alt={review.author.name}
           />
           <div className="min-w-0">
             <div className="text-[13px] font-semibold text-[var(--tgui--text_color)] truncate">

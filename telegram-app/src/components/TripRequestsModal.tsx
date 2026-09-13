@@ -6,13 +6,13 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import {
-  Avatar,
   Button,
   Modal,
   Placeholder,
   Spinner,
 } from "@telegram-apps/telegram-ui";
 import { useNavigate, useParams } from "react-router-dom";
+import { LazyAvatar } from "@/components/LazyAvatar";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { TripsPage } from "@/pages/TripsPage";
 import {
@@ -45,10 +45,11 @@ const PendingBookingCard = memo(function PendingBookingCard({
     <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <Avatar
+          <LazyAvatar
             size={40}
             src={booking.passenger.avatar}
             acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
+            alt={booking.passenger.name}
           />
           <div className="min-w-0">
             <div className="text-[13px] font-medium text-[var(--tgui--text_color)] truncate">
@@ -97,10 +98,11 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
   return (
     <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex items-center justify-between gap-2">
       <div className="flex items-center gap-2 min-w-0">
-        <Avatar
+        <LazyAvatar
           size={40}
           src={booking.passenger.avatar}
           acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
+          alt={booking.passenger.name}
         />
         <div className="min-w-0">
           <div className="text-[13px] font-medium text-[var(--tgui--text_color)] truncate">

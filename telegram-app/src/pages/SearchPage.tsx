@@ -30,6 +30,7 @@ import {
   type SearchFormState,
 } from "@/helpers/searchFilters";
 import { haptic } from "@/utils/haptics";
+import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { useInfiniteTripsQuery } from "@/queries/useTripsQuery";
 import type { TripTag } from "@edem/contracts";
 
@@ -56,6 +57,16 @@ export function SearchPage() {
 
   const trips = useInfiniteTripsQuery(buildSearchFilters(submitted));
   const items = trips.data?.pages.flatMap((page) => page.items) ?? [];
+  // Сентинел автодогрузки: observer тянет следующую страницу через тот же
+  // useInfiniteTripsQuery; без IntersectionObserver (SSR) тихо не работает,
+  // контент виден сразу + остаётся fallback-кнопка «Показать ещё».
+  const sentinelRef = useInfiniteSentinel({
+    hasNextPage: trips.hasNextPage,
+    isFetchingNextPage: trips.isFetchingNextPage,
+    fetchNextPage: () => {
+      void trips.fetchNextPage();
+    },
+  });
 
   const set = <K extends keyof SearchFormState>(key: K, value: SearchFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -287,15 +298,35 @@ export function SearchPage() {
                 <TripCard key={trip.id} trip={trip} />
               ))}
               {trips.hasNextPage && (
-                <Button
-                  stretched
-                  mode="bezeled"
-                  loading={trips.isFetchingNextPage}
-                  disabled={trips.isFetchingNextPage}
-                  onClick={() => void trips.fetchNextPage()}
-                >
-                  Показать ещё
-                </Button>
+                <>
+                  {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
+                      высота (min-h-12) держит скролл от прыжков. */}
+                  <div
+                    ref={sentinelRef}
+                    aria-hidden="true"
+                    className="flex min-h-12 items-center justify-center"
+                    style={{ overflowAnchor: "none" }}
+                  />
+                  {trips.isFetchingNextPage && (
+                    <div
+                      role="status"
+                      aria-label="Загрузка ещё поездок"
+                      className="flex flex-col gap-3"
+                    >
+                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                    </div>
+                  )}
+                  <Button
+                    stretched
+                    mode="bezeled"
+                    loading={trips.isFetchingNextPage}
+                    disabled={trips.isFetchingNextPage}
+                    onClick={() => void trips.fetchNextPage()}
+                  >
+                    Показать ещё
+                  </Button>
+                </>
               )}
             </div>
           )}

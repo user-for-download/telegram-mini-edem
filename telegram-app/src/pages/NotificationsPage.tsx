@@ -4,6 +4,7 @@ import { BellRing, CheckCheck, Settings2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
+import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { ApiError } from "@/api/client";
 import type { Notification } from "@edem/contracts";
 import {
@@ -142,6 +143,16 @@ export function NotificationsPage() {
   );
   const unreadCount = inbox.data?.pages[0]?.unreadCount ?? 0;
 
+  // Сентинел автодогрузки inbox (тот же useNotificationsInboxQuery,
+  // контракт cursor-пагинации не меняется; SSR — тихий фолбэк).
+  const sentinelRef = useInfiniteSentinel({
+    hasNextPage: inbox.hasNextPage,
+    isFetchingNextPage: inbox.isFetchingNextPage,
+    fetchNextPage: () => {
+      void inbox.fetchNextPage();
+    },
+  });
+
   // Бан mid-session: requireUser отвечает 403 — терминальный экран вместо
   // общей ошибки (паттерн ProfilePage; глобальные случаи закрывает AuthGate).
   if (inbox.error instanceof ApiError && inbox.error.status === 403) {
@@ -223,15 +234,34 @@ export function NotificationsPage() {
               />
             ))}
             {inbox.hasNextPage && (
-              <Button
-                mode="bezeled"
-                stretched
-                loading={inbox.isFetchingNextPage}
-                disabled={inbox.isFetchingNextPage}
-                onClick={() => void inbox.fetchNextPage()}
-              >
-                Показать ещё
-              </Button>
+              <>
+                {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
+                    высота (min-h-12) держит скролл от прыжков. */}
+                <div
+                  ref={sentinelRef}
+                  aria-hidden="true"
+                  className="flex min-h-12 items-center justify-center"
+                  style={{ overflowAnchor: "none" }}
+                />
+                {inbox.isFetchingNextPage && (
+                  <div
+                    role="status"
+                    aria-label="Загрузка ещё уведомлений"
+                    className="flex flex-col gap-3"
+                  >
+                    <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                  </div>
+                )}
+                <Button
+                  mode="bezeled"
+                  stretched
+                  loading={inbox.isFetchingNextPage}
+                  disabled={inbox.isFetchingNextPage}
+                  onClick={() => void inbox.fetchNextPage()}
+                >
+                  Показать ещё
+                </Button>
+              </>
             )}
           </div>
         )}

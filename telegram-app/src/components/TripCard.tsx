@@ -1,4 +1,4 @@
-import { Avatar, Button } from "@telegram-apps/telegram-ui";
+import { Button } from "@telegram-apps/telegram-ui";
 import {
   Baby,
   Cigarette,
@@ -12,6 +12,7 @@ import {
 import type { Trip, TripTag } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
 import { dayLabel, formatDuration } from "@/utils/date";
+import { LazyAvatar } from "@/components/LazyAvatar";
 
 /** Иконки для очевидных тегов (язык примера); остальные теги не
  *  иконизируем — их видно в деталях поездки. */
@@ -73,10 +74,11 @@ export function TripCard({ trip }: { trip: Trip }) {
 
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--tgui--outline)]">
         <div className="flex items-center gap-2 min-w-0">
-          <Avatar
+          <LazyAvatar
             size={40}
             src={trip.driver.avatar}
             acronym={trip.driver.name.slice(0, 1).toUpperCase()}
+            alt={trip.driver.name}
           />
           <div className="min-w-0">
             <div className="flex items-center gap-1 text-[13px] font-medium text-[var(--tgui--text_color)]">
