@@ -30,6 +30,15 @@ describe("AppTabbar", () => {
     expect(html).toContain('role="tablist"');
   });
 
+  it("порядок: Главная → Поездки → Профиль, Поиск отдельно", () => {
+    const html = render("home");
+    const order = ["Главная", "Поездки", "Профиль", "Поиск"].map((t) =>
+      html.indexOf(t),
+    );
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(html).not.toContain("shadow");
+  });
   it("активный таб помечен aria-current/selected", () => {
     const html = render("search");
     expect(html).toContain('aria-current="page"');

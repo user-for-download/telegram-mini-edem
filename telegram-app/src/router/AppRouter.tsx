@@ -21,16 +21,16 @@ import { HomePage } from "@/pages/HomePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { TripDetailsRoute } from "@/components/TripDetailsModal";
 import { CreateTripRoute } from "@/components/CreateTripModal";
+import { NotificationsRoute } from "@/components/NotificationsModal";
+import { VehicleRoute } from "@/components/VehicleModal";
 import { TripsPage } from "@/pages/TripsPage";
-import { RideRequestsPage } from "@/pages/RideRequestsPage";
-import { TripRequestsPage } from "@/pages/TripRequestsPage";
+import { RideRequestsRoute } from "@/components/RideRequestsModal";
+import { TripRequestsRoute } from "@/components/TripRequestsModal";
 import { ProfilePage } from "@/pages/ProfilePage";
-import { ReviewsPage } from "@/pages/ReviewsPage";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { NotificationsPage } from "@/pages/NotificationsPage";
-import { SupportPage } from "@/pages/SupportPage";
-import { ReportsPage } from "@/pages/ReportsPage";
-import { VehiclePage } from "@/pages/VehiclePage";
+import { ReviewsRoute } from "@/components/ReviewsModal";
+import { SettingsRoute } from "@/components/SettingsModal";
+import { SupportRoute } from "@/components/SupportModal";
+import { ReportsRoute } from "@/components/ReportsModal";
 import {
   parseTripStartParam,
   resolveStartParamRoute,
@@ -120,18 +120,18 @@ export function AppRouter() {
           <Route path="/trips" element={<SearchPage />} />
           <Route path="/trips/:tripId" element={<TripDetailsRoute />} />
           <Route path="/trips/my" element={<Navigate to="/bookings?segment=driver" replace />} />
-          <Route path="/trips/my/:tripId/requests" element={<TripRequestsPage />} />
+          <Route path="/trips/my/:tripId/requests" element={<TripRequestsRoute />} />
           <Route path="/trips/my/new" element={<CreateTripRoute />} />
           <Route path="/bookings" element={<TripsPage />} />
           <Route path="/bookings/history" element={<Navigate to="/bookings?segment=history" replace />} />
-          <Route path="/ride-requests" element={<RideRequestsPage />} />
+          <Route path="/ride-requests" element={<RideRequestsRoute />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/reviews" element={<ReviewsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/profile/support" element={<SupportPage />} />
-          <Route path="/profile/reports" element={<ReportsPage />} />
-          <Route path="/vehicle" element={<VehiclePage />} />
+          <Route path="/reviews" element={<ReviewsRoute />} />
+          <Route path="/settings" element={<SettingsRoute />} />
+          <Route path="/notifications" element={<NotificationsRoute />} />
+          <Route path="/profile/support" element={<SupportRoute />} />
+          <Route path="/profile/reports" element={<ReportsRoute />} />
+          <Route path="/vehicle" element={<VehicleRoute />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

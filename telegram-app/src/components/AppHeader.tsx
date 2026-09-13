@@ -9,13 +9,13 @@ import { CarFront } from "lucide-react";
 export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-md transition-colors border-b border-[var(--tgui--outline)] bg-[var(--tgui--bg_color)]/95 pt-[max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px))]">
-      <div className="flex items-center justify-between px-4 py-2.5">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-center px-4 py-2.5">
+        <div className="flex items-center gap-2.5 text-center">
           <div className="w-8 h-8 rounded-xl bg-[var(--app-info-bg)] text-[var(--app-info)] flex items-center justify-center font-bold">
             <CarFront size={18} />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1.5">
               <Title
                 level="2"
                 weight="2"

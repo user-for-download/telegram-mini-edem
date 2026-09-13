@@ -1,7 +1,7 @@
-// Рендер-тесты тел модалок (TripDetails/CreateTrip/Feedback).
+// Рендер-тесты тел модалок (TripDetails/CreateTrip/Feedback/Settings).
 // Modal — портал и в renderToString не попадает, поэтому тестируются
-// экспортированные тела (CreateTripBody/FeedbackForm). Детали поездки —
-// это TripDetailsPage, покрытый tripDetailsPage.test.tsx 8/8.
+// экспортированные тела (CreateTripBody/FeedbackForm/SettingsBody). Детали
+// поездки — это TripDetailsPage, покрытый tripDetailsPage.test.tsx 8/8.
 // Паттерн tripsPages.test.tsx (SSR, без testing-library).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -15,15 +15,25 @@ beforeEach(() => {
   mockUseAllCities.mockReturnValue(queryState({ data: [] }));
   mockUseCreateTrip.mockReturnValue(mutation());
   mockUseCreateFeedback.mockReturnValue(mutation());
+  mockUseProfile.mockReturnValue(
+    queryState({ data: { notificationsEnabled: true } }),
+  );
+  mockUseSaveSettings.mockReturnValue(mutation());
 });
 
-const { mockUseAllCities, mockUseCreateTrip, mockUseCreateFeedback } = vi.hoisted(
-  () => ({
-    mockUseAllCities: vi.fn(),
-    mockUseCreateTrip: vi.fn(),
-    mockUseCreateFeedback: vi.fn(),
-  }),
-);
+const {
+  mockUseAllCities,
+  mockUseCreateTrip,
+  mockUseCreateFeedback,
+  mockUseProfile,
+  mockUseSaveSettings,
+} = vi.hoisted(() => ({
+  mockUseAllCities: vi.fn(),
+  mockUseCreateTrip: vi.fn(),
+  mockUseCreateFeedback: vi.fn(),
+  mockUseProfile: vi.fn(),
+  mockUseSaveSettings: vi.fn(),
+}));
 
 vi.mock("@/queries/useAllCities", () => ({
   useAllCitiesQuery: mockUseAllCities,
@@ -46,8 +56,14 @@ vi.mock("@/queries/useSupportQuery", async (importOriginal) => {
   };
 });
 
+vi.mock("@/queries/profile", () => ({
+  useProfileQuery: mockUseProfile,
+  useProfileNotificationSettingsMutation: mockUseSaveSettings,
+}));
+
 import { CreateTripBody } from "@/components/CreateTripModal";
 import { FeedbackForm } from "@/components/FeedbackModal";
+import { SettingsBody } from "@/components/SettingsModal";
 import { ToastProvider } from "@/components/ToastProvider";
 
 function queryState(overrides: Record<string, unknown> = {}) {
@@ -126,5 +142,62 @@ describe("FeedbackForm", () => {
     expect(html).toContain("Опишите детали вашего обращения");
     expect(html).toContain("Отправить в поддержку");
     expect(html).toContain("Мои обращения");
+  });
+});
+
+describe("SettingsBody", () => {
+  it("уведомления включены — текст статуса, тумблер-кнопка и live-регион", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({ data: { notificationsEnabled: true } }),
+    );
+    const html = render(<SettingsBody />);
+    expect(html).toContain("Уведомления включены");
+    expect(html).toContain("Выключить некритичные");
+    expect(html).toContain("Открыть уведомления");
+    expect(html).toContain('aria-live="polite"');
+    // Закрытие — через header модалки: PageHeader и кнопки «назад» внутри нет.
+    expect(html).not.toContain("Назад в профиль");
+    // Таргеты ≥44px заданы явно (проверяемо в SSR).
+    expect(html).toContain("min-h-[44px]");
+  });
+
+  it("уведомления выключены — инверсия текста и кнопки", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({ data: { notificationsEnabled: false } }),
+    );
+    const html = render(<SettingsBody />);
+    expect(html).toContain("Некритичные уведомления выключены");
+    expect(html).toContain("Включить уведомления");
+    expect(html).not.toContain("Выключить некритичные");
+  });
+
+  it("профиль грузится — спиннер вместо формы", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({ data: undefined, isLoading: true }),
+    );
+    const html = render(<SettingsBody />);
+    expect(html).toContain("Загрузка");
+    expect(html).not.toContain("Открыть уведомления");
+  });
+
+  it("ошибка профиля — плейсхолдер с ретраем", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({ data: undefined, error: new Error("offline") }),
+    );
+    const html = render(<SettingsBody />);
+    expect(html).toContain("Не удалось загрузить данные");
+    expect(html).toContain("Повторить");
+  });
+
+  it("ошибка сохранения — видимый текст отката", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({ data: { notificationsEnabled: true } }),
+    );
+    mockUseSaveSettings.mockReturnValue(
+      mutation({ error: new Error("Failed to save settings") }),
+    );
+    const html = render(<SettingsBody />);
+    expect(html).toContain("Failed to save settings");
+    expect(html).toContain("Выключить некритичные");
   });
 });
