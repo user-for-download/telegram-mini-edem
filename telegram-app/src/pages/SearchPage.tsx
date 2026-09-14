@@ -19,6 +19,7 @@ import {
 import { useSearchParams } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { QueryState } from "@/components/QueryState";
+import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { TripCard } from "@/components/TripCard";
 import { QUICK_CITIES } from "@/consts/popularRoutes";
 import { TRIP_TAGS } from "@/consts/tags";
@@ -281,6 +282,7 @@ export function SearchPage() {
           error={trips.error}
           empty={false}
           emptyText=""
+          skeleton={<TripCardsSkeleton />}
           onRetry={() => void trips.refetch()}
         >
           {items.length === 0 ? (
@@ -313,8 +315,8 @@ export function SearchPage() {
                       aria-label="Загрузка ещё поездок"
                       className="flex flex-col gap-3"
                     >
-                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
-                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                      <TripCardSkeleton />
+                      <TripCardSkeleton />
                     </div>
                   )}
                   <Button

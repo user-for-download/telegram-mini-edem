@@ -17,6 +17,7 @@ import {
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
+import { ReviewCardsSkeleton } from "@/components/Skeletons";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { ReviewCard } from "@/components/ReviewCard";
@@ -335,6 +336,7 @@ export const ReviewsBody = memo(function ReviewsBody({
           error={my.error}
           empty={false}
           emptyText=""
+          skeleton={<ReviewCardsSkeleton />}
           onRetry={() => void my.refetch()}
         >
           {!my.data || my.data.length === 0 ? (
@@ -492,6 +494,7 @@ export const ReviewsBody = memo(function ReviewsBody({
           error={profile.error ?? about.error}
           empty={false}
           emptyText=""
+          skeleton={<ReviewCardsSkeleton />}
           onRetry={() => {
             void profile.refetch();
             void about.refetch();

@@ -1,4 +1,4 @@
-import { FixedLayout } from "@telegram-apps/telegram-ui";
+import { Badge, FixedLayout } from "@telegram-apps/telegram-ui";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { Bell, Car, Home, Search, User } from "lucide-react";
 
@@ -69,12 +69,17 @@ export function AppTabbar({
               >
                 <Icon size={22} strokeWidth={selected ? 2.5 : 1.8} />
                 {showBadge && (
-                  <span
+                  /* tgui Badge (tgui.xelene.me, Blocks): нативная пилюля
+                     счётчика; кап 99+ — на нашей стороне, Badge рисует
+                     children как есть. Число уже в aria-label кнопки. */
+                  <Badge
+                    type="number"
+                    mode="critical"
                     aria-hidden="true"
-                    className="absolute right-1 top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--app-danger)] px-1 text-[10px] font-bold leading-none text-white"
+                    className="absolute right-0.5 top-0.5 !m-0 pointer-events-none"
                   >
                     {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
+                  </Badge>
                 )}
                 <span className="text-[9px] font-semibold leading-none">
                   {text}

@@ -4,6 +4,10 @@ import { BellRing, CheckCheck, Settings2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
+import {
+  NotificationCardSkeleton,
+  NotificationCardsSkeleton,
+} from "@/components/Skeletons";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { ApiError } from "@/api/client";
 import type { Notification } from "@edem/contracts";
@@ -176,6 +180,7 @@ export function NotificationsPage() {
         error={inbox.error}
         empty={false}
         emptyText=""
+        skeleton={<NotificationCardsSkeleton />}
         onRetry={() => void inbox.refetch()}
       >
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
@@ -249,7 +254,7 @@ export function NotificationsPage() {
                     aria-label="Загрузка ещё уведомлений"
                     className="flex flex-col gap-3"
                   >
-                    <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                    <NotificationCardSkeleton />
                   </div>
                 )}
                 <Button

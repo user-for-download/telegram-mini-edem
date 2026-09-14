@@ -8,6 +8,7 @@ import { Calendar, Car, Send, Share2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { QueryState } from "@/components/QueryState";
+import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { useToast } from "@/components/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
@@ -484,6 +485,7 @@ export function TripsPage() {
             error={bookings.error ?? driverActive.error}
             empty={activeBookings.length === 0 && activeDriverTrips.length === 0}
             emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
+            skeleton={<TripCardsSkeleton />}
             onRetry={() => {
               void bookings.refetch();
               void driverActive.refetch();
@@ -553,7 +555,7 @@ export function TripsPage() {
                       aria-label="Загрузка ещё поездок"
                       className="flex flex-col gap-3"
                     >
-                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                      <TripCardSkeleton />
                     </div>
                   )}
                   <Button
@@ -583,6 +585,7 @@ export function TripsPage() {
             error={history.error ?? driverArchive.error}
             empty={historyItems.length === 0}
             emptyText="Здесь появятся завершённые и отменённые поездки."
+            skeleton={<TripCardsSkeleton />}
             onRetry={() => {
               void history.refetch();
               void driverArchive.refetch();
@@ -659,7 +662,7 @@ export function TripsPage() {
                       aria-label="Загрузка ещё поездок"
                       className="flex flex-col gap-3"
                     >
-                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                      <TripCardSkeleton />
                     </div>
                   )}
                   <Button
