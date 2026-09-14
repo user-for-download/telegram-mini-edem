@@ -214,8 +214,9 @@ export function ProfilePage() {
       >
         {profile.data && (
           <div className="flex flex-col gap-4 px-4 pt-1 pb-4">
-            {/* Шапка профиля */}
-            <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+            {/* Шапка профиля: поверхность — Section без заголовка. */}
+            <Section>
+              <div className="flex flex-col gap-3 p-4">
               <div className="flex items-center gap-3.5">
                 <Avatar
                   size={48}
@@ -278,7 +279,8 @@ export function ProfilePage() {
                   Редактировать профиль
                 </Button>
               )}
-            </div>
+              </div>
+            </Section>
 
             {/* Субтабы: Настройки и авто / Отзывы */}
             <div role="tablist" aria-label="Разделы профиля">

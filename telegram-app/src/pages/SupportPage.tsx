@@ -4,6 +4,7 @@ import {
   Button,
   Input,
   Placeholder,
+  Section,
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { MessageSquareText, Send } from "lucide-react";
@@ -176,12 +177,11 @@ export function SupportPage() {
           description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
         />
         <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-            <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-              Обжалование блокировки
-            </span>
-            <AppealForm />
-          </div>
+      <Section header="Обжалование блокировки">
+        <div className="flex flex-col gap-3 p-4">
+          <AppealForm />
+        </div>
+      </Section>
         </div>
       </>
     );
@@ -192,10 +192,8 @@ export function SupportPage() {
       <PageHeader title="Поддержка" />
 
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-2">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-          Частые вопросы
-        </span>
+      <Section header="Частые вопросы">
+        <div className="flex flex-col gap-2 p-4">
         {SUPPORT_FAQ.map((item) => {
           const isOpen = openedFaqId === item.id;
           return (
@@ -213,12 +211,11 @@ export function SupportPage() {
             </Accordion>
           );
         })}
-      </div>
+        </div>
+      </Section>
 
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-          Мои обращения
-        </span>
+      <Section header="Мои обращения">
+        <div className="flex flex-col gap-3 p-4">
         <QueryState
           loading={myFeedbacks.isLoading}
           error={myFeedbacks.error}
@@ -252,12 +249,11 @@ export function SupportPage() {
             </div>
           )}
         </QueryState>
-      </div>
+        </div>
+      </Section>
 
-      <section aria-label="Связаться с нами" className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-          Связаться с нами
-        </span>
+      <Section header="Связаться с нами" aria-label="Связаться с нами">
+        <div className="flex flex-col gap-3 p-4">
           <MutationError error={create.error} />
           <div className="FormField">
             <label htmlFor="support-subject">Тема</label>
@@ -317,14 +313,14 @@ export function SupportPage() {
           >
             Отправить
           </Button>
-      </section>
+        </div>
+      </Section>
 
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-          Обжалование блокировки
-        </span>
-        <AppealForm />
-      </div>
+      <Section header="Обжалование блокировки">
+        <div className="flex flex-col gap-3 p-4">
+          <AppealForm />
+        </div>
+      </Section>
       </div>
     </>
   );

@@ -5,8 +5,8 @@ import {
   IconButton,
   Input,
   Placeholder,
+  Section,
   SegmentedControl,
-  Subheadline,
   Caption,
 } from "@telegram-apps/telegram-ui";
 import {
@@ -107,12 +107,12 @@ export function SearchPage() {
   return (
     <>
       <OfflineBanner />
-      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-4">
-        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <Subheadline weight="2" className="text-[16px]!">
-              Поиск попутных поездок
-            </Subheadline>
+      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+        {/* Фильтр: поверхность — Section, заголовок — нативный.
+            Чипы-действия — первой строкой тела (рядом с заголовком
+            им не место: header принимает только текст). */}
+        <Section header="Поиск попутных поездок">
+          <div className="flex flex-col gap-3 p-4">
             <div className="flex items-center gap-1.5">
               <Chip
                 mode="mono"
@@ -136,7 +136,6 @@ export function SearchPage() {
                 Фильтры
               </Chip>
             </div>
-          </div>
 
           <div className="flex flex-col gap-1.5 relative">
             <Input
@@ -266,7 +265,8 @@ export function SearchPage() {
           <Button size="l" stretched mode="filled" before={<SearchIcon size={18} />} onClick={submit}>
             Найти
           </Button>
-        </div>
+          </div>
+        </Section>
 
         <div className="flex items-center justify-between px-1">
           <Caption className="text-(--tgui--hint_color)! font-medium">

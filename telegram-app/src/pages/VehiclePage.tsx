@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Input } from "@telegram-apps/telegram-ui";
+import { Button, Input, Section } from "@telegram-apps/telegram-ui";
 import { Car, Palette, Hash } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { QueryState } from "@/components/QueryState";
@@ -122,7 +122,10 @@ export function VehiclePage() {
       >
         {vehicleQuery.data && (
           <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+          {/* Форма/карточка автомобиля: поверхность — Section без заголовка
+              (заголовок страницы — PageHeader выше). */}
+          <Section>
+            <div className="flex flex-col gap-3 p-4">
               {editing ? (
                 <>
                   <div className="FormField">
@@ -244,7 +247,8 @@ export function VehiclePage() {
                   </Button>
                 </>
               )}
-          </div>
+            </div>
+          </Section>
           </div>
         )}
       </QueryState>

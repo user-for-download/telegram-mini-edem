@@ -458,7 +458,7 @@ export function TripsPage() {
   return (
     <>
       <OfflineBanner />
-      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-4">
+      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
         <div role="tablist" aria-label="Мои поездки">
           <SegmentedControl>
             {SEGMENTS.map((option) => (

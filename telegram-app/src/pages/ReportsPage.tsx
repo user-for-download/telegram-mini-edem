@@ -3,6 +3,7 @@ import {
   Button,
   Input,
   Placeholder,
+  Section,
   Select,
   Textarea,
 } from "@telegram-apps/telegram-ui";
@@ -162,10 +163,8 @@ export function ReportsPage() {
       <PageHeader title="Жалобы" />
 
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-          <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-            Сообщите о проблеме
-          </span>
+      <Section header="Сообщите о проблеме">
+        <div className="flex flex-col gap-3 p-4">
           <MutationError error={create.error} />
           <div className="FormField">
             <label htmlFor="report-target-type">Что случилось</label>
@@ -265,12 +264,11 @@ export function ReportsPage() {
           >
             {alreadyReported ? "Жалоба уже отправлена" : "Отправить жалобу"}
           </Button>
-      </div>
+        </div>
+      </Section>
 
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-          Мои жалобы
-        </span>
+      <Section header="Мои жалобы">
+        <div className="flex flex-col gap-3 p-4">
         <QueryState
           loading={myReports.isLoading}
           error={myReports.error}
@@ -291,7 +289,8 @@ export function ReportsPage() {
             </div>
           )}
         </QueryState>
-      </div>
+        </div>
+      </Section>
       </div>
     </>
   );

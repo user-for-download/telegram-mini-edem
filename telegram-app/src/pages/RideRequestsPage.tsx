@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input } from "@telegram-apps/telegram-ui";
+import { Button, Input, Section } from "@telegram-apps/telegram-ui";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { QueryState } from "@/components/QueryState";
@@ -119,10 +119,8 @@ export function RideRequestsPage() {
       <PageHeader title="Ищу попутку" />
       <OfflineBanner />
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-          Новый запрос
-        </span>
+      <Section header="Новый запрос">
+        <div className="flex flex-col gap-3 p-4">
         <div className="FormField">
           <label htmlFor="ride-from">Откуда</label>
           <Input
@@ -183,7 +181,8 @@ export function RideRequestsPage() {
         {validationError && <p className="FormError" role="alert">{validationError}</p>}
         {create.error && <p className="FormError" role="alert">{bookingErrorMessage(create.error)}</p>}
         <Button stretched size="l" loading={create.isPending} onClick={submit}>Опубликовать запрос</Button>
-      </div>
+        </div>
+      </Section>
       {(status.error || cancel.error || update.error) && (
         <p className="FormError" role="alert">
           {bookingErrorMessage(status.error ?? cancel.error ?? update.error)}

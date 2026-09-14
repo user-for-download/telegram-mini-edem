@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Button, Link, Placeholder } from "@telegram-apps/telegram-ui";
+import { Button, Link, Placeholder, Section } from "@telegram-apps/telegram-ui";
 import { BellRing, CheckCheck, Settings2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { MutationError } from "@/components/MutationError";
@@ -181,45 +181,48 @@ export function NotificationsPage() {
         onRetry={() => void inbox.refetch()}
       >
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <BellRing size={16} className="text-(--app-info) shrink-0" />
-            <p className="text-[14px] text-(--tgui--text_color)" aria-live="polite">
-              {unreadCount > 0
-                ? `Непрочитанных: ${unreadCount}.`
-                : "Все уведомления прочитаны."}
+        {/* Инфо-панель: поверхность — Section без заголовка. */}
+        <Section>
+          <div className="flex flex-col gap-3 p-4">
+            <div className="flex items-center gap-2">
+              <BellRing size={16} className="text-(--app-info) shrink-0" />
+              <p className="text-[14px] text-(--tgui--text_color)" aria-live="polite">
+                {unreadCount > 0
+                  ? `Непрочитанных: ${unreadCount}.`
+                  : "Все уведомления прочитаны."}
+              </p>
+            </div>
+            <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
+              Важные статусы поездки и брони сохраняются всегда, даже если
+              некритичные уведомления выключены.
             </p>
+            <div className="flex gap-2">
+              {/* Кнопка-ссылка: официальный паттерн tgui (стори Blocks/Button → Link):
+                  Button с Component="a" вместо самописного <a> со стилями. */}
+              <Button
+                Component="a"
+                href="#/settings"
+                mode="bezeled"
+                size="s"
+                before={<Settings2 size={15} />}
+                className="flex-1"
+              >
+                Настройки уведомлений
+              </Button>
+              <Button
+                stretched
+                size="s"
+                mode="bezeled"
+                before={<CheckCheck size={15} />}
+                loading={markAll.isPending}
+                disabled={markAll.isPending || unreadCount === 0}
+                onClick={() => markAll.mutate()}
+              >
+                Прочитать все
+              </Button>
+            </div>
           </div>
-          <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
-            Важные статусы поездки и брони сохраняются всегда, даже если
-            некритичные уведомления выключены.
-          </p>
-          <div className="flex gap-2">
-            {/* Кнопка-ссылка: официальный паттерн tgui (стори Blocks/Button → Link):
-                Button с Component="a" вместо самописного <a> со стилями. */}
-            <Button
-              Component="a"
-              href="#/settings"
-              mode="bezeled"
-              size="s"
-              before={<Settings2 size={15} />}
-              className="flex-1"
-            >
-              Настройки уведомлений
-            </Button>
-            <Button
-              stretched
-              size="s"
-              mode="bezeled"
-              before={<CheckCheck size={15} />}
-              loading={markAll.isPending}
-              disabled={markAll.isPending || unreadCount === 0}
-              onClick={() => markAll.mutate()}
-            >
-              Прочитать все
-            </Button>
-          </div>
-        </div>
+        </Section>
 
         {items.length === 0 ? (
           <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs">

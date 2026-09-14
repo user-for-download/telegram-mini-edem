@@ -1,4 +1,4 @@
-import { Avatar, Button, Placeholder, Spinner } from "@telegram-apps/telegram-ui";
+import { Avatar, Button, Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -66,11 +66,9 @@ export function TripRequestsPage() {
       )}
         {!items.length && <Placeholder header="Заявок нет" />}
         {pending.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <span className="text-[13px] font-semibold text-(--tgui--hint_color) px-1">
-              {`Ожидают решения (${pending.length})`}
-            </span>
-            {pending.map((booking) => (
+          <Section header={`Ожидают решения (${pending.length})`}>
+            <div className="flex flex-col gap-3 p-4">
+              {pending.map((booking) => (
               <div
                 key={booking.id}
                 className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
@@ -118,14 +116,13 @@ export function TripRequestsPage() {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </Section>
         )}
         {confirmed.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <span className="text-[13px] font-semibold text-(--tgui--hint_color) px-1">
-              {`Подтверждены (${confirmed.length})`}
-            </span>
-            {confirmed.map((booking) => (
+          <Section header={`Подтверждены (${confirmed.length})`}>
+            <div className="flex flex-col gap-3 p-4">
+              {confirmed.map((booking) => (
               <div
                 key={booking.id}
                 className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex items-center justify-between gap-2"
@@ -150,7 +147,8 @@ export function TripRequestsPage() {
                 </span>
               </div>
             ))}
-          </div>
+            </div>
+          </Section>
         )}
       {requests.hasNextPage && (
         <Button stretched mode="bezeled" onClick={() => void requests.fetchNextPage()} disabled={requests.isFetchingNextPage}>
