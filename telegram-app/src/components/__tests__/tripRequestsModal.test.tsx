@@ -171,6 +171,6 @@ describe("TripRequestsBody: a11y", () => {
 
     expect(html).toContain('aria-label="Заявки пассажиров"');
     expect(html).toContain('aria-live="polite"');
-    expect(html).toContain("min-h-[44px]");
+    expect(html).toContain("min-h-11");
   });
 });

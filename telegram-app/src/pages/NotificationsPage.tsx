@@ -96,7 +96,7 @@ function NotificationCard({
           </span>
         ) : null}
       </div>
-      <p className="text-[13px] text-(--tgui--text_color) leading-relaxed [overflow-wrap:anywhere]">
+      <p className="text-[13px] text-(--tgui--text_color) leading-relaxed wrap-anywhere">
         {notification.body}
       </p>
       <span className="text-[11px] text-(--tgui--hint_color)">

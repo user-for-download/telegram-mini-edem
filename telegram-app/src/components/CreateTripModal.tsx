@@ -209,7 +209,7 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
               mode="plain"
               onClick={swapCities}
               aria-label="Поменять направление"
-              className="absolute! right-2! top-[38px]! bg-(--tgui--section_bg_color)! shadow-xs!"
+              className="absolute! right-2! top-9.5! bg-(--tgui--section_bg_color)! shadow-xs!"
             >
               <ArrowRightLeft size={14} className="text-(--app-info)" />
             </IconButton>

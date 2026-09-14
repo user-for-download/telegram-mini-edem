@@ -43,7 +43,7 @@ export function AppTabbar({
 }) {
   const selectedSearch = activeTab === SEARCH_TAB.key;
   return (
-    <FixedLayout vertical="bottom" className="z-[2]! w-full pointer-events-none">
+    <FixedLayout vertical="bottom" className="z-2! w-full pointer-events-none">
       <div className="mx-auto flex w-full max-w-md items-center gap-2 px-4 pb-[max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px))] pointer-events-auto">
         <div
           role="tablist"

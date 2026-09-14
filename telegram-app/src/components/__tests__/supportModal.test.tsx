@@ -126,7 +126,7 @@ describe("SupportBody: a11y", () => {
     expect(html).toContain('aria-label="Связаться с нами"');
     expect(html).toContain('aria-label="Обжалование блокировки"');
     expect(html).toContain('aria-live="polite"');
-    expect(html).toContain("min-h-[44px]");
+    expect(html).toContain("min-h-11");
   });
 });
 

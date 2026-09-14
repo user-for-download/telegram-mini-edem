@@ -82,7 +82,7 @@ describe("ReportsBody: форма без PageHeader-back (закрытие — h
     expect(html).toContain("Мошенничество");
     expect(html).toContain("Недостоверная информация");
     expect(html).toContain("Отправить жалобу");
-    expect(html).toContain("min-h-[44px]");
+    expect(html).toContain("min-h-11");
   });
 
   it("happy: описание с браузерным maxLength 2000 из контракта", () => {

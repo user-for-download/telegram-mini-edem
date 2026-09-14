@@ -69,7 +69,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
         <Button
           stretched
           size="s"
-          className="min-h-[44px]"
+          className="min-h-11"
           disabled={pending}
           onClick={() => onAccept(booking.id)}
         >
@@ -79,7 +79,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
           mode="bezeled"
           stretched
           size="s"
-          className="min-h-[44px]"
+          className="min-h-11"
           disabled={pending}
           onClick={() => onDecline(booking.id)}
         >
@@ -281,7 +281,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
           <div className="ButtonRow">
             {!forbidden && (
               <Button
-                className="min-h-[44px]"
+                className="min-h-11"
                 onClick={() => void requests.refetch()}
               >
                 Повторить
@@ -289,7 +289,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
             )}
             <Button
               mode="outline"
-              className="min-h-[44px]"
+              className="min-h-11"
               onClick={() => navigate("/bookings?segment=driver")}
             >
               К моим поездкам
@@ -355,7 +355,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
           <Button
             stretched
             mode="bezeled"
-            className="min-h-[44px]"
+            className="min-h-11"
             loading={requests.isFetchingNextPage}
             disabled={requests.isFetchingNextPage}
             onClick={() => void requests.fetchNextPage()}
@@ -366,7 +366,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         <Button
           mode="bezeled"
           stretched
-          className="min-h-[44px]"
+          className="min-h-11"
           onClick={() => navigate("/bookings?segment=driver")}
         >
           К моим поездкам

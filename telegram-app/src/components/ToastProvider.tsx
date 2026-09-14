@@ -52,7 +52,7 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
     <ToastContext.Provider value={value}>
       {children}
       {toast && (
-        <div className="fixed bottom-24 left-4 right-4 z-[60] max-w-md mx-auto pointer-events-auto">
+        <div className="fixed bottom-24 left-4 right-4 z-60 max-w-md mx-auto pointer-events-auto">
           <Snackbar
             onClose={close}
             duration={TOAST_DURATION_MS}

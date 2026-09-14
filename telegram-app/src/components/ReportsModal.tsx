@@ -318,7 +318,7 @@ export const ReportsBody = memo(function ReportsBody() {
         <Button
           stretched
           size="l"
-          className="min-h-[44px]"
+          className="min-h-11"
           loading={create.isPending}
           disabled={!canSubmit}
           onClick={submit}

@@ -345,7 +345,7 @@ export const SupportBody = memo(function SupportBody() {
         <Button
           stretched
           size="l"
-          className="min-h-[44px]"
+          className="min-h-11"
           before={<Send size={16} />}
           loading={create.isPending}
           disabled={!canSubmit}

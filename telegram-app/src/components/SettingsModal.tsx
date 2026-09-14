@@ -124,7 +124,7 @@ export function SettingsBody() {
             <Button
               stretched
               size="l"
-              className="min-h-[44px]"
+              className="min-h-11"
               loading={save.isPending}
               disabled={save.isPending || enabled === null}
               onClick={() => toggle(!enabled)}
@@ -144,7 +144,7 @@ export function SettingsBody() {
               mode="bezeled"
               size="m"
               stretched
-              className="min-h-[44px]"
+              className="min-h-11"
               onClick={() => navigate("/notifications")}
             >
               Открыть уведомления

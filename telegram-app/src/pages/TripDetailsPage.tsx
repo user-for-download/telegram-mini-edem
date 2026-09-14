@@ -207,7 +207,7 @@ export function TripDetailsPage() {
           </IconButton>
           {hasActiveBooking && (
             <span
-              className="p-2 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--hint_color) min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--hint_color) min-w-11 min-h-11 flex items-center justify-center"
               title="Телефон водителя доступен после подтверждения"
             >
               <Phone size={16} />

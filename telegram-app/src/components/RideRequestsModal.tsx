@@ -306,7 +306,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
         </div>
         {validationError && <p className="FormError" role="alert">{validationError}</p>}
         {create.error && <p className="FormError" role="alert">{bookingErrorMessage(create.error)}</p>}
-        <Button stretched size="l" className="min-h-[44px]" loading={create.isPending} onClick={submit}>Опубликовать запрос</Button>
+        <Button stretched size="l" className="min-h-11" loading={create.isPending} onClick={submit}>Опубликовать запрос</Button>
       </div>
       {(status.error || cancel.error || update.error) && (
         <p className="FormError" role="alert">
@@ -376,28 +376,28 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                   </div>
                   {editError && <p className="FormError" role="alert">{editError}</p>}
                   <div className="flex gap-2">
-                    <Button stretched size="s" className="min-h-[44px]" loading={update.isPending} onClick={() => submitEdit(request.id)}>Сохранить</Button>
-                    <Button mode="bezeled" size="s" stretched className="min-h-[44px]" disabled={update.isPending} onClick={() => setEditingId(null)}>Отмена</Button>
+                    <Button stretched size="s" className="min-h-11" loading={update.isPending} onClick={() => submitEdit(request.id)}>Сохранить</Button>
+                    <Button mode="bezeled" size="s" stretched className="min-h-11" disabled={update.isPending} onClick={() => setEditingId(null)}>Отмена</Button>
                   </div>
                 </>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {request.status === "active" && (
-                    <Button mode="bezeled" size="s" stretched className="min-h-[44px]" loading={status.isPending && status.variables?.id === request.id} disabled={status.isPending || cancel.isPending} onClick={() => status.mutate({ id: request.id, status: "paused" })}>
+                    <Button mode="bezeled" size="s" stretched className="min-h-11" loading={status.isPending && status.variables?.id === request.id} disabled={status.isPending || cancel.isPending} onClick={() => status.mutate({ id: request.id, status: "paused" })}>
                       Поставить на паузу
                     </Button>
                   )}
                   {request.status === "paused" && (
-                    <Button mode="bezeled" size="s" stretched className="min-h-[44px]" loading={status.isPending && status.variables?.id === request.id} disabled={status.isPending || cancel.isPending} onClick={() => status.mutate({ id: request.id, status: "active" })}>
+                    <Button mode="bezeled" size="s" stretched className="min-h-11" loading={status.isPending && status.variables?.id === request.id} disabled={status.isPending || cancel.isPending} onClick={() => status.mutate({ id: request.id, status: "active" })}>
                       Возобновить
                     </Button>
                   )}
                   {(request.status === "active" || request.status === "paused") && (
                     <>
-                      <Button mode="bezeled" size="s" stretched className="min-h-[44px]" disabled={status.isPending || cancel.isPending} onClick={() => startEdit(request)}>
+                      <Button mode="bezeled" size="s" stretched className="min-h-11" disabled={status.isPending || cancel.isPending} onClick={() => startEdit(request)}>
                         Редактировать
                       </Button>
-                      <span className="[&_button]:min-h-[44px] contents">
+                      <span className="[&_button]:min-h-11 contents">
                         <ConfirmAction
                           label="Отменить запрос"
                           confirmLabel="Отменить запрос"
