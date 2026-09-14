@@ -386,7 +386,8 @@ try {
   await runStep("delete: удаление профиля в UI, экран «Профиль удалён»", async () => {
     await hashUrl(page, "/profile");
     await page.getByRole("button", { name: "Удалить профиль" }).click();
-    // Два window.confirm подряд — auto-accept через обработчик dialog.
+    // ConfirmAction: первый клик вооружает (без window.confirm), второй — подтверждает.
+    await page.getByRole("button", { name: "Удалить окончательно" }).click();
     await page.getByText("Профиль удалён").waitFor({ timeout: 30000 });
     await shot(page, "account-deleted");
     return "tombstone shown";
