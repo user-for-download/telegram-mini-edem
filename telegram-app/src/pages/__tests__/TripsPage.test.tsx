@@ -121,7 +121,7 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 }
 
 describe("TripsPage history", () => {
-  it("сегмент из URL + фильтр Все/Завершённые/Отменённые", () => {
+  it("сегмент из URL: все статусы без вложенного фильтра", () => {
     mockUseHistory.mockReturnValue(
       queryState({
         data: [
@@ -143,9 +143,7 @@ describe("TripsPage history", () => {
       }),
     );
     const html = render(<TripsPage />, "/bookings?segment=history");
-    expect(html).toContain("Все");
-    expect(html).toContain("Завершённые");
-    expect(html).toContain("Отменённые");
+    expect(html).not.toContain("Фильтр истории");
     expect(html).toContain("Поездка завершена");
     expect(html).toContain("Поездка отменена");
   });
@@ -153,7 +151,7 @@ describe("TripsPage history", () => {
   it("пустая история — плейсхолдер", () => {
     mockUseHistory.mockReturnValue(queryState({ data: [] }));
     const html = render(<TripsPage />, "/bookings?segment=history");
-    expect(html).toContain("Здесь появятся завершённые и архивные поездки.");
+    expect(html).toContain("Здесь появятся завершённые и отменённые поездки.");
   });
 });
 

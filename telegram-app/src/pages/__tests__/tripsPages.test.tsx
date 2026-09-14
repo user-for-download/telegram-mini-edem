@@ -239,8 +239,8 @@ describe("TripsPage parity", () => {
       }),
     );
     const html = render(<TripsPage />, "/bookings?segment=history");
-    expect(html).toContain("Завершённые");
-    expect(html).toContain("Отменённые");
+    // Один уровень табов: чипов фильтра нет, статусы — пилюлями.
+    expect(html).not.toContain("Фильтр истории");
     expect(html).toContain("Поездка завершена");
     expect(html).toContain("Поездка отменена");
     expect(html).toContain("Москва");

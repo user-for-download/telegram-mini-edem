@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Avatar,
   Button,
@@ -40,8 +39,6 @@ function parseSegment(value: string | null): Segment {
   // Легаси ?segment=driver (старые редиректы) — теперь часть «Активных».
   return value === "history" ? "history" : "active";
 }
-
-type HistoryFilter = "all" | "completed" | "cancelled";
 
 /** Единый статус истории для пассажира и водителя: завершена / отменена. */
 function historyCategoryOf(
@@ -374,7 +371,6 @@ export function TripsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
   const segment = parseSegment(searchParams.get("segment"));
-  const [historyFilter, setHistoryFilter] = useState<"all" | "completed" | "cancelled">("all");
 
   const bookings = useMyBookingsQuery({ enabled: segment === "active" });
   const history = usePassengerHistoryQuery({ enabled: segment === "history" });
@@ -414,8 +410,7 @@ export function TripsPage() {
     return Number.isNaN(fallback) ? 0 : fallback;
   };
 
-  const historyItems: HistoryItem[] = [
-    ...(history.data ?? []).map((booking) => ({
+  const historyItems: HistoryItem[] = [    ...(history.data ?? []).map((booking) => ({
       kind: "booking" as const,
       key: `b-${booking.id}`,
       at: tripTime(booking.trip),
@@ -428,7 +423,6 @@ export function TripsPage() {
       trip,
     })),
   ]
-    .filter((item) => historyFilter === "all" || historyCategoryOf(item) === historyFilter)
     .sort((a, b) => b.at - a.at);
 
   // Сентинелы автодогрузки водительских поездок (контракт
@@ -588,34 +582,12 @@ export function TripsPage() {
             loading={history.isLoading || driverArchive.isLoading}
             error={history.error ?? driverArchive.error}
             empty={historyItems.length === 0}
-            emptyText={
-              historyFilter === "all"
-                ? "Здесь появятся завершённые и архивные поездки."
-                : "Нет подходящих поездок."
-            }
+            emptyText="Здесь появятся завершённые и отменённые поездки."
             onRetry={() => {
               void history.refetch();
               void driverArchive.refetch();
             }}
           >
-            <div role="tablist" aria-label="Фильтр истории" className="mt-1">
-              <SegmentedControl>
-                {(["all", "completed", "cancelled"] as const).map((value) => (
-                  <SegmentedControl.Item
-                    key={value}
-                    role="tab"
-                    selected={historyFilter === value}
-                    aria-selected={historyFilter === value}
-                    onClick={() => {
-                      haptic.selection();
-                      setHistoryFilter(value);
-                    }}
-                  >
-                    {value === "all" ? "Все" : value === "completed" ? "Завершённые" : "Отменённые"}
-                  </SegmentedControl.Item>
-                ))}
-              </SegmentedControl>
-            </div>
             <div className="flex flex-col gap-3 mt-1">
               {historyItems.map((item) => {
                 if (item.kind === "driving") {
