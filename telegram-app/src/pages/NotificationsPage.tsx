@@ -1,7 +1,6 @@
 import { useMemo } from "react";
-import { Button, Link, Placeholder, Section } from "@telegram-apps/telegram-ui";
+import { Button, Link, Placeholder, Section, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { BellRing, CheckCheck, Settings2 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { FeedCard } from "@/components/FeedCard";
@@ -160,7 +159,10 @@ export function NotificationsPage() {
   if (inbox.error instanceof ApiError && inbox.error.status === 403) {
     return (
       <>
-        <PageHeader title="Уведомления" />
+        {/* Таб-страницы без визуального заголовка (как Главная/Поездки/
+            Профиль/Поиск — позицию показывает таббар): h1 только для
+            скринридера. */}
+        <VisuallyHidden Component="h1">Уведомления</VisuallyHidden>
         <Placeholder
           header="Аккаунт заблокирован"
           description="Действие недоступно: аккаунт заблокирован."
@@ -171,7 +173,7 @@ export function NotificationsPage() {
 
   return (
     <>
-      <PageHeader title="Уведомления" />
+      <VisuallyHidden Component="h1">Уведомления</VisuallyHidden>
       <MutationError error={markRead.error ?? markAll.error} />
       <QueryState
         loading={inbox.isLoading}
@@ -225,57 +227,64 @@ export function NotificationsPage() {
           </div>
         </Section>
 
-        {items.length === 0 ? (
-          <FeedCard className="p-4">
-            <p className="text-[16px] font-semibold text-center text-(--tgui--text_color)">
-              Пока нет уведомлений
-            </p>
-            <p className="text-[13px] text-center text-(--tgui--hint_color) mt-1">
-              Подтверждения брони, отмены и завершение поездок появятся здесь
-            </p>
-          </FeedCard>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {items.map((notification) => (
-              <NotificationCard
-                key={notification.id}
-                notification={notification}
-                marking={markRead.isPending}
-                onMarkRead={(id) => markRead.mutate(id)}
-              />
-            ))}
-            {inbox.hasNextPage && (
+        {/* Лента: поверхность — Section без заголовка (шаблон групп:
+            TripRequests, популярные). Пустое состояние — тексты прямо
+            на поверхности, карточки хранят свой хром (фаза 2). */}
+        <Section>
+          <div className="flex flex-col gap-3 p-4">
+            {items.length === 0 ? (
               <>
-                {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
-                    высота (min-h-12) держит скролл от прыжков. */}
-                <div
-                  ref={sentinelRef}
-                  aria-hidden="true"
-                  className="flex min-h-12 items-center justify-center"
-                  style={{ overflowAnchor: "none" }}
-                />
-                {inbox.isFetchingNextPage && (
-                  <div
-                    role="status"
-                    aria-label="Загрузка ещё уведомлений"
-                    className="flex flex-col gap-3"
-                  >
-                    <NotificationCardSkeleton />
-                  </div>
+                <p className="text-[16px] font-semibold text-center text-(--tgui--text_color)">
+                  Пока нет уведомлений
+                </p>
+                <p className="text-[13px] text-center text-(--tgui--hint_color)">
+                  Подтверждения брони, отмены и завершение поездок появятся здесь
+                </p>
+              </>
+            ) : (
+              <>
+                {items.map((notification) => (
+                  <NotificationCard
+                    key={notification.id}
+                    notification={notification}
+                    marking={markRead.isPending}
+                    onMarkRead={(id) => markRead.mutate(id)}
+                  />
+                ))}
+                {inbox.hasNextPage && (
+                  <>
+                    {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
+                        высота (min-h-12) держит скролл от прыжков. */}
+                    <div
+                      ref={sentinelRef}
+                      aria-hidden="true"
+                      className="flex min-h-12 items-center justify-center"
+                      style={{ overflowAnchor: "none" }}
+                    />
+                    {inbox.isFetchingNextPage && (
+                      <div
+                        role="status"
+                        aria-label="Загрузка ещё уведомлений"
+                        className="flex flex-col gap-3"
+                      >
+                        <NotificationCardSkeleton />
+                      </div>
+                    )}
+                    <Button
+                      mode="bezeled"
+                      stretched
+                      loading={inbox.isFetchingNextPage}
+                      disabled={inbox.isFetchingNextPage}
+                      onClick={() => void inbox.fetchNextPage()}
+                    >
+                      Показать ещё
+                    </Button>
+                  </>
                 )}
-                <Button
-                  mode="bezeled"
-                  stretched
-                  loading={inbox.isFetchingNextPage}
-                  disabled={inbox.isFetchingNextPage}
-                  onClick={() => void inbox.fetchNextPage()}
-                >
-                  Показать ещё
-                </Button>
               </>
             )}
           </div>
-        )}
+        </Section>
       </div>
       </QueryState>
     </>
