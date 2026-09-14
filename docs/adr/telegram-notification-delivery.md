@@ -1,7 +1,7 @@
 # ADR: Telegram notification delivery
 
-**Status:** Accepted for parity phase; Bot API option blocked
-**Date:** 2026-09-09
+**Status:** Accepted; Bot API option **approved for implementation** (2026-09-14, see below)
+**Date:** 2026-09-09 (parity phase), 2026-09-14 (Bot API approval)
 **Scope:** Telegram Mini App migration from the frozen VK reference
 
 ## Decision
@@ -39,30 +39,46 @@ Telegram mapping:
 - Every notification has a stable event type, safe user-scoped payload, and a Telegram deep-link target defined in [`../migration/notification-parity-contract.md`](../migration/notification-parity-contract.md).
 - Delivery failure must not roll back booking, trip, review or support operations.
 
-## Bot API option — blocked decision
+## Bot API option — approved (2026-09-14)
 
-**Blocked:** whether any event may be delivered as a background Bot API message, and whether that channel is required for product parity.
+**Originally blocked; approved by Product on 2026-09-14** with the decisions
+recorded in [`../product/bot-api-approval-package.md`](../product/bot-api-approval-package.md) §6а:
 
-Before implementation, Product must approve:
+- Event allowlist (9 events) and message copy — approved as drafted.
+- Consent: bot never messages first; `/start` (webhook) records consent,
+  `/stop` or admin stop revokes it immediately. No chat → quiet skip,
+  critical included.
+- Single shared notifications toggle (no separate Telegram flag).
+- Message body = notification title + body (cities/dates only, verified
+  against call sites); deep-link allowlist via `resolveTelegramDeepLink`.
+- Rollout: 100% at once (app in development, no real users); kill-switch
+  `TELEGRAM_DELIVERY_ENABLED=false` remains the instant global off.
+- Spam-complaint SLA: 24 hours; per-user stop via
+  `PATCH /admin/users/:id/telegram-stop`.
 
-- event allowlist and message copy;
-- user consent model and revocation UX;
-- whether a Telegram bot chat is mandatory and how it is established;
-- privacy review for event text and identifiers;
-- deep-link/start-parameter contract;
-- retry, deduplication, per-user/global rate limits and abuse controls;
-- rollout, opt-out and incident-disable rules.
+Engineering constraints for the enabled channel:
 
-No `TELEGRAM_BOT_TOKEN` production messaging worker, webhook/polling process, or background send is implied by this ADR. The existing token used for init-data validation is not evidence of approval for outbound messages.
+- Outbox pattern (`NotificationDelivery`) is the source of truth for
+  delivery state; the dispatcher re-reads the kill-switch, user consent
+  and toggle on every tick (no caching).
+- `TELEGRAM_BOT_TOKEN` presence gates real sending: without a token the
+  dispatcher stays in shadow mode (`delivered` + `error='shadow'`).
+- Rate limits: optional ≤5/hour per user, critical ≤1 per 5 min per type;
+  retries with 1m/5m/15m backoff, max 3 attempts.
+- Telegram 403 (bot blocked) → skip as `bot_blocked` and clear
+  `tgChatJoinedAt` (consent is effectively revoked).
+- No Bot API background message outside this outbox path; the previous
+  rule ("no production messaging worker ... implied by this ADR") is
+  lifted strictly for this dispatcher.
 
 ## Ownership
 
 | Area | Owner | Gate |
 |---|---|---|
 | In-app records, preferences, WebSocket and resync | Backend + Telegram client | Engineering; parity acceptance |
-| Event copy, critical/optional classification and Bot API approval | Product | **Blocked until approved** |
-| Privacy/consent and data minimization | Product + Security/Privacy | Required before external delivery |
-| Bot token, webhook or polling runtime, secret rotation and alerting | Platform/Backend on-call | **Blocked until product approval and runbook** |
+| Event copy, critical/optional classification and Bot API approval | Product | Approved 2026-09-14 |
+| Privacy/consent and data minimization | Product + Security/Privacy | Approved with package (§3) |
+| Bot token, webhook or polling runtime, secret rotation and alerting | Platform/Backend on-call | Runbook: kill-switch + admin stop shipped |
 | Deep-link routes and start-parameter handling | Telegram client + Backend | Required for every delivered event |
 
 ## Consequences
@@ -75,4 +91,7 @@ Trade-off: users do not receive an external message while the app is closed unle
 - Telegram can open the inbox, show unread count, paginate, mark one read and mark all read.
 - Critical notifications exist with the optional toggle off.
 - WebSocket reconnect/resync restores missed notification and booking/trip state.
-- No Bot API background message is sent in the parity implementation without a later approved decision record.
+- Background Bot API messages flow only through the approved outbox dispatcher
+  (`notificationDispatcher.ts`) with consent, rate limits and kill-switch
+  enforced per tick; shadow mode (no token) marks `delivered`/`shadow` without
+  any external call.

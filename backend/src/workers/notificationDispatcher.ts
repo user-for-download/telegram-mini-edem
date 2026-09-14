@@ -28,13 +28,19 @@ import {
   decideTelegramDelivery,
   TELEGRAM_CRITICAL_TYPES,
 } from "../services/telegramNotifications.js";
+import {
+  sendTelegramMessage,
+  type SendOutcome,
+} from "../services/telegramSend.js";
 
 /** Захваченная outbox-задача с полями, нужными диспетчеру. */
 interface ClaimedDelivery {
   id: string;
+  notificationId: string;
   userId: string;
   type: string;
   attempts: number;
+  deepLink: string | null;
 }
 
 /** Бэкофф ретраев после каждой неудачной попытки (мс). */
@@ -56,7 +62,14 @@ async function claimPendingBatch(now: Date): Promise<ClaimedDelivery[]> {
     },
     data: { status: "processing" },
     limit: env.TG_NOTIFICATION_DISPATCH_BATCH_SIZE,
-    select: { id: true, userId: true, type: true, attempts: true },
+    select: {
+      id: true,
+      notificationId: true,
+      userId: true,
+      type: true,
+      attempts: true,
+      deepLink: true,
+    },
   });
 }
 
@@ -156,6 +169,111 @@ async function settleDelivery(
   });
 }
 
+/**
+ * Ретрай-исход: как разметить неудачную реальную отправку (429/сеть/4xx).
+ * Возвращает null, если исход терминальный (обработан вызывающим).
+ */
+async function retryOrFail(
+  delivery: ClaimedDelivery,
+  code: string,
+  retryAfterMs: number | null,
+  now: Date,
+): Promise<void> {
+  const backoff = retryAfterMs ?? RETRY_BACKOFF_MS[delivery.attempts] ?? null;
+  if (backoff === null || delivery.attempts + 1 >= env.TG_NOTIFICATION_MAX_RETRIES) {
+    await settleDelivery(delivery, "failed", code);
+    logger.error(
+      { userId: delivery.userId, type: delivery.type, outcome: "failed", code },
+      "tg_dispatch_failed",
+    );
+    return;
+  }
+  await settleDelivery(delivery, "pending", code, new Date(now.getTime() + backoff));
+  logger.error(
+    { userId: delivery.userId, type: delivery.type, outcome: "retry_scheduled", code },
+    "tg_dispatch_retry",
+  );
+}
+
+/** Разметить исход реальной отправки (терминальные случаи). */
+async function settleSendOutcome(
+  delivery: ClaimedDelivery,
+  outcome: SendOutcome,
+  now: Date,
+): Promise<boolean> {
+  if (outcome.ok) {
+    await settleDelivery(delivery, "delivered", null);
+    logger.debug(
+      { userId: delivery.userId, type: delivery.type, outcome: "delivered" },
+      "tg_dispatch_delivered",
+    );
+    return true;
+  }
+  if (outcome.kind === "bot_blocked") {
+    // Пользователь заблокировал бота: согласие недействительно, чата
+    // больше нет — сбрасываем, следующих отправок не будет (ADR).
+    await db.user.update({
+      where: { id: delivery.userId },
+      data: { tgChatJoinedAt: null },
+    });
+    await settleDelivery(delivery, "skipped", "bot_blocked");
+    logger.debug(
+      { userId: delivery.userId, type: delivery.type, outcome: "bot_blocked" },
+      "tg_dispatch_skipped",
+    );
+    return true;
+  }
+  if (outcome.kind === "rate_limited") {
+    await retryOrFail(
+      delivery,
+      "rate_limited",
+      outcome.retryAfterMs,
+      now,
+    );
+    return true;
+  }
+  if (outcome.kind === "permanent") {
+    await retryOrFail(delivery, "bad_request", null, now);
+    return true;
+  }
+  return false; // transient — вызывающий разметит кодом network_error.
+}
+
+/**
+ * Реальная отправка: текст = title + "\n\n" + body inbox-уведисления
+ * (§6а.4), chatId = telegramUserId, кнопка «Открыть» по deep-link.
+ */
+async function sendDelivery(
+  delivery: ClaimedDelivery,
+  telegramUserId: bigint | null,
+  now: Date,
+): Promise<void> {
+  if (telegramUserId === null) {
+    // Пользователь без TG-id не должен попадать в outbox; страховка.
+    await settleDelivery(delivery, "skipped", "no_chat");
+    return;
+  }
+  const notification = await db.notification.findUnique({
+    where: { id: delivery.notificationId },
+    select: { title: true, body: true },
+  });
+  if (!notification) {
+    // Inbox-запись удалена пользователем — доставлять нечего.
+    await settleDelivery(delivery, "skipped", "notification_deleted");
+    return;
+  }
+
+  const outcome = await sendTelegramMessage({
+    chatId: Number(telegramUserId),
+    text: `${notification.title}\n\n${notification.body}`,
+    deepLink: delivery.deepLink ?? undefined,
+  });
+  const settled = await settleSendOutcome(delivery, outcome, now);
+  if (!settled) {
+    await retryOrFail(delivery, "network_error", null, now);
+  }
+}
+
 /** Обработка одной захваченной задачи. Никогда не бросает наружу. */
 async function processDelivery(delivery: ClaimedDelivery, now: Date): Promise<void> {
   try {
@@ -173,7 +291,11 @@ async function processDelivery(delivery: ClaimedDelivery, now: Date): Promise<vo
     // немедленно, кэша нет.
     const user = await db.user.findUnique({
       where: { id: delivery.userId },
-      select: { notificationsEnabled: true, tgChatJoinedAt: true },
+      select: {
+        notificationsEnabled: true,
+        tgChatJoinedAt: true,
+        telegramUserId: true,
+      },
     });
     const policy = decideTelegramDelivery({
       type: delivery.type,
@@ -201,14 +323,17 @@ async function processDelivery(delivery: ClaimedDelivery, now: Date): Promise<vo
       return;
     }
 
-    // 4) Shadow-доставка: Bot API заблокирован (ADR) — внешнего вызова
-    // нет по построению. Разметаем как delivered с маркером shadow,
-    // чтобы отличать от будущей реальной отправки.
-    await settleDelivery(delivery, "delivered", "shadow");
-    logger.debug(
-      { userId: delivery.userId, type: delivery.type, outcome: "delivered_shadow" },
-      "tg_dispatch_shadow",
-    );
+    // 4) Доставка: без токена — shadow-разметка (внешнего вызова нет);
+    //    с токеном — реальный sendMessage (ADR approved 2026-09-14).
+    if (!env.TELEGRAM_BOT_TOKEN) {
+      await settleDelivery(delivery, "delivered", "shadow");
+      logger.debug(
+        { userId: delivery.userId, type: delivery.type, outcome: "delivered_shadow" },
+        "tg_dispatch_shadow",
+      );
+      return;
+    }
+    await sendDelivery(delivery, user?.telegramUserId ?? null, now);
   } catch (err) {
     // 5) Непредвиденная ошибка: ретраи с бэкоффом, потом failed.
     const nextAttempt = RETRY_BACKOFF_MS[delivery.attempts] ?? null;

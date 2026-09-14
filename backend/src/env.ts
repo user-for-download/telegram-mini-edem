@@ -237,6 +237,21 @@ export const env = {
   TG_NOTIFICATION_DISPATCH_BATCH_SIZE: positiveIntEnv("TG_NOTIFICATION_DISPATCH_BATCH_SIZE", 50),
 
   /**
+   * URL Telegram Mini App (https://t.me/... или прямой https-домен) для
+   * кнопки «Открыть» в сообщениях бота (web_app). Пусто = сообщения
+   * без кнопки (только текст). Deep-link маршруты allowlist-ятся
+   * вызывающим кодом (resolveTelegramDeepLink).
+   */
+  TELEGRAM_WEBAPP_URL: process.env.TELEGRAM_WEBAPP_URL || "",
+
+  /**
+   * SOCKS5-прокси для исходящих вызовов Bot API (api.telegram.org),
+   * формат socks5://host:port. Пусто = прямой доступ. В dev-среде
+   * Telegram доступен только через прокси; в production обычно пусто.
+   */
+  TELEGRAM_API_PROXY: process.env.TELEGRAM_API_PROXY || "",
+
+  /**
    * Окно дедупликации идентичных TG-уведомлений в миллисекундах:
    * повтор того же события (user+type+title+body) внутри окна не
    * создаёт вторую inbox-запись. Легитимные разные события отличаются

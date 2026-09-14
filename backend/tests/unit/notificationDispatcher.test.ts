@@ -8,12 +8,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const updateManyAndReturn = vi.fn();
 const update = vi.fn();
 const userFindUnique = vi.fn();
+const userUpdate = vi.fn();
 const deliveryCount = vi.fn();
 const deliveryFindFirst = vi.fn();
+const notificationFindUnique = vi.fn();
+const sendMock = vi.fn();
 
 vi.mock("../../src/db.js", () => ({
   db: {
-    user: { findUnique: userFindUnique },
+    user: { findUnique: userFindUnique, update: userUpdate },
+    notification: { findUnique: notificationFindUnique },
     notificationDelivery: {
       updateManyAndReturn,
       update,
@@ -23,12 +27,17 @@ vi.mock("../../src/db.js", () => ({
   },
 }));
 
+vi.mock("../../src/services/telegramSend.js", () => ({
+  sendTelegramMessage: (...args: unknown[]) => sendMock(...args),
+}));
+
 vi.mock("../../src/logger.js", () => ({
   logger: { debug: vi.fn(), info: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
 const envState = {
   TELEGRAM_DELIVERY_ENABLED: true,
+  TELEGRAM_BOT_TOKEN: "",
   TG_NOTIFICATION_DISPATCH_BATCH_SIZE: 20,
   TG_NOTIFICATION_MAX_RETRIES: 3,
   TG_NOTIFICATION_USER_RATE_WINDOW_MS: 3_600_000,
@@ -42,14 +51,26 @@ const { pollOnce } = await import("../../src/workers/notificationDispatcher.js")
 const USER_ACTIVE = {
   notificationsEnabled: true,
   tgChatJoinedAt: new Date("2026-09-01T00:00:00Z"),
+  telegramUserId: 99_123n,
 };
 
-function delivery(over: Partial<{ id: string; userId: string; type: string; attempts: number }> = {}) {
+function delivery(
+  over: Partial<{
+    id: string;
+    notificationId: string;
+    userId: string;
+    type: string;
+    attempts: number;
+    deepLink: string | null;
+  }> = {},
+) {
   return {
     id: "d1",
+    notificationId: "n1",
     userId: "u1",
     type: "trip_cancelled",
     attempts: 0,
+    deepLink: "/bookings",
     ...over,
   };
 }
@@ -61,8 +82,12 @@ describe("pollOnce — захват и обработка", () => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", fetchMock);
     envState.TELEGRAM_DELIVERY_ENABLED = true;
+    envState.TELEGRAM_BOT_TOKEN = "";
     update.mockResolvedValue({});
+    userUpdate.mockResolvedValue({});
     userFindUnique.mockResolvedValue(USER_ACTIVE);
+    notificationFindUnique.mockResolvedValue({ title: "Заголовок", body: "Тело" });
+    sendMock.mockResolvedValue({ ok: true });
     deliveryCount.mockResolvedValue(0);
     deliveryFindFirst.mockResolvedValue(null);
   });
@@ -213,6 +238,137 @@ describe("pollOnce — захват и обработка", () => {
 
     expect(claimed).toBe(3);
     expect(update).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("pollOnce — реальная отправка (токен задан, bot-api-send)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    envState.TELEGRAM_DELIVERY_ENABLED = true;
+    envState.TELEGRAM_BOT_TOKEN = "123:abc";
+    update.mockResolvedValue({});
+    userUpdate.mockResolvedValue({});
+    userFindUnique.mockResolvedValue(USER_ACTIVE);
+    notificationFindUnique.mockResolvedValue({
+      title: "Заявка подтверждена",
+      body: "Водитель подтвердил вашу заявку",
+    });
+    sendMock.mockResolvedValue({ ok: true });
+    deliveryCount.mockResolvedValue(0);
+    deliveryFindFirst.mockResolvedValue(null);
+  });
+
+  it("ok → delivered без shadow-маркера; текст = title+body, deep-link передан", async () => {
+    updateManyAndReturn.mockResolvedValue([delivery()]);
+
+    await pollOnce();
+
+    expect(sendMock).toHaveBeenCalledWith({
+      chatId: Number(USER_ACTIVE.telegramUserId),
+      text: "Заявка подтверждена\n\nВодитель подтвердил вашу заявку",
+      deepLink: "/bookings",
+    });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "d1" },
+      data: expect.objectContaining({ status: "delivered", error: null }),
+    });
+  });
+
+  it("403 bot_blocked → skipped + согласие сброшено (tgChatJoinedAt=null)", async () => {
+    sendMock.mockResolvedValue({ ok: false, kind: "bot_blocked" });
+    updateManyAndReturn.mockResolvedValue([delivery()]);
+
+    await pollOnce();
+
+    expect(userUpdate).toHaveBeenCalledWith({
+      where: { id: "u1" },
+      data: { tgChatJoinedAt: null },
+    });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "d1" },
+      data: expect.objectContaining({ status: "skipped", error: "bot_blocked" }),
+    });
+  });
+
+  it("429 rate_limited → pending с nextAttemptAt = retry_after, attempts+1", async () => {
+    sendMock.mockResolvedValue({ ok: false, kind: "rate_limited", retryAfterMs: 120_000 });
+    updateManyAndReturn.mockResolvedValue([delivery()]);
+
+    await pollOnce();
+
+    expect(update).toHaveBeenLastCalledWith({
+      where: { id: "d1" },
+      data: expect.objectContaining({
+        status: "pending",
+        error: "rate_limited",
+        attempts: 1,
+        nextAttemptAt: expect.any(Date),
+      }),
+    });
+  });
+
+  it("transient (сеть) → pending с бэкоффом, error=network_error", async () => {
+    sendMock.mockResolvedValue({ ok: false, kind: "transient" });
+    updateManyAndReturn.mockResolvedValue([delivery()]);
+
+    await pollOnce();
+
+    expect(update).toHaveBeenLastCalledWith({
+      where: { id: "d1" },
+      data: expect.objectContaining({
+        status: "pending",
+        error: "network_error",
+        attempts: 1,
+      }),
+    });
+  });
+
+  it("transient на последней попытке → failed/network_error", async () => {
+    sendMock.mockResolvedValue({ ok: false, kind: "transient" });
+    updateManyAndReturn.mockResolvedValue([delivery({ attempts: 2 })]);
+
+    await pollOnce();
+
+    expect(update).toHaveBeenLastCalledWith({
+      where: { id: "d1" },
+      data: expect.objectContaining({
+        status: "failed",
+        error: "network_error",
+        attempts: 3,
+      }),
+    });
+  });
+
+  it("400 permanent → ретраи по обычной схеме, error=bad_request", async () => {
+    sendMock.mockResolvedValue({ ok: false, kind: "permanent" });
+    updateManyAndReturn.mockResolvedValue([delivery()]);
+
+    await pollOnce();
+
+    expect(update).toHaveBeenLastCalledWith({
+      where: { id: "d1" },
+      data: expect.objectContaining({
+        status: "pending",
+        error: "bad_request",
+        attempts: 1,
+      }),
+    });
+  });
+
+  it("inbox-запись удалена → skipped/notification_deleted, без отправки", async () => {
+    notificationFindUnique.mockResolvedValue(null);
+    updateManyAndReturn.mockResolvedValue([delivery()]);
+
+    await pollOnce();
+
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "d1" },
+      data: expect.objectContaining({
+        status: "skipped",
+        error: "notification_deleted",
+      }),
+    });
   });
 });
 
