@@ -60,7 +60,7 @@ vi.mock("@/store/useAuthStore", () => ({
   ),
 }));
 
-import { TripDetailsRoute } from "@/components/TripDetailsModal";
+import { TripDetailsPage } from "@/pages/TripDetailsPage";
 import { ToastProvider } from "@/components/ToastProvider";
 import { ApiError } from "@/api/client";
 
@@ -145,7 +145,7 @@ function render(): string {
         <MemoryRouter initialEntries={["/trips/t-1"]}>
           <ToastProvider>
             <Routes>
-              <Route path="/trips/:tripId" element={<TripDetailsRoute />} />
+              <Route path="/trips/:tripId" element={<TripDetailsPage />} />
             </Routes>
           </ToastProvider>
         </MemoryRouter>

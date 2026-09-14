@@ -17,6 +17,8 @@ import {
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
+import { haptic } from "@/utils/haptics";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { ReviewCard } from "@/components/ReviewCard";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { ApiError } from "@/api/client";
@@ -191,6 +193,9 @@ export const ReviewsBody = memo(function ReviewsBody({
   const [text, setText] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  useClosingConfirmation(
+    text !== "" || selectedTripId !== null || selectedPassengerId !== null || rating !== 5,
+  );
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
   // второй клик до ре-рендера не отправит второй запрос (паттерн VK).
   const submitGuard = useRef(false);
@@ -273,11 +278,13 @@ export const ReviewsBody = memo(function ReviewsBody({
           submitGuard.current = false;
         },
         onSuccess: () => {
+          haptic.success();
           setText("");
           setRating(5);
           setSuccess(true);
         },
         onError: (error) => {
+          haptic.error();
           if (error instanceof ApiError && error.code === "ALREADY_REVIEWED") {
             setFormError("Вы уже оставили отзыв об этом пользователе в этой поездке");
           } else if (error instanceof ApiError && error.code === "CONFLICT") {

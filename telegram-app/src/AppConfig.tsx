@@ -2,6 +2,11 @@ import type { FC, PropsWithChildren } from "react";
 import { useEffect } from "react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { miniApp, useLaunchParams, useSignal } from "@telegram-apps/sdk-react";
+import {
+  setMiniAppBackgroundColor,
+  setMiniAppBottomBarColor,
+  setMiniAppHeaderColor,
+} from "@telegram-apps/sdk-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthGate } from "@/components/AuthGate";
@@ -86,6 +91,11 @@ function useTelegramAppearance(): "dark" | "light" {
   const isDark = useSignal(miniApp.isDark);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
+    // Нативный хром Telegram в цвет приложения (официальная дока):
+    // шапка и фон — bg_color, нижняя полоса — secondary_bg_color.
+    setMiniAppHeaderColor.ifAvailable("bg_color");
+    setMiniAppBackgroundColor.ifAvailable("bg_color");
+    setMiniAppBottomBarColor.ifAvailable("secondary_bg_color");
   }, [isDark]);
   return isDark ? "dark" : "light";
 }

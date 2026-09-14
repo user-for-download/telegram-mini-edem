@@ -7,8 +7,11 @@
 
 :root {
   color-scheme: light dark;
-  --tg-safe-area-inset-top: env(safe-area-inset-top, 0px);
-  --tg-safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  /* Safe-area из SDK (viewport.bindCssVars даёт --tg-viewport-*,
+     обновляется по safeAreaChanged), fallback — системный env()
+     для браузера вне Telegram. */
+  --tg-safe-area-inset-top: var(--tg-viewport-safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --tg-safe-area-inset-bottom: var(--tg-viewport-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   --tg-viewport-height: 100dvh;
   --tg-viewport-stable-height: 100dvh;
 

@@ -10,6 +10,8 @@ import { Car, Hash, Palette, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { ConfirmAction } from "@/components/ConfirmAction";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { haptic } from "@/utils/haptics";
 import { QueryState } from "@/components/QueryState";
 import { ProfilePage } from "@/pages/ProfilePage";
 import {
@@ -169,7 +171,7 @@ function VehicleView({ vehicle, onEdit }: { vehicle: Vehicle; onEdit: () => void
       </div>
       <p className="text-[12px] text-[var(--tgui--hint_color)] leading-relaxed">Модель и цвет видят другие пользователи, номер — только вы.</p>
       <Button mode="bezeled" stretched size="s" onClick={onEdit} className="min-h-[44px]">Изменить автомобиль</Button>
-      <ConfirmAction label="Удалить автомобиль" confirmLabel="Да, удалить" description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано." pending={remove.isPending} onConfirm={() => remove.mutate(undefined)} />
+      <ConfirmAction label="Удалить автомобиль" confirmLabel="Да, удалить" description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано." pending={remove.isPending} onConfirm={() => remove.mutate(undefined, { onSuccess: () => haptic.success(), onError: () => haptic.error() })} />
       {remove.isError && <p className="FormError" role="alert">{vehicleRemoveErrorMessage(remove.error)}</p>}
     </>
   );
@@ -198,6 +200,11 @@ function VehicleForm({ vehicle, onDone }: { vehicle: Vehicle | null; onDone: () 
   const [color, setColor] = useState(vehicle?.color ?? "");
   const [plate, setPlate] = useState(vehicle?.plate ?? "");
   const [formError, setFormError] = useState<string | null>(null);
+  useClosingConfirmation(
+    model !== (vehicle?.model ?? "") ||
+      color !== (vehicle?.color ?? "") ||
+      plate !== (vehicle?.plate ?? ""),
+  );
   const isSubmittingRef = useRef(false);
   const save = () => {
     if (isSubmittingRef.current) return;
@@ -205,7 +212,14 @@ function VehicleForm({ vehicle, onDone }: { vehicle: Vehicle | null; onDone: () 
     if (error) { setFormError(error); return; }
     setFormError(null);
     isSubmittingRef.current = true;
-    upsert.mutate(normalizeVehicleForm(model, color, plate), { onSuccess: onDone, onSettled: () => { isSubmittingRef.current = false; } });
+    upsert.mutate(normalizeVehicleForm(model, color, plate), {
+      onSuccess: () => {
+        haptic.success();
+        onDone();
+      },
+      onError: () => haptic.error(),
+      onSettled: () => { isSubmittingRef.current = false; },
+    });
   };
   return (
     <>

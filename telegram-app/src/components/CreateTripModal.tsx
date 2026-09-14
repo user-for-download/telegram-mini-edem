@@ -24,6 +24,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { TripsPage } from "@/pages/TripsPage";
 import { TRIP_TAGS } from "@/consts/tags";
 import { haptic } from "@/utils/haptics";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useCreateTripMutation } from "@/queries/useTripsQuery";
 import { validateCreateTripDraft } from "@/helpers/createTripForm";
@@ -103,6 +104,17 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
   const [comment, setComment] = useState("");
   const [tags, setTags] = useState<TripTag[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Несохранённый черновик — Telegram спросит подтверждение закрытия.
+  useClosingConfirmation(
+    from !== "" ||
+      to !== "" ||
+      fromAddress !== "" ||
+      toAddress !== "" ||
+      distanceKm !== "" ||
+      comment !== "" ||
+      tags.length > 0,
+  );
 
   const swapCities = () => {
     haptic.selection();

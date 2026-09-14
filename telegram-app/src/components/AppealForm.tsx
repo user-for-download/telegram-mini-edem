@@ -6,6 +6,8 @@ import {
   FEEDBACK_TEXT_MAX_LENGTH,
 } from "@edem/contracts";
 import { useAppealFeedbackMutation } from "@/queries/useSupportQuery";
+import { haptic } from "@/utils/haptics";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import {
   feedbackErrorMessage,
   normalizeSupportForm,
@@ -24,6 +26,7 @@ export function AppealForm() {
   const [text, setText] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  useClosingConfirmation(text !== "");
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
   // второй клик до ре-рендера не отправит второй запрос (паттерн VK).
   const submitGuard = useRef(false);
@@ -45,10 +48,14 @@ export function AppealForm() {
         submitGuard.current = false;
       },
       onSuccess: () => {
+        haptic.success();
         setText("");
         setSuccess(true);
       },
-      onError: (error) => setFormError(feedbackErrorMessage(error)),
+      onError: (error) => {
+        haptic.error();
+        setFormError(feedbackErrorMessage(error));
+      },
     });
   };
 

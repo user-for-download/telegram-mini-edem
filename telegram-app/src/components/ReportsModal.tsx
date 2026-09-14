@@ -13,6 +13,8 @@ import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { haptic } from "@/utils/haptics";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { ApiError } from "@/api/client";
 import {
   useCreateReportMutation,
@@ -146,6 +148,7 @@ export const ReportsBody = memo(function ReportsBody() {
   const [description, setDescription] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  useClosingConfirmation(targetId !== "" || description !== "");
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
   // второй клик до ре-рендера не отправит второй запрос (паттерн VK).
   const submitGuard = useRef(false);
@@ -185,11 +188,15 @@ export const ReportsBody = memo(function ReportsBody() {
           submitGuard.current = false;
         },
         onSuccess: () => {
+          haptic.success();
           setTargetId("");
           setDescription("");
           setSuccess(true);
         },
-        onError: (error) => setFormError(reportErrorMessage(error)),
+        onError: (error) => {
+          haptic.error();
+          setFormError(reportErrorMessage(error));
+        },
       },
     );
   };

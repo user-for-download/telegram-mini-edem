@@ -10,6 +10,7 @@ import {
 } from "@/pages/supportValidation";
 import { FEEDBACK_TEXT_MAX_LENGTH } from "@edem/contracts";
 import { haptic } from "@/utils/haptics";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 
 const TOPICS = [
   "Вопрос по поездке",
@@ -54,6 +55,7 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
   const create = useCreateFeedbackMutation();
   const [topic, setTopic] = useState<string>(TOPICS[0]);
   const [message, setMessage] = useState("");
+  useClosingConfirmation(message !== "");
   const [formError, setFormError] = useState<string | null>(null);
 
   const submit = (event: FormEvent) => {

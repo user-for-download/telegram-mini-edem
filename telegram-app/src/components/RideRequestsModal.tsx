@@ -9,6 +9,7 @@ import { Button, Input, Modal } from "@telegram-apps/telegram-ui";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
+import { haptic } from "@/utils/haptics";
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SearchPage } from "@/pages/SearchPage";
@@ -180,7 +181,16 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
       return;
     }
     setValidationError(null);
-    create.mutate(parsed.data, { onSuccess: () => { setFrom(""); setTo(""); setEarliest(""); setLatest(""); } });
+    create.mutate(parsed.data, {
+      onSuccess: () => {
+        haptic.success();
+        setFrom("");
+        setTo("");
+        setEarliest("");
+        setLatest("");
+      },
+      onError: () => haptic.error(),
+    });
   };
 
   const startEdit = (request: RideRequest) => {
@@ -219,7 +229,13 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
     }
     update.mutate(
       { id: requestId, data: parsed.data },
-      { onSuccess: () => setEditingId(null) },
+      {
+        onSuccess: () => {
+          haptic.success();
+          setEditingId(null);
+        },
+        onError: () => haptic.error(),
+      },
     );
   };
 

@@ -31,11 +31,9 @@ export function TripDetailsModal({
 }
 
 /**
- * Роут /trips/:tripId: детали inline (SSR-friendly — Telegram-UI Modal
- * использует портал и не попадает в renderToString, из-за чего 8/8
- * tripDetailsPage тестов видели только фоновый SearchPage).
- * Фон SearchPage оставлен скрытым для будущей шторки; закрытие —
- * назад по истории, иначе fallback на /trips.
+ * Роут /trips/:tripId: фон — скрытый «Поиск», поверх — настоящая шторка.
+ * Контент тестируется через TripDetailsPage (портал Modal в renderToString
+ * не попадает). Закрытие — назад по истории, иначе fallback на /trips.
  */
 export function TripDetailsRoute() {
   const navigate = useNavigate();
@@ -49,10 +47,7 @@ export function TripDetailsRoute() {
       <div aria-hidden hidden>
         <SearchPage />
       </div>
-      <div role="dialog" aria-label="Детали поездки">
-        <TripDetailsPage />
-        <button type="button" aria-label="Закрыть детали" onClick={close} hidden />
-      </div>
+      <TripDetailsModal open onClose={close} />
     </>
   );
 }

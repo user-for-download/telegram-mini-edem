@@ -14,6 +14,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { haptic } from "@/utils/haptics";
 import { TripsPage } from "@/pages/TripsPage";
 import {
   bookingErrorMessage,
@@ -325,10 +326,16 @@ export const TripRequestsBody = memo(function TripRequestsBody({
                 booking={booking}
                 pending={update.isPending}
                 onAccept={(id) =>
-                  update.mutate({ id, status: "confirmed" })
+                  update.mutate({ id, status: "confirmed" }, {
+                    onSuccess: () => haptic.success(),
+                    onError: () => haptic.error(),
+                  })
                 }
                 onDecline={(id) =>
-                  update.mutate({ id, status: "declined" })
+                  update.mutate({ id, status: "declined" }, {
+                    onSuccess: () => haptic.success(),
+                    onError: () => haptic.error(),
+                  })
                 }
               />
             ))}
