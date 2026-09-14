@@ -7,7 +7,6 @@ import {
   Input,
   Section,
   SegmentedControl,
-  Subheadline,
   IconButton,
   Tappable,
 } from "@telegram-apps/telegram-ui";
@@ -23,6 +22,9 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { SectionTitle } from "@/components/SectionTitle";
+import { ProfileBarSkeleton } from "@/components/Skeletons";
+import { TripCardSkeleton } from "@/components/Skeletons";
 import { POPULAR_ROUTES } from "@/consts/popularRoutes";
 import { haptic } from "@/utils/haptics";
 import { dayTimeLabel } from "@/utils/date";
@@ -84,36 +86,36 @@ export function HomePage() {
   return (
     <>
       <OfflineBanner />
-      <div className="flex flex-col gap-4 pb-4 pt-1">
-        {/* Профиль-бар: имя и рейтинг */}
-        <div className="flex items-center justify-between px-4 pt-1">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Avatar
-              size={40}
-              src={profile.data?.avatar}
-              acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
-            />
-            <span className="text-[15px] font-semibold text-(--tgui--text_color) truncate">
-              {profile.data?.name ?? "Попутчик"}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--text_color) text-xs font-semibold shrink-0">
-            <Star size={13} className="fill-(--app-rating) text-(--app-rating)" />
-            <span>{profile.data ? profile.data.rating.toFixed(1) : "—"}</span>
-          </div>
-        </div>
-
-        {/* Экспресс-поиск */}
-        <div className="px-4">
-          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-sm">
-            <div className="flex items-center justify-between mb-1">
-              <Subheadline weight="2" className="text-[15px]! font-medium">
-                Куда поедем?
-              </Subheadline>
-              <span className="text-[11px] font-medium text-(--tgui--hint_color)">
-                Поиск попуток
+      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+        {/* Профиль-бар: Cell (аватар + имя + пилюля рейтинга).
+            Ошибка профиля лендинг не блокирует — тихий фолбэк. */}
+        {profile.isLoading ? (
+          <ProfileBarSkeleton />
+        ) : (
+          <Cell
+            before={
+              <Avatar
+                size={40}
+                src={profile.data?.avatar}
+                acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
+              />
+            }
+            after={
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--text_color) text-xs font-semibold shrink-0">
+                <Star size={13} className="fill-(--app-rating) text-(--app-rating)" />
+                <span>{profile.data ? profile.data.rating.toFixed(1) : "—"}</span>
               </span>
-            </div>
+            }
+          >
+            {profile.data?.name ?? "Попутчик"}
+          </Cell>
+        )}
+
+        {/* Экспресс-поиск: карточка формы (паттерн TripCard) */}
+        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-sm">
+          <div className="mb-2">
+            <SectionTitle title="Куда поедем?" hint="Поиск попуток" />
+          </div>
 
             <form onSubmit={submitSearch} className="flex flex-col gap-2.5">
               <div className="flex flex-col gap-1.5 relative">
@@ -134,7 +136,7 @@ export function HomePage() {
                 <IconButton
                   type="button"
                   size="s"
-                  mode="plain"
+                  mode="gray"
                   onClick={swapCities}
                   aria-label="Поменять направление"
                   className="absolute! right-2! top-1/2! -translate-y-1/2! bg-(--tgui--section_bg_color)! shadow-xs!"
@@ -173,32 +175,40 @@ export function HomePage() {
                 Найти поездку
               </Button>
             </form>
-          </div>
         </div>
 
-        {/* Ближайшая бронь */}
-        {activeBooking && (
-          <div className="px-4">
-            <Tappable
-              Component="button"
-              type="button"
-              onClick={() => {
-                haptic.light();
-                navigate(`/trips/${activeBooking.trip.id}`);
-              }}
-              className="w-full text-left p-3.5 rounded-2xl bg-(--tgui--secondary_fill) border border-(--app-info)/25 cursor-pointer hover:opacity-95 transition"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-(--app-info) text-white">
-                    Ближайшая поездка
+        {/* Ближайшая бронь: заголовок + статус-пилюля. Загрузка — скелетон,
+            ошибка броней лендинг не блокирует — секция тихо скрыта. */}
+        {bookings.isLoading ? (
+          <div role="status" aria-label="Загрузка поездки">
+            <TripCardSkeleton />
+          </div>
+        ) : (
+          !bookings.error &&
+          activeBooking && (
+            <div className="flex flex-col gap-2">
+              <SectionTitle
+                title="Ближайшая поездка"
+                hint={dayTimeLabel(activeBooking.trip.date, activeBooking.trip.time)}
+              />
+              <Tappable
+                Component="button"
+                type="button"
+                onClick={() => {
+                  haptic.light();
+                  navigate(`/trips/${activeBooking.trip.id}`);
+                }}
+                className="w-full text-left p-3.5 rounded-2xl bg-(--tgui--secondary_fill) border border-(--app-info)/25 cursor-pointer hover:opacity-95 transition"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    className="StatusPill shrink-0"
+                    data-tone={activeBooking.status === "confirmed" ? "success" : "warning"}
+                  >
+                    {activeBooking.status === "confirmed" ? "Подтверждено" : "Ожидает подтверждения"}
                   </span>
-                  <span className="text-[12px] font-medium text-(--tgui--hint_color)">
-                    {dayTimeLabel(activeBooking.trip.date, activeBooking.trip.time)}
-                  </span>
+                  <ChevronRight size={16} className="text-(--app-info)" />
                 </div>
-                <ChevronRight size={16} className="text-(--app-info)" />
-              </div>
 
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -220,44 +230,40 @@ export function HomePage() {
                 </div>
               </div>
             </Tappable>
-          </div>
+            </div>
+          )
         )}
 
         {/* CTA водителю */}
-        <div className="px-4">
-          <Banner
-            type="section"
-            header="Едете на машине?"
-            subheader="Возьмите попутчиков"
-            description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы на поездку"
-            before={
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-(--tgui--secondary_fill) text-(--app-info)">
-                <PlusCircle size={22} />
-              </div>
-            }
+        <Banner
+          type="section"
+          header="Едете на машине?"
+          subheader="Возьмите попутчиков"
+          description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы на поездку"
+          before={
+            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-(--tgui--secondary_fill) text-(--app-info)">
+              <PlusCircle size={22} />
+            </div>
+          }
+        >
+          <Button
+            size="m"
+            mode="filled"
+            stretched
+            onClick={() => {
+              haptic.light();
+              navigate("/trips/my/new");
+            }}
+            before={<PlusCircle size={16} />}
           >
-            <Button
-              size="m"
-              mode="filled"
-              onClick={() => {
-                haptic.light();
-                navigate("/trips/my/new");
-              }}
-              before={<PlusCircle size={16} />}
-            >
-              Создать поездку
-            </Button>
-          </Banner>
-        </div>
+            Создать поездку
+          </Button>
+        </Banner>
 
-        {/* Популярные направления */}
-        <div className="px-4">
-          <div className="flex items-center justify-between mb-2">
-            <Subheadline weight="2" className="text-[16px]!">
-              Популярные направления
-            </Subheadline>
-            <span className="text-[12px] text-(--tgui--hint_color)">По области</span>
-          </div>
+        {/* Популярные направления: сетка карточек (в Section не кладётся —
+            Section только для строк), заголовок — общий SectionTitle. */}
+        <div className="flex flex-col gap-2">
+          <SectionTitle title="Популярные направления" hint="По области" />
 
           <div className="grid grid-cols-2 gap-2.5">
             {POPULAR_ROUTES.map((route) => (
@@ -280,9 +286,8 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Преимущества */}
-        <div className="px-4">
-          <Section header="Преимущества Едем">
+        {/* Преимущества: эталон Section + Cell — не трогаем. */}
+        <Section header="Преимущества Едем">
             <Cell
               before={
                 <div className="icon-circle icon-circle--info">
@@ -314,7 +319,6 @@ export function HomePage() {
               Выгодные цены
             </Cell>
           </Section>
-        </div>
 
       </div>
     </>

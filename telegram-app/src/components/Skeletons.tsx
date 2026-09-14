@@ -106,6 +106,27 @@ export function ReviewCardSkeleton() {
   );
 }
 
+/** Болванка профиль-бара главной: аватар + имя + пилюля рейтинга. */
+export function ProfileBarSkeleton() {
+  return (
+    <div className="px-4 pt-1" role="status" aria-label="Загрузка профиля">
+      <Skeleton
+        visible
+        aria-hidden="true"
+        className="overflow-hidden rounded-2xl"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="h-10 w-10 rounded-full" />
+            <div className="h-4 w-28" />
+          </div>
+          <div className="h-6 w-14 rounded-full" />
+        </div>
+      </Skeleton>
+    </div>
+  );
+}
+
 /** Стопка болванок для начальной загрузки списка (QueryState skeleton). */
 export function TripCardsSkeleton({ count = 3 }: { count?: number }) {
   return (
