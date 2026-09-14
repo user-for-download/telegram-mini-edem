@@ -110,7 +110,7 @@ export function SearchPage() {
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-4">
         <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <Subheadline weight="2" className="!text-[16px]">
+            <Subheadline weight="2" className="text-[16px]!">
               Поиск попутных поездок
             </Subheadline>
             <div className="flex items-center gap-1.5">
@@ -118,7 +118,7 @@ export function SearchPage() {
                 mode="mono"
                 Component="a"
                 href="#/ride-requests"
-                className="!text-xs"
+                className="text-xs!"
               >
                 Ищу попутку
               </Chip>
@@ -130,7 +130,7 @@ export function SearchPage() {
                   setShowFilters(!showFilters);
                 }}
                 before={<Filter size={13} />}
-                className="!text-xs"
+                className="text-xs!"
                 aria-pressed={showFilters}
               >
                 Фильтры
@@ -185,7 +185,7 @@ export function SearchPage() {
               mode="plain"
               onClick={swapCities}
               aria-label="Поменять направление"
-              className="!absolute !right-2 !top-1/2 !-translate-y-1/2 !bg-(--tgui--section_bg_color) !shadow-xs"
+              className="absolute! right-2! top-1/2! -translate-y-1/2! bg-(--tgui--section_bg_color)! shadow-xs!"
             >
               <ArrowRightLeft size={14} className="text-(--app-info)" />
             </IconButton>
@@ -198,7 +198,7 @@ export function SearchPage() {
                 mode="mono"
                 Component="button"
                 onClick={() => pickQuickCity(city)}
-                className="shrink-0 !text-xs"
+                className="shrink-0 text-xs!"
               >
                 {city}
               </Chip>
@@ -269,7 +269,7 @@ export function SearchPage() {
         </div>
 
         <div className="flex items-center justify-between px-1">
-          <Caption className="!text-(--tgui--hint_color) font-medium">
+          <Caption className="text-(--tgui--hint_color)! font-medium">
             Найдено поездок: {items.length}
           </Caption>
           <span className="text-[11px] text-(--tgui--hint_color)">

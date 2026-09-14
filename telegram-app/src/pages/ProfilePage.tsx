@@ -223,7 +223,7 @@ export function ProfilePage() {
                   acronym={(profile.data.name ?? "П").slice(0, 2).toUpperCase()}
                 />
                 <div className="flex-1 min-w-0">
-                  <Headline weight="2" className="!text-[18px] truncate">
+                  <Headline weight="2" className="text-[18px]! truncate">
                     {profile.data.name}
                   </Headline>
                   <div className="flex items-center gap-2 mt-1">
@@ -303,7 +303,7 @@ export function ProfilePage() {
             </div>
 
             {subtab === "settings" ? (
-              <List className="!p-0 flex flex-col gap-3">
+              <List className="p-0! flex flex-col gap-3">
                 <Section header="Мой автомобиль (для поездок)">
                   <MenuRow
                     label={profile.data.car ? "Автомобиль" : "Добавить автомобиль"}

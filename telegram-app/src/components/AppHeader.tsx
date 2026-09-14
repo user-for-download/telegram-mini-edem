@@ -19,7 +19,7 @@ export function AppHeader() {
               <Title
                 level="2"
                 weight="2"
-                className="!text-[18px] tracking-tight leading-none font-bold"
+                className="text-[18px]! tracking-tight leading-none font-bold"
               >
                 Едем
               </Title>
@@ -27,7 +27,7 @@ export function AppHeader() {
                 Попутчики
               </span>
             </div>
-            <Caption className="!text-(--tgui--hint_color) !text-[11px] leading-tight block mt-0.5">
+            <Caption className="text-(--tgui--hint_color)! text-[11px]! leading-tight block mt-0.5">
               Вологодская область · между городами и сёлами
             </Caption>
           </div>

@@ -107,7 +107,7 @@ export function HomePage() {
         <div className="px-4">
           <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-sm">
             <div className="flex items-center justify-between mb-1">
-              <Subheadline weight="2" className="!text-[15px] font-medium">
+              <Subheadline weight="2" className="text-[15px]! font-medium">
                 Куда поедем?
               </Subheadline>
               <span className="text-[11px] font-medium text-(--tgui--hint_color)">
@@ -137,7 +137,7 @@ export function HomePage() {
                   mode="plain"
                   onClick={swapCities}
                   aria-label="Поменять направление"
-                  className="!absolute !right-2 !top-1/2 !-translate-y-1/2 !bg-(--tgui--section_bg_color) !shadow-xs"
+                  className="absolute! right-2! top-1/2! -translate-y-1/2! bg-(--tgui--section_bg_color)! shadow-xs!"
                 >
                   <ArrowRightLeft size={15} className="text-(--app-info)" />
                 </IconButton>
@@ -253,7 +253,7 @@ export function HomePage() {
         {/* Популярные направления */}
         <div className="px-4">
           <div className="flex items-center justify-between mb-2">
-            <Subheadline weight="2" className="!text-[16px]">
+            <Subheadline weight="2" className="text-[16px]!">
               Популярные направления
             </Subheadline>
             <span className="text-[12px] text-(--tgui--hint_color)">По области</span>
