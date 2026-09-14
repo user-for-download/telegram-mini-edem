@@ -7,6 +7,7 @@ import {
   Placeholder,
   Section,
   SegmentedControl,
+  Switch,
 } from "@telegram-apps/telegram-ui";
 import {
   Bell,
@@ -14,10 +15,13 @@ import {
   ChevronRight,
   Flag,
   LogOut,
+  Moon,
   Star,
   Trash2,
   TriangleAlert,
+  Volume2,
 } from "lucide-react";
+import { miniApp, useSignal } from "@telegram-apps/sdk-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
@@ -28,9 +32,15 @@ import { useAuthStore } from "@/store/useAuthStore";
 import {
   useDeleteAccountMutation,
   useLogoutMutation,
+  useProfileNotificationSettingsMutation,
   useProfileQuery,
 } from "@/queries/profile";
 import { useUserReviewsInfiniteQuery } from "@/queries/useReviewsQuery";
+import {
+  setSoundEnabled,
+  setThemeOverride,
+  useAppSettings,
+} from "@/utils/appSettings";
 import { haptic } from "@/utils/haptics";
 import { useModalBack } from "@/utils/modalBack";
 
@@ -76,6 +86,45 @@ function MenuRow({
 }
 
 /**
+ * Строка-переключатель (язык ProfileTab эталона): обычный div,
+ * не кнопка — внутри интерактивный Switch. tgui Switch = checkbox.
+ */
+function SwitchRow({
+  icon,
+  title,
+  subtitle,
+  checked,
+  onChange,
+  label,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+}) {
+  return (
+    <div className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)]">
+      <span className="shrink-0">{icon}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[15px] font-medium text-[var(--tgui--text_color)] truncate">
+          {title}
+        </span>
+        <span className="block text-[12px] text-[var(--tgui--hint_color)] truncate">
+          {subtitle}
+        </span>
+      </span>
+      <Switch
+        aria-label={label}
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </div>
+  );
+}
+
+/**
  * Профиль Telegram-пользователя (язык ProfileTab примера): header-карточка
  * с рейтингом и статистикой, субтабы «Настройки и авто» / «Отзывы».
  *
@@ -91,6 +140,12 @@ export function ProfilePage() {
   const profile = useProfileQuery();
   const logout = useLogoutMutation();
   const remove = useDeleteAccountMutation();
+  const saveNotifications = useProfileNotificationSettingsMutation();
+  const { themeOverride, soundEnabled } = useAppSettings();
+  const tgDark = useSignal(miniApp.isDark);
+  const dark = themeOverride ? themeOverride === "dark" : tgDark;
+  const [notifEnabled, setNotifEnabled] = useState<boolean | null>(null);
+  const notifChecked = notifEnabled ?? profile.data?.notificationsEnabled ?? true;
   const aboutReviews = useUserReviewsInfiniteQuery(me?.id ?? "", 20);
 
   const [subtab, setSubtab] = useState<ProfileSubtab>("settings");
@@ -265,7 +320,73 @@ export function ProfilePage() {
                   />
                 </Section>
 
-                <Section header="Уведомления">
+                <Section header="Внешний вид">
+                  <SwitchRow
+                    label="Тёмная тема"
+                    icon={
+                      <span className="icon-circle icon-circle--purple">
+                        <Moon size={18} />
+                      </span>
+                    }
+                    title="Тёмная тема"
+                    subtitle={
+                      dark
+                        ? `Включена тёмная тема${themeOverride ? "" : " (как в Telegram)"}`
+                        : `Включена светлая тема${themeOverride ? "" : " (как в Telegram)"}`
+                    }
+                    checked={dark}
+                    onChange={(next) => {
+                      setThemeOverride(next ? "dark" : "light");
+                      haptic.light();
+                    }}
+                  />
+                </Section>
+
+                <Section header="Уведомления и звуки">
+                  <div className="flex flex-col gap-2">
+                    <SwitchRow
+                      label="In-app уведомления"
+                      icon={
+                        <span className="icon-circle icon-circle--info">
+                          <Bell size={18} />
+                        </span>
+                      }
+                      title="In-app уведомления"
+                      subtitle="О новых бронях и подтверждении статуса"
+                      checked={notifChecked}
+                      onChange={(next) => {
+                        if (saveNotifications.isPending) return;
+                        const previous = notifChecked;
+                        haptic.light();
+                        setNotifEnabled(next);
+                        saveNotifications.mutate(next, {
+                          onSuccess: () => haptic.success(),
+                          onError: () => {
+                            haptic.error();
+                            setNotifEnabled(previous);
+                          },
+                        });
+                      }}
+                    />
+                    <SwitchRow
+                      label="Звуковые эффекты"
+                      icon={
+                        <span className="icon-circle icon-circle--warning">
+                          <Volume2 size={18} />
+                        </span>
+                      }
+                      title="Звуковые эффекты"
+                      subtitle="Звуковые сигналы и вибрация"
+                      checked={soundEnabled}
+                      onChange={(next) => {
+                        setSoundEnabled(next);
+                        if (next) haptic.light();
+                      }}
+                    />
+                  </div>
+                </Section>
+
+                <Section header="Подробные настройки">
                   <div className="flex flex-col gap-2">
                     <MenuRow
                       label="Настройки уведомлений"
@@ -281,17 +402,6 @@ export function ProfilePage() {
                           : "О новых бронях и подтверждении статуса"
                       }
                       onClick={() => navigate("/settings")}
-                    />
-                    <MenuRow
-                      label="Все уведомления"
-                      icon={
-                        <span className="icon-circle icon-circle--success">
-                          <Bell size={18} />
-                        </span>
-                      }
-                      title="Все уведомления"
-                      subtitle="Inbox заявок и статусов поездок"
-                      onClick={() => navigate("/notifications")}
                     />
                   </div>
                 </Section>

@@ -23,12 +23,14 @@ const {
   mockUseLogout,
   mockUseDeleteAccount,
   mockUseUserReviews,
+  mockUseNotifSettings,
 } = vi.hoisted(() => ({
   mockUseProfile: vi.fn(),
   mockUseProfileUpdate: vi.fn(),
   mockUseLogout: vi.fn(),
   mockUseDeleteAccount: vi.fn(),
   mockUseUserReviews: vi.fn(),
+  mockUseNotifSettings: vi.fn(() => ({ mutate: vi.fn(), isPending: false, error: null })),
 }));
 
 vi.mock("@/queries/profile", () => ({
@@ -36,6 +38,7 @@ vi.mock("@/queries/profile", () => ({
   useProfileUpdateMutation: mockUseProfileUpdate,
   useLogoutMutation: mockUseLogout,
   useDeleteAccountMutation: mockUseDeleteAccount,
+  useProfileNotificationSettingsMutation: mockUseNotifSettings,
 }));
 
 vi.mock("@/queries/useReviewsQuery", async (importOriginal) => {
@@ -134,11 +137,16 @@ describe("ProfilePage header", () => {
     expect(html).toContain("Автомобиль");
     expect(html).toContain("Octavia");
     expect(html).toContain("Настройки уведомлений");
-    expect(html).toContain("Все уведомления");
     expect(html).toContain("Служба поддержки");
     expect(html).toContain("Жалобы");
     expect(html).toContain("Выйти");
     expect(html).toContain("Удалить профиль");
+    // Переключатели из эталона: тема + уведомления и звуки.
+    expect(html).toContain("Внешний вид");
+    expect(html).toContain("Тёмная тема");
+    expect(html).toContain("Уведомления и звуки");
+    expect(html).toContain("In-app уведомления");
+    expect(html).toContain("Звуковые эффекты");
   });
 
   it("без авто — CTA добавления", () => {

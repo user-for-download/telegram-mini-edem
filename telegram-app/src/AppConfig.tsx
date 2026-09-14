@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthGate } from "@/components/AuthGate";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ApiError } from "@/api/client";
+import { useAppSettings } from "@/utils/appSettings";
 import { Onboarding } from "@/components/Onboarding";
 import { ToastProvider } from "@/components/ToastProvider";
 import { WsProvider, TelegramRealtimeListener } from "@/providers/WebSocketProvider";
@@ -83,12 +84,14 @@ function useTguiPlatform(): "base" | "ios" {
   return platform;
 }
 
-/** Живая тёмная тема Telegram (miniApp.isDark): ведём и проп appearance
- * AppRoot (палитра tgui), и свой класс `dark` на documentElement (наши
- * --app-* токены — tgui вешает свой хэшированный dark-класс, на который
- * извне не опереться). В SSR (renderToString) эффекты не выполняются. */
+/** Живая тёмная тема Telegram (miniApp.isDark) с ручным переопределением
+ * из профиля («Внешний вид»): ведём и проп appearance AppRoot (палитра
+ * tgui), и свой класс `dark` на documentElement (наши --app-* токены).
+ * В SSR (renderToString) эффекты не выполняются. */
 function useTelegramAppearance(): "dark" | "light" {
-  const isDark = useSignal(miniApp.isDark);
+  const tgDark = useSignal(miniApp.isDark);
+  const { themeOverride } = useAppSettings();
+  const isDark = themeOverride ? themeOverride === "dark" : tgDark;
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
     // Нативный хром Telegram в цвет приложения (официальная дока):

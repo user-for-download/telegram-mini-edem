@@ -133,7 +133,7 @@ export const EditProfileBody = memo(function EditProfileBody({
           {formError ?? (update.error instanceof Error ? update.error.message : "Не удалось сохранить")}
         </p>
       )}
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
         <Button
           stretched
           size="l"
@@ -143,7 +143,7 @@ export const EditProfileBody = memo(function EditProfileBody({
         >
           Сохранить изменения
         </Button>
-        <Button mode="bezeled" size="l" disabled={update.isPending} onClick={onDone}>
+        <Button mode="bezeled" size="l" stretched disabled={update.isPending} onClick={onDone}>
           Отмена
         </Button>
       </div>

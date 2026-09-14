@@ -32,6 +32,7 @@ vi.mock("@telegram-apps/sdk-react", () => ({
   },
 }));
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   clearScrollPositions,
   planRouteTransition,
@@ -48,17 +49,21 @@ function Probe({ routeKey }: { routeKey: string }) {
 }
 
 function renderShell(url: string): string {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
     <AppRoot platform="base">
-      <MemoryRouter initialEntries={[url]}>
-        <Routes>
-          <Route element={<Shell />}>
-            <Route path="/trips" element={<div>Список поездок</div>} />
-            <Route path="/trips/:tripId" element={<div>Модалка поездки</div>} />
-            <Route path="*" element={<div>Фолбэк раздела</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[url]}>
+          <Routes>
+            <Route element={<Shell />}>
+              <Route path="/trips" element={<div>Список поездок</div>} />
+              <Route path="/trips/:tripId" element={<div>Модалка поездки</div>} />
+              <Route path="/notifications" element={<div>Уведомления</div>} />
+              <Route path="*" element={<div>Фолбэк раздела</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     </AppRoot>,
   );
 }

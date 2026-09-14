@@ -1,12 +1,13 @@
 import { FixedLayout } from "@telegram-apps/telegram-ui";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
-import { Car, Home, Search, User } from "lucide-react";
+import { Bell, Car, Home, Search, User } from "lucide-react";
 
-export type AppTabId = "home" | "trips" | "search" | "profile";
+export type AppTabId = "home" | "trips" | "notifications" | "search" | "profile";
 
 const TABS = [
   { key: "home", text: "Главная", to: "/", Icon: Home },
   { key: "trips", text: "Поездки", to: "/bookings", Icon: Car },
+  { key: "notifications", text: "Уведомления", to: "/notifications", Icon: Bell },
   { key: "profile", text: "Профиль", to: "/profile", Icon: User },
 ] as const;
 
@@ -26,16 +27,19 @@ const activeBtn =
 
 /**
  * Нижний бар — кастомный floating (язык образца): прозрачная подложка
- * с блюром, круглые приподнятые кнопки, без теней. Три раздела в пилюле,
+ * с блюром, круглые приподнятые кнопки, без теней. Четыре раздела в пилюле,
  * Поиск — отдельным кругом справа. Route-driven: активный таб определяет
- * роутер, компонент только рендерит и отдаёт выбор наружу.
+ * роутер, компонент только рендерит и отдаёт выбор наружу. Бейдж
+ * непрочитанных уведомлений — пропом (счётчик считает роутер из кэша inbox).
  */
 export function AppTabbar({
   activeTab,
   onSelect,
+  unreadCount = 0,
 }: {
   activeTab: AppTabId;
   onSelect: (to: string) => void;
+  unreadCount?: number;
 }) {
   const selectedSearch = activeTab === SEARCH_TAB.key;
   return (
@@ -48,6 +52,7 @@ export function AppTabbar({
         >
           {TABS.map(({ key, text, to, Icon }) => {
             const selected = activeTab === key;
+            const showBadge = key === "notifications" && unreadCount > 0;
             return (
               <button
                 key={key}
@@ -55,13 +60,22 @@ export function AppTabbar({
                 role="tab"
                 aria-selected={selected}
                 aria-current={selected ? "page" : undefined}
+                aria-label={showBadge ? `${text}, непрочитанных: ${unreadCount}` : text}
                 onClick={() => go(activeTab, key, to, onSelect)}
                 className={[
-                  "flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-full transition-all duration-200",
+                  "relative flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-full transition-all duration-200",
                   selected ? activeBtn : idleBtn,
                 ].join(" ")}
               >
                 <Icon size={22} strokeWidth={selected ? 2.5 : 1.8} />
+                {showBadge && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-1 top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--app-danger)] px-1 text-[10px] font-bold leading-none text-white"
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
                 <span className="text-[9px] font-semibold leading-none">
                   {text}
                 </span>

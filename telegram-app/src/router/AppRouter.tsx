@@ -22,13 +22,14 @@ import { HomePage } from "@/pages/HomePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { TripDetailsRoute } from "@/components/TripDetailsModal";
 import { CreateTripRoute } from "@/components/CreateTripModal";
-import { NotificationsRoute } from "@/components/NotificationsModal";
+import { NotificationsPage } from "@/pages/NotificationsPage";
 import { VehicleRoute } from "@/components/VehicleModal";
 import { TripsPage } from "@/pages/TripsPage";
 import { RideRequestsRoute } from "@/components/RideRequestsModal";
 import { TripRequestsRoute } from "@/components/TripRequestsModal";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { EditProfileRoute } from "@/components/EditProfileModal";
+import { useNotificationsInboxQuery } from "@/queries/useNotificationsQuery";
 import { ReviewsRoute } from "@/components/ReviewsModal";
 import { SettingsRoute } from "@/components/SettingsModal";
 import { SupportRoute } from "@/components/SupportModal";
@@ -40,7 +41,7 @@ import {
 
 export { parseTripStartParam };
 
-const ROOT_ROUTES = new Set(["/", "/trips", "/bookings", "/profile"]);
+const ROOT_ROUTES = new Set(["/", "/trips", "/bookings", "/notifications", "/profile"]);
 
 export function Shell() {
   const location = useLocation();
@@ -76,6 +77,10 @@ export function Shell() {
   const openProfile = useCallback(() => navigate("/profile"), [navigate]);
   useSettingsButton(openProfile, isRoot && location.pathname !== "/profile");
 
+  // Бейдж непрочитанных на табе (тот же кэш inbox, что у страницы).
+  const inbox = useNotificationsInboxQuery(20);
+  const unreadCount = inbox.data?.pages[0]?.unreadCount ?? 0;
+
   useEffect(() => {
     if (didHandleStartParam.current) return;
     // resolveStartParamRoute: известный токен → маршрут раздела/поездки,
@@ -90,9 +95,11 @@ export function Shell() {
     ? "home"
     : location.pathname.startsWith("/bookings")
       ? "trips"
-      : location.pathname.startsWith("/trips")
-        ? "search"
-        : "profile";
+      : location.pathname.startsWith("/notifications")
+        ? "notifications"
+        : location.pathname.startsWith("/trips")
+          ? "search"
+          : "profile";
 
   const go = (to: string) => {
     navigate(to);
@@ -112,7 +119,7 @@ export function Shell() {
         </motion.div>
       </main>
       <nav aria-label="Основные разделы">
-        <AppTabbar activeTab={activeTab} onSelect={go} />
+        <AppTabbar activeTab={activeTab} onSelect={go} unreadCount={unreadCount} />
       </nav>
     </div>
   );
@@ -136,7 +143,7 @@ export function AppRouter() {
           <Route path="/profile/edit" element={<EditProfileRoute />} />
           <Route path="/reviews" element={<ReviewsRoute />} />
           <Route path="/settings" element={<SettingsRoute />} />
-          <Route path="/notifications" element={<NotificationsRoute />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile/support" element={<SupportRoute />} />
           <Route path="/profile/reports" element={<ReportsRoute />} />
           <Route path="/vehicle" element={<VehicleRoute />} />
