@@ -51,6 +51,10 @@ interface SeedUser {
   deletedAtDaysAgo?: number;
   // Версия показанного онбординга (для проверки reset-флоу в админке).
   onboardingVersion?: string;
+  // Демо согласия на TG-уведомления: /start фиксирует tgChatJoinedAt
+  // (bot/index.ts). Диспетчер шлёт только при согласии — без него
+  // seeded inbox вечно skipped/no_chat и bot-api-send нечем демоить.
+  tgChatJoinedAtDaysAgo?: number;
 }
 
 interface SeedBooking {
@@ -77,6 +81,10 @@ interface SeedTrip {
   price: number;
   seatsTotal: number;
   status: "active" | "completed" | "cancelled";
+  // Только для cancelled: как пишет рантайм при отмене (трип без
+  // cancelledAt в сиде — нереалистичен, валидация требует).
+  cancelledAtDaysAgo?: number;
+  cancelledByType?: "passenger" | "driver";
   tags: string[];
   comment?: string;
   bookings: SeedBooking[];
@@ -250,6 +258,7 @@ const users: SeedUser[] = [
     rating: 5.0,
     reviewsCount: 15,
     tripsCount: 22,
+    tgChatJoinedAtDaysAgo: 2,
     isVerified: true,
 
     about: "Езжу аккуратно, в машине есть кондиционер и хорошая музыка.",
@@ -378,6 +387,7 @@ const users: SeedUser[] = [
     rating: 4.7,
     reviewsCount: 9,
     tripsCount: 14,
+    tgChatJoinedAtDaysAgo: 3,
     isVerified: true,
     about: "Пассажир, часто езжу по делам в соседние города.",
   },
@@ -389,6 +399,7 @@ const users: SeedUser[] = [
     rating: 4.6,
     reviewsCount: 4,
     tripsCount: 10,
+    onboardingVersion: "1",
     isVerified: true,
     about: "Студент, езжу домой на выходные.",
   },
@@ -400,6 +411,7 @@ const users: SeedUser[] = [
     rating: 5.0,
     reviewsCount: 16,
     tripsCount: 21,
+    tgChatJoinedAtDaysAgo: 2,
     isVerified: true,
 
     about: "Пунктуальная, люблю тишину в дороге.",
@@ -412,6 +424,7 @@ const users: SeedUser[] = [
     rating: 4.8,
     reviewsCount: 7,
     tripsCount: 13,
+    tgChatJoinedAtDaysAgo: 2,
     isVerified: true,
     about: "Работаю вахтой, нужны поездки к поезду.",
   },
@@ -480,6 +493,7 @@ const users: SeedUser[] = [
     rating: 4.6,
     reviewsCount: 3,
     tripsCount: 7,
+    tgChatJoinedAtDaysAgo: 3,
     isVerified: true,
     about: "Езжу к семье по выходным.",
   },
@@ -1131,6 +1145,8 @@ const trips: SeedTrip[] = [
     price: 300,
     seatsTotal: 3,
     status: "cancelled",
+    cancelledAtDaysAgo: 1,
+    cancelledByType: "driver",
     tags: ["С остановками"],
     comment: "Поездка отменена из-за погоды.",
     bookings: [{ passengerId: "u-15", seat: 1, status: "declined" }],
@@ -1148,6 +1164,8 @@ const trips: SeedTrip[] = [
     price: 600,
     seatsTotal: 3,
     status: "cancelled",
+    cancelledAtDaysAgo: 1,
+    cancelledByType: "driver",
     tags: [],
     comment: "Отменил, планы изменились.",
     bookings: [],
@@ -1582,6 +1600,11 @@ function validateSeedData(): void {
       );
     }
 
+    // Отменённая поездка обязана иметь след отмены (как пишет рантайм).
+    if (trip.status === "cancelled" && trip.cancelledAtDaysAgo === undefined) {
+      throw new Error(`Cancelled seed trip ${trip.id} без cancelledAt`);
+    }
+
     const activeSeats = new Set<number>();
     const activePassengers = new Set<string>();
     for (const booking of trip.bookings) {
@@ -1822,6 +1845,10 @@ async function main() {
             ? new Date(seedNow.getTime() - u.deletedAtDaysAgo * dayMs)
             : null,
         onboardingVersion: u.onboardingVersion ?? null,
+        tgChatJoinedAt:
+          u.tgChatJoinedAtDaysAgo !== undefined
+            ? new Date(seedNow.getTime() - u.tgChatJoinedAtDaysAgo * dayMs)
+            : null,
         ...(u.car
           ? {
               car: {
@@ -1872,6 +1899,13 @@ async function main() {
         status: t.status,
         tags: t.tags,
         comment: t.comment,
+        cancelledAt:
+          t.status === "cancelled" && t.cancelledAtDaysAgo !== undefined
+            ? new Date(seedNow.getTime() - t.cancelledAtDaysAgo * dayMs)
+            : null,
+        cancelledByType: t.status === "cancelled" ? (t.cancelledByType ?? "driver") : null,
+        cancelledByUserId: t.status === "cancelled" ? t.driverId : null,
+        cancellationReason: t.status === "cancelled" ? (t.comment ?? null) : null,
         bookings: {
           create: t.bookings.map((b) => ({
             id: bookingId(t.id, b.passengerId, b.seat),
@@ -2005,7 +2039,54 @@ async function main() {
       isRead: true,
     },
   ];
-  for (const n of notifications) {
+
+// 6 новых типов уведомлений (старый booking_confirmed + 5 новых)
+  const newNotifications = [
+    {
+      userId: "u-18",
+      type: "ride_request_match",
+      title: "Новый попутчик",
+      body: 'Иван Иванов хочет присоединиться к вашей поездке Москва → Казань.',
+      isRead: false,
+    },
+    {
+      userId: "u-18",
+      type: "trip_details_changed",
+      title: "Изменение деталей поездки",
+      body: 'Время отправления поездки Череповец → Вологда сдвинуто на 30 минут.',
+      isRead: false,
+    },
+    {
+      userId: "u-18",
+      type: "booking_status_changed",
+      title: "Статус бронирования изменён",
+      body: 'Ваша заявка на поездку подтверждена.',
+      isRead: false,
+    },
+    {
+      userId: "u-18",
+      type: "trip_status_changed",
+      title: "Поездка отменена",
+      body: 'Ваша поездка отменена.',
+      isRead: false,
+    },
+    {
+      userId: "u-18",
+      type: "feedback_replied",
+      title: "Ответ на обращение в поддержку",
+      body: 'На ваш вопрос ответил администратор.',
+      isRead: false,
+    },
+    {
+      userId: "u-18",
+      type: "review_rejected",
+      title: "Отзыв отклонен",
+      body: 'Ваш отзыв о поездке отклонен администраей.',
+      isRead: false,
+    },
+  ];
+  const allNotifications = [...notifications, ...newNotifications];
+  for (const n of allNotifications) {
     await prisma.notification.create({ data: n });
   }
 

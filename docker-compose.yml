@@ -54,6 +54,13 @@ services:
       # TG-доставка уведомлений: kill-switch (дефолт true) и окно дедупа, мс.
       TELEGRAM_DELIVERY_ENABLED: ${TELEGRAM_DELIVERY_ENABLED:-true}
       TG_NOTIFICATION_DEDUPE_WINDOW_MS: ${TG_NOTIFICATION_DEDUPE_WINDOW_MS:-60000}
+      # Секрет вебхука бота (POST /bot/webhook/:secret, bot-api-approval
+      # package §4.2): обязателен в production (secretEnv), выдаётся вместе
+      # с токеном бота, ротация — перевыпуском URL вебхука.
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?TELEGRAM_WEBHOOK_SECRET is required}
+      # URL Telegram Mini App для кнопки «Открыть» в сообщениях бота
+      # (web_app.url в sendMessage). Пусто = сообщения без кнопки.
+      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-}
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
       SENTRY_DSN: ${SENTRY_DSN:-}
       ALLOW_DEV_AUTH: "false"

@@ -13,8 +13,10 @@ COPY telegram-app/package.json ./telegram-app/
 COPY webapp/package.json ./webapp/
 
 # IPv4-first + --maxsockets=2: см. backend/Dockerfile (LAN-DNS отдаёт AAAA-первых,
-# IPv6 в контейнерах сборки — blackhole; сеть троттлит npm при 15 параллельных сокетах).
-RUN NODE_OPTIONS=--dns-result-order=ipv4first npm ci --maxsockets=2
+# в контейнерах сборки IPv6 — blackhole; сеть троттлит npm при 15 параллельных сокетах).
+# cache-mount /root/.npm: tarball'ы переживают сборку — смена lockfile не качается заново.
+RUN --mount=type=cache,target=/root/.npm \
+    NODE_OPTIONS=--dns-result-order=ipv4first npm ci --maxsockets=2
 
 COPY packages/contracts ./packages/contracts
 COPY webapp ./webapp

@@ -1,12 +1,24 @@
 #!/bin/sh
-# Прод-режим: чистка docker-мусора (иначе no-cache сборки забивают диск —
-# было 99%), no-cache сборка backend+webapp, пересоздание, health-check.
-# Использование: sh scripts/prod-rebuild.sh
+# Прод-режим: сборка backend+webapp, пересоздание, health-check.
+#
+# По умолчанию — инкрементально: layer-кэш Docker переживает сборку,
+# npm ci и нетронутые исходники не пересобираются (смена только backend
+# → webapp берётся целиком из кэша, и наоборот). Это в разы быстрее full.
+#
+# --clean — полный сброс (как раньше): чистка docker-мусора (иначе
+# no-cache сборки забивают диск — было 99%), сборка без кэша. Нужен
+# при смене базового образа/платформы или подозрении на протухший кэш.
+#
+# Использование: sh scripts/prod-rebuild.sh [--clean]
 set -eu
 
-docker builder prune -af
-docker image prune -af
-docker compose build --no-cache backend webapp
+if [ "${1:-}" = "--clean" ]; then
+  docker builder prune -af
+  docker image prune -af
+  docker compose build --no-cache backend webapp
+else
+  docker compose build backend webapp
+fi
 docker compose up -d --force-recreate backend webapp
 sleep 10
 echo "--- health ---"
