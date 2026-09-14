@@ -106,10 +106,11 @@ export function ReviewCardSkeleton() {
   );
 }
 
-/** Болванка профиль-бара главной: аватар + имя + пилюля рейтинга. */
+/** Болванка профиль-бара главной: аватар + имя + пилюля рейтинга.
+ *  Отступы — у родителя (страница px-4), здесь только форма. */
 export function ProfileBarSkeleton() {
   return (
-    <div className="px-4 pt-1" role="status" aria-label="Загрузка профиля">
+    <div role="status" aria-label="Загрузка профиля">
       <Skeleton
         visible
         aria-hidden="true"

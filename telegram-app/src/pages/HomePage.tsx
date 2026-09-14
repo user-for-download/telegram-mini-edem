@@ -22,12 +22,10 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { SectionTitle } from "@/components/SectionTitle";
 import { ProfileBarSkeleton } from "@/components/Skeletons";
 import { TripCardSkeleton } from "@/components/Skeletons";
 import { POPULAR_ROUTES } from "@/consts/popularRoutes";
 import { haptic } from "@/utils/haptics";
-import { dayTimeLabel } from "@/utils/date";
 import type { DateSegment } from "@/helpers/searchFilters";
 import { useProfileQuery } from "@/queries/profile";
 import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
@@ -87,37 +85,36 @@ export function HomePage() {
     <>
       <OfflineBanner />
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-        {/* Профиль-бар: Cell (аватар + имя + пилюля рейтинга).
+        {/* Профиль: тело секции без заголовка (поверхность — Section).
             Ошибка профиля лендинг не блокирует — тихий фолбэк. */}
         {profile.isLoading ? (
           <ProfileBarSkeleton />
         ) : (
-          <Cell
-            before={
-              <Avatar
-                size={40}
-                src={profile.data?.avatar}
-                acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
-              />
-            }
-            after={
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--text_color) text-xs font-semibold shrink-0">
-                <Star size={13} className="fill-(--app-rating) text-(--app-rating)" />
-                <span>{profile.data ? profile.data.rating.toFixed(1) : "—"}</span>
-              </span>
-            }
-          >
-            {profile.data?.name ?? "Попутчик"}
-          </Cell>
+          <Section>
+            <Cell
+              before={
+                <Avatar
+                  size={40}
+                  src={profile.data?.avatar}
+                  acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
+                />
+              }
+              after={
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--text_color) text-xs font-semibold shrink-0">
+                  <Star size={13} className="fill-(--app-rating) text-(--app-rating)" />
+                  <span>{profile.data ? profile.data.rating.toFixed(1) : "—"}</span>
+                </span>
+              }
+            >
+              {profile.data?.name ?? "Попутчик"}
+            </Cell>
+          </Section>
         )}
 
-        {/* Экспресс-поиск: карточка формы (паттерн TripCard) */}
-        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-sm">
-          <div className="mb-2">
-            <SectionTitle title="Куда поедем?" hint="Поиск попуток" />
-          </div>
-
-            <form onSubmit={submitSearch} className="flex flex-col gap-2.5">
+        {/* Экспресс-поиск: форма — единственный ребёнок Section
+            (дивайдеров нет), поверхность и отступы — нативные. */}
+        <Section header="Куда поедем?">
+          <form onSubmit={submitSearch} className="flex flex-col gap-2.5 p-4">
               <div className="flex flex-col gap-1.5 relative">
                 <Input
                   header="Откуда"
@@ -175,22 +172,20 @@ export function HomePage() {
                 Найти поездку
               </Button>
             </form>
-        </div>
+        </Section>
 
-        {/* Ближайшая бронь: заголовок + статус-пилюля. Загрузка — скелетон,
-            ошибка броней лендинг не блокирует — секция тихо скрыта. */}
+        {/* Ближайшая бронь: поверхность — Section, статус-пилюля внутри.
+            Загрузка — скелетон, ошибка броней лендинг не блокирует. */}
         {bookings.isLoading ? (
-          <div role="status" aria-label="Загрузка поездки">
-            <TripCardSkeleton />
-          </div>
+          <Section header="Ближайшая поездка">
+            <div className="p-4" role="status" aria-label="Загрузка поездки">
+              <TripCardSkeleton />
+            </div>
+          </Section>
         ) : (
           !bookings.error &&
           activeBooking && (
-            <div className="flex flex-col gap-2">
-              <SectionTitle
-                title="Ближайшая поездка"
-                hint={dayTimeLabel(activeBooking.trip.date, activeBooking.trip.time)}
-              />
+            <Section header="Ближайшая поездка">
               <Tappable
                 Component="button"
                 type="button"
@@ -198,7 +193,7 @@ export function HomePage() {
                   haptic.light();
                   navigate(`/trips/${activeBooking.trip.id}`);
                 }}
-                className="w-full text-left p-3.5 rounded-2xl bg-(--tgui--secondary_fill) border border-(--app-info)/25 cursor-pointer hover:opacity-95 transition"
+                className="block w-full p-4 text-left"
               >
                 <div className="flex items-center justify-between mb-2">
                   <span
@@ -230,7 +225,7 @@ export function HomePage() {
                 </div>
               </div>
             </Tappable>
-            </div>
+            </Section>
           )
         )}
 
@@ -260,12 +255,10 @@ export function HomePage() {
           </Button>
         </Banner>
 
-        {/* Популярные направления: сетка карточек (в Section не кладётся —
-            Section только для строк), заголовок — общий SectionTitle. */}
-        <div className="flex flex-col gap-2">
-          <SectionTitle title="Популярные направления" hint="По области" />
-
-          <div className="grid grid-cols-2 gap-2.5">
+        {/* Популярные направления: сетка мини-карточек — единственный
+            ребёнок Section (дивайдеров нет), поверхность — нативная. */}
+        <Section header="Популярные направления">
+          <div className="grid grid-cols-2 gap-2.5 p-4">
             {POPULAR_ROUTES.map((route) => (
               <Tappable
                 Component="button"
@@ -284,7 +277,7 @@ export function HomePage() {
               </Tappable>
             ))}
           </div>
-        </div>
+        </Section>
 
         {/* Преимущества: эталон Section + Cell — не трогаем. */}
         <Section header="Преимущества Едем">
