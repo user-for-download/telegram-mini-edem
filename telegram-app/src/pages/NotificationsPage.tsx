@@ -4,6 +4,7 @@ import { BellRing, CheckCheck, Settings2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
+import { FeedCard } from "@/components/FeedCard";
 import {
   NotificationCardSkeleton,
   NotificationCardsSkeleton,
@@ -81,7 +82,7 @@ function NotificationCard({
   const route = notificationRoute(notification.type);
   const critical = isCriticalNotification(notification.type);
   return (
-    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-2">
+    <FeedCard className="p-4 flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[15px] font-semibold text-(--tgui--text_color)">
           {notification.title}
@@ -120,7 +121,7 @@ function NotificationCard({
           </Button>
         )}
       </div>
-    </div>
+    </FeedCard>
   );
 }
 
@@ -225,14 +226,14 @@ export function NotificationsPage() {
         </Section>
 
         {items.length === 0 ? (
-          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs">
+          <FeedCard className="p-4">
             <p className="text-[16px] font-semibold text-center text-(--tgui--text_color)">
               Пока нет уведомлений
             </p>
             <p className="text-[13px] text-center text-(--tgui--hint_color) mt-1">
               Подтверждения брони, отмены и завершение поездок появятся здесь
             </p>
-          </div>
+          </FeedCard>
         ) : (
           <div className="flex flex-col gap-3">
             {items.map((notification) => (

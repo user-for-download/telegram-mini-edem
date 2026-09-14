@@ -5,6 +5,7 @@ import {
   SegmentedControl,
   Tappable,
 } from "@telegram-apps/telegram-ui";
+import { FeedCard, FEED_CARD_SURFACE } from "@/components/FeedCard";
 import { Calendar, Car, Send, Share2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -117,7 +118,7 @@ function ActiveBookingCard({
   const navigate = useNavigate();
   const status = bookingStatusLabel(booking.status);
   return (
-    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+    <FeedCard className="p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-[12px] font-medium text-(--tgui--hint_color) min-w-0">
           <Calendar size={14} className="shrink-0" />
@@ -192,7 +193,7 @@ function ActiveBookingCard({
           />
         )}
       </div>
-    </div>
+    </FeedCard>
   );
 }
 
@@ -231,7 +232,7 @@ function DriverTripCard({
           haptic.light();
           onManage(trip.id);
         }}
-        className="text-left p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) opacity-90 hover:opacity-100 transition"
+        className={`${FEED_CARD_SURFACE} text-left p-3.5 opacity-90 hover:opacity-100 transition`}
       >
         <div className="flex items-center justify-between gap-2 mb-1.5">
           <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-(--app-info-bg) text-(--app-info)">
@@ -256,7 +257,7 @@ function DriverTripCard({
 
   const finished = trip.status === "cancelled" || trip.status === "completed";
   return (
-    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+    <FeedCard className="p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-(--app-info-bg) text-(--app-info)">
           Вы водитель
@@ -359,7 +360,7 @@ function DriverTripCard({
           />
         </div>
       )}
-    </div>
+    </FeedCard>
   );
 }
 
@@ -625,7 +626,7 @@ export function TripsPage() {
                       haptic.light();
                       navigate(`/trips/${booking.trip.id}`);
                     }}
-                    className="text-left p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) opacity-90 hover:opacity-100 transition"
+                    className={`${FEED_CARD_SURFACE} text-left p-3.5 opacity-90 hover:opacity-100 transition`}
                   >
                     <div className="flex items-center justify-between text-[12px] text-(--tgui--hint_color) mb-1.5">
                       <span>{dayLabel(booking.trip.date)}</span>

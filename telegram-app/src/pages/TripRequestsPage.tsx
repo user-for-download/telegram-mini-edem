@@ -1,4 +1,5 @@
 import { Avatar, Button, Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
+import { FeedCard } from "@/components/FeedCard";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -69,9 +70,9 @@ export function TripRequestsPage() {
           <Section header={`Ожидают решения (${pending.length})`}>
             <div className="flex flex-col gap-3 p-4">
               {pending.map((booking) => (
-              <div
+              <FeedCard
                 key={booking.id}
-                className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
+                className="p-4 flex flex-col gap-3"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -114,7 +115,7 @@ export function TripRequestsPage() {
                     Отклонить
                   </Button>
                 </div>
-              </div>
+              </FeedCard>
             ))}
             </div>
           </Section>
@@ -123,9 +124,9 @@ export function TripRequestsPage() {
           <Section header={`Подтверждены (${confirmed.length})`}>
             <div className="flex flex-col gap-3 p-4">
               {confirmed.map((booking) => (
-              <div
+              <FeedCard
                 key={booking.id}
-                className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex items-center justify-between gap-2"
+                className="p-4 flex items-center justify-between gap-2"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Avatar
@@ -145,7 +146,7 @@ export function TripRequestsPage() {
                 <span className="StatusPill shrink-0" data-tone="success">
                   Подтверждён
                 </span>
-              </div>
+              </FeedCard>
             ))}
             </div>
           </Section>

@@ -11,6 +11,7 @@ import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
 import { REPORT_DESCRIPTION_MAX_LENGTH } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
+import { FeedCard } from "@/components/FeedCard";
 import { QueryState } from "@/components/QueryState";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { haptic } from "@/utils/haptics";
@@ -59,7 +60,7 @@ function reportStatusTone(status: Report["status"]): string {
 
 const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
   return (
-    <div className="p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) flex flex-col gap-2">
+    <FeedCard className="p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
@@ -74,7 +75,7 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
       <div className="text-[13px] text-(--tgui--text_color) leading-relaxed">
         {report.description}
       </div>
-    </div>
+    </FeedCard>
   );
 });
 

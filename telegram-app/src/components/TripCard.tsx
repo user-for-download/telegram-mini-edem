@@ -11,6 +11,7 @@ import {
 import type { Trip, TripTag } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
 import { Tappable } from "@telegram-apps/telegram-ui";
+import { FEED_CARD_SURFACE } from "@/components/FeedCard";
 import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
 import { haptic } from "@/utils/haptics";
 import { LazyAvatar } from "@/components/LazyAvatar";
@@ -47,7 +48,7 @@ export function TripCard({ trip }: { trip: Trip }) {
         haptic.light();
         navigate(`/trips/${trip.id}`);
       }}
-      className="text-left p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) hover:border-(--app-info) shadow-xs cursor-pointer transition flex flex-col gap-3 group"
+      className={`${FEED_CARD_SURFACE} text-left p-4 hover:border-(--app-info) cursor-pointer transition flex flex-col gap-3 group`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

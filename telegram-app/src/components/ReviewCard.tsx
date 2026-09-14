@@ -2,6 +2,7 @@ import { Star } from "lucide-react";
 import { REVIEW_STATUS, type Review } from "@edem/contracts";
 import type { MyReview } from "@/api/reviews.api";
 import { LazyAvatar } from "@/components/LazyAvatar";
+import { FeedCard } from "@/components/FeedCard";
 
 /** Подпись и тон статус-пилюли — только для непубличных отзывов. */
 export function reviewStatusBadge(
@@ -22,7 +23,7 @@ export function reviewStatusBadge(
 export function ReviewCard({ review }: { review: Review | MyReview }) {
   const badge = reviewStatusBadge(review.status);
   return (
-    <div className="p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) flex flex-col gap-2">
+    <FeedCard className="p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <LazyAvatar
@@ -60,6 +61,6 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
           <span className="text-(--app-success) font-medium shrink-0">Опубликован</span>
         )}
       </div>
-    </div>
+    </FeedCard>
   );
 }

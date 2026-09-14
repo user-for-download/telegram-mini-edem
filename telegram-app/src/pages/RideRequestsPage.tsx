@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button, Input, Section } from "@telegram-apps/telegram-ui";
+import { FeedCard } from "@/components/FeedCard";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { QueryState } from "@/components/QueryState";
@@ -191,9 +192,9 @@ export function RideRequestsPage() {
       <QueryState loading={requests.isLoading} error={requests.error} empty={!requests.data?.length} emptyText="Активных запросов нет." onRetry={() => void requests.refetch()}>
         <div className="flex flex-col gap-3">
           {requests.data?.map((request) => (
-            <div
+            <FeedCard
               key={request.id}
-              className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
+              className="p-4 flex flex-col gap-3"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[15px] font-bold text-(--tgui--text_color) truncate">
@@ -283,7 +284,7 @@ export function RideRequestsPage() {
                   )}
                 </div>
               )}
-            </div>
+            </FeedCard>
           ))}
         </div>
       </QueryState>
