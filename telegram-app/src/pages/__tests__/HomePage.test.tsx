@@ -126,4 +126,22 @@ describe("HomePage", () => {
     const html = render(<HomePage />);
     expect(html).toContain("Ближайшая поездка");
   });
+
+  it("сегменты дня и swap не сабмитят форму — переход только по «Найти»", () => {
+    // SegmentedControl.Item рендерит <button> без type по умолчанию:
+    // в форме такой тап сабмитит поиск и уводит на /trips.
+    const html = render(<HomePage />);
+    const segmentTags =
+      html.match(/<button[^>]*role="tab"[^>]*>/g) ?? [];
+    expect(segmentTags).toHaveLength(3);
+    for (const tag of segmentTags) {
+      expect(tag).toContain('type="button"');
+    }
+    const swapTags =
+      html.match(/<button[^>]*aria-label="Поменять направление"[^>]*>/g) ?? [];
+    expect(swapTags).toHaveLength(1);
+    expect(swapTags[0]).toContain('type="button"');
+    // Единственный submit формы — CTA «Найти поездку».
+    expect(html.match(/type="submit"/g)).toHaveLength(1);
+  });
 });

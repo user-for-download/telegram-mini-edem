@@ -147,6 +147,7 @@ export function HomePage() {
                   {DAY_SEGMENTS.map((option) => (
                     <SegmentedControl.Item
                       key={option.value}
+                      type="button"
                       role="tab"
                       selected={day === option.value}
                       aria-selected={day === option.value}
