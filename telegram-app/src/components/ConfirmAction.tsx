@@ -41,6 +41,8 @@ export function ConfirmAction({
     <div role="alertdialog" aria-label={label} aria-describedby="confirm-action-desc">
       <p id="confirm-action-desc">{description}</p>
       <div className="ButtonRow">
+        {/* Подтверждение деструктива — всегда filled: иначе неотличимо
+            от «Назад» (исключение из правила «всё bezeled»). */}
         <Button
           mode="filled"
           size="s"

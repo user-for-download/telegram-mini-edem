@@ -157,7 +157,7 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
           header="Слишком много попыток входа"
           description="Сервер временно ограничил вход (защита от перебора). Подождите немного и попробуйте один раз — повторные нажатия продлевают блокировку."
           action={
-            <Button
+            <Button mode="bezeled"
               size="l"
               stretched
               disabled={cooldownLeft > 0}
@@ -186,7 +186,7 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
         header="Ошибка авторизации"
         description="Не удалось проверить данные авторизации. Проверьте подключение к интернету."
         action={
-          <Button size="l" stretched onClick={() => void bootstrap()}>
+          <Button mode="bezeled" size="l" stretched onClick={() => void bootstrap()}>
             Попробовать снова
           </Button>
         }

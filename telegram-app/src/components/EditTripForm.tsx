@@ -222,7 +222,7 @@ export function EditTripForm({
           </p>
         )}
         <div className="flex gap-2">
-          <Button stretched size="m" loading={update.isPending} onClick={submit}>
+          <Button mode="bezeled" stretched size="m" loading={update.isPending} onClick={submit}>
             Сохранить
           </Button>
           <Button mode="bezeled" size="m" stretched disabled={update.isPending} onClick={onDone}>

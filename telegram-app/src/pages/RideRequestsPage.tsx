@@ -181,7 +181,7 @@ export function RideRequestsPage() {
         </div>
         {validationError && <p className="FormError" role="alert">{validationError}</p>}
         {create.error && <p className="FormError" role="alert">{bookingErrorMessage(create.error)}</p>}
-        <Button stretched size="l" loading={create.isPending} onClick={submit}>Опубликовать запрос</Button>
+        <Button mode="bezeled" stretched size="l" loading={create.isPending} onClick={submit}>Опубликовать запрос</Button>
         </div>
       </Section>
       {(status.error || cancel.error || update.error) && (
@@ -252,7 +252,7 @@ export function RideRequestsPage() {
                   </div>
                   {editError && <p className="FormError" role="alert">{editError}</p>}
                   <div className="flex gap-2">
-                    <Button stretched size="s" loading={update.isPending} onClick={() => submitEdit(request.id)}>Сохранить</Button>
+                    <Button mode="bezeled" stretched size="s" loading={update.isPending} onClick={() => submitEdit(request.id)}>Сохранить</Button>
                     <Button mode="bezeled" size="s" stretched disabled={update.isPending} onClick={() => setEditingId(null)}>Отмена</Button>
                   </div>
                 </>

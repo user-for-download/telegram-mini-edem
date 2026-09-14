@@ -133,7 +133,7 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
 
         <Button
           size="l"
-          mode="filled"
+          mode="bezeled"
           stretched
           type="submit"
           loading={create.isPending}

@@ -72,7 +72,7 @@ export function SettingsPage() {
                   : "Некритичные уведомления выключены — критичные статусы поездки и брони останутся в приложении."}
               </p>
             </div>
-            <Button
+            <Button mode="bezeled"
               stretched
               size="l"
               loading={save.isPending}

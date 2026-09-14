@@ -66,7 +66,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
         </span>
       </div>
       <div className="flex gap-2">
-        <Button
+        <Button mode="bezeled"
           stretched
           size="s"
           className="min-h-11"
@@ -280,7 +280,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         >
           <div className="ButtonRow">
             {!forbidden && (
-              <Button
+              <Button mode="bezeled"
                 className="min-h-11"
                 onClick={() => void requests.refetch()}
               >

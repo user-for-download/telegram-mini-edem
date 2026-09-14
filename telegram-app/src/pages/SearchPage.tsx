@@ -262,7 +262,7 @@ export function SearchPage() {
             </div>
           )}
 
-          <Button size="l" stretched mode="filled" before={<SearchIcon size={18} />} onClick={submit}>
+          <Button size="l" stretched mode="bezeled" before={<SearchIcon size={18} />} onClick={submit}>
             Найти
           </Button>
           </div>

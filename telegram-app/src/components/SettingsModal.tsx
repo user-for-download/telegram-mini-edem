@@ -121,7 +121,7 @@ export function SettingsBody() {
                   : "Некритичные уведомления выключены — критичные статусы поездки и брони останутся в приложении."}
               </p>
             </div>
-            <Button
+            <Button mode="bezeled"
               stretched
               size="l"
               className="min-h-11"

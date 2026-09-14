@@ -303,7 +303,7 @@ export function SupportPage() {
               Обращение отправлено — мы ответим вам как можно скорее
             </p>
           )}
-          <Button
+          <Button mode="bezeled"
             stretched
             size="l"
             before={<Send size={16} />}

@@ -164,7 +164,7 @@ export function HomePage() {
               <Button
                 size="l"
                 stretched
-                mode="filled"
+                mode="bezeled"
                 className="mt-1"
                 before={<Search size={18} />}
                 type="submit"
@@ -243,7 +243,7 @@ export function HomePage() {
         >
           <Button
             size="m"
-            mode="filled"
+            mode="bezeled"
             stretched
             onClick={() => {
               haptic.light();

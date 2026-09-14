@@ -181,7 +181,7 @@ export function VehiclePage() {
                       {formError ?? vehicleServerErrorMessage(upsert.error)}
                     </p>
                   )}
-                  <Button stretched size="l" loading={upsert.isPending} onClick={save}>
+                  <Button mode="bezeled" stretched size="l" loading={upsert.isPending} onClick={save}>
                     Сохранить автомобиль
                   </Button>
                   <Button
@@ -242,7 +242,7 @@ export function VehiclePage() {
                       </div>
                     </div>
                   </div>
-                  <Button stretched size="l" onClick={startEditing}>
+                  <Button mode="bezeled" stretched size="l" onClick={startEditing}>
                     Добавить автомобиль
                   </Button>
                 </>

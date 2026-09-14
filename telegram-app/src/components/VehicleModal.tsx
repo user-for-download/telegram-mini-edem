@@ -151,7 +151,7 @@ function VehicleForm({ vehicle, onDone }: { vehicle: Vehicle | null; onDone: () 
       </div>
       <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">Номер — примета для узнавания, видна только вам. Чтобы убрать номер, очистите поле и сохраните.</p>
       {(formError || upsert.error) && <p className="FormError" role="alert">{formError ?? vehicleServerErrorMessage(upsert.error)}</p>}
-      <Button stretched size="l" loading={upsert.isPending} onClick={save} className="min-h-11">Сохранить автомобиль</Button>
+      <Button mode="bezeled" stretched size="l" loading={upsert.isPending} onClick={save} className="min-h-11">Сохранить автомобиль</Button>
       <Button mode="bezeled" stretched disabled={upsert.isPending} onClick={() => { setFormError(null); upsert.reset(); onDone(); }} className="min-h-11">Отмена</Button>
     </>
   );

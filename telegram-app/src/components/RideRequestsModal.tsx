@@ -306,7 +306,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
         </div>
         {validationError && <p className="FormError" role="alert">{validationError}</p>}
         {create.error && <p className="FormError" role="alert">{bookingErrorMessage(create.error)}</p>}
-        <Button stretched size="l" className="min-h-11" loading={create.isPending} onClick={submit}>Опубликовать запрос</Button>
+        <Button mode="bezeled" stretched size="l" className="min-h-11" loading={create.isPending} onClick={submit}>Опубликовать запрос</Button>
       </div>
       {(status.error || cancel.error || update.error) && (
         <p className="FormError" role="alert">
@@ -376,7 +376,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                   </div>
                   {editError && <p className="FormError" role="alert">{editError}</p>}
                   <div className="flex gap-2">
-                    <Button stretched size="s" className="min-h-11" loading={update.isPending} onClick={() => submitEdit(request.id)}>Сохранить</Button>
+                    <Button mode="bezeled" stretched size="s" className="min-h-11" loading={update.isPending} onClick={() => submitEdit(request.id)}>Сохранить</Button>
                     <Button mode="bezeled" size="s" stretched className="min-h-11" disabled={update.isPending} onClick={() => setEditingId(null)}>Отмена</Button>
                   </div>
                 </>

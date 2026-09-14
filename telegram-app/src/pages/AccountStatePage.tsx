@@ -10,5 +10,5 @@ export function AccountStatePage({
 }
 
 export function RetryAction({ label, disabled, onClick }: { label: string; disabled?: boolean; onClick: () => void }) {
-  return <Button size="l" stretched disabled={disabled} onClick={onClick}>{label}</Button>;
+  return <Button mode="bezeled" size="l" stretched disabled={disabled} onClick={onClick}>{label}</Button>;
 }

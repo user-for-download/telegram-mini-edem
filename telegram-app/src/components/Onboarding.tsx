@@ -32,7 +32,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
         <Placeholder header="Без согласия сервис недоступен"
         description="Для поиска попутчиков нужно принять условия. Можно вернуться к документам или удалить созданный профиль."
         action={<div className="ButtonRow">
-          <Button size="l" stretched onClick={() => setDeclined(false)}>Вернуться</Button>
+          <Button mode="bezeled" size="l" stretched onClick={() => setDeclined(false)}>Вернуться</Button>
           <Button size="l" mode="outline" stretched loading={deleting} disabled={deleting} onClick={() => {
             if (busyRef.current) return;
             busyRef.current = true;
@@ -64,7 +64,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
       </Section>
       <p className="Onboarding__legal">Сервис доступен пользователям старше 14 лет. Нажимая кнопку, вы принимаете оба документа.</p>
       <div className="ButtonRow">
-        <Button size="l" stretched loading={busy} disabled={busy} onClick={accept}>Принять и продолжить</Button>
+        <Button mode="bezeled" size="l" stretched loading={busy} disabled={busy} onClick={accept}>Принять и продолжить</Button>
         <Button size="l" mode="plain" stretched disabled={busy} onClick={() => setDeclined(true)}>Не принимать</Button>
       </div>
     </main>

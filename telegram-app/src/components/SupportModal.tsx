@@ -342,7 +342,7 @@ export const SupportBody = memo(function SupportBody() {
             Обращение отправлено — мы ответим вам как можно скорее
           </p>
         )}
-        <Button
+        <Button mode="bezeled"
           stretched
           size="l"
           className="min-h-11"

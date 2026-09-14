@@ -134,7 +134,7 @@ export const EditProfileBody = memo(function EditProfileBody({
         </p>
       )}
       <div className="flex flex-col gap-2">
-        <Button
+        <Button mode="bezeled"
           stretched
           size="l"
           loading={update.isPending}

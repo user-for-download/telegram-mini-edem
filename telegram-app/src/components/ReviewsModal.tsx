@@ -474,7 +474,7 @@ export const ReviewsBody = memo(function ReviewsBody({
                   Отзыв отправлен на модерацию — он появится в профиле после одобрения
                 </p>
               )}
-              <Button
+              <Button mode="bezeled"
                 stretched
                 size="l"
                 loading={create.isPending}

@@ -65,7 +65,7 @@ export function TripDetailsPage() {
           description={trip.error ? bookingErrorMessage(trip.error) : "Вернитесь к поиску и выберите другую поездку."}
         >
           <div className="ButtonRow">
-            <Button onClick={() => void trip.refetch()}>Повторить</Button>
+            <Button mode="bezeled" onClick={() => void trip.refetch()}>Повторить</Button>
             <Button mode="outline" onClick={() => navigate("/trips")}>К поиску</Button>
           </div>
           {!isOnline && <p>Проверьте подключение к интернету.</p>}
@@ -296,7 +296,7 @@ export function TripDetailsPage() {
                     {seat} (зан.)
                   </Button>
                 ) : effectiveSeat === seat ? (
-                  <Button
+                  <Button mode="bezeled"
                     key={seat}
                     disabled={createBooking.isPending}
                     onClick={() => setSelectedSeat(seat)}
@@ -345,7 +345,7 @@ export function TripDetailsPage() {
             </div>
           </div>
           <Button
-            mode="filled"
+            mode="bezeled"
             size="l"
             stretched
             loading={createBooking.isPending}

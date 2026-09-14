@@ -42,7 +42,7 @@ export function TripRequestsPage() {
           }
         >
           <div className="ButtonRow">
-            {!forbidden && <Button onClick={() => void requests.refetch()}>Повторить</Button>}
+            {!forbidden && <Button mode="bezeled" onClick={() => void requests.refetch()}>Повторить</Button>}
             <Button mode="outline" onClick={() => navigate("/bookings?segment=driver")}>К моим поездкам</Button>
           </div>
           {!isOnline && <p>Проверьте подключение к интернету.</p>}
@@ -95,7 +95,7 @@ export function TripRequestsPage() {
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <Button
+                  <Button mode="bezeled"
                     stretched
                     size="s"
                     loading={update.isPending && update.variables?.id === booking.id}

@@ -308,7 +308,7 @@ function DriverTripCard({
                 </div>
               </div>
             </div>
-            <Button size="s" mode="filled" onClick={() => onRequests(trip.id)}>
+            <Button size="s" mode="bezeled" onClick={() => onRequests(trip.id)}>
               Заявки
             </Button>
           </div>
@@ -572,7 +572,7 @@ export function TripsPage() {
                   </Button>
                 </>
               )}
-              <Button size="l" mode="filled" onClick={() => navigate("/trips")}>
+              <Button size="l" mode="bezeled" onClick={() => navigate("/trips")}>
                 Найти поездку
               </Button>
               <Button size="l" mode="bezeled" onClick={() => navigate("/trips/my/new")}>

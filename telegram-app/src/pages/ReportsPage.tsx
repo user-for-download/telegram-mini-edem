@@ -256,7 +256,7 @@ export function ReportsPage() {
               Жалоба отправлена
             </p>
           )}
-          <Button
+          <Button mode="bezeled"
             stretched
             size="l"
             loading={create.isPending}

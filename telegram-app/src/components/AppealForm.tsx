@@ -112,7 +112,7 @@ export function AppealForm() {
         </p>
       )}
       <div className="ButtonRow">
-        <Button
+        <Button mode="bezeled"
           stretched
           size="l"
           before={<Send size={16} />}

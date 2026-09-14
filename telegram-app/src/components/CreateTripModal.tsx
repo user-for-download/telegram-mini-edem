@@ -341,7 +341,7 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
 
         {validationError && <p className="FormError" role="alert">{validationError}</p>}
         <MutationError error={create.error} />
-        <Button stretched size="l" loading={create.isPending} onClick={submit}>
+        <Button mode="bezeled" stretched size="l" loading={create.isPending} onClick={submit}>
           Опубликовать
         </Button>
       </div>
