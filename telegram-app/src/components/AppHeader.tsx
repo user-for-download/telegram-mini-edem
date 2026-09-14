@@ -10,9 +10,12 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-2 w-full backdrop-blur-md transition-colors border-b border-(--tgui--outline) bg-(--tgui--bg_color)/95 pt-[max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px))]">
       <div className="flex items-center justify-center px-4 py-2.5">
-        <div className="flex items-center gap-2.5 text-center">
+        <div className="flex items-center text-center">
           <div className="text-center">
-            <div className="flex items-center justify-center gap-1.5">
+            {/* Заголовок + бейдж — по базовой линии (items-baseline):
+                у «Едем» есть спуск «д» под базой, у капс-пилюли — нет;
+                items-center ставит пилюлю визуально выше строки. */}
+            <div className="flex items-baseline justify-center gap-1.5">
               <Title
                 level="2"
                 weight="2"
@@ -20,7 +23,7 @@ export function AppHeader() {
               >
                 Едем
               </Title>
-              <span className="text-[12px] font-semibold uppercase px-1.5 py-0.5 rounded bg-(--tgui--secondary_fill) text-(--tgui--link_color) leading-none">
+              <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-(--tgui--secondary_fill) text-(--tgui--link_color) leading-none">
                 Попутчики
               </span>
             </div>
