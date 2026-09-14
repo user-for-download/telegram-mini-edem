@@ -28,6 +28,7 @@ vi.mock("../../src/env.js", () => ({
 
 const {
   shouldDeliverTelegram,
+  decideTelegramDelivery,
   resolveTelegramDeepLink,
   findTelegramDuplicate,
   deliverTelegramNotification,
@@ -35,6 +36,84 @@ const {
 } = await import("../../src/services/telegramNotifications.js");
 
 const UUID = "123e4567-e89b-12d3-a456-426614174000";
+
+describe("decideTelegramDelivery — полная политика с согласием (bot-api shadow)", () => {
+  it("kill-switch → channel_disabled, даже для critical с чатом", () => {
+    expect(
+      decideTelegramDelivery({
+        type: "trip_cancelled",
+        notificationsEnabled: true,
+        chatJoined: true,
+        channelEnabled: false,
+      }),
+    ).toEqual({ deliver: false, reason: "channel_disabled" });
+  });
+
+  it("нет чата с ботом → no_chat, тихо, даже critical с тумблером", () => {
+    expect(
+      decideTelegramDelivery({
+        type: "trip_cancelled",
+        notificationsEnabled: true,
+        chatJoined: false,
+        channelEnabled: true,
+      }),
+    ).toEqual({ deliver: false, reason: "no_chat" });
+  });
+
+  it("critical + чат + выключенный тумблер → доставляем", () => {
+    expect(
+      decideTelegramDelivery({
+        type: "booking_status_changed",
+        notificationsEnabled: false,
+        chatJoined: true,
+        channelEnabled: true,
+      }),
+    ).toEqual({ deliver: true });
+  });
+
+  it("optional + чат + выключенный тумблер → notifications_disabled", () => {
+    expect(
+      decideTelegramDelivery({
+        type: "review_approved",
+        notificationsEnabled: false,
+        chatJoined: true,
+        channelEnabled: true,
+      }),
+    ).toEqual({ deliver: false, reason: "notifications_disabled" });
+  });
+
+  it("optional + чат + включённый тумблер → доставляем", () => {
+    expect(
+      decideTelegramDelivery({
+        type: "feedback_replied",
+        notificationsEnabled: true,
+        chatJoined: true,
+        channelEnabled: true,
+      }),
+    ).toEqual({ deliver: true });
+  });
+
+  it("channelEnabled по умолчанию включён (undefined = канал жив)", () => {
+    expect(
+      decideTelegramDelivery({
+        type: "trip_cancelled",
+        notificationsEnabled: true,
+        chatJoined: true,
+      }),
+    ).toEqual({ deliver: true });
+  });
+
+  it("порядок приоритета: kill-switch важнее отсутствия чата", () => {
+    expect(
+      decideTelegramDelivery({
+        type: "trip_cancelled",
+        notificationsEnabled: false,
+        chatJoined: false,
+        channelEnabled: false,
+      }),
+    ).toEqual({ deliver: false, reason: "channel_disabled" });
+  });
+});
 
 describe("shouldDeliverTelegram — opt-out / critical override", () => {
   it("critical игнорирует выключенный тумблер", () => {

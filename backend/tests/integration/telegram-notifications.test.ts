@@ -58,7 +58,18 @@ async function countNotifications(userId: string): Promise<number> {
   return db.notification.count({ where: { userId } });
 }
 
+async function countDeliveries(
+  userId: string,
+  status?: string,
+): Promise<number> {
+  return db.notificationDelivery.count({
+    where: { userId, ...(status ? { status } : {}) },
+  });
+}
+
 afterEach(async () => {
+  // NotificationDelivery сцеплена с Notification FK Cascade — чистится
+  // через удаление inbox-записей пользователей.
   await db.notification.deleteMany({
     where: { userId: { in: createdUserIds } },
   });
@@ -174,5 +185,103 @@ describe("createNotification — TG-доставка", () => {
 
     // Дедуп применяется только к TG-идентифицированным пользователям.
     expect(await countNotifications(userId)).toBe(2);
+  });
+});
+
+describe("createNotification — outbox (bot-api shadow)", () => {
+  it("чат есть + тумблер on → outbox pending привязан к inbox-записи", async () => {
+    const userId = await seedTelegramUser({ tgChatJoinedAt: new Date() });
+
+    await createNotification(
+      userId,
+      "trip_cancelled",
+      "Поездка отменена",
+      "Поездка Москва → Казань отменена",
+      "/bookings",
+    );
+
+    expect(await countNotifications(userId)).toBe(1);
+    expect(await countDeliveries(userId, "pending")).toBe(1);
+    const delivery = await db.notificationDelivery.findFirst({
+      where: { userId },
+    });
+    expect(delivery?.deepLink).toBe("/bookings");
+    expect(delivery?.channel).toBe("telegram");
+    // FK указывает на реальную inbox-запись.
+    const notification = await db.notification.findFirst({ where: { userId } });
+    expect(delivery?.notificationId).toBe(notification?.id);
+  });
+
+  it("чата нет → outbox skipped с причиной no_chat", async () => {
+    const userId = await seedTelegramUser({ tgChatJoinedAt: null });
+
+    await createNotification(
+      userId,
+      "trip_cancelled",
+      "Поездка отменена",
+      "Текст",
+      "/bookings",
+    );
+
+    expect(await countNotifications(userId)).toBe(1);
+    expect(await countDeliveries(userId, "skipped")).toBe(1);
+    const delivery = await db.notificationDelivery.findFirst({
+      where: { userId },
+    });
+    expect(delivery?.error).toBe("no_chat");
+  });
+
+  it("critical + выключенный тумблер + чат → inbox + outbox pending", async () => {
+    const userId = await seedTelegramUser({
+      notificationsEnabled: false,
+      tgChatJoinedAt: new Date(),
+    });
+
+    await createNotification(
+      userId,
+      "booking_status_changed",
+      "Заявка подтверждена",
+      "Водитель подтвердил вашу заявку",
+      "/bookings",
+    );
+
+    expect(await countNotifications(userId)).toBe(1);
+    expect(await countDeliveries(userId, "pending")).toBe(1);
+  });
+
+  it("дубликат → вторая outbox-запись не создаётся", async () => {
+    const userId = await seedTelegramUser({ tgChatJoinedAt: new Date() });
+
+    await createNotification(
+      userId,
+      "trip_cancelled",
+      "Поездка отменена",
+      "Поездка Москва → Казань отменена",
+      "/bookings",
+    );
+    await createNotification(
+      userId,
+      "trip_cancelled",
+      "Поездка отменена",
+      "Поездка Москва → Казань отменена",
+      "/bookings",
+    );
+
+    expect(await countDeliveries(userId)).toBe(1);
+  });
+
+  it("пользователь без platform-id → outbox не создаётся", async () => {
+    const userId = await seedIdentitylessUser({});
+
+    await createNotification(
+      userId,
+      "trip_cancelled",
+      "Поездка отменена",
+      "Текст",
+      "/bookings",
+    );
+
+    expect(await countNotifications(userId)).toBe(1);
+    expect(await countDeliveries(userId)).toBe(0);
   });
 });

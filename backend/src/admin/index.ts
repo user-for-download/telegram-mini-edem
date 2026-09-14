@@ -54,7 +54,9 @@ import { tokensEqual } from "../utils/timingSafeEqual.js";
 import { getUniqueConstraintName } from "../utils/prisma-errors.js";
 import { recomputeUserRating } from "../reviews/rating.js";
 import { createNotification } from "../services/notification.service.js";
+import { getTelegramDeliveryMetrics } from "../services/telegramMetrics.js";
 import { logBusinessEvent } from "../logger/business.js";
+import { logger } from "../logger.js";
 import { ADMIN_COOKIE_NAME, adminGuard } from "./guard.js";
 import {
   serializeAdminBooking,
@@ -680,6 +682,57 @@ adminRouter.patch("/users/:id/onboarding-reset", mutationLimiter, async (c) => {
   });
 
   return c.json(serializeAdminUser(updated));
+});
+
+/**
+ * Ручной стоп Telegram-уведомлений пользователя (bot-api shadow,
+ * approval-package §4.6): обнуляет согласие (tgChatJoinedAt) и гасит
+ * его pending-задачи в outbox как skipped/admin_stopped. Следующий тик
+ * диспетчера увидит чат=null и пропустит остальные — стоп мгновенный,
+ * без кэша. Идемпотентно: повторный стоп на пустом согласии — 200.
+ */
+adminRouter.patch("/users/:id/telegram-stop", mutationLimiter, async (c) => {
+  const id = c.req.param("id");
+
+  const user = await db.user.findUnique({ where: { id } });
+  if (!user) {
+    return c.json(
+      { code: ERROR_CODES.NOT_FOUND, message: "User not found" },
+      404,
+    );
+  }
+
+  const hadConsent = user.tgChatJoinedAt != null;
+
+  await db.user.update({
+    where: { id },
+    data: { tgChatJoinedAt: null },
+  });
+
+  const cancelled = await db.notificationDelivery.updateMany({
+    where: { userId: id, status: { in: ["pending", "processing"] } },
+    data: { status: "skipped", error: "admin_stopped" },
+  });
+
+  logger.info(
+    { userId: id, cancelled: cancelled.count, hadConsent },
+    "tg_admin_stop",
+  );
+
+  return c.json({
+    success: true,
+    hadConsent,
+    cancelledDeliveries: cancelled.count,
+  });
+});
+
+/**
+ * JSON-агрегаты Telegram-outbox для админ-панели: те же цифры, что в
+ * /metrics (Prometheus), но структурированные. Без PII — только counts.
+ */
+adminRouter.get("/telegram/metrics", adminReadLimiter, async (c) => {
+  const metrics = await getTelegramDeliveryMetrics();
+  return c.json(metrics);
 });
 
 /**

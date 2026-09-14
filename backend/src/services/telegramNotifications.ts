@@ -61,6 +61,51 @@ const UUID_RE =
 const TRIP_DETAILS_RE = /^\/trips\/([^/]+)$/;
 const TRIP_REQUESTS_RE = /^\/trips\/my\/([^/]+)\/requests$/;
 
+export interface TelegramDeliveryPolicyInput {
+  type: string;
+  /** Пользовательский тумблер «Уведомления» (единый на оба канала). */
+  notificationsEnabled: boolean;
+  /** Факт /start в чате с ботом (User.tgChatJoinedAt != null). */
+  chatJoined: boolean;
+  /** Kill-switch TELEGRAM_DELIVERY_ENABLED (гасит весь канал). */
+  channelEnabled?: boolean;
+}
+
+/** Почему доставка не состоялась — машинный код для outbox/логов. */
+export type TelegramSkipReason =
+  | "channel_disabled"
+  | "no_chat"
+  | "notifications_disabled";
+
+export type TelegramPolicyDecision =
+  | { deliver: true }
+  | { deliver: false; reason: TelegramSkipReason };
+
+/**
+ * Чистая функция: полная политика фоновой TG-доставки
+ * (bot-api-approval-package §2):
+ * - kill-switch выключен → channel_disabled (ничего не доставляем);
+ * - чата с ботом нет → no_chat (тихо, независимо от критичности —
+ *   бот не может написать первым без /start);
+ * - critical игнорирует выключенный тумблер;
+ * - optional подчиняется настройке пользователя.
+ */
+export function decideTelegramDelivery(
+  input: TelegramDeliveryPolicyInput,
+): TelegramPolicyDecision {
+  if (input.channelEnabled === false) {
+    return { deliver: false, reason: "channel_disabled" };
+  }
+  if (!input.chatJoined) {
+    return { deliver: false, reason: "no_chat" };
+  }
+  if (TELEGRAM_CRITICAL_TYPES.has(input.type)) return { deliver: true };
+  if (!input.notificationsEnabled) {
+    return { deliver: false, reason: "notifications_disabled" };
+  }
+  return { deliver: true };
+}
+
 /**
  * Чистая функция: critical игнорирует выключенный тумблер,
  * остальные типы подчиняются настройке пользователя.

@@ -17,6 +17,7 @@ import { citiesRouter } from "./cities/index.js";
 import { notificationsRouter } from "./notifications/index.js";
 import { rideRequestsRouter } from "./rideRequests/index.js";
 import { reportsRouter, adminReportsRouter } from "./reports/index.js";
+import { botRouter } from "./bot/index.js";
 import { createWsHandler } from "./ws/index.js";
 
 import { env } from "./env.js";
@@ -25,6 +26,10 @@ import { logger } from "./logger.js";
 import { Sentry } from "./sentry.js";
 import { ERROR_CODES } from "./errors.js";
 import { httpRequestsTotal, metricsSnapshot } from "./metrics.js";
+import {
+  getTelegramDeliveryMetrics,
+  renderTelegramMetrics,
+} from "./services/telegramMetrics.js";
 import { tokensEqual } from "./utils/timingSafeEqual.js";
 
 export const app = new Hono();
@@ -154,6 +159,10 @@ app.use(
   })
 );
 
+// Webhook Telegram-бота: секрет в path, сравнение timing-safe.
+// Монтируется до API-роутов; запросы идут от серверов Telegram.
+app.route("/bot", botRouter);
+
 /**
  * Проверка подключения к БД.
  */
@@ -191,8 +200,9 @@ app.get("/health/ready", async (c) => {
 /**
  * Метрики сервиса в Prometheus text-формате.
  * В production endpoint закрыт, даже если токен ошибочно не настроен.
+ * TG-outbox агрегаты добавляются отдельным блоком (shadow-наблюдаемость).
  */
-app.get("/metrics", (c) => {
+app.get("/metrics", async (c) => {
   if (!env.METRICS_TOKEN) {
     if (env.isProduction) return c.notFound();
   } else {
@@ -204,7 +214,12 @@ app.get("/metrics", (c) => {
     }
   }
 
-  return c.text(metricsSnapshot(), 200, { "Content-Type": "text/plain; charset=utf-8" });
+  const tgMetrics = await getTelegramDeliveryMetrics();
+  return c.text(
+    metricsSnapshot() + renderTelegramMetrics(tgMetrics),
+    200,
+    { "Content-Type": "text/plain; charset=utf-8" },
+  );
 });
 
 app.route("/api/v1/auth", authRouter);

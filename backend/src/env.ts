@@ -188,6 +188,55 @@ export const env = {
   TELEGRAM_DELIVERY_ENABLED: boolEnv("TELEGRAM_DELIVERY_ENABLED", true),
 
   /**
+   * Секрет Telegram-бота для webhook (bot-api-approval-package §4.2):
+   * случайная строка в path POST /bot/webhook/:secret. Выдаётся вместе
+   * с токеном бота, ротация — перевыпуском URL вебхука. В production
+   * обязателен, в dev эфемерный (secretEnv).
+   */
+  TELEGRAM_WEBHOOK_SECRET: secretEnv("TELEGRAM_WEBHOOK_SECRET"),
+
+  /**
+   * Интервал опроса outbox-таблицы NotificationDelivery диспетчером
+   * (в миллисекундах). Дефолт 15 секунд — консервативный поллинг,
+   * без отдельного процесса-воркера на shadow-этапе.
+   */
+  TG_NOTIFICATION_DISPATCH_INTERVAL_MS: positiveIntEnv(
+    "TG_NOTIFICATION_DISPATCH_INTERVAL_MS",
+    15 * 1000,
+  ),
+
+  /**
+   * Максимум попыток обработки одной outbox-записи (включая первую):
+   * ретраи с бэкоффом, после исчерпания — status=failed.
+   */
+  TG_NOTIFICATION_MAX_RETRIES: positiveIntEnv("TG_NOTIFICATION_MAX_RETRIES", 3),
+
+  /**
+   * Per-user rate limit диспетчера: не более N доставок в окно
+   * (бот-api-approval-package §4: ≤5/час, критичные вне лимита —
+   * но ≤1/5мин на тип). Окно в миллисекундах, дефолт 1 час.
+   */
+  TG_NOTIFICATION_USER_RATE_WINDOW_MS: positiveIntEnv(
+    "TG_NOTIFICATION_USER_RATE_WINDOW_MS",
+    60 * 60 * 1000,
+  ),
+  TG_NOTIFICATION_USER_RATE_MAX: positiveIntEnv("TG_NOTIFICATION_USER_RATE_MAX", 5),
+
+  /**
+   * Дедуп-пауза на тип для критичных: повторный критичный того же типа
+   * тому же пользователю не чаще одного раза в это окно (мс).
+   */
+  TG_NOTIFICATION_CRITICAL_TYPE_COOLDOWN_MS: positiveIntEnv(
+    "TG_NOTIFICATION_CRITICAL_TYPE_COOLDOWN_MS",
+    5 * 60 * 1000,
+  ),
+
+  /**
+   * Размер пачки outbox-записей, забираемой диспетчером за один тик.
+   */
+  TG_NOTIFICATION_DISPATCH_BATCH_SIZE: positiveIntEnv("TG_NOTIFICATION_DISPATCH_BATCH_SIZE", 50),
+
+  /**
    * Окно дедупликации идентичных TG-уведомлений в миллисекундах:
    * повтор того же события (user+type+title+body) внутри окна не
    * создаёт вторую inbox-запись. Легитимные разные события отличаются

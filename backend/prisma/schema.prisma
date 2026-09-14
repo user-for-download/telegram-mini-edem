@@ -32,6 +32,12 @@ model User {
   // Причина бана (обязательна при бане через админку: 1..500 символов).
   // null для старых банов, выставленных до этого поля (UI показывает «Причина не указана»).
   banReason            String?
+  // Согласие на сообщения бота (bot-api-approval-package §2): бот не может
+  // написать первым, факт /start в чате с ботом фиксируется вебхуком
+  // POST /bot/webhook/:secret и проставляет эту метку времени. null — чата
+  // нет, фоновая доставка молча пропускается (не спамим просьбами).
+  // /stop сбрасывает обратно в null.
+  tgChatJoinedAt       DateTime?
   about                String?
   // Версия онбординга (слайдов), показанного пользователю; null — ещё не показан.
   // Админка может сбросить (PATCH /admin/users/:id/onboarding-reset).
@@ -57,6 +63,8 @@ model User {
   rideRequests  RideRequest[]
   reportsMade   Report[] @relation("ReportReporter")
   reportsHandled Report[] @relation("ReportAdminActor")
+  // Outbox не связан с User relation-полем: userId там денормализован
+  // для per-user rate limit/дедупа, связь идёт через Notification.
 }
 
 model RefreshToken {
@@ -81,9 +89,42 @@ model Notification {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries  NotificationDelivery[]
 
   @@index([userId, isRead, createdAt(sort: Desc)])
+}
+
+// Outbox фоновых доставок уведомлений (bot-api-approval-package §4):
+// createNotification пишет inbox-запись (как раньше) плюс строку задачи
+// здесь; воркер-диспетчер забирает, проверяет согласие/дедуп/лимиты.
+// Shadow mode: внешних отправок нет (ADR telegram-notification-delivery —
+// Bot API blocked), воркер только размечает исход. Когда продукт
+// одобрит канал, сюда добавится реальный sendMessage-контур без смены
+// схемы.
+model NotificationDelivery {
+  id             String    @id @default(uuid())
+  notificationId String
+  userId         String
+  // Плановый канал доставки; сейчас всегда "telegram".
+  channel        String    @default("telegram")
+  type           String
+  // pending -> processing -> delivered | skipped | failed
+  status         String    @default("pending")
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime?
+  // Allowlist-маршрут из resolveTelegramDeepLink (без query/hash/PII).
+  deepLink       String?
+  // Краткий машинный код ошибки (не текст сообщения, без PII).
+  error          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([userId, type])
+  @@index([notificationId])
 }
 
 model Car {

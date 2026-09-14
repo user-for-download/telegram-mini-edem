@@ -7,6 +7,10 @@ import { wsManager, startWsReaper, stopWsReaper } from "./services/wsManager.js"
 
 import { db } from "./db.js";
 import { startTripWorker, stopTripWorker } from "./workers/tripWorker.js";
+import {
+  startNotificationDispatcher,
+  stopNotificationDispatcher,
+} from "./workers/notificationDispatcher.js";
 
 initSentry();
 
@@ -36,12 +40,15 @@ logger.info({ port: env.PORT }, "WebSocket support injected");
 
 startTripWorker();
 startWsReaper();
+// Outbox-диспетчер TG-доставок: shadow mode, внешних вызовов нет (ADR).
+startNotificationDispatcher();
 
 const SHUTDOWN_TIMEOUT_MS = 20_000;
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Shutdown signal received");
   stopTripWorker();
   stopWsReaper();
+  stopNotificationDispatcher();
   wsManager.closeAll(1001, "Server shutting down");
   server.close(async () => {
     logger.info("HTTP server closed");
