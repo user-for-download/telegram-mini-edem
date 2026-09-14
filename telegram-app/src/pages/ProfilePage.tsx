@@ -1,15 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   Avatar,
   Button,
-  Cell,
   Headline,
-  Input,
   List,
   Placeholder,
   Section,
   SegmentedControl,
-  Textarea,
 } from "@telegram-apps/telegram-ui";
 import {
   Bell,
@@ -32,14 +29,51 @@ import {
   useDeleteAccountMutation,
   useLogoutMutation,
   useProfileQuery,
-  useProfileUpdateMutation,
 } from "@/queries/profile";
 import { useUserReviewsInfiniteQuery } from "@/queries/useReviewsQuery";
-import { normalizeProfileForm, validateProfileForm } from "@/pages/profileValidation";
 import { haptic } from "@/utils/haptics";
 import { useModalBack } from "@/utils/modalBack";
 
 type ProfileSubtab = "settings" | "reviews";
+
+/**
+ * Строка меню раздела — нативная кнопка во всю ширину (язык компактных
+ * карточек приложения). tgui Cell с Component="button" наследует базовые
+ * стили Button (inline-flex + nowrap) и вылезает за экран на 150px+.
+ */
+function MenuRow({
+  icon,
+  title,
+  subtitle,
+  onClick,
+  label,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="w-full min-w-0 flex items-center gap-3 p-3 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] text-left hover:border-[var(--app-info)] transition"
+    >
+      <span className="shrink-0">{icon}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[15px] font-medium text-[var(--tgui--text_color)] truncate">
+          {title}
+        </span>
+        <span className="block text-[12px] text-[var(--tgui--hint_color)] truncate">
+          {subtitle}
+        </span>
+      </span>
+      <ChevronRight size={16} className="text-[var(--tgui--hint_color)] shrink-0" />
+    </button>
+  );
+}
 
 /**
  * Профиль Telegram-пользователя (язык ProfileTab примера): header-карточка
@@ -55,50 +89,20 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const me = useAuthStore((state) => state.user);
   const profile = useProfileQuery();
-  const update = useProfileUpdateMutation();
   const logout = useLogoutMutation();
   const remove = useDeleteAccountMutation();
   const aboutReviews = useUserReviewsInfiniteQuery(me?.id ?? "", 20);
 
   const [subtab, setSubtab] = useState<ProfileSubtab>("settings");
-  const [editing, setEditing] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [about, setAbout] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
 
   // State-модалка перехватывает Back первой (стек modalBack в Shell).
   useModalBack(() => setFeedbackOpen(false), feedbackOpen);
-
-  useEffect(() => {
-    if (profile.data && !editing) {
-      setName(profile.data.name ?? "");
-      setAbout(profile.data.about ?? "");
-    }
-  }, [profile.data, editing]);
 
   const aboutItems = useMemo(
     () => aboutReviews.data?.pages.flatMap((page) => page.items) ?? [],
     [aboutReviews.data],
   );
-
-  const startEditing = () => {
-    setFormError(null);
-    update.reset();
-    setEditing(true);
-  };
-
-  const save = () => {
-    const error = validateProfileForm(name, about);
-    if (error) {
-      setFormError(error);
-      return;
-    }
-    setFormError(null);
-    update.mutate(normalizeProfileForm(name, about), {
-      onSuccess: () => setEditing(false),
-    });
-  };
 
   const handleLogout = () => {
     if (window.confirm("Выйти из аккаунта на этом устройстве?")) {
@@ -177,7 +181,7 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              {profile.data.about && !editing && (
+              {profile.data.about && (
                 <p className="text-[13px] text-[var(--tgui--text_color)] leading-relaxed">
                   {profile.data.about}
                 </p>
@@ -204,54 +208,18 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              {editing ? (
-                <>
-                  <div className="FormField">
-                    <label htmlFor="profile-name">Имя</label>
-                    <Input
-                      id="profile-name"
-                      value={name}
-                      maxLength={100}
-                      onChange={(event) => {
-                        setName(event.target.value);
-                        if (formError) setFormError(null);
-                      }}
-                    />
-                  </div>
-                  <div className="FormField">
-                    <label htmlFor="profile-about">О себе</label>
-                    <Textarea
-                      id="profile-about"
-                      rows={3}
-                      maxLength={500}
-                      placeholder="Например: за рулём 7 лет, люблю музыку 80-х"
-                      value={about}
-                      onChange={(event) => {
-                        setAbout(event.target.value);
-                        if (formError) setFormError(null);
-                      }}
-                    />
-                  </div>
-                  {(formError || update.error) && (
-                    <p className="FormError" role="alert">
-                      {formError ?? (update.error instanceof Error ? update.error.message : "Не удалось сохранить")}
-                    </p>
-                  )}
-                  <div className="flex gap-2">
-                    <Button stretched size="s" loading={update.isPending} onClick={save}>
-                      Сохранить изменения
-                    </Button>
-                    <Button mode="bezeled" size="s" stretched disabled={update.isPending} onClick={() => setEditing(false)}>
-                      Отмена
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                subtab === "settings" && (
-                  <Button mode="bezeled" stretched size="s" onClick={startEditing}>
-                    Редактировать профиль
-                  </Button>
-                )
+              {subtab === "settings" && (
+                <Button
+                  mode="bezeled"
+                  stretched
+                  size="s"
+                  onClick={() => {
+                    haptic.light();
+                    navigate("/profile/edit");
+                  }}
+                >
+                  Редактировать профиль
+                </Button>
               )}
             </div>
 
@@ -280,88 +248,82 @@ export function ProfilePage() {
             {subtab === "settings" ? (
               <List className="!p-0 flex flex-col gap-3">
                 <Section header="Мой автомобиль (для поездок)">
-                  <Cell
-                    Component="button"
-                    before={
+                  <MenuRow
+                    label={profile.data.car ? "Автомобиль" : "Добавить автомобиль"}
+                    icon={
                       <span className="icon-circle icon-circle--info">
                         <Car size={20} />
                       </span>
                     }
+                    title={profile.data.car ? "Автомобиль" : "Добавить автомобиль"}
                     subtitle={
                       profile.data.car
                         ? `${profile.data.car.model} · ${profile.data.car.color}`
                         : "Добавьте автомобиль, чтобы создавать поездки"
                     }
-                    after={<ChevronRight size={16} className="text-[var(--tgui--hint_color)]" />}
                     onClick={() => navigate("/vehicle")}
-                  >
-                    {profile.data.car ? "Автомобиль" : "Добавить автомобиль"}
-                  </Cell>
+                  />
                 </Section>
 
                 <Section header="Уведомления">
-                  <Cell
-                    Component="button"
-                    before={
-                      <span className="icon-circle icon-circle--info">
-                        <Bell size={18} />
-                      </span>
-                    }
-                    subtitle={
-                      profile.data.notificationsEnabled === false
-                        ? "Некритичные уведомления выключены"
-                        : "О новых бронях и подтверждении статуса"
-                    }
-                    after={<ChevronRight size={16} className="text-[var(--tgui--hint_color)]" />}
-                    onClick={() => navigate("/settings")}
-                  >
-                    Настройки уведомлений
-                  </Cell>
-                  <Cell
-                    Component="button"
-                    before={
-                      <span className="icon-circle icon-circle--success">
-                        <Bell size={18} />
-                      </span>
-                    }
-                    subtitle="Inbox заявок и статусов поездок"
-                    after={<ChevronRight size={16} className="text-[var(--tgui--hint_color)]" />}
-                    onClick={() => navigate("/notifications")}
-                  >
-                    Все уведомления
-                  </Cell>
+                  <div className="flex flex-col gap-2">
+                    <MenuRow
+                      label="Настройки уведомлений"
+                      icon={
+                        <span className="icon-circle icon-circle--info">
+                          <Bell size={18} />
+                        </span>
+                      }
+                      title="Настройки уведомлений"
+                      subtitle={
+                        profile.data.notificationsEnabled === false
+                          ? "Некритичные уведомления выключены"
+                          : "О новых бронях и подтверждении статуса"
+                      }
+                      onClick={() => navigate("/settings")}
+                    />
+                    <MenuRow
+                      label="Все уведомления"
+                      icon={
+                        <span className="icon-circle icon-circle--success">
+                          <Bell size={18} />
+                        </span>
+                      }
+                      title="Все уведомления"
+                      subtitle="Inbox заявок и статусов поездок"
+                      onClick={() => navigate("/notifications")}
+                    />
+                  </div>
                 </Section>
 
                 <Section header="Сервис и помощь">
-                  <Cell
-                    Component="button"
-                    before={
-                      <span className="icon-circle icon-circle--purple">
-                        <TriangleAlert size={18} />
-                      </span>
-                    }
-                    subtitle="Вопросы и обращения — ответим в течение нескольких минут"
-                    after={<ChevronRight size={16} className="text-[var(--tgui--hint_color)]" />}
-                    onClick={() => {
-                      haptic.light();
-                      setFeedbackOpen(true);
-                    }}
-                  >
-                    Служба поддержки
-                  </Cell>
-                  <Cell
-                    Component="button"
-                    before={
-                      <span className="icon-circle icon-circle--danger">
-                        <Flag size={18} />
-                      </span>
-                    }
-                    subtitle="Сообщить о проблеме с пользователем"
-                    after={<ChevronRight size={16} className="text-[var(--tgui--hint_color)]" />}
-                    onClick={() => navigate("/profile/reports")}
-                  >
-                    Жалобы
-                  </Cell>
+                  <div className="flex flex-col gap-2">
+                    <MenuRow
+                      label="Служба поддержки"
+                      icon={
+                        <span className="icon-circle icon-circle--purple">
+                          <TriangleAlert size={18} />
+                        </span>
+                      }
+                      title="Служба поддержки"
+                      subtitle="Вопросы и обращения — ответим в течение нескольких минут"
+                      onClick={() => {
+                        haptic.light();
+                        setFeedbackOpen(true);
+                      }}
+                    />
+                    <MenuRow
+                      label="Жалобы"
+                      icon={
+                        <span className="icon-circle icon-circle--danger">
+                          <Flag size={18} />
+                        </span>
+                      }
+                      title="Жалобы"
+                      subtitle="Сообщить о проблеме с пользователем"
+                      onClick={() => navigate("/profile/reports")}
+                    />
+                  </div>
                 </Section>
 
                 {/* Опасная зона */}

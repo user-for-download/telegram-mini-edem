@@ -1,10 +1,8 @@
 import {
   memo,
   useCallback,
-  useEffect,
   useRef,
   useState,
-  type RefObject,
 } from "react";
 import {
   Accordion,
@@ -39,49 +37,6 @@ import {
   normalizeSupportForm,
   validateSupportForm,
 } from "@/pages/supportValidation";
-
-/** Esc закрывает диалог (клиент; в SSR useEffect не выполняется). */
-function useEscapeClose(onClose: () => void): void {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-}
-
-const FOCUSABLE =
-  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-/** Минимальный focus-trap: фокус внутрь при монтировании + цикл по Tab. */
-function useFocusTrap(ref: RefObject<HTMLDivElement | null>): void {
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const items = () =>
-      Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-        (el) => !el.hasAttribute("disabled"),
-      );
-    (node.querySelector<HTMLElement>("[data-autofocus]") ?? items()[0] ?? node).focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
-      const list = items();
-      if (list.length === 0) return;
-      const first = list[0];
-      const last = list[list.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    node.addEventListener("keydown", onKey);
-    return () => node.removeEventListener("keydown", onKey);
-  }, [ref]);
-}
 
 const FeedbackCard = memo(function FeedbackCard({
   feedback,
@@ -175,27 +130,17 @@ export function SupportModal({
  */
 export function SupportRoute() {
   const navigate = useNavigate();
-  const dialogRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => {
     const historyIndex = window.history.state?.idx;
     if (typeof historyIndex === "number" && historyIndex > 0) navigate(-1);
     else navigate("/profile", { replace: true });
   }, [navigate]);
-  useEscapeClose(close);
-  useFocusTrap(dialogRef);
   return (
     <>
       <div aria-hidden hidden>
         <ProfilePage />
       </div>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Поддержка" tabIndex={-1} className="outline-none">
-        <div className="flex flex-col gap-3.5 px-4 pt-4 pb-24 max-w-[640px] mx-auto">
-          <button type="button" data-autofocus aria-label="Закрыть" onClick={close} className="self-end inline-flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 rounded-xl text-[13px] font-medium text-[var(--tgui--link_color)]">
-            <X size={18} aria-hidden /> Закрыть
-          </button>
-          <SupportBody />
-        </div>
-      </div>
+      <SupportModal open onClose={close} />
     </>
   );
 }

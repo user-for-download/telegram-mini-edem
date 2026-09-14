@@ -28,6 +28,7 @@ import { TripsPage } from "@/pages/TripsPage";
 import { RideRequestsRoute } from "@/components/RideRequestsModal";
 import { TripRequestsRoute } from "@/components/TripRequestsModal";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { EditProfileRoute } from "@/components/EditProfileModal";
 import { ReviewsRoute } from "@/components/ReviewsModal";
 import { SettingsRoute } from "@/components/SettingsModal";
 import { SupportRoute } from "@/components/SupportModal";
@@ -132,6 +133,7 @@ export function AppRouter() {
           <Route path="/bookings/history" element={<Navigate to="/bookings?segment=history" replace />} />
           <Route path="/ride-requests" element={<RideRequestsRoute />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/edit" element={<EditProfileRoute />} />
           <Route path="/reviews" element={<ReviewsRoute />} />
           <Route path="/settings" element={<SettingsRoute />} />
           <Route path="/notifications" element={<NotificationsRoute />} />
