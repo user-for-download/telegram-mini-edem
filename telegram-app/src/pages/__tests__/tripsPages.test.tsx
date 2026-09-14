@@ -149,16 +149,16 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 }
 
 describe("TripsPage parity", () => {
-  it("renders the three segments on the active tab", () => {
+  it("renders two segments on the active tab", () => {
     mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
     mockUseHistory.mockReturnValue(queryState({ data: [] }));
     mockUseCancelBooking.mockReturnValue(mutation());
     const html = render(<TripsPage />);
     expect(html).toContain("Активные");
     expect(html).toContain("История");
-    expect(html).toContain("За рулём");
-    // Пустые брони → плейсхолдер с подсказкой уйти в поиск.
-    expect(html).toContain("Вы ещё не забронировали поездку");
+    expect(html).not.toContain("За рулём");
+    // Пусто везде → подсказка с двумя путями.
+    expect(html).toContain("Пока тихо");
   });
 
   it("shows active booking cards with guarded cancel", () => {
@@ -183,12 +183,13 @@ describe("TripsPage parity", () => {
     expect(html).toContain("место №2");
   });
 
-  it("renders driver trips with request counters and guarded actions", () => {
+  it("renders driver trips with request counters and guarded actions on active", () => {
     mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
     mockUseHistory.mockReturnValue(queryState({ data: [] }));
     mockUseInfiniteMyTrips.mockReturnValue(infiniteState([makeTrip()]));
     mockUseCancelTrip.mockReturnValue(mutation());
     mockUseCompleteTrip.mockReturnValue(mutation());
+    // Легаси ?segment=driver ведёт в «Активные».
     const html = render(<TripsPage />, "/bookings?segment=driver");
     expect(html).toContain("Вы водитель");
     expect(html).toContain("Заявки: 2");
@@ -244,6 +245,20 @@ describe("TripsPage parity", () => {
     expect(html).toContain("Поездка отменена");
     expect(html).toContain("Москва");
     expect(html).toContain("Тверь");
+  });
+
+  it("merges driver archive into history with role badge", () => {
+    mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
+    mockUseHistory.mockReturnValue(queryState({ data: [] }));
+    mockUseInfiniteMyTrips.mockReturnValue(
+      infiniteState([makeTrip({ id: "t-arch", status: "completed" })]),
+    );
+    const html = render(<TripsPage />, "/bookings?segment=history");
+    expect(html).toContain("Вы водитель");
+    expect(html).toContain("Завершена");
+    // SSR разбивает «→» комментариями.
+    expect(html).toContain("Москва");
+    expect(html).toContain("Тула");
   });
 });
 

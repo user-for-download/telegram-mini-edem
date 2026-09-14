@@ -169,7 +169,7 @@ describe("TripsPage driver", () => {
     expect(html).toContain("Управление поездкой");
     expect(html).toContain("Завершить");
     expect(html).toContain("Отменить");
-    expect(html).toContain("+ Создать ещё поездку");
+    expect(html).toContain("+ Создать поездку");
   });
 
   it("завершённая поездка — без destructive-кнопок", () => {
@@ -185,7 +185,7 @@ describe("TripsPage driver", () => {
     mockUseInfiniteMyTrips.mockReturnValue(infiniteState([]));
     const html = render(<TripsPage />, "/bookings?segment=driver");
     expect(html).toContain("Пока пусто");
-    expect(html).toContain("Опубликуйте маршрут");
+    expect(html).toContain("Пока тихо");
   });
 });
 

@@ -29,16 +29,35 @@ import {
 import type { Trip } from "@edem/contracts";
 import type { PassengerBooking } from "@edem/contracts";
 
-type Segment = "active" | "history" | "driver";
+type Segment = "active" | "history";
 
 const SEGMENTS: ReadonlyArray<{ value: Segment; label: string }> = [
   { value: "active", label: "Активные" },
   { value: "history", label: "История" },
-  { value: "driver", label: "За рулём" },
 ];
 
 function parseSegment(value: string | null): Segment {
-  return value === "history" || value === "driver" ? value : "active";
+  // Легаси ?segment=driver (старые редиректы) — теперь часть «Активных».
+  return value === "history" ? "history" : "active";
+}
+
+type HistoryFilter = "all" | "completed" | "cancelled";
+
+/** Единый статус истории для пассажира и водителя: завершена / отменена. */
+function historyCategoryOf(
+  item: { kind: "booking"; booking: PassengerBooking } | { kind: "driving"; trip: Trip },
+): "completed" | "cancelled" | "other" {
+  if (item.kind === "driving") {
+    if (item.trip.status === "completed") return "completed";
+    if (item.trip.status === "cancelled") return "cancelled";
+    return "other";
+  }
+  const known = item.booking.historyCategory;
+  if (known === "completed" || known === "cancelled") return known;
+  if (item.booking.status === "cancelled" || item.booking.status === "declined") {
+    return "cancelled";
+  }
+  return "other";
 }
 
 function bookingStatusLabel(status: string): { label: string; tone: string } {
@@ -178,11 +197,177 @@ function ActiveBookingCard({
   );
 }
 
+/** Карточка поездки водителя: полная (управление, заявки, действия)
+ * для «Активных», компактная — для «Истории». */
+function DriverTripCard({
+  trip,
+  archived,
+  onRequests,
+  onManage,
+  onShare,
+  onComplete,
+  onCancel,
+  completePending,
+  cancelPending,
+}: {
+  trip: Trip;
+  archived: boolean;
+  onRequests: (id: string) => void;
+  onManage: (id: string) => void;
+  onShare: (id: string) => void;
+  onComplete: (id: string) => void;
+  onCancel: (id: string) => void;
+  completePending: boolean;
+  cancelPending: boolean;
+}) {
+  const status = tripStatusLabel(trip);
+  const pending = trip.pendingRequestsCount ?? 0;
+
+  if (archived) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          haptic.light();
+          onManage(trip.id);
+        }}
+        className="text-left p-3.5 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] opacity-90 hover:opacity-100 transition"
+      >
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--app-info-bg)] text-[var(--app-info)]">
+            Вы водитель
+          </span>
+          <span className="StatusPill shrink-0" data-tone={status.tone}>
+            {status.label}
+          </span>
+        </div>
+        <div className="text-[15px] font-semibold text-[var(--tgui--text_color)]">
+          {trip.fromCity} → {trip.toCity}
+        </div>
+        <div className="flex items-center justify-between mt-2 text-[12px] text-[var(--tgui--hint_color)]">
+          <span className="truncate">
+            {dayLabel(trip.date)}, {trip.time}
+          </span>
+          <span className="font-medium shrink-0">{trip.price} ₽ / место</span>
+        </div>
+      </button>
+    );
+  }
+
+  const finished = trip.status === "cancelled" || trip.status === "completed";
+  return (
+    <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--app-info-bg)] text-[var(--app-info)]">
+          Вы водитель
+        </span>
+        <span className="text-[12px] font-medium text-[var(--tgui--hint_color)] truncate">
+          {dayLabel(trip.date)}, {trip.time}
+        </span>
+      </div>
+
+      <div>
+        <div className="text-[16px] font-bold text-[var(--tgui--text_color)]">
+          {trip.fromCity} → {trip.toCity}
+        </div>
+        <span className="StatusPill" data-tone={status.tone}>
+          {status.label}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--tgui--tertiary_bg_color)] text-[13px]">
+        <div>
+          <span className="text-[var(--tgui--hint_color)]">Свободно мест: </span>
+          <span className="font-semibold text-[var(--app-success)]">
+            {trip.seatsAvailable} из {trip.seatsTotal}
+          </span>
+        </div>
+        <div className="text-xs font-medium text-[var(--tgui--hint_color)]">
+          Цена:{" "}
+          <span className="font-bold text-[var(--tgui--text_color)]">
+            {trip.price} ₽
+          </span>
+        </div>
+      </div>
+
+      {pending > 0 && (
+        <div className="p-3 rounded-xl border border-dashed border-[var(--tgui--outline)] bg-[var(--tgui--bg_color)]">
+          <div className="flex items-center justify-between text-xs font-semibold text-[var(--tgui--hint_color)] mb-2">
+            <span>Заявки от попутчиков</span>
+            <span className="text-[var(--app-warning)] font-medium">Новые</span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="icon-circle icon-circle--warning shrink-0">
+                <Send size={14} />
+              </span>
+              <div className="min-w-0">
+                <div className="text-[13px] font-medium text-[var(--tgui--text_color)] truncate">
+                  {`Ожидают решения: ${pending}`}
+                </div>
+              </div>
+            </div>
+            <Button size="s" mode="filled" onClick={() => onRequests(trip.id)}>
+              Заявки
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <Button
+          size="m"
+          mode="bezeled"
+          className="flex-1"
+          onClick={() => {
+            haptic.light();
+            onManage(trip.id);
+          }}
+          before={<Car size={15} />}
+        >
+          Управление поездкой
+        </Button>
+        <IconButton
+          size="m"
+          mode="gray"
+          aria-label="Поделиться поездкой"
+          title="Поделиться поездкой"
+          onClick={() => {
+            haptic.light();
+            onShare(trip.id);
+          }}
+        >
+          <Share2 size={16} />
+        </IconButton>
+      </div>
+
+      {!finished && (
+        <div className="flex gap-2">
+          <ConfirmAction
+            label="Завершить"
+            confirmLabel="Завершить"
+            description="Поездка будет перенесена в архив, а пассажиры смогут оставить отзывы."
+            pending={completePending}
+            onConfirm={() => onComplete(trip.id)}
+          />
+          <ConfirmAction
+            label="Отменить"
+            confirmLabel="Отменить поездку"
+            description="Поездка станет недоступна, а пассажиры получат уведомление."
+            pending={cancelPending}
+            onConfirm={() => onCancel(trip.id)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
- * «Поездки» — один раздел с сегментами Активные / История / За рулём
- * (язык TripsTab примера, адаптация под наши queries): активные брони,
- * история пассажира и поездки водителя с заявками. Сегмент синхронизирован
- * с ?segment= (deep-links/редиректы со старых маршрутов).
+ * «Поездки» — два раздела: «Активные» (брони + поездки за рулём)
+ * и «История» (завершённые/отменённые обеих ролей с фильтром по статусу).
+ * Сегмент синхронизирован с ?segment= (?segment=driver — легаси, ведёт
+ * в «Активные»; deep-links/редиректы со старых маршрутов).
  */
 export function TripsPage() {
   const navigate = useNavigate();
@@ -191,9 +376,16 @@ export function TripsPage() {
   const segment = parseSegment(searchParams.get("segment"));
   const [historyFilter, setHistoryFilter] = useState<"all" | "completed" | "cancelled">("all");
 
-  const bookings = useMyBookingsQuery();
+  const bookings = useMyBookingsQuery({ enabled: segment === "active" });
   const history = usePassengerHistoryQuery({ enabled: segment === "history" });
-  const driverTrips = useInfiniteMyTripsQuery({ enabled: segment === "driver" });
+  const driverActive = useInfiniteMyTripsQuery({
+    status: "active",
+    enabled: segment === "active",
+  });
+  const driverArchive = useInfiniteMyTripsQuery({
+    status: "archive",
+    enabled: segment === "history",
+  });
   const cancelBooking = useCancelBookingMutation();
   const cancelTrip = useCancelTripMutation();
   const completeTrip = useCompleteTripMutation();
@@ -206,25 +398,56 @@ export function TripsPage() {
       return aTime - bTime;
     });
 
-  const historyItems = (history.data ?? [])
-    .filter((booking) => historyFilter === "all" || booking.historyCategory === historyFilter)
-    .sort((a, b) => {
-      const aTime = a.trip.departureAt ? Date.parse(a.trip.departureAt) : 0;
-      const bTime = b.trip.departureAt ? Date.parse(b.trip.departureAt) : 0;
-      return bTime - aTime;
-    });
+  const activeDriverTrips =
+    driverActive.data?.pages.flatMap((page) => page.items) ?? [];
 
-  const driverItems = driverTrips.data?.pages.flatMap((page) => page.items) ?? [];
+  type HistoryItem =
+    | { kind: "booking"; key: string; at: number; booking: PassengerBooking }
+    | { kind: "driving"; key: string; at: number; trip: Trip };
 
-  // Сентинел автодогрузки водительских поездок (тот же
-  // useInfiniteMyTripsQuery, контракт не меняется; SSR — тихий фолбэк).
-  const driverSentinelRef = useInfiniteSentinel({
-    hasNextPage: driverTrips.hasNextPage,
-    isFetchingNextPage: driverTrips.isFetchingNextPage,
+  const tripTime = (trip: { departureAt?: string; date: string; time: string }): number => {
+    if (trip.departureAt) {
+      const parsed = Date.parse(trip.departureAt);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+    const fallback = Date.parse(`${trip.date}T${trip.time}`);
+    return Number.isNaN(fallback) ? 0 : fallback;
+  };
+
+  const historyItems: HistoryItem[] = [
+    ...(history.data ?? []).map((booking) => ({
+      kind: "booking" as const,
+      key: `b-${booking.id}`,
+      at: tripTime(booking.trip),
+      booking,
+    })),
+    ...(driverArchive.data?.pages.flatMap((page) => page.items) ?? []).map((trip) => ({
+      kind: "driving" as const,
+      key: `d-${trip.id}`,
+      at: tripTime(trip),
+      trip,
+    })),
+  ]
+    .filter((item) => historyFilter === "all" || historyCategoryOf(item) === historyFilter)
+    .sort((a, b) => b.at - a.at);
+
+  // Сентинелы автодогрузки водительских поездок (контракт
+  // useInfiniteMyTripsQuery не меняется; SSR — тихий фолбэк).
+  const activeSentinelRef = useInfiniteSentinel({
+    hasNextPage: driverActive.hasNextPage,
+    isFetchingNextPage: driverActive.isFetchingNextPage,
     fetchNextPage: () => {
-      void driverTrips.fetchNextPage();
+      void driverActive.fetchNextPage();
     },
-    disabled: segment !== "driver",
+    disabled: segment !== "active",
+  });
+  const archiveSentinelRef = useInfiniteSentinel({
+    hasNextPage: driverArchive.hasNextPage,
+    isFetchingNextPage: driverArchive.isFetchingNextPage,
+    fetchNextPage: () => {
+      void driverArchive.fetchNextPage();
+    },
+    disabled: segment !== "history",
   });
 
   const pickSegment = (next: Segment) => {
@@ -263,11 +486,14 @@ export function TripsPage() {
 
         {segment === "active" && (
           <QueryState
-            loading={bookings.isLoading}
-            error={bookings.error}
-            empty={activeBookings.length === 0}
-            emptyText="Вы ещё не забронировали поездку. Найдите подходящую в поиске!"
-            onRetry={() => void bookings.refetch()}
+            loading={bookings.isLoading || driverActive.isLoading}
+            error={bookings.error ?? driverActive.error}
+            empty={activeBookings.length === 0 && activeDriverTrips.length === 0}
+            emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
+            onRetry={() => {
+              void bookings.refetch();
+              void driverActive.refetch();
+            }}
           >
             <div className="flex flex-col gap-3">
               {activeBookings.map((booking) => (
@@ -285,8 +511,73 @@ export function TripsPage() {
                   }
                 />
               ))}
+              {activeDriverTrips.map((trip) => (
+                <DriverTripCard
+                  key={trip.id}
+                  trip={trip}
+                  archived={false}
+                  onRequests={(id) => navigate(`/trips/my/${id}/requests`)}
+                  onManage={(id) => {
+                    haptic.light();
+                    navigate(`/trips/${id}`);
+                  }}
+                  onShare={(id) => {
+                    haptic.light();
+                    void shareTrip(id);
+                  }}
+                  onComplete={(id) =>
+                    completeTrip.mutate(id, {
+                      onSuccess: () => {
+                        haptic.success();
+                        toast.show({ text: "Поездка завершена" });
+                      },
+                    })
+                  }
+                  onCancel={(id) =>
+                    cancelTrip.mutate(id, {
+                      onSuccess: () => {
+                        haptic.warning();
+                        toast.show({ text: "Поездка отменена" });
+                      },
+                    })
+                  }
+                  completePending={completeTrip.isPending}
+                  cancelPending={cancelTrip.isPending}
+                />
+              ))}
+              {driverActive.hasNextPage && (
+                <>
+                  <div
+                    ref={activeSentinelRef}
+                    aria-hidden="true"
+                    className="flex min-h-12 items-center justify-center"
+                    style={{ overflowAnchor: "none" }}
+                  />
+                  {driverActive.isFetchingNextPage && (
+                    <div
+                      role="status"
+                      aria-label="Загрузка ещё поездок"
+                      className="flex flex-col gap-3"
+                    >
+                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
+                    </div>
+                  )}
+                  <Button
+                    stretched
+                    mode="bezeled"
+                    loading={driverActive.isFetchingNextPage}
+                    disabled={driverActive.isFetchingNextPage}
+                    onClick={() => void driverActive.fetchNextPage()}
+                  >
+                    Показать ещё
+                  </Button>
+                </>
+              )}
               <Button size="l" mode="filled" onClick={() => navigate("/trips")}>
                 Найти поездку
+              </Button>
+              <Button size="l" mode="bezeled" onClick={() => navigate("/trips/my/new")}>
+                + Создать поездку
               </Button>
             </div>
           </QueryState>
@@ -294,15 +585,18 @@ export function TripsPage() {
 
         {segment === "history" && (
           <QueryState
-            loading={history.isLoading}
-            error={history.error}
+            loading={history.isLoading || driverArchive.isLoading}
+            error={history.error ?? driverArchive.error}
             empty={historyItems.length === 0}
             emptyText={
               historyFilter === "all"
                 ? "Здесь появятся завершённые и архивные поездки."
                 : "Нет подходящих поездок."
             }
-            onRetry={() => void history.refetch()}
+            onRetry={() => {
+              void history.refetch();
+              void driverArchive.refetch();
+            }}
           >
             <div role="tablist" aria-label="Фильтр истории" className="mt-1">
               <SegmentedControl>
@@ -323,11 +617,31 @@ export function TripsPage() {
               </SegmentedControl>
             </div>
             <div className="flex flex-col gap-3 mt-1">
-              {historyItems.map((booking) => {
-                const category = booking.historyCategory ?? booking.status;
+              {historyItems.map((item) => {
+                if (item.kind === "driving") {
+                  return (
+                    <DriverTripCard
+                      key={item.key}
+                      trip={item.trip}
+                      archived
+                      onRequests={() => {}}
+                      onManage={(id) => {
+                        haptic.light();
+                        navigate(`/trips/${id}`);
+                      }}
+                      onShare={() => {}}
+                      onComplete={() => {}}
+                      onCancel={() => {}}
+                      completePending={false}
+                      cancelPending={false}
+                    />
+                  );
+                }
+                const booking = item.booking;
+                const category = historyCategoryOf(item);
                 return (
                   <button
-                    key={booking.id}
+                    key={item.key}
                     type="button"
                     onClick={() => {
                       haptic.light();
@@ -359,188 +673,38 @@ export function TripsPage() {
                   </button>
                 );
               })}
-            </div>
-          </QueryState>
-        )}
-
-        {segment === "driver" && (
-          <QueryState
-            loading={driverTrips.isLoading}
-            error={driverTrips.error}
-            empty={driverItems.length === 0}
-            emptyText="Опубликуйте маршрут, чтобы найти попутчиков и разделить расходы."
-            onRetry={() => void driverTrips.refetch()}
-          >
-            <div className="flex flex-col gap-3">
-              {driverItems.map((trip) => {
-                const status = tripStatusLabel(trip);
-                const finished = trip.status === "cancelled" || trip.status === "completed";
-                const pending = trip.pendingRequestsCount ?? 0;
-                return (
-                  <div
-                    key={trip.id}
-                    className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--app-info-bg)] text-[var(--app-info)]">
-                        Вы водитель
-                      </span>
-                      <span className="text-[12px] font-medium text-[var(--tgui--hint_color)] truncate">
-                        {dayLabel(trip.date)}, {trip.time}
-                      </span>
-                    </div>
-
-                    <div>
-                      <div className="text-[16px] font-bold text-[var(--tgui--text_color)]">
-                        {trip.fromCity} → {trip.toCity}
-                      </div>
-                      <span className="StatusPill" data-tone={status.tone}>
-                        {status.label}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--tgui--tertiary_bg_color)] text-[13px]">
-                      <div>
-                        <span className="text-[var(--tgui--hint_color)]">Свободно мест: </span>
-                        <span className="font-semibold text-[var(--app-success)]">
-                          {trip.seatsAvailable} из {trip.seatsTotal}
-                        </span>
-                      </div>
-                      <div className="text-xs font-medium text-[var(--tgui--hint_color)]">
-                        Цена:{" "}
-                        <span className="font-bold text-[var(--tgui--text_color)]">
-                          {trip.price} ₽
-                        </span>
-                      </div>
-                    </div>
-
-                    {pending > 0 && (
-                      <div className="p-3 rounded-xl border border-dashed border-[var(--tgui--outline)] bg-[var(--tgui--bg_color)]">
-                        <div className="flex items-center justify-between text-xs font-semibold text-[var(--tgui--hint_color)] mb-2">
-                          <span>Заявки от попутчиков</span>
-                          <span className="text-[var(--app-warning)] font-medium">Новые</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="icon-circle icon-circle--warning shrink-0">
-                              <Send size={14} />
-                            </span>
-                            <div className="min-w-0">
-                              <div className="text-[13px] font-medium text-[var(--tgui--text_color)] truncate">
-                                {`Ожидают решения: ${pending}`}
-                              </div>
-                            </div>
-                          </div>
-                          <Button
-                            size="s"
-                            mode="filled"
-                            onClick={() => navigate(`/trips/my/${trip.id}/requests`)}
-                          >
-                            Заявки
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="m"
-                        mode="bezeled"
-                        className="flex-1"
-                        onClick={() => {
-                          haptic.light();
-                          navigate(`/trips/${trip.id}`);
-                        }}
-                        before={<Car size={15} />}
-                      >
-                        Управление поездкой
-                      </Button>
-                      <IconButton
-                        size="m"
-                        mode="gray"
-                        aria-label="Поделиться поездкой"
-                        title="Поделиться поездкой"
-                        onClick={() => {
-                          haptic.light();
-                          void shareTrip(trip.id);
-                        }}
-                      >
-                        <Share2 size={16} />
-                      </IconButton>
-                    </div>
-
-                    {!finished && (
-                      <div className="flex gap-2">
-                        <ConfirmAction
-                          label="Завершить"
-                          confirmLabel="Завершить"
-                          description="Поездка будет перенесена в архив, а пассажиры смогут оставить отзывы."
-                          pending={completeTrip.isPending}
-                          onConfirm={() =>
-                            completeTrip.mutate(trip.id, {
-                              onSuccess: () => {
-                                haptic.success();
-                                toast.show({ text: "Поездка завершена" });
-                              },
-                            })
-                          }
-                        />
-                        <ConfirmAction
-                          label="Отменить"
-                          confirmLabel="Отменить поездку"
-                          description="Поездка станет недоступна, а пассажиры получат уведомление."
-                          pending={cancelTrip.isPending}
-                          onConfirm={() =>
-                            cancelTrip.mutate(trip.id, {
-                              onSuccess: () => {
-                                haptic.warning();
-                                toast.show({ text: "Поездка отменена" });
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {driverTrips.hasNextPage && (
+              {driverArchive.hasNextPage && (
                 <>
-                  {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
-                      высота (min-h-12) держит скролл от прыжков. */}
                   <div
-                    ref={driverSentinelRef}
+                    ref={archiveSentinelRef}
                     aria-hidden="true"
                     className="flex min-h-12 items-center justify-center"
                     style={{ overflowAnchor: "none" }}
                   />
-                  {driverTrips.isFetchingNextPage && (
+                  {driverArchive.isFetchingNextPage && (
                     <div
                       role="status"
                       aria-label="Загрузка ещё поездок"
                       className="flex flex-col gap-3"
                     >
                       <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
-                      <div className="h-20 animate-pulse rounded-2xl bg-[var(--tgui--secondary_fill)]" />
                     </div>
                   )}
                   <Button
                     stretched
                     mode="bezeled"
-                    loading={driverTrips.isFetchingNextPage}
-                    disabled={driverTrips.isFetchingNextPage}
-                    onClick={() => void driverTrips.fetchNextPage()}
+                    loading={driverArchive.isFetchingNextPage}
+                    disabled={driverArchive.isFetchingNextPage}
+                    onClick={() => void driverArchive.fetchNextPage()}
                   >
                     Показать ещё
                   </Button>
                 </>
               )}
-              <Button size="l" mode="filled" onClick={() => navigate("/trips/my/new")}>
-                + Создать ещё поездку
-              </Button>
             </div>
           </QueryState>
         )}
+
       </div>
     </>
   );
