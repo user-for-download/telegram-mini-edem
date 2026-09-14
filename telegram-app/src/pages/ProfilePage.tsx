@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import {
   Avatar,
   Button,
+  Cell,
   Headline,
   List,
   Placeholder,
@@ -17,13 +18,13 @@ import {
   LogOut,
   Moon,
   Star,
-  Trash2,
   TriangleAlert,
   Volume2,
 } from "lucide-react";
 import { miniApp, useSignal } from "@telegram-apps/sdk-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
+import { ConfirmAction } from "@/components/ConfirmAction";
 import { QueryState } from "@/components/QueryState";
 import { ReviewCard } from "@/components/ReviewCard";
 import { FeedbackModal } from "@/components/FeedbackModal";
@@ -47,9 +48,9 @@ import { useModalBack } from "@/utils/modalBack";
 type ProfileSubtab = "settings" | "reviews";
 
 /**
- * Строка меню раздела — нативная кнопка во всю ширину (язык компактных
- * карточек приложения). tgui Cell с Component="button" наследует базовые
- * стили Button (inline-flex + nowrap) и вылезает за экран на 150px+.
+ * Строка меню раздела — tgui Cell (учебниковый паттерн стори Playground:
+ * before=иконка, children=title, subtitle, after=chevron). Cell идёт через
+ * Tappable (ripple/press), Component="button" + w-full держат ширину.
  */
 function MenuRow({
   icon,
@@ -65,23 +66,18 @@ function MenuRow({
   label: string;
 }) {
   return (
-    <button
+    <Cell
+      Component="button"
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="w-full min-w-0 flex items-center gap-3 p-3 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] text-left hover:border-[var(--app-info)] transition"
+      before={<span className="shrink-0">{icon}</span>}
+      after={<ChevronRight size={16} className="text-[var(--tgui--hint_color)] shrink-0" />}
+      subtitle={subtitle}
+      className="w-full text-left"
     >
-      <span className="shrink-0">{icon}</span>
-      <span className="flex-1 min-w-0">
-        <span className="block text-[15px] font-medium text-[var(--tgui--text_color)] truncate">
-          {title}
-        </span>
-        <span className="block text-[12px] text-[var(--tgui--hint_color)] truncate">
-          {subtitle}
-        </span>
-      </span>
-      <ChevronRight size={16} className="text-[var(--tgui--hint_color)] shrink-0" />
-    </button>
+      {title}
+    </Cell>
   );
 }
 
@@ -180,17 +176,8 @@ export function ProfilePage() {
     }
   };
 
-  const handleDeleteAccount = () => {
-    const first = window.confirm(
-      "Удалить профиль? Аккаунт будет анонимизирован, поездки и отзывы сохранятся без вашего имени. Активные поездки и брони нужно завершить или отменить заранее. Продолжить?",
-    );
-    if (!first) return;
-    const second = window.confirm(
-      "Подтвердите удаление: восстановление будет невозможно. Удалить профиль окончательно?",
-    );
-    if (!second) return;
-    remove.mutate();
-  };
+  // Удаление — через ConfirmAction (вооружение в UI); двойной
+  // window.confirm здесь больше не нужен.
 
   if (profile.error instanceof ApiError && profile.error.status === 403) {
     if (profile.error.message === "Account is deleted") {
@@ -457,17 +444,16 @@ export function ProfilePage() {
                           : "Не удалось удалить профиль"}
                     </p>
                   )}
-                  <Button
-                    mode="gray"
-                    stretched
-                    size="s"
-                    before={<Trash2 size={16} />}
-                    loading={remove.isPending}
+                  {/* Деструктив — только через ConfirmAction (вооружение вместо
+                      window.confirm: нативные диалоги ненадёжны в WebView). */}
+                  <ConfirmAction
+                    label="Удалить профиль"
+                    confirmLabel="Удалить окончательно"
+                    description="Аккаунт будет анонимизирован, поездки и отзывы сохранятся без вашего имени. Активные поездки и брони завершите или отмените заранее. Восстановление невозможно."
+                    pending={remove.isPending}
                     disabled={remove.isPending}
-                    onClick={handleDeleteAccount}
-                  >
-                    Удалить профиль
-                  </Button>
+                    onConfirm={() => remove.mutate()}
+                  />
                 </div>
               </List>
             ) : (

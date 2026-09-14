@@ -27,7 +27,7 @@ export function QueryState({
   if (error) {
     return (
       <Placeholder header="Не удалось загрузить данные" description="Проверьте соединение и повторите попытку.">
-        <Button onClick={onRetry}>Повторить</Button>
+        <Button mode="bezeled" size="m" onClick={onRetry}>Повторить</Button>
       </Placeholder>
     );
   }

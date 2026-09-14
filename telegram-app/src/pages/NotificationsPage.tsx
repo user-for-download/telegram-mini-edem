@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Button, Placeholder } from "@telegram-apps/telegram-ui";
+import { Button, Link, Placeholder } from "@telegram-apps/telegram-ui";
 import { BellRing, CheckCheck, Settings2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { MutationError } from "@/components/MutationError";
@@ -104,12 +104,9 @@ function NotificationCard({
       </span>
       <div className="flex items-center gap-3 pt-1 border-t border-[var(--tgui--outline)]">
         {route && (
-          <a
-            className="text-[13px] font-medium text-[var(--tgui--link_color)]"
-            href={`#${route}`}
-          >
+          <Link href={`#${route}`}>
             Открыть
-          </a>
+          </Link>
         )}
         {!notification.isRead && (
           <Button
@@ -198,13 +195,18 @@ export function NotificationsPage() {
             некритичные уведомления выключены.
           </p>
           <div className="flex gap-2">
-            <a
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[14px] font-medium bg-[var(--tgui--secondary_fill)] text-[var(--tgui--link_color)]"
+            {/* Кнопка-ссылка: официальный паттерн tgui (стори Blocks/Button → Link):
+                Button с Component="a" вместо самописного <a> со стилями. */}
+            <Button
+              Component="a"
               href="#/settings"
+              mode="bezeled"
+              size="s"
+              before={<Settings2 size={15} />}
+              className="flex-1"
             >
-              <Settings2 size={15} />
               Настройки уведомлений
-            </a>
+            </Button>
             <Button
               stretched
               size="s"

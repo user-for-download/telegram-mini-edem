@@ -9,6 +9,7 @@ import {
   SegmentedControl,
   Subheadline,
   IconButton,
+  Tappable,
 } from "@telegram-apps/telegram-ui";
 import {
   ChevronRight,
@@ -178,7 +179,8 @@ export function HomePage() {
         {/* Ближайшая бронь */}
         {activeBooking && (
           <div className="px-4">
-            <button
+            <Tappable
+              Component="button"
               type="button"
               onClick={() => {
                 haptic.light();
@@ -217,7 +219,7 @@ export function HomePage() {
                   </div>
                 </div>
               </div>
-            </button>
+            </Tappable>
           </div>
         )}
 
@@ -259,7 +261,8 @@ export function HomePage() {
 
           <div className="grid grid-cols-2 gap-2.5">
             {POPULAR_ROUTES.map((route) => (
-              <button
+              <Tappable
+                Component="button"
                 key={`${route.from}-${route.to}`}
                 type="button"
                 onClick={() => goToSearch(route.from, route.to, "all")}
@@ -272,7 +275,7 @@ export function HomePage() {
                 <div className="flex items-center justify-between mt-1 text-[11px] text-[var(--tgui--hint_color)]">
                   <span className="font-medium text-[var(--app-info)]">Найти попутку</span>
                 </div>
-              </button>
+              </Tappable>
             ))}
           </div>
         </div>

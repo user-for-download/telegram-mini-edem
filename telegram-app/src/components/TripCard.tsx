@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { Trip, TripTag } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
+import { Tappable } from "@telegram-apps/telegram-ui";
 import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
 import { haptic } from "@/utils/haptics";
 import { LazyAvatar } from "@/components/LazyAvatar";
@@ -39,7 +40,8 @@ export function TripCard({ trip }: { trip: Trip }) {
   const arrival = formatArrivalTime(trip.time, trip.durationMinutes);
 
   return (
-    <button
+    <Tappable
+      Component="button"
       type="button"
       onClick={() => {
         haptic.light();
@@ -135,6 +137,6 @@ export function TripCard({ trip }: { trip: Trip }) {
           )}
         </div>
       </div>
-    </button>
+    </Tappable>
   );
 }

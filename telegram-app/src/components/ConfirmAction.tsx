@@ -42,6 +42,8 @@ export function ConfirmAction({
       <p id="confirm-action-desc">{description}</p>
       <div className="ButtonRow">
         <Button
+          mode="filled"
+          size="s"
           stretched
           loading={pending}
           disabled={pending}
@@ -52,7 +54,7 @@ export function ConfirmAction({
         >
           {confirmLabel}
         </Button>
-        <Button mode="bezeled" stretched disabled={pending} onClick={() => setArmed(false)}>
+        <Button mode="bezeled" size="s" stretched disabled={pending} onClick={() => setArmed(false)}>
           Назад
         </Button>
       </div>

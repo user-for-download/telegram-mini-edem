@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Chip, Placeholder, Spinner } from "@telegram-apps/telegram-ui";
+import { Button, Chip, IconButton, Placeholder, Spinner } from "@telegram-apps/telegram-ui";
 import { Phone, Send, ShieldCheck, Star } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -196,15 +196,15 @@ export function TripDetailsPage() {
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
+          <IconButton
+            size="m"
+            mode="gray"
             onClick={handleShare}
-            className="p-2 rounded-full bg-[var(--tgui--secondary_fill)] text-[var(--app-info)] hover:opacity-80 transition min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label="Поделиться поездкой"
             title="Поделиться поездкой"
           >
             <Send size={16} />
-          </button>
+          </IconButton>
           {hasActiveBooking && (
             <span
               className="p-2 rounded-full bg-[var(--tgui--secondary_fill)] text-[var(--tgui--hint_color)] min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -216,13 +216,15 @@ export function TripDetailsPage() {
         </div>
       </div>
 
-      <button
-        type="button"
+      <Button
+        mode="bezeled"
+        size="m"
+        stretched
+        before={<Send size={16} />}
         onClick={handleShare}
-        className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[var(--tgui--tertiary_bg_color)] text-xs font-medium text-[var(--tgui--text_color)] hover:opacity-80 transition min-h-[44px]"
       >
         Поделиться поездкой с попутчиком в Telegram
-      </button>
+      </Button>
       {shareStatus && (
         <p role="status" className="text-xs text-[var(--tgui--hint_color)] -mt-2">
           {shareStatus}
@@ -343,6 +345,8 @@ export function TripDetailsPage() {
             </div>
           </div>
           <Button
+            mode="filled"
+            size="l"
             stretched
             loading={createBooking.isPending}
             disabled={effectiveSeat === null || createBooking.isPending}

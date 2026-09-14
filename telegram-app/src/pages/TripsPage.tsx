@@ -3,6 +3,7 @@ import {
   Button,
   IconButton,
   SegmentedControl,
+  Tappable,
 } from "@telegram-apps/telegram-ui";
 import { Calendar, Car, Send, Share2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -223,7 +224,8 @@ function DriverTripCard({
 
   if (archived) {
     return (
-      <button
+      <Tappable
+        Component="button"
         type="button"
         onClick={() => {
           haptic.light();
@@ -248,7 +250,7 @@ function DriverTripCard({
           </span>
           <span className="font-medium shrink-0">{trip.price} ₽ / место</span>
         </div>
-      </button>
+      </Tappable>
     );
   }
 
@@ -615,7 +617,8 @@ export function TripsPage() {
                 const booking = item.booking;
                 const category = historyCategoryOf(item);
                 return (
-                  <button
+                  <Tappable
+                    Component="button"
                     key={item.key}
                     type="button"
                     onClick={() => {
@@ -645,7 +648,7 @@ export function TripsPage() {
                         {`взнос ~${booking.trip.price * booking.seat} ₽`}
                       </span>
                     </div>
-                  </button>
+                  </Tappable>
                 );
               })}
               {driverArchive.hasNextPage && (
