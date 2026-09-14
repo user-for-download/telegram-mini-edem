@@ -36,7 +36,7 @@ export function VehicleModal({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <Modal open={open} onOpenChange={(next) => { if (!next) onClose(); }} header={<Modal.Header>Автомобиль</Modal.Header>}>
       <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto">
-        <VehicleBody />
+        <VehicleBody onDone={onClose} />
       </div>
     </Modal>
   );
@@ -74,13 +74,14 @@ function VehicleTerminal({ deleted }: { deleted: boolean }) {
 }
 
 /**
- * Тело модалки (экспортировано для SSR-тестов). PageHeader с back-кнопкой
+ * Тело модалки (экспортировано для SSR-тестов): форма сразу, без
+ * промежуточного экрана с кнопкой. PageHeader с back-кнопкой
  * намеренно отсутствует — закрытие через header модалки / Esc / Back.
  */
-export function VehicleBody() {
+export function VehicleBody({ onDone }: { onDone: () => void }) {
   const vehicleQuery = useVehicleQuery();
   const vehicle = vehicleQuery.vehicle ?? null;
-  const [editing, setEditing] = useState(false);
+  const remove = useRemoveVehicleMutation();
   if (vehicleQuery.error instanceof ApiError && vehicleQuery.error.status === 403) {
     return <VehicleTerminal deleted={vehicleQuery.error.message === "Account is deleted"} />;
   }
@@ -88,52 +89,21 @@ export function VehicleBody() {
     <QueryState loading={vehicleQuery.isLoading} error={vehicleQuery.error} empty={!vehicleQuery.data} emptyText="Не удалось загрузить автомобиль." onRetry={() => void vehicleQuery.refetch()}>
       {vehicleQuery.data && (
         <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-          {editing ? (
-            <VehicleForm vehicle={vehicle} onDone={() => setEditing(false)} />
-          ) : vehicle ? (
-            <VehicleView vehicle={vehicle} onEdit={() => setEditing(true)} />
-          ) : (
-            <VehicleEmpty onAdd={() => setEditing(true)} />
+          {!vehicle && (
+            <p className="text-[13px] text-[var(--tgui--hint_color)] leading-relaxed">
+              Чтобы публиковать поездки, добавьте автомобиль.
+            </p>
+          )}
+          <VehicleForm vehicle={vehicle} onDone={onDone} />
+          {vehicle && (
+            <>
+              <ConfirmAction label="Удалить автомобиль" confirmLabel="Да, удалить" description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано." pending={remove.isPending} onConfirm={() => remove.mutate(undefined, { onSuccess: () => haptic.success(), onError: () => haptic.error() })} />
+              {remove.isError && <p className="FormError" role="alert">{vehicleRemoveErrorMessage(remove.error)}</p>}
+            </>
           )}
         </div>
       )}
     </QueryState>
-  );
-}
-
-/** Просмотр + удаление (409 при активных поездках — объяснение, не общая ошибка). */
-function VehicleView({ vehicle, onEdit }: { vehicle: Vehicle; onEdit: () => void }) {
-  const remove = useRemoveVehicleMutation();
-  return (
-    <>
-      <div className="flex items-center gap-3">
-        <span className="icon-circle icon-circle--info"><Car size={20} /></span>
-        <div className="min-w-0">
-          <div className="text-[16px] font-semibold text-[var(--tgui--text_color)] truncate">{vehicle.model}</div>
-          <div className="text-[13px] text-[var(--tgui--hint_color)]">{vehicle.plate ? `${vehicle.color} · ${vehicle.plate}` : vehicle.color}</div>
-        </div>
-      </div>
-      <p className="text-[12px] text-[var(--tgui--hint_color)] leading-relaxed">Модель и цвет видят другие пользователи, номер — только вы.</p>
-      <Button mode="bezeled" stretched size="s" onClick={onEdit} className="min-h-[44px]">Изменить автомобиль</Button>
-      <ConfirmAction label="Удалить автомобиль" confirmLabel="Да, удалить" description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано." pending={remove.isPending} onConfirm={() => remove.mutate(undefined, { onSuccess: () => haptic.success(), onError: () => haptic.error() })} />
-      {remove.isError && <p className="FormError" role="alert">{vehicleRemoveErrorMessage(remove.error)}</p>}
-    </>
-  );
-}
-
-/** Empty-state (VK-копия): без авто backend отклоняет создание поездки (NO_CAR). */
-function VehicleEmpty({ onAdd }: { onAdd: () => void }) {
-  return (
-    <>
-      <div className="flex items-center gap-3">
-        <span className="icon-circle icon-circle--warning"><Car size={20} /></span>
-        <div>
-          <div className="text-[16px] font-semibold text-[var(--tgui--text_color)]">Автомобиль не добавлен</div>
-          <div className="text-[13px] text-[var(--tgui--hint_color)]">Чтобы публиковать поездки, добавьте автомобиль.</div>
-        </div>
-      </div>
-      <Button stretched size="l" onClick={onAdd} className="min-h-[44px]">Добавить автомобиль</Button>
-    </>
   );
 }
 

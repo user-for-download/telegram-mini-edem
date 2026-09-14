@@ -251,6 +251,12 @@ if (env.isProduction) {
     if (!isTelegramHost(c)) {
       return c.text("Not found", 404);
     }
+    // Хэшированные ассеты immutable на год (заголовок ДО serveStatic,
+    // иначе не попадёт в финализированный ответ); index.html и остальное —
+    // без кэша (иначе WebView после ребилда указывает на удалённые файлы).
+    if (c.req.path.startsWith("/assets/")) {
+      c.header("Cache-Control", "public, max-age=31536000, immutable");
+    }
     return tgStatic(c, next);
   });
   app.get("*", (c) => {
@@ -261,6 +267,7 @@ if (env.isProduction) {
     }
 
     if (isTelegramHost(c) && tgIndexHtml) {
+      c.header("Cache-Control", "no-store");
       return c.html(tgIndexHtml);
     }
     return c.text("Frontend build not found", 404);

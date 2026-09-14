@@ -60,31 +60,32 @@ function render(element: ReactNode): string {
 }
 
 describe("VehicleBody", () => {
-  it("авто есть — карточка с моделью и кнопкой изменения", () => {
-    const html = render(<VehicleBody />);
+  it("авто есть — сразу форма с данными и удаление, без лишнего экрана", () => {
+    const html = render(<VehicleBody onDone={() => {}} />);
     expect(html).toContain("Skoda Octavia");
     expect(html).toContain("белый");
-    expect(html).toContain("Изменить автомобиль");
+    expect(html).toContain("Сохранить автомобиль");
     expect(html).toContain("Удалить автомобиль");
+    expect(html).not.toContain("Изменить автомобиль");
   });
 
-  it("авто нет — empty-state с кнопкой добавления", () => {
+  it("авто нет — сразу пустая форма с подсказкой", () => {
     mockUseVehicle.mockReturnValue(
       queryState({ data: { car: null }, vehicle: null }),
     );
-    const html = render(<VehicleBody />);
-    expect(html).toContain("Автомобиль не добавлен");
+    const html = render(<VehicleBody onDone={() => {}} />);
     expect(html).toContain("Чтобы публиковать поездки, добавьте автомобиль");
-    expect(html).toContain("Добавить автомобиль");
+    expect(html).toContain("Сохранить автомобиль");
+    expect(html).not.toContain("Удалить автомобиль");
   });
 
-  it("загрузка — плейсхолдер вместо карточки", () => {
+  it("загрузка — плейсхолдер вместо формы", () => {
     mockUseVehicle.mockReturnValue(
       queryState({ data: undefined, vehicle: null, isLoading: true }),
     );
-    const html = render(<VehicleBody />);
+    const html = render(<VehicleBody onDone={() => {}} />);
     expect(html).toContain("Загрузка");
-    expect(html).not.toContain("Изменить автомобиль");
+    expect(html).not.toContain("Сохранить автомобиль");
   });
 
   it("удаление заблокировано 409 — объяснение про активные поездки", () => {
@@ -98,7 +99,7 @@ describe("VehicleBody", () => {
         ),
       }),
     );
-    const html = render(<VehicleBody />);
+    const html = render(<VehicleBody onDone={() => {}} />);
     expect(html).toContain("завершите или отмените активные поездки");
   });
 
@@ -106,8 +107,8 @@ describe("VehicleBody", () => {
     mockUseVehicle.mockReturnValue(
       queryState({ error: new ApiError("Forbidden", "FORBIDDEN", 403) }),
     );
-    const html = render(<VehicleBody />);
+    const html = render(<VehicleBody onDone={() => {}} />);
     expect(html).toContain("аккаунт заблокирован");
-    expect(html).not.toContain("Изменить автомобиль");
+    expect(html).not.toContain("Сохранить автомобиль");
   });
 });
