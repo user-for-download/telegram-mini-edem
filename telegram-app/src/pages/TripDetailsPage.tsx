@@ -118,38 +118,38 @@ export function TripDetailsPage() {
       <OfflineBanner />
 
       {hasActiveBooking && item.myBooking && (
-        <div className="p-3 rounded-xl bg-[var(--app-success-bg)] border border-[var(--app-success)]/20 flex items-center justify-between gap-2">
-          <div className="text-xs font-semibold text-[var(--app-success)]">
+        <div className="p-3 rounded-xl bg-(--app-success-bg) border border-(--app-success)/20 flex items-center justify-between gap-2">
+          <div className="text-xs font-semibold text-(--app-success)">
             Вы записались попутчиком
-            <div className="text-[11px] font-medium text-[var(--app-success)]/80">
+            <div className="text-[11px] font-medium text-(--app-success)/80">
               Место №{item.myBooking.seat} · {item.price * item.myBooking.seat} ₽
             </div>
           </div>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--app-success)] text-white font-medium shrink-0">
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-(--app-success) text-white font-medium shrink-0">
             {item.myBooking.status === "confirmed" ? "Подтверждено" : "На рассмотрении"}
           </span>
         </div>
       )}
 
-      <div className="p-3.5 rounded-2xl bg-[var(--tgui--tertiary_bg_color)] flex flex-col gap-3">
-        <div className="flex items-center justify-between text-xs font-medium text-[var(--tgui--hint_color)]">
+      <div className="p-3.5 rounded-2xl bg-(--tgui--tertiary_bg_color) flex flex-col gap-3">
+        <div className="flex items-center justify-between text-xs font-medium text-(--tgui--hint_color)">
           <span>{dayLabel(item.date)}</span>
           <span>
             В пути ~ {formatDurationLocal(item.durationMinutes)} · {item.distanceKm} км
           </span>
         </div>
 
-        <div className="flex flex-col gap-3 relative pl-4 border-l-2 border-[var(--app-info)] ml-1">
+        <div className="flex flex-col gap-3 relative pl-4 border-l-2 border-(--app-info) ml-1">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-bold text-[var(--tgui--text_color)]">
+              <span className="text-base font-bold text-(--tgui--text_color)">
                 {item.time}
               </span>
-              <span className="text-sm font-semibold text-[var(--tgui--text_color)]">
+              <span className="text-sm font-semibold text-(--tgui--text_color)">
                 {item.fromCity}
               </span>
             </div>
-            <div className="text-xs text-[var(--tgui--hint_color)] mt-0.5">
+            <div className="text-xs text-(--tgui--hint_color) mt-0.5">
               {item.fromAddress ?? "Точное место встречи станет доступно после подтверждения брони"}
             </div>
           </div>
@@ -157,22 +157,22 @@ export function TripDetailsPage() {
           <div>
             <div className="flex items-center gap-2">
               {arrival && (
-                <span className="text-base font-bold text-[var(--tgui--text_color)]">
+                <span className="text-base font-bold text-(--tgui--text_color)">
                   {arrival}
                 </span>
               )}
-              <span className="text-sm font-semibold text-[var(--tgui--text_color)]">
+              <span className="text-sm font-semibold text-(--tgui--text_color)">
                 {item.toCity}
               </span>
             </div>
-            <div className="text-xs text-[var(--tgui--hint_color)] mt-0.5">
+            <div className="text-xs text-(--tgui--hint_color) mt-0.5">
               {item.toAddress ?? "Точное место встречи станет доступно после подтверждения брони"}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-3.5 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] flex items-center justify-between gap-2">
+      <div className="p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <LazyAvatar
             size={40}
@@ -181,14 +181,14 @@ export function TripDetailsPage() {
             alt={item.driver.name}
           />
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 font-semibold text-sm text-[var(--tgui--text_color)]">
+            <div className="flex items-center gap-1.5 font-semibold text-sm text-(--tgui--text_color)">
               <span className="truncate">{item.driver.name}</span>
               {item.driver.isVerified && (
-                <ShieldCheck size={15} className="text-[var(--app-info)] fill-[var(--app-info-bg)] shrink-0" />
+                <ShieldCheck size={15} className="text-(--app-info) fill-(--app-info-bg) shrink-0" />
               )}
             </div>
-            <div className="flex items-center gap-1 text-xs text-[var(--tgui--hint_color)]">
-              <Star size={12} className="fill-[var(--app-rating)] text-[var(--app-rating)]" />
+            <div className="flex items-center gap-1 text-xs text-(--tgui--hint_color)">
+              <Star size={12} className="fill-(--app-rating) text-(--app-rating)" />
               <span>{item.driver.rating.toFixed(1)}</span>
               <span>({item.driver.reviewsCount} отзывов)</span>
             </div>
@@ -207,7 +207,7 @@ export function TripDetailsPage() {
           </IconButton>
           {hasActiveBooking && (
             <span
-              className="p-2 rounded-full bg-[var(--tgui--secondary_fill)] text-[var(--tgui--hint_color)] min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--hint_color) min-w-[44px] min-h-[44px] flex items-center justify-center"
               title="Телефон водителя доступен после подтверждения"
             >
               <Phone size={16} />
@@ -226,17 +226,17 @@ export function TripDetailsPage() {
         Поделиться поездкой с попутчиком в Telegram
       </Button>
       {shareStatus && (
-        <p role="status" className="text-xs text-[var(--tgui--hint_color)] -mt-2">
+        <p role="status" className="text-xs text-(--tgui--hint_color) -mt-2">
           {shareStatus}
         </p>
       )}
 
       {item.driver.car && (
-        <div className="p-3 rounded-xl bg-[var(--tgui--tertiary_bg_color)] flex items-center justify-between text-xs">
-          <span className="font-semibold text-[var(--tgui--text_color)]">
+        <div className="p-3 rounded-xl bg-(--tgui--tertiary_bg_color) flex items-center justify-between text-xs">
+          <span className="font-semibold text-(--tgui--text_color)">
             {item.driver.car.model} · {item.driver.car.color}
           </span>
-          <span className="text-[var(--tgui--hint_color)]">
+          <span className="text-(--tgui--hint_color)">
             {item.driver.car.plate ?? "Госномер после брони"}
           </span>
         </div>
@@ -253,8 +253,8 @@ export function TripDetailsPage() {
       )}
 
       {item.comment && (
-        <div className="p-3 rounded-xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] text-xs text-[var(--tgui--text_color)] leading-relaxed">
-          <span className="font-semibold text-[var(--tgui--hint_color)] block mb-0.5">
+        <div className="p-3 rounded-xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) text-xs text-(--tgui--text_color) leading-relaxed">
+          <span className="font-semibold text-(--tgui--hint_color) block mb-0.5">
             Комментарий водителя:
           </span>
           {item.comment}
@@ -262,7 +262,7 @@ export function TripDetailsPage() {
       )}
 
       {item.myBooking && (
-        <div className="flex flex-col gap-2 pt-2 border-t border-[var(--tgui--outline)]">
+        <div className="flex flex-col gap-2 pt-2 border-t border-(--tgui--outline)">
           {(item.myBooking.status === "pending" || item.myBooking.status === "confirmed") && (
             <ConfirmAction
               label="Отменить бронирование"
@@ -286,9 +286,9 @@ export function TripDetailsPage() {
       )}
 
       {canBook && (
-        <div className="flex flex-col gap-3 pt-2 border-t border-[var(--tgui--outline)]">
+        <div className="flex flex-col gap-3 pt-2 border-t border-(--tgui--outline)">
           <div role="group" aria-label="Выбор места">
-            <p className="text-sm font-medium text-[var(--tgui--text_color)] mb-2">Место</p>
+            <p className="text-sm font-medium text-(--tgui--text_color) mb-2">Место</p>
             <div className="ButtonRow">
               {Array.from({ length: item.seatsTotal }, (_, index) => index + 1).map((seat) =>
                 takenSeats.includes(seat) ? (
@@ -332,14 +332,14 @@ export function TripDetailsPage() {
           </label>
           <div className="flex items-center justify-between py-1">
             <div>
-              <div className="text-xs text-[var(--tgui--hint_color)]">
+              <div className="text-xs text-(--tgui--hint_color)">
                 Цена за место
               </div>
-              <div className="text-xl font-bold text-[var(--tgui--text_color)]">
+              <div className="text-xl font-bold text-(--tgui--text_color)">
                 {item.price} ₽
               </div>
             </div>
-            <div className="text-right text-[11px] text-[var(--tgui--hint_color)]">
+            <div className="text-right text-[11px] text-(--tgui--hint_color)">
               Оплата водителю
               <br />при посадке
             </div>
@@ -442,15 +442,15 @@ function DriverBlock({
       .filter((booking) => booking.status === "pending").length ?? 0;
 
   return (
-    <div className="flex flex-col gap-2 pt-2 border-t border-[var(--tgui--outline)]">
-      <div className="text-sm font-semibold text-[var(--tgui--text_color)]">
+    <div className="flex flex-col gap-2 pt-2 border-t border-(--tgui--outline)">
+      <div className="text-sm font-semibold text-(--tgui--text_color)">
         Управление поездкой
       </div>
       {status === "completed" && (
-        <p className="text-xs text-[var(--tgui--hint_color)]">Поездка завершена — пассажиры могут оставить отзыв.</p>
+        <p className="text-xs text-(--tgui--hint_color)">Поездка завершена — пассажиры могут оставить отзыв.</p>
       )}
       {status === "cancelled" && (
-        <p className="text-xs text-[var(--tgui--hint_color)]">Поездка отменена — недоступна для бронирования.</p>
+        <p className="text-xs text-(--tgui--hint_color)">Поездка отменена — недоступна для бронирования.</p>
       )}
       {isActive && (
         <>
@@ -478,7 +478,7 @@ function DriverBlock({
             onConfirm={() => completeTrip.mutate(tripId)}
           />
           {!canCompleteTrip && (
-            <p className="text-xs text-[var(--tgui--hint_color)]">Завершение станет доступно после времени отправления.</p>
+            <p className="text-xs text-(--tgui--hint_color)">Завершение станет доступно после времени отправления.</p>
           )}
           <ConfirmAction
             label="Отменить поездку"

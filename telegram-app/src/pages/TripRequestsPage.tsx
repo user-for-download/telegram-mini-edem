@@ -67,13 +67,13 @@ export function TripRequestsPage() {
         {!items.length && <Placeholder header="Заявок нет" />}
         {pending.length > 0 && (
           <div className="flex flex-col gap-3">
-            <span className="text-[13px] font-semibold text-[var(--tgui--hint_color)] px-1">
+            <span className="text-[13px] font-semibold text-(--tgui--hint_color) px-1">
               {`Ожидают решения (${pending.length})`}
             </span>
             {pending.map((booking) => (
               <div
                 key={booking.id}
-                className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3"
+                className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -83,10 +83,10 @@ export function TripRequestsPage() {
                       acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
                     />
                     <div className="min-w-0">
-                      <div className="text-[13px] font-medium text-[var(--tgui--text_color)] truncate">
+                      <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
                         {booking.passenger.name}
                       </div>
-                      <div className="text-[11px] text-[var(--tgui--hint_color)]">
+                      <div className="text-[11px] text-(--tgui--hint_color)">
                         {`место ${booking.seat}${booking.comment ? ` · «${booking.comment}»` : ""}`}
                       </div>
                     </div>
@@ -122,13 +122,13 @@ export function TripRequestsPage() {
         )}
         {confirmed.length > 0 && (
           <div className="flex flex-col gap-3">
-            <span className="text-[13px] font-semibold text-[var(--tgui--hint_color)] px-1">
+            <span className="text-[13px] font-semibold text-(--tgui--hint_color) px-1">
               {`Подтверждены (${confirmed.length})`}
             </span>
             {confirmed.map((booking) => (
               <div
                 key={booking.id}
-                className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex items-center justify-between gap-2"
+                className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex items-center justify-between gap-2"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Avatar
@@ -137,10 +137,10 @@ export function TripRequestsPage() {
                     acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
                   />
                   <div className="min-w-0">
-                    <div className="text-[13px] font-medium text-[var(--tgui--text_color)] truncate">
+                    <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
                       {booking.passenger.name}
                     </div>
-                    <div className="text-[11px] text-[var(--tgui--hint_color)]">
+                    <div className="text-[11px] text-(--tgui--hint_color)">
                       {`место ${booking.seat}`}
                     </div>
                   </div>

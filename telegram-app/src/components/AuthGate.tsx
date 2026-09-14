@@ -132,8 +132,8 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
         <AccountStatePage title="Аккаунт заблокирован"
           description={`Причина: ${banReason || "Причина не указана"}. Вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт.`} />
         <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-          <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-            <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+            <span className="text-[13px] font-semibold text-(--tgui--text_color)">
               Обжалование блокировки
             </span>
             <AppealForm />

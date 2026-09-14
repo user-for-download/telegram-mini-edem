@@ -59,19 +59,19 @@ function reportStatusTone(status: Report["status"]): string {
 
 const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
   return (
-    <div className="p-3.5 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] flex flex-col gap-2">
+    <div className="p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
         </span>
         <span className="StatusPill shrink-0" data-tone={reportStatusTone(report.status)}>
           {REPORT_STATUS_LABELS[report.status]}
         </span>
       </div>
-      <span className="text-[11px] text-[var(--tgui--hint_color)]">
+      <span className="text-[11px] text-(--tgui--hint_color)">
         {formatDate(report.createdAt)}
       </span>
-      <div className="text-[13px] text-[var(--tgui--text_color)] leading-relaxed">
+      <div className="text-[13px] text-(--tgui--text_color) leading-relaxed">
         {report.description}
       </div>
     </div>
@@ -221,8 +221,8 @@ export const ReportsBody = memo(function ReportsBody() {
 
   return (
     <div className="flex flex-col gap-3.5 pt-1 pb-6">
-      <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           Сообщите о проблеме
         </span>
         <MutationError error={create.error} />
@@ -327,8 +327,8 @@ export const ReportsBody = memo(function ReportsBody() {
         </Button>
       </div>
 
-      <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           Мои жалобы
         </span>
         <QueryState

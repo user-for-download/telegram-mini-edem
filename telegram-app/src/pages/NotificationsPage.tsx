@@ -81,9 +81,9 @@ function NotificationCard({
   const route = notificationRoute(notification.type);
   const critical = isCriticalNotification(notification.type);
   return (
-    <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-2">
+    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] font-semibold text-[var(--tgui--text_color)]">
+        <span className="text-[15px] font-semibold text-(--tgui--text_color)">
           {notification.title}
         </span>
         {critical ? (
@@ -96,13 +96,13 @@ function NotificationCard({
           </span>
         ) : null}
       </div>
-      <p className="text-[13px] text-[var(--tgui--text_color)] leading-relaxed [overflow-wrap:anywhere]">
+      <p className="text-[13px] text-(--tgui--text_color) leading-relaxed [overflow-wrap:anywhere]">
         {notification.body}
       </p>
-      <span className="text-[11px] text-[var(--tgui--hint_color)]">
+      <span className="text-[11px] text-(--tgui--hint_color)">
         {formatDate(notification.createdAt)}
       </span>
-      <div className="flex items-center gap-3 pt-1 border-t border-[var(--tgui--outline)]">
+      <div className="flex items-center gap-3 pt-1 border-t border-(--tgui--outline)">
         {route && (
           <Link href={`#${route}`}>
             Открыть
@@ -181,16 +181,16 @@ export function NotificationsPage() {
         onRetry={() => void inbox.refetch()}
       >
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-        <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <BellRing size={16} className="text-[var(--app-info)] shrink-0" />
-            <p className="text-[14px] text-[var(--tgui--text_color)]" aria-live="polite">
+            <BellRing size={16} className="text-(--app-info) shrink-0" />
+            <p className="text-[14px] text-(--tgui--text_color)" aria-live="polite">
               {unreadCount > 0
                 ? `Непрочитанных: ${unreadCount}.`
                 : "Все уведомления прочитаны."}
             </p>
           </div>
-          <p className="text-[12px] text-[var(--tgui--hint_color)] leading-relaxed">
+          <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
             Важные статусы поездки и брони сохраняются всегда, даже если
             некритичные уведомления выключены.
           </p>
@@ -222,11 +222,11 @@ export function NotificationsPage() {
         </div>
 
         {items.length === 0 ? (
-          <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs">
-            <p className="text-[16px] font-semibold text-center text-[var(--tgui--text_color)]">
+          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs">
+            <p className="text-[16px] font-semibold text-center text-(--tgui--text_color)">
               Пока нет уведомлений
             </p>
-            <p className="text-[13px] text-center text-[var(--tgui--hint_color)] mt-1">
+            <p className="text-[13px] text-center text-(--tgui--hint_color) mt-1">
               Подтверждения брони, отмены и завершение поездок появятся здесь
             </p>
           </div>

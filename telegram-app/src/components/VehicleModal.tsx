@@ -88,9 +88,9 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
   return (
     <QueryState loading={vehicleQuery.isLoading} error={vehicleQuery.error} empty={!vehicleQuery.data} emptyText="Не удалось загрузить автомобиль." onRetry={() => void vehicleQuery.refetch()}>
       {vehicleQuery.data && (
-        <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
           {!vehicle && (
-            <p className="text-[13px] text-[var(--tgui--hint_color)] leading-relaxed">
+            <p className="text-[13px] text-(--tgui--hint_color) leading-relaxed">
               Чтобы публиковать поездки, добавьте автомобиль.
             </p>
           )}
@@ -139,17 +139,17 @@ function VehicleForm({ vehicle, onDone }: { vehicle: Vehicle | null; onDone: () 
     <>
       <div className="FormField">
         <label htmlFor="vehicle-model">Модель</label>
-        <Input id="vehicle-model" before={<Car size={17} className="text-[var(--app-info)]" />} value={model} maxLength={VEHICLE_LIMITS.model} placeholder="Skoda Octavia" onChange={(e) => { setModel(e.target.value.slice(0, VEHICLE_LIMITS.model)); if (formError) setFormError(null); }} />
+        <Input id="vehicle-model" before={<Car size={17} className="text-(--app-info)" />} value={model} maxLength={VEHICLE_LIMITS.model} placeholder="Skoda Octavia" onChange={(e) => { setModel(e.target.value.slice(0, VEHICLE_LIMITS.model)); if (formError) setFormError(null); }} />
       </div>
       <div className="FormField">
         <label htmlFor="vehicle-color">Цвет</label>
-        <Input id="vehicle-color" before={<Palette size={16} className="text-[var(--tgui--hint_color)]" />} value={color} maxLength={VEHICLE_LIMITS.color} placeholder="белый" onChange={(e) => { setColor(e.target.value.slice(0, VEHICLE_LIMITS.color)); if (formError) setFormError(null); }} />
+        <Input id="vehicle-color" before={<Palette size={16} className="text-(--tgui--hint_color)" />} value={color} maxLength={VEHICLE_LIMITS.color} placeholder="белый" onChange={(e) => { setColor(e.target.value.slice(0, VEHICLE_LIMITS.color)); if (formError) setFormError(null); }} />
       </div>
       <div className="FormField">
         <label htmlFor="vehicle-plate">Номер (необязательно)</label>
-        <Input id="vehicle-plate" before={<Hash size={16} className="text-[var(--tgui--hint_color)]" />} value={plate} maxLength={VEHICLE_LIMITS.plate} placeholder="Например: 583" onChange={(e) => { setPlate(e.target.value.toUpperCase().slice(0, VEHICLE_LIMITS.plate)); if (formError) setFormError(null); }} />
+        <Input id="vehicle-plate" before={<Hash size={16} className="text-(--tgui--hint_color)" />} value={plate} maxLength={VEHICLE_LIMITS.plate} placeholder="Например: 583" onChange={(e) => { setPlate(e.target.value.toUpperCase().slice(0, VEHICLE_LIMITS.plate)); if (formError) setFormError(null); }} />
       </div>
-      <p className="text-[12px] text-[var(--tgui--hint_color)] leading-relaxed">Номер — примета для узнавания, видна только вам. Чтобы убрать номер, очистите поле и сохраните.</p>
+      <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">Номер — примета для узнавания, видна только вам. Чтобы убрать номер, очистите поле и сохраните.</p>
       {(formError || upsert.error) && <p className="FormError" role="alert">{formError ?? vehicleServerErrorMessage(upsert.error)}</p>}
       <Button stretched size="l" loading={upsert.isPending} onClick={save} className="min-h-[44px]">Сохранить автомобиль</Button>
       <Button mode="bezeled" stretched disabled={upsert.isPending} onClick={() => { setFormError(null); upsert.reset(); onDone(); }} className="min-h-[44px]">Отмена</Button>

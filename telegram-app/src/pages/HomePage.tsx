@@ -93,24 +93,24 @@ export function HomePage() {
               src={profile.data?.avatar}
               acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
             />
-            <span className="text-[15px] font-semibold text-[var(--tgui--text_color)] truncate">
+            <span className="text-[15px] font-semibold text-(--tgui--text_color) truncate">
               {profile.data?.name ?? "Попутчик"}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--tgui--secondary_fill)] text-[var(--tgui--text_color)] text-xs font-semibold shrink-0">
-            <Star size={13} className="fill-[var(--app-rating)] text-[var(--app-rating)]" />
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--text_color) text-xs font-semibold shrink-0">
+            <Star size={13} className="fill-(--app-rating) text-(--app-rating)" />
             <span>{profile.data ? profile.data.rating.toFixed(1) : "—"}</span>
           </div>
         </div>
 
         {/* Экспресс-поиск */}
         <div className="px-4">
-          <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-sm">
+          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-sm">
             <div className="flex items-center justify-between mb-1">
               <Subheadline weight="2" className="!text-[15px] font-medium">
                 Куда поедем?
               </Subheadline>
-              <span className="text-[11px] font-medium text-[var(--tgui--hint_color)]">
+              <span className="text-[11px] font-medium text-(--tgui--hint_color)">
                 Поиск попуток
               </span>
             </div>
@@ -119,14 +119,14 @@ export function HomePage() {
               <div className="flex flex-col gap-1.5 relative">
                 <Input
                   header="Откуда"
-                  before={<MapPin size={17} className="text-[var(--app-info)]" />}
+                  before={<MapPin size={17} className="text-(--app-info)" />}
                   value={fromCity}
                   onChange={(event) => setFromCity(event.target.value)}
                   placeholder="Город или село отправления"
                 />
                 <Input
                   header="Куда"
-                  before={<MapPin size={17} className="text-[var(--app-success)]" />}
+                  before={<MapPin size={17} className="text-(--app-success)" />}
                   value={toCity}
                   onChange={(event) => setToCity(event.target.value)}
                   placeholder="Город или село назначения"
@@ -137,9 +137,9 @@ export function HomePage() {
                   mode="plain"
                   onClick={swapCities}
                   aria-label="Поменять направление"
-                  className="!absolute !right-2 !top-1/2 !-translate-y-1/2 !bg-[var(--tgui--section_bg_color)] !shadow-xs"
+                  className="!absolute !right-2 !top-1/2 !-translate-y-1/2 !bg-(--tgui--section_bg_color) !shadow-xs"
                 >
-                  <ArrowRightLeft size={15} className="text-[var(--app-info)]" />
+                  <ArrowRightLeft size={15} className="text-(--app-info)" />
                 </IconButton>
               </div>
 
@@ -186,35 +186,35 @@ export function HomePage() {
                 haptic.light();
                 navigate(`/trips/${activeBooking.trip.id}`);
               }}
-              className="w-full text-left p-3.5 rounded-2xl bg-[var(--tgui--secondary_fill)] border border-[var(--app-info)]/25 cursor-pointer hover:opacity-95 transition"
+              className="w-full text-left p-3.5 rounded-2xl bg-(--tgui--secondary_fill) border border-(--app-info)/25 cursor-pointer hover:opacity-95 transition"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--app-info)] text-white">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-(--app-info) text-white">
                     Ближайшая поездка
                   </span>
-                  <span className="text-[12px] font-medium text-[var(--tgui--hint_color)]">
+                  <span className="text-[12px] font-medium text-(--tgui--hint_color)">
                     {dayTimeLabel(activeBooking.trip.date, activeBooking.trip.time)}
                   </span>
                 </div>
-                <ChevronRight size={16} className="text-[var(--app-info)]" />
+                <ChevronRight size={16} className="text-(--app-info)" />
               </div>
 
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[16px] font-bold text-[var(--tgui--text_color)] truncate">
+                  <div className="text-[16px] font-bold text-(--tgui--text_color) truncate">
                     {activeBooking.trip.fromCity} → {activeBooking.trip.toCity}
                   </div>
-                  <div className="text-[12px] text-[var(--tgui--hint_color)] flex items-center gap-1 mt-0.5">
+                  <div className="text-[12px] text-(--tgui--hint_color) flex items-center gap-1 mt-0.5">
                     <span className="truncate">Водитель: {activeBooking.trip.driver.name}</span>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-[15px] font-bold text-[var(--tgui--text_color)]">
+                  <div className="text-[15px] font-bold text-(--tgui--text_color)">
                     {activeBooking.trip.price * activeBooking.seat} ₽
                   </div>
-                  <div className="text-[11px] text-[var(--tgui--hint_color)] font-medium">
+                  <div className="text-[11px] text-(--tgui--hint_color) font-medium">
                     Цена поездки
                   </div>
                 </div>
@@ -231,7 +231,7 @@ export function HomePage() {
             subheader="Возьмите попутчиков"
             description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы на поездку"
             before={
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--tgui--secondary_fill)] text-[var(--app-info)]">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-(--tgui--secondary_fill) text-(--app-info)">
                 <PlusCircle size={22} />
               </div>
             }
@@ -256,7 +256,7 @@ export function HomePage() {
             <Subheadline weight="2" className="!text-[16px]">
               Популярные направления
             </Subheadline>
-            <span className="text-[12px] text-[var(--tgui--hint_color)]">По области</span>
+            <span className="text-[12px] text-(--tgui--hint_color)">По области</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5">
@@ -266,14 +266,14 @@ export function HomePage() {
                 key={`${route.from}-${route.to}`}
                 type="button"
                 onClick={() => goToSearch(route.from, route.to, "all")}
-                className="text-left p-3 rounded-xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] cursor-pointer hover:border-[var(--app-info)] transition"
+                className="text-left p-3 rounded-xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) cursor-pointer hover:border-(--app-info) transition"
               >
                 <div className="text-lg mb-1">{route.icon}</div>
-                <div className="font-semibold text-[13px] text-[var(--tgui--text_color)] line-clamp-1">
+                <div className="font-semibold text-[13px] text-(--tgui--text_color) line-clamp-1">
                   {route.from} → {route.to}
                 </div>
-                <div className="flex items-center justify-between mt-1 text-[11px] text-[var(--tgui--hint_color)]">
-                  <span className="font-medium text-[var(--app-info)]">Найти попутку</span>
+                <div className="flex items-center justify-between mt-1 text-[11px] text-(--tgui--hint_color)">
+                  <span className="font-medium text-(--app-info)">Найти попутку</span>
                 </div>
               </Tappable>
             ))}

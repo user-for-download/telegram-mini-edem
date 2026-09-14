@@ -178,14 +178,14 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
       <OfflineBanner />
       <div className="flex flex-col gap-3.5 pt-1">
         {/* Маршрут */}
-        <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-          <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">Маршрут</span>
+        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+          <span className="text-[13px] font-semibold text-(--tgui--text_color)">Маршрут</span>
           <div className="flex flex-col gap-1.5 relative">
             <div className="FormField">
               <label htmlFor="create-from">Город отправления</label>
               <Input
                 id="create-from"
-                before={<MapPin size={17} className="text-[var(--app-info)]" />}
+                before={<MapPin size={17} className="text-(--app-info)" />}
                 list="trip-cities"
                 value={from}
                 onChange={(event) => setFrom(event.target.value)}
@@ -196,7 +196,7 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
               <label htmlFor="create-to">Город назначения</label>
               <Input
                 id="create-to"
-                before={<MapPin size={17} className="text-[var(--app-success)]" />}
+                before={<MapPin size={17} className="text-(--app-success)" />}
                 list="trip-cities"
                 value={to}
                 onChange={(event) => setTo(event.target.value)}
@@ -209,16 +209,16 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
               mode="plain"
               onClick={swapCities}
               aria-label="Поменять направление"
-              className="!absolute !right-2 !top-[38px] !bg-[var(--tgui--section_bg_color)] !shadow-xs"
+              className="!absolute !right-2 !top-[38px] !bg-(--tgui--section_bg_color) !shadow-xs"
             >
-              <ArrowRightLeft size={14} className="text-[var(--app-info)]" />
+              <ArrowRightLeft size={14} className="text-(--app-info)" />
             </IconButton>
           </div>
           <div className="FormField">
             <label htmlFor="create-from-address">Адрес отправления</label>
             <Input
               id="create-from-address"
-              before={<Navigation size={16} className="text-[var(--tgui--hint_color)]" />}
+              before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
               value={fromAddress}
               onChange={(event) => setFromAddress(event.target.value)}
               placeholder="Точка встречи"
@@ -228,7 +228,7 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
             <label htmlFor="create-to-address">Адрес назначения</label>
             <Input
               id="create-to-address"
-              before={<Navigation size={16} className="text-[var(--tgui--hint_color)]" />}
+              before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
               value={toAddress}
               onChange={(event) => setToAddress(event.target.value)}
               placeholder="Точка прибытия"
@@ -240,14 +240,14 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
         </div>
 
         {/* Поездка */}
-        <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-          <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">Поездка</span>
+        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+          <span className="text-[13px] font-semibold text-(--tgui--text_color)">Поездка</span>
           <div className="grid grid-cols-2 gap-3">
             <div className="FormField">
               <label htmlFor="create-date">Дата и время</label>
               <Input
                 id="create-date"
-                before={<Calendar size={16} className="text-[var(--tgui--hint_color)]" />}
+                before={<Calendar size={16} className="text-(--tgui--hint_color)" />}
                 type="datetime-local"
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
@@ -257,7 +257,7 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
               <label htmlFor="create-duration">В пути, часов</label>
               <Input
                 id="create-duration"
-                before={<Clock size={16} className="text-[var(--tgui--hint_color)]" />}
+                before={<Clock size={16} className="text-(--tgui--hint_color)" />}
                 type="number"
                 min="1"
                 max="168"
@@ -283,7 +283,7 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
               <label htmlFor="create-price">Цена, ₽</label>
               <Input
                 id="create-price"
-                before={<RussianRuble size={16} className="text-[var(--tgui--hint_color)]" />}
+                before={<RussianRuble size={16} className="text-(--tgui--hint_color)" />}
                 type="number"
                 min="1"
                 max="100000"
@@ -296,7 +296,7 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
             <label htmlFor="create-seats">Места</label>
             <Input
               id="create-seats"
-              before={<Users size={16} className="text-[var(--tgui--hint_color)]" />}
+              before={<Users size={16} className="text-(--tgui--hint_color)" />}
               type="number"
               min="1"
               max="3"
@@ -307,18 +307,18 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
         </div>
 
         {/* Условия и комментарий */}
-        <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+            <span className="text-[13px] font-semibold text-(--tgui--text_color)">
               Условия поездки
             </span>
-            <span className="text-[11px] text-[var(--tgui--hint_color)]">
+            <span className="text-[11px] text-(--tgui--hint_color)">
               {`до 6 · выбрано ${tags.length}`}
             </span>
           </div>
           {TRIP_TAGS.map((tag) => (
             <div key={tag} className="flex items-center justify-between text-xs">
-              <span className="text-[var(--tgui--text_color)]">{tag}</span>
+              <span className="text-(--tgui--text_color)">{tag}</span>
               <Switch
                 checked={tags.includes(tag)}
                 onChange={(event) => toggleTag(tag, event.target.checked)}
@@ -326,7 +326,7 @@ export function CreateTripBody({ onCreated }: { onCreated: (tripId: string) => v
               />
             </div>
           ))}
-          <div className="FormField pt-1 border-t border-[var(--tgui--outline)]">
+          <div className="FormField pt-1 border-t border-(--tgui--outline)">
             <label htmlFor="create-comment">Комментарий</label>
             <Textarea
               id="create-comment"

@@ -377,7 +377,7 @@ export const ReviewsBody = memo(function ReviewsBody({
               description="Когда вы совершите поездку, она появится здесь"
             />
           ) : (
-            <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+            <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
               <div className="FormField">
                 <label htmlFor="review-trip">Поездка</label>
                 <Select
@@ -501,11 +501,11 @@ export const ReviewsBody = memo(function ReviewsBody({
           }}
         >
           {profile.data && (
-            <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs text-center">
-              <p className="text-[17px] font-semibold text-[var(--tgui--text_color)]">
+            <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs text-center">
+              <p className="text-[17px] font-semibold text-(--tgui--text_color)">
                 {`Рейтинг ${profile.data.rating.toFixed(1)} · ${profile.data.reviewsCount} отзывов`}
               </p>
-              <p className="text-[12px] text-[var(--tgui--hint_color)] mt-1">
+              <p className="text-[12px] text-(--tgui--hint_color) mt-1">
                 Рейтинг учитывает только опубликованные отзывы
               </p>
             </div>

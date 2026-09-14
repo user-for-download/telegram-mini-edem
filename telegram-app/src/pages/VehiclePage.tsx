@@ -122,14 +122,14 @@ export function VehiclePage() {
       >
         {vehicleQuery.data && (
           <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-          <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
               {editing ? (
                 <>
                   <div className="FormField">
                     <label htmlFor="vehicle-model">Модель</label>
                     <Input
                       id="vehicle-model"
-                      before={<Car size={17} className="text-[var(--app-info)]" />}
+                      before={<Car size={17} className="text-(--app-info)" />}
                       value={model}
                       maxLength={VEHICLE_LIMITS.model}
                       placeholder="Skoda Octavia"
@@ -143,7 +143,7 @@ export function VehiclePage() {
                     <label htmlFor="vehicle-color">Цвет</label>
                     <Input
                       id="vehicle-color"
-                      before={<Palette size={16} className="text-[var(--tgui--hint_color)]" />}
+                      before={<Palette size={16} className="text-(--tgui--hint_color)" />}
                       value={color}
                       maxLength={VEHICLE_LIMITS.color}
                       placeholder="белый"
@@ -157,7 +157,7 @@ export function VehiclePage() {
                     <label htmlFor="vehicle-plate">Номер (необязательно)</label>
                     <Input
                       id="vehicle-plate"
-                      before={<Hash size={16} className="text-[var(--tgui--hint_color)]" />}
+                      before={<Hash size={16} className="text-(--tgui--hint_color)" />}
                       value={plate}
                       maxLength={VEHICLE_LIMITS.plate}
                       placeholder="Например: 583"
@@ -169,7 +169,7 @@ export function VehiclePage() {
                       }}
                     />
                   </div>
-                  <p className="text-[12px] text-[var(--tgui--hint_color)] leading-relaxed">
+                  <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
                     Номер — примета для узнавания, видна только вам. Чтобы убрать номер,
                     очистите поле и сохраните.
                   </p>
@@ -197,15 +197,15 @@ export function VehiclePage() {
                       <Car size={20} />
                     </span>
                     <div className="min-w-0">
-                      <div className="text-[16px] font-semibold text-[var(--tgui--text_color)] truncate">
+                      <div className="text-[16px] font-semibold text-(--tgui--text_color) truncate">
                         {vehicle.model}
                       </div>
-                      <div className="text-[13px] text-[var(--tgui--hint_color)]">
+                      <div className="text-[13px] text-(--tgui--hint_color)">
                         {vehicle.plate ? `${vehicle.color} · ${vehicle.plate}` : vehicle.color}
                       </div>
                     </div>
                   </div>
-                  <p className="text-[12px] text-[var(--tgui--hint_color)] leading-relaxed">
+                  <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
                     Модель и цвет видят другие пользователи, номер — только вы.
                   </p>
                   <Button mode="bezeled" stretched size="s" onClick={startEditing}>
@@ -231,10 +231,10 @@ export function VehiclePage() {
                       <Car size={20} />
                     </span>
                     <div>
-                      <div className="text-[16px] font-semibold text-[var(--tgui--text_color)]">
+                      <div className="text-[16px] font-semibold text-(--tgui--text_color)">
                         Автомобиль не добавлен
                       </div>
-                      <div className="text-[13px] text-[var(--tgui--hint_color)]">
+                      <div className="text-[13px] text-(--tgui--hint_color)">
                         Чтобы публиковать поездки, добавьте автомобиль.
                       </div>
                     </div>

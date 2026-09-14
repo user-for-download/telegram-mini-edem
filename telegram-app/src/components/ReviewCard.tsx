@@ -22,7 +22,7 @@ export function reviewStatusBadge(
 export function ReviewCard({ review }: { review: Review | MyReview }) {
   const badge = reviewStatusBadge(review.status);
   return (
-    <div className="p-3.5 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] flex flex-col gap-2">
+    <div className="p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <LazyAvatar
@@ -32,14 +32,14 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
             alt={review.author.name}
           />
           <div className="min-w-0">
-            <div className="text-[13px] font-semibold text-[var(--tgui--text_color)] truncate">
+            <div className="text-[13px] font-semibold text-(--tgui--text_color) truncate">
               {review.author.name}
             </div>
-            <div className="text-[11px] text-[var(--tgui--hint_color)]">{review.date}</div>
+            <div className="text-[11px] text-(--tgui--hint_color)">{review.date}</div>
           </div>
         </div>
         <div
-          className="flex items-center gap-0.5 text-[var(--app-rating)] shrink-0"
+          className="flex items-center gap-0.5 text-(--app-rating) shrink-0"
           aria-label={`Оценка ${review.rating} из 5`}
         >
           {Array.from({ length: review.rating }, (_, index) => (
@@ -47,17 +47,17 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
           ))}
         </div>
       </div>
-      <div className="text-[13px] text-[var(--tgui--text_color)] leading-relaxed">
+      <div className="text-[13px] text-(--tgui--text_color) leading-relaxed">
         {review.text}
       </div>
-      <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--tgui--hint_color)] pt-1 border-t border-[var(--tgui--outline)]">
+      <div className="flex items-center justify-between gap-2 text-[11px] text-(--tgui--hint_color) pt-1 border-t border-(--tgui--outline)">
         <span className="truncate">Маршрут: {review.tripRoute}</span>
         {badge ? (
           <span className="StatusPill shrink-0" data-tone={badge.tone}>
             {badge.label}
           </span>
         ) : (
-          <span className="text-[var(--app-success)] font-medium shrink-0">Опубликован</span>
+          <span className="text-(--app-success) font-medium shrink-0">Опубликован</span>
         )}
       </div>
     </div>

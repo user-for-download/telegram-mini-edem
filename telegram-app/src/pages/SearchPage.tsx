@@ -108,7 +108,7 @@ export function SearchPage() {
     <>
       <OfflineBanner />
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-4">
-        <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <Subheadline weight="2" className="!text-[16px]">
               Поиск попутных поездок
@@ -141,7 +141,7 @@ export function SearchPage() {
           <div className="flex flex-col gap-1.5 relative">
             <Input
               id="search-from"
-              before={<MapPin size={17} className="text-[var(--app-info)]" />}
+              before={<MapPin size={17} className="text-(--app-info)" />}
               after={
                 form.fromCity ? (
                   <IconButton
@@ -151,7 +151,7 @@ export function SearchPage() {
                     onClick={() => set("fromCity", "")}
                     aria-label="Очистить откуда"
                   >
-                    <X size={14} className="text-[var(--tgui--hint_color)]" />
+                    <X size={14} className="text-(--tgui--hint_color)" />
                   </IconButton>
                 ) : undefined
               }
@@ -161,7 +161,7 @@ export function SearchPage() {
             />
             <Input
               id="search-to"
-              before={<MapPin size={17} className="text-[var(--app-success)]" />}
+              before={<MapPin size={17} className="text-(--app-success)" />}
               after={
                 form.toCity ? (
                   <IconButton
@@ -171,7 +171,7 @@ export function SearchPage() {
                     onClick={() => set("toCity", "")}
                     aria-label="Очистить куда"
                   >
-                    <X size={14} className="text-[var(--tgui--hint_color)]" />
+                    <X size={14} className="text-(--tgui--hint_color)" />
                   </IconButton>
                 ) : undefined
               }
@@ -185,9 +185,9 @@ export function SearchPage() {
               mode="plain"
               onClick={swapCities}
               aria-label="Поменять направление"
-              className="!absolute !right-2 !top-1/2 !-translate-y-1/2 !bg-[var(--tgui--section_bg_color)] !shadow-xs"
+              className="!absolute !right-2 !top-1/2 !-translate-y-1/2 !bg-(--tgui--section_bg_color) !shadow-xs"
             >
-              <ArrowRightLeft size={14} className="text-[var(--app-info)]" />
+              <ArrowRightLeft size={14} className="text-(--app-info)" />
             </IconButton>
           </div>
 
@@ -225,7 +225,7 @@ export function SearchPage() {
           </div>
 
           {showFilters && (
-            <div className="pt-2 border-t border-[var(--tgui--outline)] flex flex-col gap-3">
+            <div className="pt-2 border-t border-(--tgui--outline) flex flex-col gap-3">
               <div className="FormField">
                 <label htmlFor="search-max-price">Цена не выше, ₽</label>
                 <Input
@@ -239,7 +239,7 @@ export function SearchPage() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-[var(--tgui--text_color)]">
+                <span className="text-xs font-medium text-(--tgui--text_color)">
                   Условия поездки
                 </span>
                 <div className="TagChips">
@@ -269,10 +269,10 @@ export function SearchPage() {
         </div>
 
         <div className="flex items-center justify-between px-1">
-          <Caption className="!text-[var(--tgui--hint_color)] font-medium">
+          <Caption className="!text-(--tgui--hint_color) font-medium">
             Найдено поездок: {items.length}
           </Caption>
-          <span className="text-[11px] text-[var(--tgui--hint_color)]">
+          <span className="text-[11px] text-(--tgui--hint_color)">
             Цены без комиссии
           </span>
         </div>

@@ -79,23 +79,23 @@ function tripStatusLabel(trip: Trip): { label: string; tone: string } {
 /** Маршрутная визуализация (язык примера): города + адреса вдоль линии. */
 function RouteLine({ trip }: { trip: Trip }) {
   return (
-    <div className="flex flex-col gap-2 relative pl-4 border-l-2 border-[var(--app-info)]/30 ml-2 py-0.5">
+    <div className="flex flex-col gap-2 relative pl-4 border-l-2 border-(--app-info)/30 ml-2 py-0.5">
       <div>
-        <div className="text-[15px] font-bold text-[var(--tgui--text_color)]">
+        <div className="text-[15px] font-bold text-(--tgui--text_color)">
           {trip.fromCity}
         </div>
         {trip.fromAddress && (
-          <div className="text-[12px] text-[var(--tgui--hint_color)] truncate">
+          <div className="text-[12px] text-(--tgui--hint_color) truncate">
             {trip.fromAddress}
           </div>
         )}
       </div>
       <div className="pt-1">
-        <div className="text-[15px] font-bold text-[var(--tgui--text_color)]">
+        <div className="text-[15px] font-bold text-(--tgui--text_color)">
           {trip.toCity}
         </div>
         {trip.toAddress && (
-          <div className="text-[12px] text-[var(--tgui--hint_color)] truncate">
+          <div className="text-[12px] text-(--tgui--hint_color) truncate">
             {trip.toAddress}
           </div>
         )}
@@ -117,9 +117,9 @@ function ActiveBookingCard({
   const navigate = useNavigate();
   const status = bookingStatusLabel(booking.status);
   return (
-    <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--tgui--hint_color)] min-w-0">
+        <div className="flex items-center gap-1.5 text-[12px] font-medium text-(--tgui--hint_color) min-w-0">
           <Calendar size={14} className="shrink-0" />
           <span className="truncate">
             {dayLabel(booking.trip.date)}, {booking.trip.time}
@@ -132,7 +132,7 @@ function ActiveBookingCard({
 
       <RouteLine trip={booking.trip} />
 
-      <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--tgui--tertiary_bg_color)]">
+      <div className="flex items-center justify-between p-2.5 rounded-xl bg-(--tgui--tertiary_bg_color)">
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar
             size={40}
@@ -140,25 +140,25 @@ function ActiveBookingCard({
             acronym={booking.trip.driver.name.slice(0, 1).toUpperCase()}
           />
           <div className="min-w-0">
-            <div className="text-[13px] font-semibold text-[var(--tgui--text_color)] truncate">
+            <div className="text-[13px] font-semibold text-(--tgui--text_color) truncate">
               {booking.trip.driver.name}
             </div>
-            <div className="text-[11px] text-[var(--tgui--hint_color)]">
+            <div className="text-[11px] text-(--tgui--hint_color)">
               {`место №${booking.seat}`}
             </div>
           </div>
         </div>
         <div className="text-right shrink-0">
-          <div className="text-[14px] font-bold text-[var(--tgui--text_color)]">
+          <div className="text-[14px] font-bold text-(--tgui--text_color)">
             {booking.trip.price * booking.seat} ₽
           </div>
-          <div className="text-[11px] text-[var(--tgui--hint_color)]">
+          <div className="text-[11px] text-(--tgui--hint_color)">
             {`цена (${booking.seat} ${booking.seat === 1 ? "место" : "места"})`}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 pt-1 border-t border-[var(--tgui--outline)]">
+      <div className="flex items-center gap-2 pt-1 border-t border-(--tgui--outline)">
         <Button
           size="s"
           mode="bezeled"
@@ -231,20 +231,20 @@ function DriverTripCard({
           haptic.light();
           onManage(trip.id);
         }}
-        className="text-left p-3.5 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] opacity-90 hover:opacity-100 transition"
+        className="text-left p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) opacity-90 hover:opacity-100 transition"
       >
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--app-info-bg)] text-[var(--app-info)]">
+          <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-(--app-info-bg) text-(--app-info)">
             Вы водитель
           </span>
           <span className="StatusPill shrink-0" data-tone={status.tone}>
             {status.label}
           </span>
         </div>
-        <div className="text-[15px] font-semibold text-[var(--tgui--text_color)]">
+        <div className="text-[15px] font-semibold text-(--tgui--text_color)">
           {trip.fromCity} → {trip.toCity}
         </div>
-        <div className="flex items-center justify-between mt-2 text-[12px] text-[var(--tgui--hint_color)]">
+        <div className="flex items-center justify-between mt-2 text-[12px] text-(--tgui--hint_color)">
           <span className="truncate">
             {dayLabel(trip.date)}, {trip.time}
           </span>
@@ -256,18 +256,18 @@ function DriverTripCard({
 
   const finished = trip.status === "cancelled" || trip.status === "completed";
   return (
-    <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--app-info-bg)] text-[var(--app-info)]">
+        <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-(--app-info-bg) text-(--app-info)">
           Вы водитель
         </span>
-        <span className="text-[12px] font-medium text-[var(--tgui--hint_color)] truncate">
+        <span className="text-[12px] font-medium text-(--tgui--hint_color) truncate">
           {dayLabel(trip.date)}, {trip.time}
         </span>
       </div>
 
       <div>
-        <div className="text-[16px] font-bold text-[var(--tgui--text_color)]">
+        <div className="text-[16px] font-bold text-(--tgui--text_color)">
           {trip.fromCity} → {trip.toCity}
         </div>
         <span className="StatusPill" data-tone={status.tone}>
@@ -275,26 +275,26 @@ function DriverTripCard({
         </span>
       </div>
 
-      <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--tgui--tertiary_bg_color)] text-[13px]">
+      <div className="flex items-center justify-between p-2.5 rounded-xl bg-(--tgui--tertiary_bg_color) text-[13px]">
         <div>
-          <span className="text-[var(--tgui--hint_color)]">Свободно мест: </span>
-          <span className="font-semibold text-[var(--app-success)]">
+          <span className="text-(--tgui--hint_color)">Свободно мест: </span>
+          <span className="font-semibold text-(--app-success)">
             {trip.seatsAvailable} из {trip.seatsTotal}
           </span>
         </div>
-        <div className="text-xs font-medium text-[var(--tgui--hint_color)]">
+        <div className="text-xs font-medium text-(--tgui--hint_color)">
           Цена:{" "}
-          <span className="font-bold text-[var(--tgui--text_color)]">
+          <span className="font-bold text-(--tgui--text_color)">
             {trip.price} ₽
           </span>
         </div>
       </div>
 
       {pending > 0 && (
-        <div className="p-3 rounded-xl border border-dashed border-[var(--tgui--outline)] bg-[var(--tgui--bg_color)]">
-          <div className="flex items-center justify-between text-xs font-semibold text-[var(--tgui--hint_color)] mb-2">
+        <div className="p-3 rounded-xl border border-dashed border-(--tgui--outline) bg-(--tgui--bg_color)">
+          <div className="flex items-center justify-between text-xs font-semibold text-(--tgui--hint_color) mb-2">
             <span>Заявки от попутчиков</span>
-            <span className="text-[var(--app-warning)] font-medium">Новые</span>
+            <span className="text-(--app-warning) font-medium">Новые</span>
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
@@ -302,7 +302,7 @@ function DriverTripCard({
                 <Send size={14} />
               </span>
               <div className="min-w-0">
-                <div className="text-[13px] font-medium text-[var(--tgui--text_color)] truncate">
+                <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
                   {`Ожидают решения: ${pending}`}
                 </div>
               </div>
@@ -625,24 +625,24 @@ export function TripsPage() {
                       haptic.light();
                       navigate(`/trips/${booking.trip.id}`);
                     }}
-                    className="text-left p-3.5 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] opacity-90 hover:opacity-100 transition"
+                    className="text-left p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) opacity-90 hover:opacity-100 transition"
                   >
-                    <div className="flex items-center justify-between text-[12px] text-[var(--tgui--hint_color)] mb-1.5">
+                    <div className="flex items-center justify-between text-[12px] text-(--tgui--hint_color) mb-1.5">
                       <span>{dayLabel(booking.trip.date)}</span>
                       <span
                         className={
                           category === "completed"
-                            ? "font-semibold text-[var(--app-success)]"
-                            : "font-semibold text-[var(--app-danger)]"
+                            ? "font-semibold text-(--app-success)"
+                            : "font-semibold text-(--app-danger)"
                         }
                       >
                         {category === "completed" ? "Поездка завершена" : "Поездка отменена"}
                       </span>
                     </div>
-                    <div className="text-[15px] font-semibold text-[var(--tgui--text_color)]">
+                    <div className="text-[15px] font-semibold text-(--tgui--text_color)">
                       {booking.trip.fromCity} → {booking.trip.toCity}
                     </div>
-                    <div className="flex items-center justify-between mt-2 text-[12px] text-[var(--tgui--hint_color)]">
+                    <div className="flex items-center justify-between mt-2 text-[12px] text-(--tgui--hint_color)">
                       <span className="truncate">Водитель: {booking.trip.driver.name}</span>
                       <span className="font-medium shrink-0">
                         {`взнос ~${booking.trip.price * booking.seat} ₽`}

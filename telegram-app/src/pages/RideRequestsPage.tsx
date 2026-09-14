@@ -119,15 +119,15 @@ export function RideRequestsPage() {
       <PageHeader title="Ищу попутку" />
       <OfflineBanner />
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           Новый запрос
         </span>
         <div className="FormField">
           <label htmlFor="ride-from">Откуда</label>
           <Input
             id="ride-from"
-            before={<MapPin size={17} className="text-[var(--app-info)]" />}
+            before={<MapPin size={17} className="text-(--app-info)" />}
             list="request-cities"
             value={from}
             onChange={(event) => setFrom(event.target.value)}
@@ -138,7 +138,7 @@ export function RideRequestsPage() {
           <label htmlFor="ride-to">Куда</label>
           <Input
             id="ride-to"
-            before={<MapPin size={17} className="text-[var(--app-success)]" />}
+            before={<MapPin size={17} className="text-(--app-success)" />}
             list="request-cities"
             value={to}
             onChange={(event) => setTo(event.target.value)}
@@ -151,7 +151,7 @@ export function RideRequestsPage() {
             <label htmlFor="ride-earliest">Не раньше</label>
             <Input
               id="ride-earliest"
-              before={<Calendar size={16} className="text-[var(--tgui--hint_color)]" />}
+              before={<Calendar size={16} className="text-(--tgui--hint_color)" />}
               type="datetime-local"
               value={earliest}
               onChange={(event) => setEarliest(event.target.value)}
@@ -161,7 +161,7 @@ export function RideRequestsPage() {
             <label htmlFor="ride-latest">Не позже</label>
             <Input
               id="ride-latest"
-              before={<Calendar size={16} className="text-[var(--tgui--hint_color)]" />}
+              before={<Calendar size={16} className="text-(--tgui--hint_color)" />}
               type="datetime-local"
               value={latest}
               onChange={(event) => setLatest(event.target.value)}
@@ -172,7 +172,7 @@ export function RideRequestsPage() {
           <label htmlFor="ride-seats">Места</label>
           <Input
             id="ride-seats"
-            before={<Users size={16} className="text-[var(--tgui--hint_color)]" />}
+            before={<Users size={16} className="text-(--tgui--hint_color)" />}
             type="number"
             min="1"
             max="3"
@@ -194,10 +194,10 @@ export function RideRequestsPage() {
           {requests.data?.map((request) => (
             <div
               key={request.id}
-              className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3"
+              className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[15px] font-bold text-[var(--tgui--text_color)] truncate">
+                <span className="text-[15px] font-bold text-(--tgui--text_color) truncate">
                   {`${request.fromCity.name} → ${request.toCity.name}`}
                 </span>
                 <span
@@ -207,7 +207,7 @@ export function RideRequestsPage() {
                   {request.status === "active" ? "Активен" : request.status}
                 </span>
               </div>
-              <div className="text-[13px] text-[var(--tgui--hint_color)]">
+              <div className="text-[13px] text-(--tgui--hint_color)">
                 {`${request.earliestAt} — ${request.latestAt} · ${request.seats} мест`}
               </div>
               {editingId === request.id ? (

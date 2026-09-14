@@ -90,7 +90,7 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-        <div className="text-xs text-[var(--tgui--hint_color)]">
+        <div className="text-xs text-(--tgui--hint_color)">
           Если у вас возникли сложности с бронированием или поездкой, опишите
           ситуацию. Наша команда поддержки оперативно поможет вам.
         </div>

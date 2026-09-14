@@ -43,7 +43,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
   onDecline: (id: string) => void;
 }) {
   return (
-    <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <LazyAvatar
@@ -53,10 +53,10 @@ const PendingBookingCard = memo(function PendingBookingCard({
             alt={booking.passenger.name}
           />
           <div className="min-w-0">
-            <div className="text-[13px] font-medium text-[var(--tgui--text_color)] truncate">
+            <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
               {booking.passenger.name}
             </div>
-            <div className="text-[11px] text-[var(--tgui--hint_color)]">
+            <div className="text-[11px] text-(--tgui--hint_color)">
               {`место ${booking.seat}${booking.comment ? ` · «${booking.comment}»` : ""}`}
             </div>
           </div>
@@ -97,7 +97,7 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
   booking: TripBooking;
 }) {
   return (
-    <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex items-center justify-between gap-2">
+    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex items-center justify-between gap-2">
       <div className="flex items-center gap-2 min-w-0">
         <LazyAvatar
           size={40}
@@ -106,10 +106,10 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
           alt={booking.passenger.name}
         />
         <div className="min-w-0">
-          <div className="text-[13px] font-medium text-[var(--tgui--text_color)] truncate">
+          <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
             {booking.passenger.name}
           </div>
-          <div className="text-[11px] text-[var(--tgui--hint_color)]">
+          <div className="text-[11px] text-(--tgui--hint_color)">
             {`место ${booking.seat}`}
           </div>
         </div>
@@ -317,7 +317,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
             aria-live="polite"
             aria-label="Ожидают решения"
           >
-            <span className="text-[13px] font-semibold text-[var(--tgui--hint_color)] px-1">
+            <span className="text-[13px] font-semibold text-(--tgui--hint_color) px-1">
               {`Ожидают решения (${pending.length})`}
             </span>
             {pending.map((booking) => (
@@ -343,7 +343,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         )}
         {confirmed.length > 0 && (
           <div className="flex flex-col gap-3" aria-label="Подтверждены">
-            <span className="text-[13px] font-semibold text-[var(--tgui--hint_color)] px-1">
+            <span className="text-[13px] font-semibold text-(--tgui--hint_color) px-1">
               {`Подтверждены (${confirmed.length})`}
             </span>
             {confirmed.map((booking) => (

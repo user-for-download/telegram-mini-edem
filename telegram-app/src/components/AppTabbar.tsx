@@ -20,10 +20,10 @@ function go(activeTab: AppTabId, key: AppTabId, to: string, onSelect: (to: strin
 }
 
 const idleBtn =
-  "bg-transparent text-[var(--tgui--text_color)] active:scale-95";
+  "bg-transparent text-(--tgui--text_color) active:scale-95";
 // Активный таб: только цвет иконки, круглой заливки нет.
 const activeBtn =
-  "-translate-y-1 bg-transparent text-[var(--tgui--button_color)]";
+  "-translate-y-1 bg-transparent text-(--tgui--button_color)";
 
 /**
  * Нижний бар — кастомный floating (язык образца): прозрачная подложка
@@ -48,7 +48,7 @@ export function AppTabbar({
         <div
           role="tablist"
           aria-label="Основные разделы"
-          className="flex flex-1 items-center justify-around gap-1 rounded-[28px] border border-gray-300 dark:border-white/20 bg-[var(--tgui--bg_color)]/75 px-2 py-1 backdrop-blur-md"
+          className="flex flex-1 items-center justify-around gap-1 rounded-[28px] border border-gray-300 dark:border-white/20 bg-(--tgui--bg_color)/75 px-2 py-1 backdrop-blur-md"
         >
           {TABS.map(({ key, text, to, Icon }) => {
             const selected = activeTab === key;
@@ -88,7 +88,7 @@ export function AppTabbar({
             );
           })}
         </div>
-        <div className="rounded-full border border-gray-300 dark:border-white/20 bg-[var(--tgui--bg_color)]/75 p-1 backdrop-blur-md">
+        <div className="rounded-full border border-gray-300 dark:border-white/20 bg-(--tgui--bg_color)/75 p-1 backdrop-blur-md">
           <button
             type="button"
             role="tab"

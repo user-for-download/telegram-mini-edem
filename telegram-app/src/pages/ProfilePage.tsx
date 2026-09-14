@@ -72,7 +72,7 @@ function MenuRow({
       aria-label={label}
       onClick={onClick}
       before={<span className="shrink-0">{icon}</span>}
-      after={<ChevronRight size={16} className="text-[var(--tgui--hint_color)] shrink-0" />}
+      after={<ChevronRight size={16} className="text-(--tgui--hint_color) shrink-0" />}
       subtitle={subtitle}
       className="w-full text-left"
     >
@@ -101,13 +101,13 @@ function SwitchRow({
   label: string;
 }) {
   return (
-    <div className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)]">
+    <div className="w-full flex items-center gap-3 p-3 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline)">
       <span className="shrink-0">{icon}</span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[15px] font-medium text-[var(--tgui--text_color)] truncate">
+        <span className="block text-[15px] font-medium text-(--tgui--text_color) truncate">
           {title}
         </span>
-        <span className="block text-[12px] text-[var(--tgui--hint_color)] truncate">
+        <span className="block text-[12px] text-(--tgui--hint_color) truncate">
           {subtitle}
         </span>
       </span>
@@ -215,7 +215,7 @@ export function ProfilePage() {
         {profile.data && (
           <div className="flex flex-col gap-4 px-4 pt-1 pb-4">
             {/* Шапка профиля */}
-            <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+            <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
               <div className="flex items-center gap-3.5">
                 <Avatar
                   size={48}
@@ -227,11 +227,11 @@ export function ProfilePage() {
                     {profile.data.name}
                   </Headline>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--tgui--secondary_fill)] text-[var(--tgui--link_color)]">
-                      <Star size={11} className="fill-[var(--app-rating)] text-[var(--app-rating)]" />
+                    <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--link_color)">
+                      <Star size={11} className="fill-(--app-rating) text-(--app-rating)" />
                       {`${profile.data.rating.toFixed(1)} (${profile.data.reviewsCount})`}
                     </span>
-                    <span className="text-[11px] text-[var(--app-success)] font-medium">
+                    <span className="text-[11px] text-(--app-success) font-medium">
                       Telegram верифицирован
                     </span>
                   </div>
@@ -239,29 +239,29 @@ export function ProfilePage() {
               </div>
 
               {profile.data.about && (
-                <p className="text-[13px] text-[var(--tgui--text_color)] leading-relaxed">
+                <p className="text-[13px] text-(--tgui--text_color) leading-relaxed">
                   {profile.data.about}
                 </p>
               )}
 
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--tgui--outline)]">
-                <div className="p-2 rounded-xl bg-[var(--tgui--tertiary_bg_color)] text-center">
-                  <div className="text-[16px] font-bold text-[var(--tgui--text_color)]">
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-(--tgui--outline)">
+                <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
+                  <div className="text-[16px] font-bold text-(--tgui--text_color)">
                     {profile.data.tripsCount}
                   </div>
-                  <div className="text-[11px] text-[var(--tgui--hint_color)]">Поездок</div>
+                  <div className="text-[11px] text-(--tgui--hint_color)">Поездок</div>
                 </div>
-                <div className="p-2 rounded-xl bg-[var(--tgui--tertiary_bg_color)] text-center">
-                  <div className="text-[16px] font-bold text-[var(--app-info)]">
+                <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
+                  <div className="text-[16px] font-bold text-(--app-info)">
                     {profile.data.reviewsCount}
                   </div>
-                  <div className="text-[11px] text-[var(--tgui--hint_color)]">Отзывов</div>
+                  <div className="text-[11px] text-(--tgui--hint_color)">Отзывов</div>
                 </div>
-                <div className="p-2 rounded-xl bg-[var(--tgui--tertiary_bg_color)] text-center">
-                  <div className="text-[16px] font-bold text-[var(--app-rating)]">
+                <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
+                  <div className="text-[16px] font-bold text-(--app-rating)">
                     {profile.data.rating.toFixed(1)}
                   </div>
-                  <div className="text-[11px] text-[var(--tgui--hint_color)]">Рейтинг</div>
+                  <div className="text-[11px] text-(--tgui--hint_color)">Рейтинг</div>
                 </div>
               </div>
 
@@ -422,7 +422,7 @@ export function ProfilePage() {
                 </Section>
 
                 {/* Опасная зона */}
-                <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--app-danger)]/30 shadow-xs flex flex-col gap-2">
+                <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--app-danger)/30 shadow-xs flex flex-col gap-2">
                   <Button
                     mode="bezeled"
                     stretched
@@ -458,8 +458,8 @@ export function ProfilePage() {
               </List>
             ) : (
               <div className="flex flex-col gap-3">
-                <div className="p-3 rounded-xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] flex items-center justify-between gap-2 text-xs">
-                  <span className="text-[var(--tgui--hint_color)]">
+                <div className="p-3 rounded-xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) flex items-center justify-between gap-2 text-xs">
+                  <span className="text-(--tgui--hint_color)">
                     Все отзывы проходят пре-модерацию
                   </span>
                   <Button size="s" mode="bezeled" onClick={() => navigate("/reviews")}>

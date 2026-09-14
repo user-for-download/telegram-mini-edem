@@ -110,12 +110,12 @@ export function SettingsBody() {
         onRetry={() => void profile.refetch()}
       >
         <div className="flex flex-col gap-3.5 pt-1 pb-4">
-          <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
+          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
             <div className="flex items-center gap-2.5">
               <span className="icon-circle icon-circle--info">
                 {enabled ? <BellRing size={18} /> : <Bell size={18} />}
               </span>
-              <p className="text-[14px] text-[var(--tgui--text_color)]" aria-live="polite">
+              <p className="text-[14px] text-(--tgui--text_color)" aria-live="polite">
                 {enabled
                   ? "Уведомления включены — подтверждение брони, отмена и завершение поездки."
                   : "Некритичные уведомления выключены — критичные статусы поездки и брони останутся в приложении."}
@@ -132,11 +132,11 @@ export function SettingsBody() {
               {enabled ? "Выключить некритичные" : "Включить уведомления"}
             </Button>
             {showSaved && (
-              <p className="text-[13px] text-[var(--tgui--link_color)]" role="status">
+              <p className="text-[13px] text-(--tgui--link_color)" role="status">
                 Настройки сохранены
               </p>
             )}
-            <p className="text-[12px] text-[var(--tgui--hint_color)] leading-relaxed">
+            <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
               Настройка синхронизируется с аккаунтом. Отдельные настройки звука и типов уведомлений пока
               не поддерживаются.
             </p>

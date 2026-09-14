@@ -90,23 +90,23 @@ function FeedbackCard({
       </Accordion.Summary>
       <Accordion.Content>
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] text-[var(--tgui--hint_color)]">
+          <span className="text-[11px] text-(--tgui--hint_color)">
             {new Date(feedback.createdAt).toLocaleDateString("ru-RU")}
           </span>
-          <p className="text-[13px] text-[var(--tgui--text_color)] leading-relaxed">
+          <p className="text-[13px] text-(--tgui--text_color) leading-relaxed">
             {feedback.text}
           </p>
           {feedback.reply ? (
             <>
-              <span className="text-[13px] font-semibold text-[var(--tgui--text_color)] pt-1">
+              <span className="text-[13px] font-semibold text-(--tgui--text_color) pt-1">
                 Ответ поддержки
               </span>
-              <p className="text-[13px] text-[var(--tgui--text_color)] leading-relaxed">
+              <p className="text-[13px] text-(--tgui--text_color) leading-relaxed">
                 {feedback.reply}
               </p>
             </>
           ) : (
-            <span className="text-[12px] text-[var(--tgui--hint_color)]">
+            <span className="text-[12px] text-(--tgui--hint_color)">
               Поддержка ещё не ответила. Мы свяжемся с вами здесь — список
               обновится автоматически.
             </span>
@@ -176,8 +176,8 @@ export function SupportPage() {
           description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
         />
         <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-            <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+            <span className="text-[13px] font-semibold text-(--tgui--text_color)">
               Обжалование блокировки
             </span>
             <AppealForm />
@@ -192,8 +192,8 @@ export function SupportPage() {
       <PageHeader title="Поддержка" />
 
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-2">
-        <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-2">
+        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           Частые вопросы
         </span>
         {SUPPORT_FAQ.map((item) => {
@@ -206,7 +206,7 @@ export function SupportPage() {
             >
               <Accordion.Summary Component="button">{item.question}</Accordion.Summary>
               <Accordion.Content>
-                <p className="text-[13px] text-[var(--tgui--hint_color)] leading-relaxed">
+                <p className="text-[13px] text-(--tgui--hint_color) leading-relaxed">
                   {item.answer}
                 </p>
               </Accordion.Content>
@@ -215,8 +215,8 @@ export function SupportPage() {
         })}
       </div>
 
-      <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           Мои обращения
         </span>
         <QueryState
@@ -228,10 +228,10 @@ export function SupportPage() {
         >
           {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
             <>
-              <p className="text-[14px] font-semibold text-center text-[var(--tgui--text_color)]">
+              <p className="text-[14px] font-semibold text-center text-(--tgui--text_color)">
                 У вас пока нет обращений
               </p>
-              <p className="text-[13px] text-center text-[var(--tgui--hint_color)]">
+              <p className="text-[13px] text-center text-(--tgui--hint_color)">
                 Здесь появятся ваши обращения и ответы поддержки
               </p>
             </>
@@ -254,8 +254,8 @@ export function SupportPage() {
         </QueryState>
       </div>
 
-      <section aria-label="Связаться с нами" className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+      <section aria-label="Связаться с нами" className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           Связаться с нами
         </span>
           <MutationError error={create.error} />
@@ -263,7 +263,7 @@ export function SupportPage() {
             <label htmlFor="support-subject">Тема</label>
             <Input
               id="support-subject"
-              before={<MessageSquareText size={16} className="text-[var(--tgui--hint_color)]" />}
+              before={<MessageSquareText size={16} className="text-(--tgui--hint_color)" />}
               placeholder="Например: не приходит уведомление"
               value={subject}
               maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
@@ -319,8 +319,8 @@ export function SupportPage() {
           </Button>
       </section>
 
-      <div className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-[var(--tgui--text_color)]">
+      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           Обжалование блокировки
         </span>
         <AppealForm />

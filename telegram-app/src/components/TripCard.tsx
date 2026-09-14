@@ -47,40 +47,40 @@ export function TripCard({ trip }: { trip: Trip }) {
         haptic.light();
         navigate(`/trips/${trip.id}`);
       }}
-      className="text-left p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] hover:border-[var(--app-info)] shadow-xs cursor-pointer transition flex flex-col gap-3 group"
+      className="text-left p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) hover:border-(--app-info) shadow-xs cursor-pointer transition flex flex-col gap-3 group"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[17px] font-bold text-[var(--tgui--text_color)]">
+            <span className="text-[17px] font-bold text-(--tgui--text_color)">
               {trip.time}
             </span>
             {duration && (
-              <span className="text-xs text-[var(--tgui--hint_color)]">({duration})</span>
+              <span className="text-xs text-(--tgui--hint_color)">({duration})</span>
             )}
             {arrival && (
-              <span className="text-[15px] font-medium text-[var(--tgui--hint_color)]">
+              <span className="text-[15px] font-medium text-(--tgui--hint_color)">
                 → {arrival}
               </span>
             )}
           </div>
-          <div className="text-[14px] font-semibold text-[var(--tgui--text_color)] mt-0.5 truncate">
+          <div className="text-[14px] font-semibold text-(--tgui--text_color) mt-0.5 truncate">
             {trip.fromCity} → {trip.toCity}
           </div>
-          <div className="text-[12px] text-[var(--tgui--hint_color)]">
+          <div className="text-[12px] text-(--tgui--hint_color)">
             {dayLabel(trip.date)}
           </div>
         </div>
         <div className="text-right shrink-0">
-          <div className="text-[16px] font-bold text-[var(--tgui--text_color)]">
+          <div className="text-[16px] font-bold text-(--tgui--text_color)">
             {trip.price} ₽
           </div>
-          <span className="text-[11px] text-[var(--tgui--hint_color)]">за место</span>
+          <span className="text-[11px] text-(--tgui--hint_color)">за место</span>
         </div>
       </div>
 
       {(trip.fromAddress || trip.toAddress) && (
-        <div className="text-[12px] text-[var(--tgui--hint_color)] flex flex-col gap-0.5 border-l-2 border-[var(--tgui--outline)] pl-2.5">
+        <div className="text-[12px] text-(--tgui--hint_color) flex flex-col gap-0.5 border-l-2 border-(--tgui--outline) pl-2.5">
           {trip.fromAddress && (
             <div className="truncate">Посадка: {trip.fromAddress}</div>
           )}
@@ -88,7 +88,7 @@ export function TripCard({ trip }: { trip: Trip }) {
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--tgui--outline)]">
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-(--tgui--outline)">
         <div className="flex items-center gap-2 min-w-0">
           <LazyAvatar
             size={40}
@@ -97,17 +97,17 @@ export function TripCard({ trip }: { trip: Trip }) {
             alt={trip.driver.name}
           />
           <div className="min-w-0">
-            <div className="flex items-center gap-1 text-[13px] font-medium text-[var(--tgui--text_color)]">
+            <div className="flex items-center gap-1 text-[13px] font-medium text-(--tgui--text_color)">
               <span className="truncate">{trip.driver.name}</span>
               {trip.driver.isVerified && (
                 <ShieldCheck
                   size={14}
-                  className="text-[var(--app-info)] fill-[var(--app-info-bg)] shrink-0"
+                  className="text-(--app-info) fill-(--app-info-bg) shrink-0"
                 />
               )}
             </div>
-            <div className="flex items-center gap-1 text-[11px] text-[var(--tgui--hint_color)]">
-              <Star size={11} className="fill-[var(--app-rating)] text-[var(--app-rating)]" />
+            <div className="flex items-center gap-1 text-[11px] text-(--tgui--hint_color)">
+              <Star size={11} className="fill-(--app-rating) text-(--app-rating)" />
               <span>{trip.driver.rating.toFixed(1)}</span>
             </div>
           </div>
@@ -117,10 +117,10 @@ export function TripCard({ trip }: { trip: Trip }) {
           <span
             className={`text-[11px] px-2 py-0.5 rounded-full ${
               trip.seatsAvailable === 0
-                ? "font-semibold bg-[var(--app-danger-bg)] text-[var(--app-danger)]"
+                ? "font-semibold bg-(--app-danger-bg) text-(--app-danger)"
                 : fewSeats
-                  ? "font-semibold bg-[var(--app-warning-bg)] text-[var(--app-warning)]"
-                  : "font-medium bg-[var(--app-success-bg)] text-[var(--app-success)]"
+                  ? "font-semibold bg-(--app-warning-bg) text-(--app-warning)"
+                  : "font-medium bg-(--app-success-bg) text-(--app-success)"
             }`}
           >
             {trip.seatsAvailable === 0
@@ -128,7 +128,7 @@ export function TripCard({ trip }: { trip: Trip }) {
               : `Осталось мест: ${trip.seatsAvailable}`}
           </span>
           {trip.tags.length > 0 && (
-            <div className="flex items-center gap-1.5 text-[var(--tgui--hint_color)]">
+            <div className="flex items-center gap-1.5 text-(--tgui--hint_color)">
               {trip.tags.flatMap((tag) => {
                 const entry = TAG_ICONS[tag];
                 return entry ? [<entry.Icon key={tag} size={13} />] : [];

@@ -68,7 +68,7 @@ export function AppealForm() {
         <label htmlFor="appeal-subject">Тема</label>
         <Input
           id="appeal-subject"
-          before={<MessageSquareText size={16} className="text-[var(--tgui--hint_color)]" />}
+          before={<MessageSquareText size={16} className="text-(--tgui--hint_color)" />}
           value={subject}
           maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
           status={formError ? "error" : "default"}

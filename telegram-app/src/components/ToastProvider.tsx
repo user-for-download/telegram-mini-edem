@@ -58,7 +58,7 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
             duration={TOAST_DURATION_MS}
             before={
               toast.before ?? (
-                <CheckCircle2 size={20} className="text-[var(--app-success)] shrink-0" />
+                <CheckCircle2 size={20} className="text-(--app-success) shrink-0" />
               )
             }
             description={toast.description}

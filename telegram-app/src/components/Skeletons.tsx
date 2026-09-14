@@ -18,7 +18,7 @@ export function TripCardSkeleton() {
     <Skeleton
       visible
       aria-hidden="true"
-      className="overflow-hidden rounded-2xl border border-[var(--tgui--outline)]"
+      className="overflow-hidden rounded-2xl border border-(--tgui--outline)"
     >
       <div className="flex flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-3">
@@ -33,7 +33,7 @@ export function TripCardSkeleton() {
           </div>
         </div>
         <div className="h-3 w-2/5" />
-        <div className="flex items-center justify-between gap-2 border-t border-[var(--tgui--outline)] pt-2">
+        <div className="flex items-center justify-between gap-2 border-t border-(--tgui--outline) pt-2">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 rounded-full" />
             <div className="flex flex-col gap-1">
@@ -55,7 +55,7 @@ export function NotificationCardSkeleton() {
     <Skeleton
       visible
       aria-hidden="true"
-      className="overflow-hidden rounded-2xl border border-[var(--tgui--outline)]"
+      className="overflow-hidden rounded-2xl border border-(--tgui--outline)"
     >
       <div className="flex flex-col gap-2 p-4">
         <div className="flex items-center justify-between gap-2">
@@ -65,7 +65,7 @@ export function NotificationCardSkeleton() {
         <div className="h-3 w-full" />
         <div className="h-3 w-3/5" />
         <div className="h-3 w-28" />
-        <div className="flex items-center gap-3 border-t border-[var(--tgui--outline)] pt-2">
+        <div className="flex items-center gap-3 border-t border-(--tgui--outline) pt-2">
           <div className="h-3 w-16" />
           <div className="h-8 w-36 rounded-xl" />
         </div>
@@ -81,7 +81,7 @@ export function ReviewCardSkeleton() {
     <Skeleton
       visible
       aria-hidden="true"
-      className="overflow-hidden rounded-2xl border border-[var(--tgui--outline)]"
+      className="overflow-hidden rounded-2xl border border-(--tgui--outline)"
     >
       <div className="flex flex-col gap-2 p-3.5">
         <div className="flex items-center justify-between gap-2">

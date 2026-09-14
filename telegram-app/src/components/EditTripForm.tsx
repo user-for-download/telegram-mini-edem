@@ -95,13 +95,13 @@ export function EditTripForm({
 
   return (
     <>
-      <div className="flex flex-col gap-3 border-t border-[var(--tgui--outline)] pt-3">
+      <div className="flex flex-col gap-3 border-t border-(--tgui--outline) pt-3">
         <p>Маршрут изменить нельзя — только адреса, время и условия.</p>
         <div className="FormField">
           <label htmlFor="edit-from">Адрес отправления</label>
           <Input
             id="edit-from"
-            before={<MapPin size={17} className="text-[var(--app-info)]" />}
+            before={<MapPin size={17} className="text-(--app-info)" />}
             value={fromAddress}
             onChange={(event) => setFromAddress(event.target.value)}
             placeholder="Например: м. Тёплый Стан"
@@ -111,7 +111,7 @@ export function EditTripForm({
           <label htmlFor="edit-to">Адрес назначения</label>
           <Input
             id="edit-to"
-            before={<MapPin size={17} className="text-[var(--app-success)]" />}
+            before={<MapPin size={17} className="text-(--app-success)" />}
             value={toAddress}
             onChange={(event) => setToAddress(event.target.value)}
             placeholder="Например: пр-т Ленина"
@@ -121,7 +121,7 @@ export function EditTripForm({
           <label htmlFor="edit-departure">Дата и время</label>
           <Input
             id="edit-departure"
-            before={<Calendar size={16} className="text-[var(--tgui--hint_color)]" />}
+            before={<Calendar size={16} className="text-(--tgui--hint_color)" />}
             type="datetime-local"
             value={departure}
             onChange={(event) => setDeparture(event.target.value)}
@@ -132,7 +132,7 @@ export function EditTripForm({
             <label htmlFor="edit-duration">В пути, часов</label>
             <Input
               id="edit-duration"
-              before={<Clock size={16} className="text-[var(--tgui--hint_color)]" />}
+              before={<Clock size={16} className="text-(--tgui--hint_color)" />}
               type="number"
               min="1"
               max="168"
@@ -157,7 +157,7 @@ export function EditTripForm({
             <label htmlFor="edit-price">Цена, ₽</label>
             <Input
               id="edit-price"
-              before={<RussianRuble size={16} className="text-[var(--tgui--hint_color)]" />}
+              before={<RussianRuble size={16} className="text-(--tgui--hint_color)" />}
               type="number"
               min="1"
               max="100000"
@@ -169,7 +169,7 @@ export function EditTripForm({
             <label htmlFor="edit-seats">Места (1–{MAX_SEATS})</label>
             <Input
               id="edit-seats"
-              before={<Users size={16} className="text-[var(--tgui--hint_color)]" />}
+              before={<Users size={16} className="text-(--tgui--hint_color)" />}
               type="number"
               min="1"
               max={MAX_SEATS}
