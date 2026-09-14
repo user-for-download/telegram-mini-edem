@@ -1,4 +1,3 @@
-import { Button } from "@telegram-apps/telegram-ui";
 import {
   Baby,
   Cigarette,
@@ -11,7 +10,8 @@ import {
 } from "lucide-react";
 import type { Trip, TripTag } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
-import { dayLabel, formatDuration } from "@/utils/date";
+import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
+import { haptic } from "@/utils/haptics";
 import { LazyAvatar } from "@/components/LazyAvatar";
 
 /** Иконки для очевидных тегов (язык примера); остальные теги не
@@ -26,18 +26,27 @@ const TAG_ICONS: Partial<Record<TripTag, { Icon: typeof Luggage }>> = {
 };
 
 /**
- * Карточка поездки в ленте поиска (язык примера edem-telegram-mini-app):
- * время + длительность, маршрут + цена, адреса посадки/высадки,
- * водитель (аватар, рейтинг, верификация), пилюля мест и иконки тегов.
- * Навигация — явной кнопкой (a11y: без clickable-div).
+ * Карточка поездки в ленте поиска — язык SearchTab эталона
+ * (/tmp/edem---telegram-mini-app): вся карточка кликабельна
+ * (нативный button, без отдельной кнопки «Подробнее»),
+ * время → прибытие, маршрут + цена, адреса, водитель,
+ * компактная цветная пилюля мест и иконки тегов.
  */
 export function TripCard({ trip }: { trip: Trip }) {
   const navigate = useNavigate();
   const fewSeats = trip.seatsAvailable <= 1;
   const duration = formatDuration(trip.durationMinutes);
+  const arrival = formatArrivalTime(trip.time, trip.durationMinutes);
 
   return (
-    <article className="p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] shadow-xs cursor-pointer transition flex flex-col gap-3">
+    <button
+      type="button"
+      onClick={() => {
+        haptic.light();
+        navigate(`/trips/${trip.id}`);
+      }}
+      className="text-left p-4 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] hover:border-[var(--app-info)] shadow-xs cursor-pointer transition flex flex-col gap-3 group"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -45,7 +54,12 @@ export function TripCard({ trip }: { trip: Trip }) {
               {trip.time}
             </span>
             {duration && (
-              <span className="text-xs text-[var(--tgui--hint_color)]">(~{duration})</span>
+              <span className="text-xs text-[var(--tgui--hint_color)]">({duration})</span>
+            )}
+            {arrival && (
+              <span className="text-[15px] font-medium text-[var(--tgui--hint_color)]">
+                → {arrival}
+              </span>
             )}
           </div>
           <div className="text-[14px] font-semibold text-[var(--tgui--text_color)] mt-0.5 truncate">
@@ -99,8 +113,13 @@ export function TripCard({ trip }: { trip: Trip }) {
 
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span
-            className="StatusPill"
-            data-tone={trip.seatsAvailable === 0 ? "danger" : fewSeats ? "warning" : "success"}
+            className={`text-[11px] px-2 py-0.5 rounded-full ${
+              trip.seatsAvailable === 0
+                ? "font-semibold bg-[var(--app-danger-bg)] text-[var(--app-danger)]"
+                : fewSeats
+                  ? "font-semibold bg-[var(--app-warning-bg)] text-[var(--app-warning)]"
+                  : "font-medium bg-[var(--app-success-bg)] text-[var(--app-success)]"
+            }`}
           >
             {trip.seatsAvailable === 0
               ? "Мест нет"
@@ -116,15 +135,6 @@ export function TripCard({ trip }: { trip: Trip }) {
           )}
         </div>
       </div>
-
-      <Button
-        stretched
-        size="m"
-        mode="bezeled"
-        onClick={() => navigate(`/trips/${trip.id}`)}
-      >
-        Подробнее
-      </Button>
-    </article>
+    </button>
   );
 }

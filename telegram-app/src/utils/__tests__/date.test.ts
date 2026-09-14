@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, dayTimeLabel, formatDuration, toIsoDate } from "@/utils/date";
+import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, toIsoDate } from "@/utils/date";
 
 const NOW = new Date(2026, 8, 10, 15, 0, 0); // четверг 2026-09-10
 
@@ -50,5 +50,21 @@ describe("formatDuration", () => {
     expect(formatDuration(0)).toBe("");
     expect(formatDuration(-5)).toBe("");
     expect(formatDuration(Number.NaN)).toBe("");
+  });
+});
+
+describe("formatArrivalTime", () => {
+  it("adds duration to departure time", () => {
+    expect(formatArrivalTime("10:00", 120)).toBe("12:00");
+    expect(formatArrivalTime("09:30", 45)).toBe("10:15");
+  });
+
+  it("wraps past midnight", () => {
+    expect(formatArrivalTime("23:30", 90)).toBe("01:00");
+  });
+
+  it("returns empty string for invalid input", () => {
+    expect(formatArrivalTime("", 60)).toBe("");
+    expect(formatArrivalTime("10:00", 0)).toBe("");
   });
 });

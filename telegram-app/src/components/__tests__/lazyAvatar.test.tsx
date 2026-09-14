@@ -218,7 +218,11 @@ describe("LazyAvatar в карточках SSR", () => {
     expect(html).toContain(AVATAR_SRC);
     expect(html).toContain("Москва");
     expect(html).toContain("Тула");
-    expect(html).toContain("Подробнее");
+    // Эталон SearchTab: вся карточка — кнопка, время → прибытие.
+    expect(html).toContain("<button");
+    expect(html).toContain("10:00");
+    expect(html).toContain("12:00");
+    expect(html).toContain("Осталось мест:");
   });
 
   it("ReviewCard: автор, текст и оценка видны, аватар с src", () => {

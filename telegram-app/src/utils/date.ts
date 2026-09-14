@@ -49,3 +49,14 @@ export function formatDuration(minutes: number): string {
   if (rest === 0) return `${hours} ч`;
   return `${hours} ч ${rest} мин`;
 }
+
+/** Время прибытия «ЧЧ:ММ» = отправление + длительность (через полночь — по модулю суток). */
+export function formatArrivalTime(time: string, durationMinutes: number): string {
+  const match = /^(\d{1,2}):(\d{2})/.exec(time.trim());
+  if (!match || !Number.isFinite(durationMinutes) || durationMinutes <= 0) return "";
+  const total = Number(match[1]) * 60 + Number(match[2]) + Math.round(durationMinutes);
+  const wrapped = ((total % 1440) + 1440) % 1440;
+  const hours = Math.floor(wrapped / 60);
+  const minutes = wrapped % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}

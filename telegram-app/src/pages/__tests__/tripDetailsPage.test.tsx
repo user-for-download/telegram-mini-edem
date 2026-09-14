@@ -160,7 +160,9 @@ describe("TripDetailsPage parity", () => {
     const html = render();
     expect(html).toContain("м. Тёплый Стан");
     expect(html).toContain("2 ч 30 мин");
-    expect(html).toContain("180 км");
+    // SSR разбивает комментариями: «180<!-- --> км».
+    expect(html).toContain("180");
+    expect(html).toContain("км");
     expect(html).toContain("Не курить");
     expect(html).toContain("Еду без остановок");
     expect(html).toContain("Комментарий водителю");

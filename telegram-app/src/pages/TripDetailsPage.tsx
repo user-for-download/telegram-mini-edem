@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Button, Cell, List, Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
+import { Button, Chip, Placeholder, Spinner } from "@telegram-apps/telegram-ui";
+import { Phone, Send, ShieldCheck, Star } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
-import { PageHeader } from "@/components/PageHeader";
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { EditTripForm } from "@/components/EditTripForm";
+import { LazyAvatar } from "@/components/LazyAvatar";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { shareTrip } from "@/helpers/tripShare";
@@ -21,19 +22,18 @@ import {
   useCancelTripMutation,
   useCompleteTripMutation,
 } from "@/queries/useTripsQuery";
+import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
 
-function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  if (hours > 0 && rest > 0) return `${hours} ч ${rest} мин`;
-  if (hours > 0) return `${hours} ч`;
-  return `${rest} мин`;
+function formatDurationLocal(minutes: number): string {
+  return formatDuration(minutes);
 }
 
 /**
- * Детали поездки (паритет VK TripDetailsPanel): адреса/теги/длительность/
- * дистанция, выбор места + комментарий, confirm-guards, шаринг, edit trip,
- * expired/authorization/conflict/offline-состояния. Бэкенд — авторитет.
+ * Детали поездки — язык TripDetailsModal эталона
+ * (/tmp/edem---telegram-mini-app): баннер брони, карточка маршрута
+ * с таймлайном, карточка водителя, шаринг, авто, чипы-теги,
+ * комментарий, футер бронирования. Логика (места/комментарий/
+ * guards/маски адресов/edit trip) — наша, без изменений.
  */
 export function TripDetailsPage() {
   const { tripId = "" } = useParams();
@@ -51,18 +51,14 @@ export function TripDetailsPage() {
 
   if (trip.isLoading) {
     return (
-      <>
-        <PageHeader title="Детали поездки" />
-        <Placeholder>
-          <Spinner size="m" />
-        </Placeholder>
-      </>
+      <Placeholder>
+        <Spinner size="m" />
+      </Placeholder>
     );
   }
   if (trip.isError || !trip.data) {
     return (
       <>
-        <PageHeader title="Детали поездки" />
         <OfflineBanner />
         <Placeholder
           header="Поездка не найдена"
@@ -105,6 +101,7 @@ export function TripDetailsPage() {
       : (availableSeats[0] ?? null);
 
   const canCompleteTrip = isDriver && isActive && departureTime !== null && departureTime <= Date.now();
+  const arrival = formatArrivalTime(item.time, item.durationMinutes);
 
   const handleShare = () => {
     setShareStatus(null);
@@ -117,161 +114,275 @@ export function TripDetailsPage() {
   };
 
   return (
-    <>
-      <PageHeader title="Детали поездки" />
+    <div className="flex flex-col gap-4">
       <OfflineBanner />
-      <Section header={`${item.fromCity} → ${item.toCity}`}>
-        <List>
-          <Cell subtitle={`${item.date} в ${item.time}`}>Маршрут</Cell>
-          {item.fromAddress || item.toAddress ? (
-            <Cell subtitle={`${item.fromAddress ?? "—"} → ${item.toAddress ?? "—"}`}>
-              Адреса встречи
-            </Cell>
-          ) : (
-            <Cell subtitle="Точное место встречи станет доступно после подтверждения брони">
-              Адреса встречи
-            </Cell>
+
+      {hasActiveBooking && item.myBooking && (
+        <div className="p-3 rounded-xl bg-[var(--app-success-bg)] border border-[var(--app-success)]/20 flex items-center justify-between gap-2">
+          <div className="text-xs font-semibold text-[var(--app-success)]">
+            Вы записались попутчиком
+            <div className="text-[11px] font-medium text-[var(--app-success)]/80">
+              Место №{item.myBooking.seat} · {item.price * item.myBooking.seat} ₽
+            </div>
+          </div>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--app-success)] text-white font-medium shrink-0">
+            {item.myBooking.status === "confirmed" ? "Подтверждено" : "На рассмотрении"}
+          </span>
+        </div>
+      )}
+
+      <div className="p-3.5 rounded-2xl bg-[var(--tgui--tertiary_bg_color)] flex flex-col gap-3">
+        <div className="flex items-center justify-between text-xs font-medium text-[var(--tgui--hint_color)]">
+          <span>{dayLabel(item.date)}</span>
+          <span>
+            В пути ~ {formatDurationLocal(item.durationMinutes)} · {item.distanceKm} км
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-3 relative pl-4 border-l-2 border-[var(--app-info)] ml-1">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-bold text-[var(--tgui--text_color)]">
+                {item.time}
+              </span>
+              <span className="text-sm font-semibold text-[var(--tgui--text_color)]">
+                {item.fromCity}
+              </span>
+            </div>
+            <div className="text-xs text-[var(--tgui--hint_color)] mt-0.5">
+              {item.fromAddress ?? "Точное место встречи станет доступно после подтверждения брони"}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+              {arrival && (
+                <span className="text-base font-bold text-[var(--tgui--text_color)]">
+                  {arrival}
+                </span>
+              )}
+              <span className="text-sm font-semibold text-[var(--tgui--text_color)]">
+                {item.toCity}
+              </span>
+            </div>
+            <div className="text-xs text-[var(--tgui--hint_color)] mt-0.5">
+              {item.toAddress ?? "Точное место встречи станет доступно после подтверждения брони"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-3.5 rounded-2xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <LazyAvatar
+            size={40}
+            src={item.driver.avatar}
+            acronym={item.driver.name.slice(0, 1).toUpperCase()}
+            alt={item.driver.name}
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 font-semibold text-sm text-[var(--tgui--text_color)]">
+              <span className="truncate">{item.driver.name}</span>
+              {item.driver.isVerified && (
+                <ShieldCheck size={15} className="text-[var(--app-info)] fill-[var(--app-info-bg)] shrink-0" />
+              )}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-[var(--tgui--hint_color)]">
+              <Star size={12} className="fill-[var(--app-rating)] text-[var(--app-rating)]" />
+              <span>{item.driver.rating.toFixed(1)}</span>
+              <span>({item.driver.reviewsCount} отзывов)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleShare}
+            className="p-2 rounded-full bg-[var(--tgui--secondary_fill)] text-[var(--app-info)] hover:opacity-80 transition min-w-[44px] min-h-[44px] flex items-center justify-center"
+            aria-label="Поделиться поездкой"
+            title="Поделиться поездкой"
+          >
+            <Send size={16} />
+          </button>
+          {hasActiveBooking && (
+            <span
+              className="p-2 rounded-full bg-[var(--tgui--secondary_fill)] text-[var(--tgui--hint_color)] min-w-[44px] min-h-[44px] flex items-center justify-center"
+              title="Телефон водителя доступен после подтверждения"
+            >
+              <Phone size={16} />
+            </span>
           )}
-          <Cell subtitle={`${formatDuration(item.durationMinutes)} · ${item.distanceKm} км`}>
-            Время в пути и расстояние
-          </Cell>
-          <Cell subtitle={`${item.seatsAvailable} из ${item.seatsTotal}`}>Свободные места</Cell>
-          <Cell subtitle={`${item.driver.rating.toFixed(1)} · ${item.driver.reviewsCount} отзывов`}>
-            Водитель: {item.driver.name}
-          </Cell>
-          <Cell subtitle={item.driver.car?.model ?? "Автомобиль не указан"}>Автомобиль</Cell>
-          {item.tags.length > 0 && (
-            <Cell subtitle={item.tags.join(" · ")}>Особенности</Cell>
-          )}
-          {item.comment && <Cell subtitle={item.comment}>Комментарий водителя</Cell>}
-          <Cell subtitle={`${item.price} ₽`}>Цена за место</Cell>
-        </List>
-      </Section>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleShare}
+        className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[var(--tgui--tertiary_bg_color)] text-xs font-medium text-[var(--tgui--text_color)] hover:opacity-80 transition min-h-[44px]"
+      >
+        Поделиться поездкой с попутчиком в Telegram
+      </button>
+      {shareStatus && (
+        <p role="status" className="text-xs text-[var(--tgui--hint_color)] -mt-2">
+          {shareStatus}
+        </p>
+      )}
+
+      {item.driver.car && (
+        <div className="p-3 rounded-xl bg-[var(--tgui--tertiary_bg_color)] flex items-center justify-between text-xs">
+          <span className="font-semibold text-[var(--tgui--text_color)]">
+            {item.driver.car.model} · {item.driver.car.color}
+          </span>
+          <span className="text-[var(--tgui--hint_color)]">
+            {item.driver.car.plate ?? "Госномер после брони"}
+          </span>
+        </div>
+      )}
+
+      {item.tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {item.tags.map((tag) => (
+            <Chip key={tag} mode="mono">
+              {tag}
+            </Chip>
+          ))}
+        </div>
+      )}
+
+      {item.comment && (
+        <div className="p-3 rounded-xl bg-[var(--tgui--section_bg_color)] border border-[var(--tgui--outline)] text-xs text-[var(--tgui--text_color)] leading-relaxed">
+          <span className="font-semibold text-[var(--tgui--hint_color)] block mb-0.5">
+            Комментарий водителя:
+          </span>
+          {item.comment}
+        </div>
+      )}
 
       {item.myBooking && (
-        <Section header="Ваша заявка">
-          <List>
-            <p>Вы записались попутчиком</p>
-            <Cell
-              subtitle={
-                item.myBooking.status === "confirmed"
-                  ? `Место №${item.myBooking.seat} подтверждено — приятной поездки!`
-                  : `Заявка на место №${item.myBooking.seat} отправлена — ожидайте подтверждения водителя.`
+        <div className="flex flex-col gap-2 pt-2 border-t border-[var(--tgui--outline)]">
+          {(item.myBooking.status === "pending" || item.myBooking.status === "confirmed") && (
+            <ConfirmAction
+              label="Отменить бронирование"
+              confirmLabel="Отменить бронь"
+              description="Заявка будет отменена, а место снова станет доступно."
+              pending={cancelBooking.isPending}
+              onConfirm={() =>
+                cancelBooking.mutate(item.myBooking!.id, {
+                  onSuccess: () =>
+                    hapticFeedback.notificationOccurred.ifAvailable("success"),
+                })
               }
-            >
-              Статус: {item.myBooking.status}
-            </Cell>
-            {(item.myBooking.status === "pending" || item.myBooking.status === "confirmed") && (
-              <ConfirmAction
-                label="Отменить бронирование"
-                confirmLabel="Отменить бронь"
-                description="Заявка будет отменена, а место снова станет доступно."
-                pending={cancelBooking.isPending}
-                onConfirm={() =>
-                  cancelBooking.mutate(item.myBooking!.id, {
-                    onSuccess: () =>
-                      hapticFeedback.notificationOccurred.ifAvailable("success"),
-                  })
-                }
-              />
-            )}
-            {cancelBooking.error && (
-              <p className="FormError" role="alert">
-                {bookingErrorMessage(cancelBooking.error)}
-              </p>
-            )}
-          </List>
-        </Section>
+            />
+          )}
+          {cancelBooking.error && (
+            <p className="FormError" role="alert">
+              {bookingErrorMessage(cancelBooking.error)}
+            </p>
+          )}
+        </div>
       )}
 
       {canBook && (
-        <Section header="Бронирование">
-          <List>
-            <div role="group" aria-label="Выбор места">
-              <p>Место</p>
-              <div className="ButtonRow">
-                {Array.from({ length: item.seatsTotal }, (_, index) => index + 1).map((seat) =>
-                  takenSeats.includes(seat) ? (
-                    <Button key={seat} mode="outline" disabled aria-label={`Место ${seat} занято`}>
-                      {seat} (зан.)
-                    </Button>
-                  ) : effectiveSeat === seat ? (
-                    <Button
-                      key={seat}
-                      disabled={createBooking.isPending}
-                      onClick={() => setSelectedSeat(seat)}
-                      aria-pressed
-                      aria-label={`Место ${seat} выбрано`}
-                    >
-                      {seat}
-                    </Button>
-                  ) : (
-                    <Button
-                      key={seat}
-                      mode="outline"
-                      disabled={createBooking.isPending}
-                      onClick={() => setSelectedSeat(seat)}
-                      aria-pressed={false}
-                      aria-label={`Выбрать место ${seat}`}
-                    >
-                      {seat}
-                    </Button>
-                  )
-                )}
+        <div className="flex flex-col gap-3 pt-2 border-t border-[var(--tgui--outline)]">
+          <div role="group" aria-label="Выбор места">
+            <p className="text-sm font-medium text-[var(--tgui--text_color)] mb-2">Место</p>
+            <div className="ButtonRow">
+              {Array.from({ length: item.seatsTotal }, (_, index) => index + 1).map((seat) =>
+                takenSeats.includes(seat) ? (
+                  <Button key={seat} mode="outline" disabled aria-label={`Место ${seat} занято`}>
+                    {seat} (зан.)
+                  </Button>
+                ) : effectiveSeat === seat ? (
+                  <Button
+                    key={seat}
+                    disabled={createBooking.isPending}
+                    onClick={() => setSelectedSeat(seat)}
+                    aria-pressed
+                    aria-label={`Место ${seat} выбрано`}
+                  >
+                    {seat}
+                  </Button>
+                ) : (
+                  <Button
+                    key={seat}
+                    mode="outline"
+                    disabled={createBooking.isPending}
+                    onClick={() => setSelectedSeat(seat)}
+                    aria-pressed={false}
+                    aria-label={`Выбрать место ${seat}`}
+                  >
+                    {seat}
+                  </Button>
+                )
+              )}
+            </div>
+          </div>
+          <label className="FormField">
+            Комментарий водителю
+            <textarea
+              value={comment}
+              maxLength={300}
+              rows={3}
+              placeholder="Например: буду с небольшим чемоданом, подойду к 9:25"
+              onChange={(event) => setComment(event.target.value)}
+            />
+          </label>
+          <div className="flex items-center justify-between py-1">
+            <div>
+              <div className="text-xs text-[var(--tgui--hint_color)]">
+                Цена за место
+              </div>
+              <div className="text-xl font-bold text-[var(--tgui--text_color)]">
+                {item.price} ₽
               </div>
             </div>
-            <label className="FormField">
-              Комментарий водителю
-              <textarea
-                value={comment}
-                maxLength={300}
-                rows={3}
-                placeholder="Например: буду с небольшим чемоданом, подойду к 9:25"
-                onChange={(event) => setComment(event.target.value)}
-              />
-            </label>
-            <Button
-              stretched
-              loading={createBooking.isPending}
-              disabled={effectiveSeat === null || createBooking.isPending}
-              onClick={() => {
-                if (effectiveSeat === null) return;
-                createBooking.mutate(
-                  {
-                    tripId: item.id,
-                    seat: effectiveSeat,
-                    comment: comment.trim() ? comment.trim() : undefined,
+            <div className="text-right text-[11px] text-[var(--tgui--hint_color)]">
+              Оплата водителю
+              <br />при посадке
+            </div>
+          </div>
+          <Button
+            stretched
+            loading={createBooking.isPending}
+            disabled={effectiveSeat === null || createBooking.isPending}
+            onClick={() => {
+              if (effectiveSeat === null) return;
+              createBooking.mutate(
+                {
+                  tripId: item.id,
+                  seat: effectiveSeat,
+                  comment: comment.trim() ? comment.trim() : undefined,
+                },
+                {
+                  onSuccess: () => {
+                    hapticFeedback.notificationOccurred.ifAvailable("success");
+                    setComment("");
                   },
-                  {
-                    onSuccess: () => {
-                      hapticFeedback.notificationOccurred.ifAvailable("success");
-                      setComment("");
-                    },
-                    onError: (error) => {
-                      // Гонка за место: обновляем схему мест с сервера.
-                      if (
-                        error instanceof Error &&
-                        "code" in error &&
-                        (error as { code?: string }).code === "SEAT_TAKEN"
-                      ) {
-                        void queryClient.invalidateQueries({
-                          queryKey: TRIP_KEYS.detail(item.id),
-                        });
-                      }
-                    },
+                  onError: (error) => {
+                    // Гонка за место: обновляем схему мест с сервера.
+                    if (
+                      error instanceof Error &&
+                      "code" in error &&
+                      (error as { code?: string }).code === "SEAT_TAKEN"
+                    ) {
+                      void queryClient.invalidateQueries({
+                        queryKey: TRIP_KEYS.detail(item.id),
+                      });
+                    }
                   },
-                );
-              }}
-            >
-              Забронировать место · {item.price} ₽
-            </Button>
-            {createBooking.error && (
-              <p className="FormError" role="alert">
-                {bookingErrorMessage(createBooking.error)}
-              </p>
-            )}
-          </List>
-        </Section>
+                },
+              );
+            }}
+          >
+            Забронировать место · {item.price} ₽
+          </Button>
+          {createBooking.error && (
+            <p className="FormError" role="alert">
+              {bookingErrorMessage(createBooking.error)}
+            </p>
+          )}
+        </div>
       )}
 
       {!isDriver && isActive && !departed && item.seatsAvailable <= 0 && !hasActiveBooking && (
@@ -294,17 +405,7 @@ export function TripDetailsPage() {
           trip={item}
         />
       )}
-
-      <Section header="Поделиться">
-        <List>
-          <Button mode="outline" stretched onClick={handleShare}>
-            Поделиться поездкой
-          </Button>
-          {shareStatus && <p role="status">{shareStatus}</p>}
-        </List>
-      </Section>
-
-    </>
+    </div>
   );
 }
 
@@ -337,54 +438,58 @@ function DriverBlock({
       .filter((booking) => booking.status === "pending").length ?? 0;
 
   return (
-    <Section header="Управление поездкой">
-      <List>
-        <Cell subtitle="Это ваша поездка">Водитель</Cell>
-        {status === "completed" && <Cell subtitle="Пассажиры могут оставить отзыв">Поездка завершена</Cell>}
-        {status === "cancelled" && <Cell subtitle="Поездка недоступна для бронирования">Поездка отменена</Cell>}
-        {isActive && (
-          <>
-            <Button mode="outline" stretched onClick={() => navigate(`/trips/my/${tripId}/requests`)}>
-              Заявки пассажиров{bookings.data ? ` (${pendingCount})` : ""}
-            </Button>
-            {bookings.isError && (
-              <p className="FormError" role="alert">
-                {bookingErrorMessage(bookings.error)}{" "}
-                <Button mode="plain" size="s" onClick={() => void bookings.refetch()}>
-                  Повторить
-                </Button>
-              </p>
-            )}
-            <Button mode="outline" stretched onClick={onToggleEdit}>
-              {editing ? "Скрыть редактирование" : "Редактировать поездку"}
-            </Button>
-            {editing && <EditTripForm trip={trip} onDone={onToggleEdit} />}
-            <ConfirmAction
-              label="Завершить поездку"
-              confirmLabel="Завершить"
-              description="Поездка будет перенесена в архив, а пассажиры смогут оставить отзывы."
-              pending={completeTrip.isPending}
-              disabled={!canCompleteTrip || completeTrip.isPending || cancelTrip.isPending}
-              onConfirm={() => completeTrip.mutate(tripId)}
-            />
-            {!canCompleteTrip && (
-              <p>Завершение станет доступно после времени отправления.</p>
-            )}
-            <ConfirmAction
-              label="Отменить поездку"
-              confirmLabel="Отменить поездку"
-              description="Поездка станет недоступна, а пассажиры получат уведомление об отмене."
-              pending={cancelTrip.isPending}
-              onConfirm={() => cancelTrip.mutate(tripId)}
-            />
-            {(cancelTrip.error || completeTrip.error) && (
-              <p className="FormError" role="alert">
-                {bookingErrorMessage(cancelTrip.error ?? completeTrip.error)}
-              </p>
-            )}
-          </>
-        )}
-      </List>
-    </Section>
+    <div className="flex flex-col gap-2 pt-2 border-t border-[var(--tgui--outline)]">
+      <div className="text-sm font-semibold text-[var(--tgui--text_color)]">
+        Управление поездкой
+      </div>
+      {status === "completed" && (
+        <p className="text-xs text-[var(--tgui--hint_color)]">Поездка завершена — пассажиры могут оставить отзыв.</p>
+      )}
+      {status === "cancelled" && (
+        <p className="text-xs text-[var(--tgui--hint_color)]">Поездка отменена — недоступна для бронирования.</p>
+      )}
+      {isActive && (
+        <>
+          <Button mode="bezeled" stretched onClick={() => navigate(`/trips/my/${tripId}/requests`)}>
+            Заявки пассажиров{bookings.data ? ` (${pendingCount})` : ""}
+          </Button>
+          {bookings.isError && (
+            <p className="FormError" role="alert">
+              {bookingErrorMessage(bookings.error)}{" "}
+              <Button mode="plain" size="s" onClick={() => void bookings.refetch()}>
+                Повторить
+              </Button>
+            </p>
+          )}
+          <Button mode="bezeled" stretched onClick={onToggleEdit}>
+            {editing ? "Скрыть редактирование" : "Редактировать поездку"}
+          </Button>
+          {editing && <EditTripForm trip={trip} onDone={onToggleEdit} />}
+          <ConfirmAction
+            label="Завершить поездку"
+            confirmLabel="Завершить"
+            description="Поездка будет перенесена в архив, а пассажиры смогут оставить отзывы."
+            pending={completeTrip.isPending}
+            disabled={!canCompleteTrip || completeTrip.isPending || cancelTrip.isPending}
+            onConfirm={() => completeTrip.mutate(tripId)}
+          />
+          {!canCompleteTrip && (
+            <p className="text-xs text-[var(--tgui--hint_color)]">Завершение станет доступно после времени отправления.</p>
+          )}
+          <ConfirmAction
+            label="Отменить поездку"
+            confirmLabel="Отменить поездку"
+            description="Поездка станет недоступна, а пассажиры получат уведомление об отмене."
+            pending={cancelTrip.isPending}
+            onConfirm={() => cancelTrip.mutate(tripId)}
+          />
+          {(cancelTrip.error || completeTrip.error) && (
+            <p className="FormError" role="alert">
+              {bookingErrorMessage(cancelTrip.error ?? completeTrip.error)}
+            </p>
+          )}
+        </>
+      )}
+    </div>
   );
 }
