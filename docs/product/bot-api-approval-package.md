@@ -1,0 +1,61 @@
+# Bot API: пакет на согласование фоновых уведомлений
+
+Статус: **на согласовании у продукта**. Связано: `docs/adr/telegram-notification-delivery.md` (Bot API option — blocked).
+Техника наполовину готова: `shouldDeliverTelegram`, `resolveTelegramDeepLink`, дедуп, kill-switch `TELEGRAM_DELIVERY_ENABLED`.
+
+## 1. Allowlist событий и тексты
+
+Принцип: в бота — только то, что требует действия или меняет планы. Никаких адресов, телефонов, цен в тексте — только города, дата/время и ссылка в приложение.
+
+| Событие | Критичность | Текст боту (черновик) | Deep-link |
+|---|---|---|---|
+| `booking_status_changed` (подтверждена) | critical | «Водитель подтвердил вашу заявку: {from} → {to}, {date} {time}. Детали — в приложении.» | `/trips/{id}` |
+| `booking_status_changed` (отклонена) | critical | «Водитель отклонил заявку: {from} → {to}. Подберите другую поездку.» + кнопка «Найти» | `/trips` |
+| `trip_cancelled` | critical | «Поездка {from} → {to}, {date} отменена водителем.» | `/notifications` |
+| `trip_status_changed` (завершена) | critical | «Поездка {from} → {to} завершена. Оставьте отзыв.» | `/reviews` |
+| `booking_created` (водителю) | optional | «Новая заявка: {from} → {to}, место №{seat}.» | `/trips/my/{id}/requests` |
+| `trip_details_changed` | optional | «В поездке {from} → {to} изменились детали.» | `/trips/{id}` |
+| `review_approved` / `review_rejected` | optional | «Ваш отзыв опубликован.» / «Отзыв отклонён модерацией.» | `/reviews` |
+| `feedback_replied` | optional | «Поддержка ответила на ваше обращение.» | `/profile/support` |
+| `ride_request_match` | optional | «Найдена поездка под ваш запрос: {from} → {to}.» | `/trips` |
+
+НЕ шлём в бота никогда: `review_*` тексты чужих отзывов, жалобы/репорты, апелляции, админские события.
+
+## 2. Согласие и отзыв (UX)
+
+- Бот технически не может написать первым: нужен `/start` в чате с ботом.
+- Вход: строка «Telegram-уведомления» в «Уведомления и звуки» → если чата с ботом нет, кнопка «Открыть бота» (`https://t.me/{bot}?start=notify`) + подпись «Нажмите Start в чате, иначе сообщения не дойдут».
+- Факт `/start` фиксируем (Bot API `getUpdates`/webhook → `allows_write_to_pm`-подобный флаг в профиле, поле `tgChatJoinedAt`).
+- Отзыв: выключение тумблера = немедленный стоп (флаг читается в момент отправки, не кэшируется); дополнительно команда `/stop` у бота.
+- Критичные идут только при включённом канале? Нет — как в inbox: критичные идут всегда, **но только если чат с ботом есть**. Без чата — тихо (не спамим просьбой).
+
+## 3. Приватность (на ревью Security)
+
+- Тексты — только из таблицы выше; имена — только «Водитель» (без ФИО), без адресов/телефонов/номеров авто.
+- Deep-link — только allowlist-маршруты (`resolveTelegramDeepLink`, уже есть): UUID-маршруты поездок, иначе fallback `/notifications`. Никаких query/hash.
+- Логи воркера: userId + type + outcome, без body.
+
+## 4. Техплан (инженерия, оценка ~1–2 дня)
+
+1. Миграция: `User.tgChatJoinedAt DateTime?` (чат есть), опционально `User.telegramNotificationsEnabled Boolean default true` — сплит флага только здесь, не раньше.
+2. Webhook `POST /bot/webhook` (секрет в path, `TELEGRAM_WEBHOOK_SECRET`) на `/start`/`/stop` → проставление/сброс `tgChatJoinedAt`. Валидация апдейтов по секрету.
+3. Воркер `notificationDispatcher`: outbox-таблица (`NotificationDelivery`: notificationId, channel, status, attempts) — createNotification пишет inbox как сейчас + кладёт задачу; воркер забирает, проверяет флаг/согласие/дедуп, шлёт `sendMessage`, ретраи с бэкоффом (3 попытки), пер-user rate limit (≤5/час, критичные вне лимита — но ≤1/5мин на тип).
+4. `shouldDeliverTelegram(type, tgEnabled, chatJoined)` — расширение существующей чистой функции (тесты уже есть — дополнить).
+5. Kill-switch: существующий `TELEGRAM_DELIVERY_ENABLED=false` гасит всё мгновенно; плюс per-user opt-out.
+6. Метрики: delivered/skipped(no-consent/opt-out)/failed + алерт на error-rate; админка: ручной стоп пользователю.
+7. E2E: parity-тест «событие → outbox → (мок Bot API) → inbox + delivered».
+
+## 5. Раскатка
+
+1. Теневой режим: воркер пишет outbox, отправки нет — сверяем объёмы неделю.
+2. Только критичные, 10% пользователей с чатом бота.
+3. Все allowlist-события, 100%.
+4. Откат: kill-switch или revert воркера — inbox не затрагивается.
+
+## 6. Открытые вопросы к продукту
+
+1. Allowlist и тексты выше — approve / правки?
+2. Обязателен ли чат с ботом для критичных, или критичные дублируем ещё куда-то?
+3. Нужен ли сплит флага in-app/TG уже сейчас (миграция) или один флаг на оба канала?
+4. Кто пишет тексты на Serena-языках (минимум RU)?
+5. SLA ответа поддержки на жалобы «пришёл спам от бота»?
