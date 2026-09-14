@@ -256,6 +256,10 @@ if (env.isProduction) {
     // без кэша (иначе WebView после ребилда указывает на удалённые файлы).
     if (c.req.path.startsWith("/assets/")) {
       c.header("Cache-Control", "public, max-age=31536000, immutable");
+    } else {
+      // index.html и SPA-fallback: всегда свежие (serveStatic отдаёт
+      // корневой / сам, до app.get("*") дело не доходит).
+      c.header("Cache-Control", "no-store");
     }
     return tgStatic(c, next);
   });
