@@ -146,6 +146,21 @@ export function ProfilePage() {
   const dark = themeOverride ? themeOverride === "dark" : tgDark;
   const [notifEnabled, setNotifEnabled] = useState<boolean | null>(null);
   const notifChecked = notifEnabled ?? profile.data?.notificationsEnabled ?? true;
+
+  // Один флаг бэкенда на оба канала: тогглы in-app и Telegram — зеркала.
+  const toggleNotifications = (next: boolean) => {
+    if (saveNotifications.isPending) return;
+    const previous = notifChecked;
+    haptic.light();
+    setNotifEnabled(next);
+    saveNotifications.mutate(next, {
+      onSuccess: () => haptic.success(),
+      onError: () => {
+        haptic.error();
+        setNotifEnabled(previous);
+      },
+    });
+  };
   const aboutReviews = useUserReviewsInfiniteQuery(me?.id ?? "", 20);
 
   const [subtab, setSubtab] = useState<ProfileSubtab>("settings");
@@ -321,52 +336,55 @@ export function ProfilePage() {
                 </Section>
 
                 <Section header="Внешний вид">
-                  <SwitchRow
-                    label="Тёмная тема"
-                    icon={
-                      <span className="icon-circle icon-circle--purple">
-                        <Moon size={18} />
-                      </span>
-                    }
-                    title="Тёмная тема"
-                    subtitle={
-                      dark
-                        ? `Включена тёмная тема${themeOverride ? "" : " (как в Telegram)"}`
-                        : `Включена светлая тема${themeOverride ? "" : " (как в Telegram)"}`
-                    }
-                    checked={dark}
-                    onChange={(next) => {
-                      setThemeOverride(next ? "dark" : "light");
-                      haptic.light();
-                    }}
-                  />
+                  <div className="flex flex-col gap-2">
+                    <SwitchRow
+                      label="Тёмная тема"
+                      icon={
+                        <span className="icon-circle icon-circle--purple">
+                          <Moon size={18} />
+                        </span>
+                      }
+                      title="Тёмная тема"
+                      subtitle={
+                        dark
+                          ? `Включена тёмная тема${themeOverride ? "" : " (как в Telegram)"}`
+                          : `Включена светлая тема${themeOverride ? "" : " (как в Telegram)"}`
+                      }
+                      checked={dark}
+                      onChange={(next) => {
+                        setThemeOverride(next ? "dark" : "light");
+                        haptic.light();
+                      }}
+                    />
+                    {themeOverride && (
+                      <Button
+                        mode="bezeled"
+                        stretched
+                        size="s"
+                        onClick={() => {
+                          haptic.light();
+                          setThemeOverride(null);
+                        }}
+                      >
+                        Как в Telegram
+                      </Button>
+                    )}
+                  </div>
                 </Section>
 
                 <Section header="Уведомления и звуки">
                   <div className="flex flex-col gap-2">
                     <SwitchRow
-                      label="In-app уведомления"
+                      label="Уведомления"
                       icon={
                         <span className="icon-circle icon-circle--info">
                           <Bell size={18} />
                         </span>
                       }
-                      title="In-app уведомления"
-                      subtitle="О новых бронях и подтверждении статуса"
+                      title="Уведомления"
+                      subtitle="Брони, статусы поездок, ответы поддержки"
                       checked={notifChecked}
-                      onChange={(next) => {
-                        if (saveNotifications.isPending) return;
-                        const previous = notifChecked;
-                        haptic.light();
-                        setNotifEnabled(next);
-                        saveNotifications.mutate(next, {
-                          onSuccess: () => haptic.success(),
-                          onError: () => {
-                            haptic.error();
-                            setNotifEnabled(previous);
-                          },
-                        });
-                      }}
+                      onChange={toggleNotifications}
                     />
                     <SwitchRow
                       label="Звуковые эффекты"
@@ -382,26 +400,6 @@ export function ProfilePage() {
                         setSoundEnabled(next);
                         if (next) haptic.light();
                       }}
-                    />
-                  </div>
-                </Section>
-
-                <Section header="Подробные настройки">
-                  <div className="flex flex-col gap-2">
-                    <MenuRow
-                      label="Настройки уведомлений"
-                      icon={
-                        <span className="icon-circle icon-circle--info">
-                          <Bell size={18} />
-                        </span>
-                      }
-                      title="Настройки уведомлений"
-                      subtitle={
-                        profile.data.notificationsEnabled === false
-                          ? "Некритичные уведомления выключены"
-                          : "О новых бронях и подтверждении статуса"
-                      }
-                      onClick={() => navigate("/settings")}
                     />
                   </div>
                 </Section>

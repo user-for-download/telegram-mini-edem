@@ -136,7 +136,6 @@ describe("ProfilePage header", () => {
     expect(html).toContain("Настройки и авто");
     expect(html).toContain("Автомобиль");
     expect(html).toContain("Octavia");
-    expect(html).toContain("Настройки уведомлений");
     expect(html).toContain("Служба поддержки");
     expect(html).toContain("Жалобы");
     expect(html).toContain("Выйти");
@@ -145,7 +144,6 @@ describe("ProfilePage header", () => {
     expect(html).toContain("Внешний вид");
     expect(html).toContain("Тёмная тема");
     expect(html).toContain("Уведомления и звуки");
-    expect(html).toContain("In-app уведомления");
     expect(html).toContain("Звуковые эффекты");
   });
 
