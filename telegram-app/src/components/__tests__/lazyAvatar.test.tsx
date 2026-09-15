@@ -225,6 +225,31 @@ describe("LazyAvatar в карточках SSR", () => {
     expect(html).toContain("Осталось мест:");
   });
 
+  it("TripCard: пилюля мест — StatusPill с тоном по остатку (0=danger, 1=warning, 2+=success)", () => {
+    withoutObserver();
+
+    const renderTripCard = (seatsAvailable: number): string =>
+      renderToString(
+        <AppRoot platform="base">
+          <MemoryRouter initialEntries={["/"]}>
+            <TripCard trip={{ ...makeTrip(), seatsAvailable }} />
+          </MemoryRouter>
+        </AppRoot>,
+      );
+
+    const soldOut = renderTripCard(0);
+    expect(soldOut).toContain("Мест нет");
+    expect(soldOut).toContain('data-tone="danger"');
+
+    const lastSeat = renderTripCard(1);
+    expect(lastSeat).toContain("Осталось мест: 1");
+    expect(lastSeat).toContain('data-tone="warning"');
+
+    const plenty = renderTripCard(2);
+    expect(plenty).toContain("Осталось мест: 2");
+    expect(plenty).toContain('data-tone="success"');
+  });
+
   it("ReviewCard: автор, текст и оценка видны, аватар с src", () => {
     withoutObserver();
 

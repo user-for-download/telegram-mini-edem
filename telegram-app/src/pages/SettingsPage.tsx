@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Section } from "@telegram-apps/telegram-ui";
+import { Button, Section, Text } from "@telegram-apps/telegram-ui";
 import { ArrowLeft, Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
@@ -82,9 +82,9 @@ export function SettingsPage() {
               {enabled ? "Выключить некритичные" : "Включить уведомления"}
             </Button>
             {showSaved && (
-              <p className="text-[13px] text-(--tgui--link_color)" role="status">
+              <Text Component="p" className="text-(--tgui--link_color)" role="status">
                 Настройки сохранены
-              </p>
+              </Text>
             )}
             <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
               Настройка синхронизируется с аккаунтом. Отдельные настройки звука и типов уведомлений пока

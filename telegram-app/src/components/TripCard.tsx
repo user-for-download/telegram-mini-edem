@@ -12,6 +12,7 @@ import type { Trip, TripTag } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
 import { Caption, Tappable, Text } from "@telegram-apps/telegram-ui";
 import { FEED_CARD_SURFACE } from "@/components/FeedCard";
+import { StatusPill } from "@/components/StatusPill";
 import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
 import { haptic } from "@/utils/haptics";
 import { LazyAvatar } from "@/components/LazyAvatar";
@@ -115,22 +116,14 @@ export function TripCard({ trip }: { trip: Trip }) {
         </div>
 
         <div className="flex flex-col items-end gap-1 shrink-0">
-          {/* Мест-пилюля — не StatusPill: тон кодируется инлайн-классами
-              (danger/warning/success по остатку мест), класс .StatusPill
-              и data-tone здесь не используются. */}
-          <span
-            className={`text-[11px] px-2 py-0.5 rounded-full ${
-              trip.seatsAvailable === 0
-                ? "font-semibold bg-(--app-danger-bg) text-(--app-danger)"
-                : fewSeats
-                  ? "font-semibold bg-(--app-warning-bg) text-(--app-warning)"
-                  : "font-medium bg-(--app-success-bg) text-(--app-success)"
-            }`}
+          <StatusPill
+            tone={trip.seatsAvailable === 0 ? "danger" : fewSeats ? "warning" : "success"}
+            className="shrink-0"
           >
             {trip.seatsAvailable === 0
               ? "Мест нет"
               : `Осталось мест: ${trip.seatsAvailable}`}
-          </span>
+          </StatusPill>
           {trip.tags.length > 0 && (
             <div className="flex items-center gap-1.5 text-(--tgui--hint_color)">
               {trip.tags.flatMap((tag) => {

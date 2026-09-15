@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Input, Section } from "@telegram-apps/telegram-ui";
+import { Button, Caption, Input, Section } from "@telegram-apps/telegram-ui";
 import { Car, Palette, Hash } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { QueryState } from "@/components/QueryState";
@@ -203,9 +203,9 @@ export function VehiclePage() {
                       <div className="text-[16px] font-semibold text-(--tgui--text_color) truncate">
                         {vehicle.model}
                       </div>
-                      <div className="text-[13px] text-(--tgui--hint_color)">
+                      <Caption Component="div" className="text-(--tgui--hint_color)">
                         {vehicle.plate ? `${vehicle.color} · ${vehicle.plate}` : vehicle.color}
-                      </div>
+                      </Caption>
                     </div>
                   </div>
                   <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
@@ -237,9 +237,9 @@ export function VehiclePage() {
                       <div className="text-[16px] font-semibold text-(--tgui--text_color)">
                         Автомобиль не добавлен
                       </div>
-                      <div className="text-[13px] text-(--tgui--hint_color)">
+                      <Caption Component="div" className="text-(--tgui--hint_color)">
                         Чтобы публиковать поездки, добавьте автомобиль.
-                      </div>
+                      </Caption>
                     </div>
                   </div>
                   <Button mode="bezeled" stretched size="l" onClick={startEditing}>
