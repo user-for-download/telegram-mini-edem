@@ -180,6 +180,20 @@ input, select, textarea {
   outline-offset: 2px;
 }
 
+/* Выбранный тег условий — голубой (переопределение tgui Chip:
+   aria-pressed уже выставляется в DOM, правило бьёт hashed-классы
+   tgui за счёт специфичности). Действует везде, где TagChips:
+   создание, поиск, редактирование поездки. */
+.TagChips .TagChip[aria-pressed="true"] {
+  background: var(--tgui--button_color, #007aff);
+  border-color: transparent;
+}
+
+.TagChips .TagChip[aria-pressed="true"],
+.TagChips .TagChip[aria-pressed="true"] * {
+  color: var(--tgui--button_text_color, #ffffff);
+}
+
 /* Кружок иконки для Cell.before (язык ProfileTab примера):
    w-8 h-8 rounded-full, тон — пастель из --app-* токенов. */
 .icon-circle {

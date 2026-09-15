@@ -115,13 +115,16 @@ const CITIES = [
 ];
 
 describe("CreateTripForm (страница /trips/my/new)", () => {
-  it("города — Select из справочника, места — кап MAX_SEATS=3", () => {
+  it("города — пикер с вводом, места — степпер MAX_SEATS=3", () => {
     mockUseAllCities.mockReturnValue(queryState({ data: CITIES }));
     const html = render(<CreateTripForm onCreated={() => {}} />);
     expect(html).toContain("Маршрут");
     expect(html).toContain("Город отправления");
-    expect(html).toContain("Вологда");
-    expect(html).toContain("Череповец");
+    expect(html).toContain("Город назначения");
+    // Пикер закрыт по умолчанию: список городов раскрывается по фокусу,
+    // в SSR его нет — логика фильтра покрыта filterCities-тестами.
+    expect(html).toContain("Откуда едем");
+    expect(html).toContain("Куда едем");
     expect(html).toContain("Поездка");
     expect(html).toContain("Условия поездки");
     // CTA «Опубликовать» живёт в нижнем баре (ActionVariant), не в форме.

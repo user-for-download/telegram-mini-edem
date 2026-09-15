@@ -6,7 +6,6 @@ import {
   Input,
   Placeholder,
   Section,
-  Select,
   Spinner,
   Textarea,
 } from "@telegram-apps/telegram-ui";
@@ -22,6 +21,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
+import { CityPickerField } from "@/components/CityPickerField";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PageHeader } from "@/components/PageHeader";
 import { useToast } from "@/components/ToastProvider";
@@ -256,41 +256,31 @@ export function CreateTripForm({
         <Section header="Маршрут">
           <div className="flex flex-col gap-3 p-4">
             <div className="flex flex-col gap-1.5 relative">
-              <Select
+              <CityPickerField
                 id="create-from"
-                header="Город отправления"
+                label="Город отправления"
                 value={from}
+                cities={cities.data}
+                placeholder="Откуда едем — начните вводить"
                 status={errorField === "create-from" ? "error" : "default"}
-                onChange={(event) => {
+                onSelect={(name) => {
                   touch();
-                  setFrom(event.target.value);
+                  setFrom(name);
                 }}
-              >
-                <option value="">Откуда едем</option>
-                {cities.data?.map((city) => (
-                  <option key={city.id} value={city.name}>
-                    {city.name}
-                  </option>
-                ))}
-              </Select>
+              />
               <FieldError show={errorField === "create-from"}>{validationError}</FieldError>
-              <Select
+              <CityPickerField
                 id="create-to"
-                header="Город назначения"
+                label="Город назначения"
                 value={to}
+                cities={cities.data}
+                placeholder="Куда едем — начните вводить"
                 status={errorField === "create-to" ? "error" : "default"}
-                onChange={(event) => {
+                onSelect={(name) => {
                   touch();
-                  setTo(event.target.value);
+                  setTo(name);
                 }}
-              >
-                <option value="">Куда едем</option>
-                {cities.data?.map((city) => (
-                  <option key={city.id} value={city.name}>
-                    {city.name}
-                  </option>
-                ))}
-              </Select>
+              />
               <FieldError show={errorField === "create-to"}>{validationError}</FieldError>
               <IconButton
                 type="button"
@@ -303,41 +293,45 @@ export function CreateTripForm({
                 <ArrowRightLeft size={14} className="text-(--app-info)" />
               </IconButton>
             </div>
-            <Input
-              id="create-from-address"
-              header="Адрес отправления"
-              before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
-              value={fromAddress}
-              status={errorField === "create-from-address" ? "error" : "default"}
-              onChange={(event) => {
-                touch();
-                setFromAddress(event.target.value);
-              }}
-              placeholder="Точка встречи"
-            />
-            <FieldError show={errorField === "create-from-address"}>{validationError}</FieldError>
-            <Input
-              id="create-to-address"
-              header="Адрес назначения"
-              before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
-              value={toAddress}
-              status={errorField === "create-to-address" ? "error" : "default"}
-              onChange={(event) => {
-                touch();
-                setToAddress(event.target.value);
-              }}
-              placeholder="Точка прибытия"
-            />
-            <FieldError show={errorField === "create-to-address"}>{validationError}</FieldError>
+            <div className="FormField">
+              <label htmlFor="create-from-address">Адрес отправления</label>
+              <Input
+                id="create-from-address"
+                before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
+                value={fromAddress}
+                status={errorField === "create-from-address" ? "error" : "default"}
+                onChange={(event) => {
+                  touch();
+                  setFromAddress(event.target.value);
+                }}
+                placeholder="Точка встречи"
+              />
+              <FieldError show={errorField === "create-from-address"}>{validationError}</FieldError>
+            </div>
+            <div className="FormField">
+              <label htmlFor="create-to-address">Адрес назначения</label>
+              <Input
+                id="create-to-address"
+                before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
+                value={toAddress}
+                status={errorField === "create-to-address" ? "error" : "default"}
+                onChange={(event) => {
+                  touch();
+                  setToAddress(event.target.value);
+                }}
+                placeholder="Точка прибытия"
+              />
+              <FieldError show={errorField === "create-to-address"}>{validationError}</FieldError>
+            </div>
           </div>
         </Section>
 
         <Section header="Поездка">
           <div className="flex flex-col gap-3 p-4">
               <div className="FormField">
+                <label htmlFor="create-date">Дата и время</label>
                 <Input
                   id="create-date"
-                  header="Дата и время"
                   before={<Calendar size={16} className="text-(--tgui--hint_color)" />}
                   type="datetime-local"
                   value={date}
@@ -351,9 +345,9 @@ export function CreateTripForm({
               </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="FormField">
+                <label htmlFor="create-price">Цена, ₽</label>
                 <Input
                   id="create-price"
-                  header="Цена, ₽"
                   before={<RussianRuble size={16} className="text-(--tgui--hint_color)" />}
                   type="number"
                   min="1"
@@ -373,7 +367,7 @@ export function CreateTripForm({
                   id="create-seats"
                   role="group"
                   aria-label={`Количество мест: ${seats} из ${MAX_SEATS}`}
-                  className="flex items-center gap-2"
+                  className="flex max-w-6/7 items-center gap-2"
                 >
                   <IconButton
                     type="button"
@@ -408,9 +402,9 @@ export function CreateTripForm({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="FormField">
+                <label htmlFor="create-distance">Расстояние, км</label>
                 <Input
                   id="create-distance"
-                  header="Расстояние, км"
                   before={<MapPin size={16} className="text-(--tgui--hint_color)" />}
                   type="number"
                   min="1"
@@ -426,9 +420,9 @@ export function CreateTripForm({
                 <FieldError show={errorField === "create-distance"}>{validationError}</FieldError>
               </div>
               <div className="FormField">
+                <label htmlFor="create-duration">В пути, часов</label>
                 <Input
                   id="create-duration"
-                  header="В пути, часов"
                   before={<Clock size={16} className="text-(--tgui--hint_color)" />}
                   type="number"
                   min="1"
@@ -469,10 +463,11 @@ export function CreateTripForm({
                 );
               })}
             </div>
-            <Textarea
-              id="create-comment"
-              header="Комментарий"
-              rows={3}
+            <div className="FormField">
+              <label htmlFor="create-comment">Комментарий</label>
+              <Textarea
+                id="create-comment"
+                rows={3}
               maxLength={500}
               placeholder="Например: едем спокойно, салон чистый, багажник свободен"
               value={comment}
@@ -483,6 +478,7 @@ export function CreateTripForm({
               }}
             />
             <FieldError show={errorField === "create-comment"}>{validationError}</FieldError>
+            </div>
           </div>
         </Section>
 

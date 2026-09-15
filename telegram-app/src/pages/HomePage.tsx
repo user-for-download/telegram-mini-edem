@@ -116,20 +116,27 @@ export function HomePage() {
         <Section header="Куда поедем?">
           <form onSubmit={submitSearch} className="flex flex-col gap-2.5 p-4">
               <div className="flex flex-col gap-1.5 relative">
-                <Input
-                  header="Откуда"
-                  before={<MapPin size={17} className="text-(--app-info)" />}
-                  value={fromCity}
-                  onChange={(event) => setFromCity(event.target.value)}
-                  placeholder="Город или село отправления"
-                />
-                <Input
-                  header="Куда"
-                  before={<MapPin size={17} className="text-(--app-success)" />}
-                  value={toCity}
-                  onChange={(event) => setToCity(event.target.value)}
-                  placeholder="Город или село назначения"
-                />
+                {/* tgui header скрыт на iOS (только base) — внешний label виден везде. */}
+                <div className="FormField">
+                  <label htmlFor="home-from">Откуда</label>
+                  <Input
+                    id="home-from"
+                    before={<MapPin size={17} className="text-(--app-info)" />}
+                    value={fromCity}
+                    onChange={(event) => setFromCity(event.target.value)}
+                    placeholder="Город или село отправления"
+                  />
+                </div>
+                <div className="FormField">
+                  <label htmlFor="home-to">Куда</label>
+                  <Input
+                    id="home-to"
+                    before={<MapPin size={17} className="text-(--app-success)" />}
+                    value={toCity}
+                    onChange={(event) => setToCity(event.target.value)}
+                    placeholder="Город или село назначения"
+                  />
+                </div>
                 <IconButton
                   type="button"
                   size="s"
