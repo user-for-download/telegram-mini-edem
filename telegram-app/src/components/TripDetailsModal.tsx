@@ -4,8 +4,7 @@ import { SearchPage } from "@/pages/SearchPage";
 import { TripDetailsPage } from "@/pages/TripDetailsPage";
 
 /**
- * Детали поездки — модальная шторка поверх «Поиска» (модель примера:
- * CreateTripModal; в Telegram нет «новых страниц», только модалки;
+ * Детали поездки — route-backed шторка поверх «Поиска»;
  * роут /trips/:tripId остаётся источником правды ради диплинков).
  */
 export function TripDetailsModal({

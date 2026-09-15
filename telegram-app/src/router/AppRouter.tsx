@@ -21,7 +21,7 @@ import { handleModalBack } from "@/utils/modalBack";
 import { HomePage } from "@/pages/HomePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { TripDetailsRoute } from "@/components/TripDetailsModal";
-import { CreateTripRoute } from "@/components/CreateTripModal";
+import { CreateTripPage } from "@/pages/CreateTripPage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
 import { VehicleRoute } from "@/components/VehicleModal";
 import { TripsPage } from "@/pages/TripsPage";
@@ -135,7 +135,7 @@ export function AppRouter() {
           <Route path="/trips/:tripId" element={<TripDetailsRoute />} />
           <Route path="/trips/my" element={<Navigate to="/bookings?segment=driver" replace />} />
           <Route path="/trips/my/:tripId/requests" element={<TripRequestsRoute />} />
-          <Route path="/trips/my/new" element={<CreateTripRoute />} />
+          <Route path="/trips/my/new" element={<CreateTripPage />} />
           <Route path="/bookings" element={<TripsPage />} />
           <Route path="/bookings/history" element={<Navigate to="/bookings?segment=history" replace />} />
           <Route path="/ride-requests" element={<RideRequestsRoute />} />

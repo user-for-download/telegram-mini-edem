@@ -80,9 +80,7 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
 });
 
 /**
- * Жалобы — модальная шторка поверх «Профиля» (модель примера:
- * CreateTripModal/NotificationsModal; в Telegram нет «новых страниц»,
- * только модалки; роут /profile/reports остаётся источником правды,
+ * Жалобы — route-backed шторка поверх «Профиля»; роут /profile/reports остаётся источником правды,
  * вход из ProfilePage — тот же navigate("/profile/reports")).
  *
  * a11y: telegram-ui Modal даёт role=dialog, Esc-закрытие (onOpenChange) и

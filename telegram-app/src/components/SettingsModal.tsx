@@ -11,8 +11,7 @@ import {
 } from "@/queries/profile";
 
 /**
- * Настройки уведомлений — модальная шторка поверх «Профиля» (модель примера:
- * CreateTripModal; в Telegram нет «новых страниц», только модалки; роут
+ * Настройки уведомлений — route-backed шторка поверх «Профиля»; роут
  * /settings остаётся источником правды ради диплинков START_PARAM_ROUTES и
  * точки входа из ProfilePage — тот же navigate("/settings")).
  *

@@ -28,8 +28,7 @@ import {
 type Vehicle = NonNullable<ReturnType<typeof useVehicleQuery>["vehicle"]>;
 
 /**
- * Автомобиль водителя — модальная шторка (в Telegram нет «новых страниц»,
- * только модалки; роут /vehicle остаётся источником правды, вход из
+ * Автомобиль водителя — route-backed шторка (роут /vehicle остаётся источником правды, вход из
  * ProfilePage тем же navigate("/vehicle") — см. VehicleRoute).
  */
 export function VehicleModal({ open, onClose }: { open: boolean; onClose: () => void }) {

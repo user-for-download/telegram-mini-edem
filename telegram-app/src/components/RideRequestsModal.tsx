@@ -36,9 +36,8 @@ function toDateTimeLocal(iso: string): string {
 }
 
 /**
- * Запросы «Ищу попутку» — route-backed модалка поверх «Поиска» (модель
- * CreateTripModal/ReviewsModal: в Telegram нет «новых страниц», только
- * модалки; роут /ride-requests остаётся источником правды ради точки
+ * Запросы «Ищу попутку» — route-backed шторка поверх «Поиска»;
+ * роут /ride-requests остаётся источником правды ради точки
  * входа SearchPage:108 — тот же href `#/ride-requests`).
  *
  * Закрытие: native Back — через Shell.handleBack (стек handleModalBack

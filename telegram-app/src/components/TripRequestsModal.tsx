@@ -122,9 +122,7 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
 });
 
 /**
- * Заявки пассажиров — модальная шторка поверх «Поездок» (модель примера:
- * CreateTripModal/ReviewsModal; в Telegram нет «новых страниц», только
- * модалки; роут /trips/my/:tripId/requests остаётся источником правды,
+ * Заявки пассажиров — route-backed шторка поверх «Поездок»; роут /trips/my/:tripId/requests остаётся источником правды,
  * точки входа TripsPage:425 + TripDetailsPage:347 — тот же navigate —
  * не меняются).
  *

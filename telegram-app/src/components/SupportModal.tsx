@@ -87,9 +87,7 @@ const FeedbackCard = memo(function FeedbackCard({
 });
 
 /**
- * Помощь и поддержка — модальная шторка поверх «Профиля» (модель примера:
- * CreateTripModal/VehicleModal; в Telegram нет «новых страниц», только
- * модалки; роут /profile/support остаётся источником правды ради диплинков
+ * Помощь и поддержка — route-backed шторка поверх «Профиля»; роут /profile/support остаётся источником правды ради диплинков
  * START_PARAM_ROUTES, точки входа FeedbackModal:152 (тот же
  * navigate("/profile/support")) и нотификаций feedback_replied →
  * notificationRoute из NotificationsPage).

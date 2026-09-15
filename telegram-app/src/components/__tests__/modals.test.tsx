@@ -1,6 +1,7 @@
-// Рендер-тесты тел модалок (TripDetails/CreateTrip/Feedback/Settings).
-// Modal — портал и в renderToString не попадает, поэтому тестируются
-// экспортированные тела (CreateTripBody/FeedbackForm/SettingsBody). Детали
+// Рендер-тесты тел модалок (Feedback/Settings) и страницы создания поездки.
+// Modal — портал и в renderToString не попадает, поэтому у модалок тестируются
+// экспортированные тела (FeedbackForm/SettingsBody). Создание поездки —
+// отдельная страница: тестируется CreateTripForm. Детали
 // поездки — это TripDetailsPage, покрытый tripDetailsPage.test.tsx 8/8.
 // Паттерн tripsPages.test.tsx (SSR, без testing-library).
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -61,7 +62,7 @@ vi.mock("@/queries/profile", () => ({
   useProfileNotificationSettingsMutation: mockUseSaveSettings,
 }));
 
-import { CreateTripBody } from "@/components/CreateTripModal";
+import { CreateTripForm } from "@/pages/CreateTripPage";
 import { FeedbackForm } from "@/components/FeedbackModal";
 import { SettingsBody } from "@/components/SettingsModal";
 import { ToastProvider } from "@/components/ToastProvider";
@@ -101,10 +102,10 @@ const CITIES = [
   { id: "22222222-2222-2222-2222-222222222222", name: "Череповец" },
 ];
 
-describe("CreateTripBody", () => {
-  it("города — из справочника (datalist), места — кап MAX_SEATS=3", () => {
+describe("CreateTripForm (страница /trips/my/new)", () => {
+  it("города — Select из справочника, места — кап MAX_SEATS=3", () => {
     mockUseAllCities.mockReturnValue(queryState({ data: CITIES }));
-    const html = render(<CreateTripBody onCreated={() => {}} />);
+    const html = render(<CreateTripForm onCreated={() => {}} />);
     expect(html).toContain("Маршрут");
     expect(html).toContain("Город отправления");
     expect(html).toContain("Вологда");
@@ -118,7 +119,7 @@ describe("CreateTripBody", () => {
     mockUseAllCities.mockReturnValue(
       queryState({ data: undefined, isLoading: true }),
     );
-    const html = render(<CreateTripBody onCreated={() => {}} />);
+    const html = render(<CreateTripForm onCreated={() => {}} />);
     expect(html).toContain("Загружаем города");
     expect(html).not.toContain("Опубликовать");
   });
@@ -128,7 +129,7 @@ describe("CreateTripBody", () => {
     mockUseCreateTrip.mockReturnValue(
       mutation({ error: new Error("Overlap with passenger booking") }),
     );
-    const html = render(<CreateTripBody onCreated={() => {}} />);
+    const html = render(<CreateTripForm onCreated={() => {}} />);
     expect(html).toContain("Overlap with passenger booking");
   });
 });

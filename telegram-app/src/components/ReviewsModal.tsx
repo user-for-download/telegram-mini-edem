@@ -55,8 +55,7 @@ function tripLabel(trip: Trip): string {
 }
 
 /**
- * Отзывы и рейтинг — route-backed модалка поверх «Профиля» (модель
- * CreateTripModal: в Telegram нет «новых страниц», только модалки; роут
+ * Отзывы и рейтинг — route-backed шторка поверх «Профиля»; роут
  * /reviews остаётся источником правды ради диплинков START_PARAM_ROUTES,
  * точек входа ProfilePage и нотификаций review_approved/review_rejected).
  *
