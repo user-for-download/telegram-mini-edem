@@ -139,11 +139,13 @@ export function TabsVariant({
 }
 
 /**
- * Действие вместо табов (страница «Создание поездки»): круг-назад слева
- * (та же логика goBack, что у Shell) + растянутая filled-кнопка справа.
- * Accessible name кнопки — label страницы («Опубликовать»): селектор
- * e2e/telegram-parity.mjs продолжает находить кнопку после переезда из
- * sticky-CTA в бар. loading/disabled блокируют повторный submit.
+ * Действие вместо табов (страница «Создание поездки»): геометрия 1:1 как
+ * у табов — кнопка-овал слева (flex-1, тот же силуэт пилюли таббара:
+ * высота 56px + radius 28px), круг-назад справа отдельным кругом
+ * (на месте круга поиска). Accessible name кнопки — label страницы
+ * («Опубликовать»): селектор e2e/telegram-parity.mjs продолжает находить
+ * кнопку после переезда из sticky-CTA в бар. loading/disabled блокируют
+ * повторный submit.
  */
 export function ActionVariant({
   label,
@@ -159,29 +161,29 @@ export function ActionVariant({
   };
   return (
     <BottomBarFrame>
-      <div className="flex flex-1 items-center gap-2 rounded-[28px] border border-gray-300 dark:border-white/20 bg-(--tgui--bg_color)/75 px-2 py-1 backdrop-blur-md">
+      <Button
+        mode="filled"
+        size="l"
+        stretched
+        loading={loading}
+        disabled={blocked}
+        onClick={handleSubmit}
+        className="min-h-14! flex-1 rounded-[28px]!"
+      >
+        {label}
+      </Button>
+      <div className="rounded-full border border-gray-300 dark:border-white/20 bg-(--tgui--bg_color)/75 p-1 backdrop-blur-md">
         <button
           type="button"
           aria-label="Назад"
           onClick={onBack}
-          className={[
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-all duration-200",
-            idleBtn,
-          ].join(" ")}
+          className="flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-full transition-all duration-200 bg-transparent text-(--tgui--text_color) active:scale-95"
         >
           <ArrowLeft size={22} strokeWidth={1.8} />
+          <span className="text-[9px] font-semibold leading-none">
+            Назад
+          </span>
         </button>
-        <Button
-          mode="filled"
-          size="m"
-          stretched
-          loading={loading}
-          disabled={blocked}
-          onClick={handleSubmit}
-          className="min-h-11"
-        >
-          {label}
-        </Button>
       </div>
     </BottomBarFrame>
   );
