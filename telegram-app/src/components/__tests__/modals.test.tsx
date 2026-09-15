@@ -112,7 +112,8 @@ describe("CreateTripForm (страница /trips/my/new)", () => {
     expect(html).toContain("Череповец");
     expect(html).toContain("Поездка");
     expect(html).toContain("Условия поездки");
-    expect(html).toContain("Опубликовать");
+    // CTA «Опубликовать» живёт в нижнем баре (ActionVariant), не в форме.
+    expect(html).not.toContain("Опубликовать");
   });
 
   it("справочник грузится — плейсхолдер вместо формы", () => {

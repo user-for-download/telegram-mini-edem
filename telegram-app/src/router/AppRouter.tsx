@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { motion } from "motion/react";
 import {
   HashRouter,
@@ -14,10 +14,11 @@ import {
   useLaunchParams,
 } from "@telegram-apps/sdk-react";
 import { AppHeader } from "@/components/AppHeader";
-import { AppTabbar, type AppTabId } from "@/components/AppTabbar";
+import { ActionVariant, TabsVariant, type AppTabId } from "@/components/AppBottomBar";
 import { useSettingsButton } from "@/hooks/useSettingsButton";
 import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
+import { getCurrent, subscribe } from "@/utils/bottomBarRegistry";
 import { HomePage } from "@/pages/HomePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { TripDetailsRoute } from "@/components/TripDetailsModal";
@@ -56,17 +57,29 @@ export function Shell() {
   // локацию не меняют, хук их не трогает.
   useScrollRestore(routeScrollKey(location.pathname, location.search));
 
+  // Активное действие бара из реестра: есть регистрация — action-вариант,
+  // иначе — обычные табы. motion.div key=pathname перемонтирует страницу,
+  // cleanup реестра срабатывает автоматически. Третий аргумент —
+  // getServerSnapshot для SSR (renderToString): на сервере реестр пуст.
+  const action = useSyncExternalStore(subscribe, getCurrent, getCurrent);
+
+  /**
+   * Общий назад для нативного BackButton и стрелки бара: сначала верхняя
+   * state-модалка, затем история, затем fallback (create — в /bookings).
+   */
+  const goBack = useCallback(() => {
+    // Верхняя state-модалка (FeedbackModal) перехватывает Back первой.
+    if (handleModalBack()) return;
+    const historyIndex = window.history.state?.idx;
+    if (typeof historyIndex === "number" && historyIndex > 0) navigate(-1);
+    else if (location.pathname === "/trips/my/new") navigate("/bookings", { replace: true });
+    else navigate("/", { replace: true });
+  }, [navigate, location.pathname]);
+
   useEffect(() => {
-    const handleBack = () => {
-      // Верхняя state-модалка (FeedbackModal) перехватывает Back первой.
-      if (handleModalBack()) return;
-      const historyIndex = window.history.state?.idx;
-      if (typeof historyIndex === "number" && historyIndex > 0) navigate(-1);
-      else navigate("/", { replace: true });
-    };
-    backButton.onClick(handleBack);
-    return () => backButton.offClick(handleBack);
-  }, [navigate]);
+    backButton.onClick(goBack);
+    return () => backButton.offClick(goBack);
+  }, [goBack]);
 
   useEffect(() => {
     if (isRoot) backButton.hide.ifAvailable();
@@ -118,9 +131,21 @@ export function Shell() {
           <Outlet />
         </motion.div>
       </main>
-      <nav aria-label="Основные разделы">
-        <AppTabbar activeTab={activeTab} onSelect={go} unreadCount={unreadCount} />
-      </nav>
+      {action ? (
+        <div aria-label="Действия страницы">
+          <ActionVariant
+            label={action.label}
+            onBack={goBack}
+            onSubmit={action.onSubmit}
+            loading={action.loading}
+            disabled={action.disabled}
+          />
+        </div>
+      ) : (
+        <nav aria-label="Основные разделы">
+          <TabsVariant activeTab={activeTab} onSelect={go} unreadCount={unreadCount} />
+        </nav>
+      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
-  Button,
   Chip,
   IconButton,
   Input,
@@ -27,6 +26,7 @@ import { useToast } from "@/components/ToastProvider";
 import { TRIP_TAGS } from "@/consts/tags";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useBottomBarAction } from "@/hooks/useBottomBarAction";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useCreateTripMutation } from "@/queries/useTripsQuery";
 import { validateCreateTripDraft } from "@/helpers/createTripForm";
@@ -40,8 +40,9 @@ const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString();
  * Почему не модалка: форма из 10+ полей в шторке с внутренним скроллом
  * (max-h 82dvh) неудобна — клавиатура перекрывает поля, CTA уезжает,
  * свайп-закрытие конфликтует со скроллом. На странице — естественный
- * скролл WebView, нативный BackButton (Shell показывает его на
- * некорневых роутах), CTA — sticky над таббаром и всегда на виду.
+  * скролл WebView, нативный BackButton (Shell показывает его на
+  * некорневых роутах), CTA — кнопка «Опубликовать» в нижнем баре
+  * (регистрация через useBottomBarAction) и всегда на виду.
  *
  * Поверхности — нативные Section, города — Select из справочника
  * (datalist в WebView не даёт нативного пикера), теги — Chip
@@ -80,6 +81,8 @@ export function CreateTripForm({
   const [comment, setComment] = useState("");
   const [tags, setTags] = useState<TripTag[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  /** Якорь блока ошибок: валидатор отдаёт строку без id поля. */
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
 
   // Несохранённый черновик — Telegram спросит подтверждение закрытия.
   useClosingConfirmation(
@@ -129,6 +132,7 @@ export function CreateTripForm({
     );
     if (!validation.ok) {
       setValidationError(validation.error);
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     create.mutate(validation.data, {
@@ -140,8 +144,19 @@ export function CreateTripForm({
         });
         onCreated(trip.id);
       },
+      onError: () => {
+        errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      },
     });
   };
+
+  // CTA живёт в нижнем баре (Shell): loading напрямую из мутации.
+  useBottomBarAction({
+    label: "Опубликовать",
+    onSubmit: submit,
+    loading: create.isPending,
+    disabled: false,
+  });
 
   if (cities.isLoading) {
     return (
@@ -329,24 +344,11 @@ export function CreateTripForm({
         </Section>
 
         {validationError && (
-          <p className="FormError" role="alert">
+          <p ref={errorRef} className="FormError" role="alert">
             {validationError}
           </p>
         )}
         <MutationError error={create.error} />
-
-        {/* Sticky CTA над таббаром: всегда на виду на длинной форме. */}
-        <div className="sticky bottom-24 z-1 rounded-2xl border border-(--tgui--outline) bg-(--tgui--bg_color)/95 p-2 backdrop-blur-md">
-          <Button
-            mode="filled"
-            stretched
-            size="l"
-            loading={create.isPending}
-            onClick={submit}
-          >
-            Опубликовать
-          </Button>
-        </div>
       </div>
     </>
   );
