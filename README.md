@@ -104,7 +104,7 @@ docker compose stop backend    # остановить контейнер бэк�
 ```
 Требуется корневой `.env` с переменными `POSTGRES_PASSWORD`, `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_HOSTS`, `CORS_ORIGINS` (образец — `.env.example`). Миграции применяются автоматически при старте контейнера. Reseed внутри контейнера:
 ```bash
-docker exec -it vk-mini-edem-backend-1 node --import tsx prisma/seed.ts
+docker exec -it telegram-mini-edem-backend-1 node --import tsx prisma/seed.ts
 ```
 
 ### Сборка приложения (включая общий пакет)
