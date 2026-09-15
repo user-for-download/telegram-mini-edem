@@ -203,8 +203,16 @@ try {
     tripId = page.url().match(/[0-9a-f-]{36}$/)[0];
     // Водитель на своей странице цены не видит (цена — только в canBook-блоке
     // пассажира): ждём блок управления + сверяем цену через API.
-    await page.getByText("Управление поездкой").first().waitFor({ timeout: 15000 });
-    await page.getByText(CITY_FROM).first().waitFor({ timeout: 15000 });
+    // NB: Shell держит предыдущий роут смонтированным в hidden-контейнере
+    // (aria-hidden + hidden) ради анимации/бэка — там лежит карточка этой же
+    // поездки из списка, поэтому .first() без фильтра упирается в невидимую
+    // копию. Фильтруем только видимые (заголовок Timeline на странице деталей).
+    try {
+      await page.getByText("Управление поездкой").first().waitFor({ timeout: 15000 });
+      await page.getByText(CITY_FROM).filter({ visible: true }).first().waitFor({ timeout: 15000 });
+    } catch (e) {
+      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "create-trip")}`);
+    }
     const created = await api(`/trips/${tripId}`, { token: peerToken });
     if (created.price !== PRICE) {
       throw new Error(`price mismatch: API ${created.price} !== UI ${PRICE}`);
