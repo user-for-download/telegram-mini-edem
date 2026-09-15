@@ -201,7 +201,14 @@ try {
     // Успех — редирект на /trips/:id.
     await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/, { timeout: 30000 });
     tripId = page.url().match(/[0-9a-f-]{36}$/)[0];
-    await page.getByText(PRICE_LABEL).first().waitFor({ timeout: 15000 });
+    // Водитель на своей странице цены не видит (цена — только в canBook-блоке
+    // пассажира): ждём блок управления + сверяем цену через API.
+    await page.getByText("Управление поездкой").first().waitFor({ timeout: 15000 });
+    await page.getByText(CITY_FROM).first().waitFor({ timeout: 15000 });
+    const created = await api(`/trips/${tripId}`, { token: peerToken });
+    if (created.price !== PRICE) {
+      throw new Error(`price mismatch: API ${created.price} !== UI ${PRICE}`);
+    }
     await shot(page, "trip-created");
     return `trip=${tripId.slice(0, 8)} price=${PRICE_LABEL}`;
   });
