@@ -238,4 +238,5 @@ jobs:
           CORS_ORIGINS: https://example.com
           TELEGRAM_BOT_TOKEN: ci-dummy-tg-token
           TELEGRAM_HOSTS: tg-ci.example.com
+          TELEGRAM_WEBHOOK_SECRET: ci-dummy-webhook-secret
         run: docker compose config --quiet
