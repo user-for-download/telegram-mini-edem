@@ -21,7 +21,6 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { QueryState } from "@/components/QueryState";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { TripCard } from "@/components/TripCard";
-import { QUICK_CITIES } from "@/consts/popularRoutes";
 import { TRIP_TAGS } from "@/consts/tags";
 import {
   DATE_SEGMENTS,
@@ -46,7 +45,7 @@ function presetFromParams(params: URLSearchParams): SearchFormState {
 }
 
 /**
- * Поиск поездок (язык SearchTab примера): города + swap, чипы городов,
+ * Поиск поездок (язык SearchTab примера): города + swap,
  * сегменты дат, сворачиваемый drawer фильтров (цена + теги). Пустые
  * фильтры — общая лента (бэкенд скрывает уехавшие: departureAt > now).
  */
@@ -75,11 +74,6 @@ export function SearchPage() {
   const swapCities = () => {
     haptic.selection();
     setForm((prev) => ({ ...prev, fromCity: prev.toCity, toCity: prev.fromCity }));
-  };
-
-  const pickQuickCity = (city: string) => {
-    haptic.selection();
-    setForm((prev) => (!prev.fromCity ? { ...prev, fromCity: city } : { ...prev, toCity: city }));
   };
 
   const toggleTag = (tag: TripTag) =>
@@ -188,20 +182,6 @@ export function SearchPage() {
             >
               <ArrowRightLeft size={14} className="text-(--app-info)" />
             </IconButton>
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-            {QUICK_CITIES.map((city) => (
-              <Chip
-                key={city}
-                mode="mono"
-                Component="button"
-                onClick={() => pickQuickCity(city)}
-                className="shrink-0 text-xs!"
-              >
-                {city}
-              </Chip>
-            ))}
           </div>
 
           <div role="tablist" aria-label="Дата поездки">
