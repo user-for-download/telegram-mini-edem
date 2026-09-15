@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Button, Link, Placeholder, Section, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { BellRing, CheckCheck, Settings2 } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
+import { StatusPill } from "@/components/StatusPill";
 import { QueryState } from "@/components/QueryState";
 import { FeedCard } from "@/components/FeedCard";
 import {
@@ -87,13 +88,13 @@ function NotificationCard({
           {notification.title}
         </span>
         {critical ? (
-          <span className="StatusPill shrink-0" data-tone="danger">
+          <StatusPill tone="danger" className="shrink-0">
             Важное
-          </span>
+          </StatusPill>
         ) : !notification.isRead ? (
-          <span className="StatusPill shrink-0" data-tone="info">
+          <StatusPill tone="info" className="shrink-0">
             Новое
-          </span>
+          </StatusPill>
         ) : null}
       </div>
       <p className="text-[13px] text-(--tgui--text_color) leading-relaxed wrap-anywhere">

@@ -7,9 +7,12 @@ import {
 import {
   Accordion,
   Button,
+  Caption,
   Input,
   Modal,
   Placeholder,
+  Subheadline,
+  Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { MessageSquareText, Send, X } from "lucide-react";
@@ -21,6 +24,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { AppealForm } from "@/components/AppealForm";
+import { StatusPill } from "@/components/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { ProfilePage } from "@/pages/ProfilePage";
@@ -51,28 +55,24 @@ const FeedbackCard = memo(function FeedbackCard({
     <Accordion expanded={opened} onChange={onToggle}>
       <Accordion.Summary Component="button">
         {feedback.subject}
-        {feedback.reply && (
-          <span className="StatusPill" data-tone="info">
-            Есть ответ
-          </span>
-        )}
+        {feedback.reply && <StatusPill tone="info">Есть ответ</StatusPill>}
       </Accordion.Summary>
       <Accordion.Content>
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] text-(--tgui--hint_color)">
+          <Caption className="text-(--tgui--hint_color)">
             {new Date(feedback.createdAt).toLocaleDateString("ru-RU")}
-          </span>
-          <p className="text-[13px] text-(--tgui--text_color) leading-relaxed">
+          </Caption>
+          <Text Component="p" className="text-(--tgui--text_color) leading-relaxed">
             {feedback.text}
-          </p>
+          </Text>
           {feedback.reply ? (
             <>
-              <span className="text-[13px] font-semibold text-(--tgui--text_color) pt-1">
+              <Subheadline weight="2" Component="span" className="text-(--tgui--text_color) pt-1">
                 Ответ поддержки
-              </span>
-              <p className="text-[13px] text-(--tgui--text_color) leading-relaxed">
+              </Subheadline>
+              <Text Component="p" className="text-(--tgui--text_color) leading-relaxed">
                 {feedback.reply}
-              </p>
+              </Text>
             </>
           ) : (
             <span className="text-[12px] text-(--tgui--hint_color)">
@@ -204,9 +204,9 @@ export const SupportBody = memo(function SupportBody() {
         />
         <div className="flex flex-col gap-3.5 pt-1">
           <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-            <span className="text-[13px] font-semibold text-(--tgui--text_color)">
+            <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
               Обжалование блокировки
-            </span>
+            </Subheadline>
             <AppealForm />
           </div>
         </div>
@@ -220,9 +220,9 @@ export const SupportBody = memo(function SupportBody() {
         aria-label="Частые вопросы"
         className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-2"
       >
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
+        <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
           Частые вопросы
-        </span>
+        </Subheadline>
         {SUPPORT_FAQ.map((item) => {
           const isOpen = openedFaqId === item.id;
           return (
@@ -233,9 +233,9 @@ export const SupportBody = memo(function SupportBody() {
             >
               <Accordion.Summary Component="button">{item.question}</Accordion.Summary>
               <Accordion.Content>
-                <p className="text-[13px] text-(--tgui--hint_color) leading-relaxed">
+                <Text Component="p" className="text-(--tgui--hint_color) leading-relaxed">
                   {item.answer}
-                </p>
+                </Text>
               </Accordion.Content>
             </Accordion>
           );
@@ -246,9 +246,9 @@ export const SupportBody = memo(function SupportBody() {
         aria-label="Мои обращения"
         className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
       >
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
+        <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
           Мои обращения
-        </span>
+        </Subheadline>
         <QueryState
           loading={myFeedbacks.isLoading}
           error={myFeedbacks.error}
@@ -261,9 +261,9 @@ export const SupportBody = memo(function SupportBody() {
               <p className="text-[14px] font-semibold text-center text-(--tgui--text_color)">
                 У вас пока нет обращений
               </p>
-              <p className="text-[13px] text-center text-(--tgui--hint_color)">
+              <Text Component="p" className="text-center text-(--tgui--hint_color)">
                 Здесь появятся ваши обращения и ответы поддержки
-              </p>
+              </Text>
             </>
           ) : (
             <div className="flex flex-col gap-2" aria-live="polite" aria-label="Список обращений">
@@ -288,9 +288,9 @@ export const SupportBody = memo(function SupportBody() {
         aria-label="Связаться с нами"
         className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
       >
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
+        <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
           Связаться с нами
-        </span>
+        </Subheadline>
         <MutationError error={create.error} />
         <div className="FormField">
           <label htmlFor="support-subject">Тема</label>
@@ -357,9 +357,9 @@ export const SupportBody = memo(function SupportBody() {
         aria-label="Обжалование блокировки"
         className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
       >
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
+        <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
           Обжалование блокировки
-        </span>
+        </Subheadline>
         <AppealForm />
       </section>
     </div>

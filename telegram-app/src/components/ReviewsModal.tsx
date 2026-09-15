@@ -1,10 +1,8 @@
 import {
   memo,
-  useEffect,
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import {
   Button,
@@ -19,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
 import { ReviewCardsSkeleton } from "@/components/Skeletons";
 import { haptic } from "@/utils/haptics";
+import { RatingInput } from "@/components/RatingInput";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { ReviewCard } from "@/components/ReviewCard";
 import { ProfilePage } from "@/pages/ProfilePage";
@@ -62,8 +61,10 @@ function tripLabel(trip: Trip): string {
  * Закрытие: native Back — через Shell.handleBack (стек handleModalBack
  * пуст для route-модалок → navigate(-1)), прямой вход — fallback на
  * /profile. PageHeader с back-кнопкой внутри убран — закрытие через
- * header шторки. a11y: role=dialog + aria-modal, Esc, focus-trap,
- * таргеты ≥44px (звёзды — 46px в index.css, кнопки — minHeight 44).
+ * header шторки. a11y: нативный telegram-ui Modal (vaul Drawer поверх
+ * Radix Dialog) даёт role=dialog + aria-modal, Esc/overlay-закрытие через
+ * onOpenChange, focus-trap и возврат фокуса; таргеты ≥44px (звёзды
+ * RatingInput — 44px в index.css, кнопки — minHeight 44).
  */
 export function ReviewsModal({
   open,
@@ -74,43 +75,8 @@ export function ReviewsModal({
   onClose: () => void;
   initialTab?: ReviewsTab;
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  // Esc закрывает шторку (a11y); native Back обрабатывает Shell.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  // Фокус внутрь диалога при открытии (Modal держит портал).
-  useEffect(() => {
-    if (open) dialogRef.current?.focus();
-  }, [open ]);
-
-  // Лёгкий focus-trap: Tab циклится внутри диалога.
-  const trapTab = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab") return;
-    const root = dialogRef.current;
-    if (!root) return;
-    const focusables = [...root.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-    )];
-    if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
+  // Фокус, Esc и Tab-trap — нативные (Radix FocusScope + onOpenChange);
+  // свой role=dialog не добавляем — vaul уже рендерит dialog (двойной анонс).
   return (
     <Modal
       open={open}
@@ -119,15 +85,7 @@ export function ReviewsModal({
       }}
       header={<Modal.Header>Отзывы</Modal.Header>}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Отзывы"
-        tabIndex={-1}
-        onKeyDown={trapTab}
-        className="pt-2 pb-10 max-h-[82dvh] overflow-y-auto outline-none"
-      >
+      <div className="pt-2 pb-10 max-h-[82dvh] overflow-y-auto outline-none">
         <ReviewsBody initialTab={initialTab} />
       </div>
     </Modal>
@@ -418,26 +376,7 @@ export const ReviewsBody = memo(function ReviewsBody({
 
               <div className="FormField">
                 <span id="review-rating-label">Оценка</span>
-                <div
-                  role="radiogroup"
-                  aria-labelledby="review-rating-label"
-                  className="ReviewStars"
-                >
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      role="radio"
-                      aria-checked={n === rating}
-                      aria-label={`${n} из 5`}
-                      className="ReviewStars__star"
-                      data-active={n <= rating}
-                      onClick={() => setRating(n)}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
+                <RatingInput value={rating} onChange={setRating} />
               </div>
 
               <div className="FormField">

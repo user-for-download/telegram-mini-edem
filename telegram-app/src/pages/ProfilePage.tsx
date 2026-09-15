@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import {
   Avatar,
   Button,
+  Caption,
   Cell,
   Headline,
   List,
@@ -9,6 +10,7 @@ import {
   Section,
   SegmentedControl,
   Switch,
+  Text,
 } from "@telegram-apps/telegram-ui";
 import {
   Bell,
@@ -232,17 +234,17 @@ export function ProfilePage() {
                       <Star size={11} className="fill-(--app-rating) text-(--app-rating)" />
                       {`${profile.data.rating.toFixed(1)} (${profile.data.reviewsCount})`}
                     </span>
-                    <span className="text-[11px] text-(--app-success) font-medium">
+                    <Caption weight="2" className="text-(--app-success)">
                       Telegram верифицирован
-                    </span>
+                    </Caption>
                   </div>
                 </div>
               </div>
 
               {profile.data.about && (
-                <p className="text-[13px] text-(--tgui--text_color) leading-relaxed">
+                <Text Component="p" className="text-(--tgui--text_color) leading-relaxed">
                   {profile.data.about}
-                </p>
+                </Text>
               )}
 
               <div className="grid grid-cols-3 gap-2 pt-2 border-t border-(--tgui--outline)">
@@ -250,19 +252,19 @@ export function ProfilePage() {
                   <div className="text-[16px] font-bold text-(--tgui--text_color)">
                     {profile.data.tripsCount}
                   </div>
-                  <div className="text-[11px] text-(--tgui--hint_color)">Поездок</div>
+                  <Caption Component="div" className="text-(--tgui--hint_color)">Поездок</Caption>
                 </div>
                 <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
                   <div className="text-[16px] font-bold text-(--app-info)">
                     {profile.data.reviewsCount}
                   </div>
-                  <div className="text-[11px] text-(--tgui--hint_color)">Отзывов</div>
+                  <Caption Component="div" className="text-(--tgui--hint_color)">Отзывов</Caption>
                 </div>
                 <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
                   <div className="text-[16px] font-bold text-(--app-rating)">
                     {profile.data.rating.toFixed(1)}
                   </div>
-                  <div className="text-[11px] text-(--tgui--hint_color)">Рейтинг</div>
+                  <Caption Component="div" className="text-(--tgui--hint_color)">Рейтинг</Caption>
                 </div>
               </div>
 

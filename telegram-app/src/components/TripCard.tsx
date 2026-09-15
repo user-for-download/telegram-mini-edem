@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { Trip, TripTag } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
-import { Tappable } from "@telegram-apps/telegram-ui";
+import { Caption, Tappable, Text } from "@telegram-apps/telegram-ui";
 import { FEED_CARD_SURFACE } from "@/components/FeedCard";
 import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
 import { haptic } from "@/utils/haptics";
@@ -76,7 +76,7 @@ export function TripCard({ trip }: { trip: Trip }) {
           <div className="text-[16px] font-bold text-(--tgui--text_color)">
             {trip.price} ₽
           </div>
-          <span className="text-[11px] text-(--tgui--hint_color)">за место</span>
+          <Caption className="text-(--tgui--hint_color)">за место</Caption>
         </div>
       </div>
 
@@ -98,7 +98,7 @@ export function TripCard({ trip }: { trip: Trip }) {
             alt={trip.driver.name}
           />
           <div className="min-w-0">
-            <div className="flex items-center gap-1 text-[13px] font-medium text-(--tgui--text_color)">
+            <Text weight="2" Component="div" className="flex items-center gap-1 text-(--tgui--text_color)">
               <span className="truncate">{trip.driver.name}</span>
               {trip.driver.isVerified && (
                 <ShieldCheck
@@ -106,15 +106,18 @@ export function TripCard({ trip }: { trip: Trip }) {
                   className="text-(--app-info) fill-(--app-info-bg) shrink-0"
                 />
               )}
-            </div>
-            <div className="flex items-center gap-1 text-[11px] text-(--tgui--hint_color)">
+            </Text>
+            <Caption Component="div" className="flex items-center gap-1 text-(--tgui--hint_color)">
               <Star size={11} className="fill-(--app-rating) text-(--app-rating)" />
               <span>{trip.driver.rating.toFixed(1)}</span>
-            </div>
+            </Caption>
           </div>
         </div>
 
         <div className="flex flex-col items-end gap-1 shrink-0">
+          {/* Мест-пилюля — не StatusPill: тон кодируется инлайн-классами
+              (danger/warning/success по остатку мест), класс .StatusPill
+              и data-tone здесь не используются. */}
           <span
             className={`text-[11px] px-2 py-0.5 rounded-full ${
               trip.seatsAvailable === 0

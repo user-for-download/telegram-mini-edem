@@ -1,5 +1,6 @@
 import { Avatar, Button, Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
 import { FeedCard } from "@/components/FeedCard";
+import { StatusPill } from "@/components/StatusPill";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -90,9 +91,9 @@ export function TripRequestsPage() {
                       </div>
                     </div>
                   </div>
-                  <span className="StatusPill shrink-0" data-tone="warning">
+                  <StatusPill tone="warning" className="shrink-0">
                     Ожидает решения
-                  </span>
+                  </StatusPill>
                 </div>
                 <div className="flex gap-2">
                   <Button mode="bezeled"
@@ -143,9 +144,9 @@ export function TripRequestsPage() {
                     </div>
                   </div>
                 </div>
-                <span className="StatusPill shrink-0" data-tone="success">
+                <StatusPill tone="success" className="shrink-0">
                   Подтверждён
-                </span>
+                </StatusPill>
               </FeedCard>
             ))}
             </div>

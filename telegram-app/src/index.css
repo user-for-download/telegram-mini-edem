@@ -254,7 +254,7 @@ input, select, textarea {
 }
 
 /* Отзывы: форма — tailwind-карточка, список — карточки, табы —
-   tgui SegmentedControl. Звёзды ввода — кастомный radiogroup (см. ниже). */
+   tgui SegmentedControl. Звёзды ввода — нативный tgui Rating (см. .RatingInput ниже). */
 
 .ReviewTarget {
   margin: 4px 16px;
@@ -262,31 +262,20 @@ input, select, textarea {
   font-weight: 600;
 }
 
-/* Звёзды рейтинга — осознанно НЕ tgui Rating: Rating неконтролируемый
-   (только defaultValue), а форма сбрасывает оценку программно
-   (setRating(5) после успешной отправки). Нативный radiogroup + radio +
-   aria-checked — каноничный a11y-паттерн, цвет — токен --app-rating.
-   Тач-таргеты 46px (a11y: ≥44px). */
-.ReviewStars {
+/* Оценка — нативный tgui Rating (RatingInput: max 5, precision 1,
+   radiogroup + aria-labelledby="review-rating-label"). Звёзды tgui 40px →
+   44px ради тач-таргетов ≥44px (a11y); центрирование как у старого .ReviewStars.
+   Программный сброс оценки — remount через key в RatingInput (Rating сеет
+   внутреннее состояние один раз и игнорит последующие value). */
+.RatingInput {
   display: flex;
-  gap: 4px;
   justify-content: center;
   padding: 4px 0;
 }
 
-.ReviewStars__star {
-  min-width: 46px;
-  min-height: 46px;
-  border: 0;
-  background: transparent;
-  color: var(--tg-theme-hint-color, #707579);
-  cursor: pointer;
-  font-size: 30px;
-  line-height: 1;
-}
-
-.ReviewStars__star[data-active="true"] {
-  color: var(--app-rating);
+.RatingInput svg {
+  width: 44px;
+  height: 44px;
 }
 
 .ReviewCounter {

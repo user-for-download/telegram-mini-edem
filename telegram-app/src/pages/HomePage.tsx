@@ -21,6 +21,7 @@ import {
   ArrowRightLeft,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { StatusPill } from "@/components/StatusPill";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ProfileBarSkeleton } from "@/components/Skeletons";
 import { TripCardSkeleton } from "@/components/Skeletons";
@@ -204,12 +205,12 @@ export function HomePage() {
                 className="block w-full p-4 text-left"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span
-                    className="StatusPill shrink-0"
-                    data-tone={activeBooking.status === "confirmed" ? "success" : "warning"}
+                  <StatusPill
+                    tone={activeBooking.status === "confirmed" ? "success" : "warning"}
+                    className="shrink-0"
                   >
                     {activeBooking.status === "confirmed" ? "Подтверждено" : "Ожидает подтверждения"}
-                  </span>
+                  </StatusPill>
                   <ChevronRight size={16} className="text-(--app-info)" />
                 </div>
 

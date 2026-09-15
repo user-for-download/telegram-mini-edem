@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Input, Section } from "@telegram-apps/telegram-ui";
 import { FeedCard } from "@/components/FeedCard";
+import { StatusPill } from "@/components/StatusPill";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { QueryState } from "@/components/QueryState";
@@ -200,12 +201,11 @@ export function RideRequestsPage() {
                 <span className="text-[15px] font-bold text-(--tgui--text_color) truncate">
                   {`${request.fromCity.name} → ${request.toCity.name}`}
                 </span>
-                <span
-                  className="StatusPill"
-                  data-tone={request.status === "active" ? "success" : "warning"}
+                <StatusPill
+                  tone={request.status === "active" ? "success" : "warning"}
                 >
                   {request.status === "active" ? "Активен" : request.status}
-                </span>
+                </StatusPill>
               </div>
               <div className="text-[13px] text-(--tgui--hint_color)">
                 {`${request.earliestAt} — ${request.latestAt} · ${request.seats} мест`}

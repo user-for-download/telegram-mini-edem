@@ -14,6 +14,7 @@ import {
   type UserFeedbackDto,
 } from "@edem/contracts";
 import { PageHeader } from "@/components/PageHeader";
+import { StatusPill } from "@/components/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { AppealForm } from "@/components/AppealForm";
@@ -83,11 +84,7 @@ function FeedbackCard({
     <Accordion expanded={opened} onChange={onToggle}>
       <Accordion.Summary Component="button">
         {feedback.subject}
-        {feedback.reply && (
-          <span className="StatusPill" data-tone="info">
-            Есть ответ
-          </span>
-        )}
+        {feedback.reply && <StatusPill tone="info">Есть ответ</StatusPill>}
       </Accordion.Summary>
       <Accordion.Content>
         <div className="flex flex-col gap-1.5">

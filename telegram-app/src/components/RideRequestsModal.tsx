@@ -1,11 +1,7 @@
-import {
-  memo,
-  useEffect,
-  useRef,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import { memo } from "react";
 import { useState } from "react";
 import { Button, Input, Modal } from "@telegram-apps/telegram-ui";
+import { StatusPill } from "@/components/StatusPill";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
@@ -43,8 +39,10 @@ function toDateTimeLocal(iso: string): string {
  * Закрытие: native Back — через Shell.handleBack (стек handleModalBack
  * пуст для route-модалок → navigate(-1)), прямой вход — fallback на
  * /trips. PageHeader с back-кнопкой внутри убран — закрытие через
- * header шторки. a11y: role=dialog + aria-modal, Esc, focus-trap,
- * таргеты ≥44px (min-h), ошибки — role=alert.
+ * header шторки. a11y: нативный telegram-ui Modal (vaul Drawer поверх
+ * Radix Dialog) даёт role=dialog + aria-modal, Esc/overlay-закрытие через
+ * onOpenChange, focus-trap и возврат фокуса; таргеты ≥44px (min-h),
+ * ошибки — role=alert.
  */
 export function RideRequestsModal({
   open,
@@ -53,45 +51,8 @@ export function RideRequestsModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  // Esc закрывает шторку (a11y); native Back обрабатывает Shell.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  // Фокус внутрь диалога при открытии (Modal держит портал).
-  useEffect(() => {
-    if (open) dialogRef.current?.focus();
-  }, [open]);
-
-  // Лёгкий focus-trap: Tab циклится внутри диалога.
-  const trapTab = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab") return;
-    const root = dialogRef.current;
-    if (!root) return;
-    const focusables = [
-      ...root.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      ),
-    ];
-    if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
+  // Фокус, Esc и Tab-trap — нативные (Radix FocusScope + onOpenChange);
+  // свой role=dialog не добавляем — vaul уже рендерит dialog (двойной анонс).
   return (
     <Modal
       open={open}
@@ -100,15 +61,7 @@ export function RideRequestsModal({
       }}
       header={<Modal.Header>Ищу попутку</Modal.Header>}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Ищу попутку"
-        tabIndex={-1}
-        onKeyDown={trapTab}
-        className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto outline-none"
-      >
+      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto outline-none">
         <RideRequestsBody />
       </div>
     </Modal>
@@ -323,12 +276,11 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                 <span className="text-[15px] font-bold text-(--tgui--text_color) truncate">
                   {`${request.fromCity.name} → ${request.toCity.name}`}
                 </span>
-                <span
-                  className="StatusPill"
-                  data-tone={request.status === "active" ? "success" : "warning"}
+                <StatusPill
+                  tone={request.status === "active" ? "success" : "warning"}
                 >
                   {request.status === "active" ? "Активен" : request.status}
-                </span>
+                </StatusPill>
               </div>
               <div className="text-[13px] text-(--tgui--hint_color)">
                 {`${request.earliestAt} — ${request.latestAt} · ${request.seats} мест`}

@@ -1,9 +1,6 @@
 import {
   memo,
-  useEffect,
   useMemo,
-  useRef,
-  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import {
   Button,
@@ -13,6 +10,7 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { useNavigate, useParams } from "react-router-dom";
 import { LazyAvatar } from "@/components/LazyAvatar";
+import { StatusPill } from "@/components/StatusPill";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { haptic } from "@/utils/haptics";
 import { TripsPage } from "@/pages/TripsPage";
@@ -61,9 +59,9 @@ const PendingBookingCard = memo(function PendingBookingCard({
             </div>
           </div>
         </div>
-        <span className="StatusPill shrink-0" data-tone="warning">
+        <StatusPill tone="warning" className="shrink-0">
           Ожидает решения
-        </span>
+        </StatusPill>
       </div>
       <div className="flex gap-2">
         <Button mode="bezeled"
@@ -114,9 +112,9 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
           </div>
         </div>
       </div>
-      <span className="StatusPill shrink-0" data-tone="success">
+      <StatusPill tone="success" className="shrink-0">
         Подтверждён
-      </span>
+      </StatusPill>
     </div>
   );
 });
@@ -126,9 +124,10 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
  * точки входа TripsPage:425 + TripDetailsPage:347 — тот же navigate —
  * не меняются).
  *
- * a11y: telegram-ui Modal даёт role=dialog и Esc-закрытие (onOpenChange);
- * дублируем Esc-хендлер + лёгкий focus-trap (паттерн ReviewsModal),
- * списки — aria-live, ошибки — role=alert, интерактив — таргеты ≥44px.
+ * a11y: telegram-ui Modal даёт role=dialog и Esc-закрытие (onOpenChange),
+ * focus-trap и возврат фокуса — нативные (Radix FocusScope); свой
+ * role=dialog не добавляем (двойной анонс); списки — aria-live,
+ * ошибки — role=alert, интерактив — таргеты ≥44px.
  */
 export function TripRequestsModal({
   open,
@@ -139,45 +138,7 @@ export function TripRequestsModal({
   onClose: () => void;
   tripId: string;
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  // Esc закрывает шторку (a11y); native Back обрабатывает Shell.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  // Фокус внутрь диалога при открытии (Modal держит портал).
-  useEffect(() => {
-    if (open) dialogRef.current?.focus();
-  }, [open]);
-
-  // Лёгкий focus-trap: Tab циклится внутри диалога.
-  const trapTab = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab") return;
-    const root = dialogRef.current;
-    if (!root) return;
-    const focusables = [
-      ...root.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      ),
-    ];
-    if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
+  // Фокус, Esc и Tab-trap — нативные (Radix FocusScope + onOpenChange).
   return (
     <Modal
       open={open}
@@ -186,15 +147,7 @@ export function TripRequestsModal({
       }}
       header={<Modal.Header>Заявки пассажиров</Modal.Header>}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Заявки пассажиров"
-        tabIndex={-1}
-        onKeyDown={trapTab}
-        className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto outline-none"
-      >
+      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto outline-none">
         <TripRequestsBody tripId={tripId} />
       </div>
     </Modal>

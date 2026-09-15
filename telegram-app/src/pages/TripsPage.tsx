@@ -1,11 +1,14 @@
 import {
   Avatar,
   Button,
+  Caption,
   IconButton,
   SegmentedControl,
   Tappable,
+  Text,
 } from "@telegram-apps/telegram-ui";
 import { FeedCard, FEED_CARD_SURFACE } from "@/components/FeedCard";
+import { StatusPill, type StatusTone } from "@/components/StatusPill";
 import { Calendar, Car, Send, Share2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -60,14 +63,14 @@ function historyCategoryOf(
   return "other";
 }
 
-function bookingStatusLabel(status: string): { label: string; tone: string } {
+function bookingStatusLabel(status: string): { label: string; tone: StatusTone } {
   if (status === "confirmed") return { label: "Подтверждено", tone: "success" };
   if (status === "cancelled") return { label: "Отменено", tone: "danger" };
   if (status === "declined") return { label: "Отклонено", tone: "danger" };
   return { label: "На рассмотрении", tone: "warning" };
 }
 
-function tripStatusLabel(trip: Trip): { label: string; tone: string } {
+function tripStatusLabel(trip: Trip): { label: string; tone: StatusTone } {
   if (trip.status === "completed") return { label: "Завершена", tone: "info" };
   if (trip.status === "cancelled") return { label: "Отменена", tone: "danger" };
   const pending = trip.pendingRequestsCount ?? 0;
@@ -126,9 +129,9 @@ function ActiveBookingCard({
             {dayLabel(booking.trip.date)}, {booking.trip.time}
           </span>
         </div>
-        <span className="StatusPill shrink-0" data-tone={status.tone}>
+        <StatusPill tone={status.tone} className="shrink-0">
           {status.label}
-        </span>
+        </StatusPill>
       </div>
 
       <RouteLine trip={booking.trip} />
@@ -141,21 +144,21 @@ function ActiveBookingCard({
             acronym={booking.trip.driver.name.slice(0, 1).toUpperCase()}
           />
           <div className="min-w-0">
-            <div className="text-[13px] font-semibold text-(--tgui--text_color) truncate">
+            <Text weight="2" Component="div" className="text-(--tgui--text_color) truncate">
               {booking.trip.driver.name}
-            </div>
-            <div className="text-[11px] text-(--tgui--hint_color)">
+            </Text>
+            <Caption Component="div" className="text-(--tgui--hint_color)">
               {`место №${booking.seat}`}
-            </div>
+            </Caption>
           </div>
         </div>
         <div className="text-right shrink-0">
           <div className="text-[14px] font-bold text-(--tgui--text_color)">
             {booking.trip.price * booking.seat} ₽
           </div>
-          <div className="text-[11px] text-(--tgui--hint_color)">
+          <Caption Component="div" className="text-(--tgui--hint_color)">
             {`цена (${booking.seat} ${booking.seat === 1 ? "место" : "места"})`}
-          </div>
+          </Caption>
         </div>
       </div>
 
@@ -238,9 +241,9 @@ function DriverTripCard({
           <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-(--app-info-bg) text-(--app-info)">
             Вы водитель
           </span>
-          <span className="StatusPill shrink-0" data-tone={status.tone}>
+          <StatusPill tone={status.tone} className="shrink-0">
             {status.label}
-          </span>
+          </StatusPill>
         </div>
         <div className="text-[15px] font-semibold text-(--tgui--text_color)">
           {trip.fromCity} → {trip.toCity}
@@ -271,12 +274,10 @@ function DriverTripCard({
         <div className="text-[16px] font-bold text-(--tgui--text_color)">
           {trip.fromCity} → {trip.toCity}
         </div>
-        <span className="StatusPill" data-tone={status.tone}>
-          {status.label}
-        </span>
+        <StatusPill tone={status.tone}>{status.label}</StatusPill>
       </div>
 
-      <div className="flex items-center justify-between p-2.5 rounded-xl bg-(--tgui--tertiary_bg_color) text-[13px]">
+      <Text Component="div" className="flex items-center justify-between p-2.5 rounded-xl bg-(--tgui--tertiary_bg_color)">
         <div>
           <span className="text-(--tgui--hint_color)">Свободно мест: </span>
           <span className="font-semibold text-(--app-success)">
@@ -289,7 +290,7 @@ function DriverTripCard({
             {trip.price} ₽
           </span>
         </div>
-      </div>
+      </Text>
 
       {pending > 0 && (
         <div className="p-3 rounded-xl border border-dashed border-(--tgui--outline) bg-(--tgui--bg_color)">
@@ -303,9 +304,9 @@ function DriverTripCard({
                 <Send size={14} />
               </span>
               <div className="min-w-0">
-                <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
+                <Text weight="2" Component="div" className="text-(--tgui--text_color) truncate">
                   {`Ожидают решения: ${pending}`}
-                </div>
+                </Text>
               </div>
             </div>
             <Button size="s" mode="bezeled" onClick={() => onRequests(trip.id)}>

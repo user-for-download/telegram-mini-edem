@@ -205,6 +205,21 @@ describe("TripDetailsPage parity", () => {
     expect(render()).toContain("Поделиться поездкой");
   });
 
+  it("keeps date/duration header and native Timeline route (no manual rail)", () => {
+    setMocks(makeTrip());
+    const html = render();
+    // Строка даты/длительности над маршрутом не тронута.
+    expect(html).toContain("1 июня 2030");
+    expect(html).toContain("2 ч 30 мин");
+    expect(html).toContain("180");
+    expect(html).toContain("км");
+    // Маршрут — нативный Timeline, самодельного border-l-2 больше нет.
+    expect(html).toContain("09:00");
+    expect(html).toContain("Москва");
+    expect(html).toContain("Тула");
+    expect(html).not.toContain("border-l-2");
+  });
+
   it("offers retry on load error", () => {
     setMocks(null);
     const html = render();

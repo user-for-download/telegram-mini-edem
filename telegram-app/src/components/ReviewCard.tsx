@@ -3,11 +3,12 @@ import { REVIEW_STATUS, type Review } from "@edem/contracts";
 import type { MyReview } from "@/api/reviews.api";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { FeedCard } from "@/components/FeedCard";
+import { StatusPill, type StatusTone } from "@/components/StatusPill";
 
 /** Подпись и тон статус-пилюли — только для непубличных отзывов. */
 export function reviewStatusBadge(
   status: Review["status"],
-): { label: string; tone: string } | null {
+): { label: string; tone: StatusTone } | null {
   switch (status) {
     case REVIEW_STATUS.PENDING:
       return { label: "На модерации", tone: "warning" };
@@ -54,9 +55,9 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
       <div className="flex items-center justify-between gap-2 text-[11px] text-(--tgui--hint_color) pt-1 border-t border-(--tgui--outline)">
         <span className="truncate">Маршрут: {review.tripRoute}</span>
         {badge ? (
-          <span className="StatusPill shrink-0" data-tone={badge.tone}>
+          <StatusPill tone={badge.tone} className="shrink-0">
             {badge.label}
-          </span>
+          </StatusPill>
         ) : (
           <span className="text-(--app-success) font-medium shrink-0">Опубликован</span>
         )}

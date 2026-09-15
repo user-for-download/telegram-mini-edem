@@ -11,6 +11,7 @@ import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
 import { REPORT_DESCRIPTION_MAX_LENGTH } from "@edem/contracts";
 import { PageHeader } from "@/components/PageHeader";
 import { FeedCard } from "@/components/FeedCard";
+import { StatusPill, type StatusTone } from "@/components/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { ApiError } from "@/api/client";
@@ -42,7 +43,7 @@ function formatDate(createdAt: string): string {
 
 /** Тон статус-пилюли жалобы: ожидание — warning, работа — info,
  * решение — success, отказ — danger. */
-function reportStatusTone(status: Report["status"]): string {
+function reportStatusTone(status: Report["status"]): StatusTone {
   switch (status) {
     case "resolved":
       return "success";
@@ -62,9 +63,9 @@ function ReportCard({ report }: { report: Report }) {
         <span className="text-[13px] font-semibold text-(--tgui--text_color)">
           {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
         </span>
-        <span className="StatusPill shrink-0" data-tone={reportStatusTone(report.status)}>
+        <StatusPill tone={reportStatusTone(report.status)} className="shrink-0">
           {REPORT_STATUS_LABELS[report.status]}
-        </span>
+        </StatusPill>
       </div>
       <span className="text-[11px] text-(--tgui--hint_color)">
         {formatDate(report.createdAt)}

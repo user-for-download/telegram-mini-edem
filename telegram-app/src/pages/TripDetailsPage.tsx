@@ -8,6 +8,7 @@ import { ConfirmAction } from "@/components/ConfirmAction";
 import { EditTripForm } from "@/components/EditTripForm";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { TripRouteTimeline } from "@/components/TripRouteTimeline";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { shareTrip } from "@/helpers/tripShare";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -139,37 +140,14 @@ export function TripDetailsPage() {
           </span>
         </div>
 
-        <div className="flex flex-col gap-3 relative pl-4 border-l-2 border-(--app-info) ml-1">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base font-bold text-(--tgui--text_color)">
-                {item.time}
-              </span>
-              <span className="text-sm font-semibold text-(--tgui--text_color)">
-                {item.fromCity}
-              </span>
-            </div>
-            <div className="text-xs text-(--tgui--hint_color) mt-0.5">
-              {item.fromAddress ?? "Точное место встречи станет доступно после подтверждения брони"}
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2">
-              {arrival && (
-                <span className="text-base font-bold text-(--tgui--text_color)">
-                  {arrival}
-                </span>
-              )}
-              <span className="text-sm font-semibold text-(--tgui--text_color)">
-                {item.toCity}
-              </span>
-            </div>
-            <div className="text-xs text-(--tgui--hint_color) mt-0.5">
-              {item.toAddress ?? "Точное место встречи станет доступно после подтверждения брони"}
-            </div>
-          </div>
-        </div>
+        <TripRouteTimeline
+          fromCity={item.fromCity}
+          fromAddress={item.fromAddress}
+          fromTime={item.time}
+          toCity={item.toCity}
+          toAddress={item.toAddress}
+          arrival={arrival}
+        />
       </div>
 
       <div className="p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) flex items-center justify-between gap-2">
