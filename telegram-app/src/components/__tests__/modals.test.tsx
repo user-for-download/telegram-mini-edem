@@ -20,6 +20,12 @@ beforeEach(() => {
     queryState({ data: { notificationsEnabled: true } }),
   );
   mockUseSaveSettings.mockReturnValue(mutation());
+  mockUseVehicle.mockReturnValue(
+    queryState({
+      data: { car: { model: "Skoda Octavia", color: "белый" } },
+      vehicle: { model: "Skoda Octavia", color: "белый", plate: null },
+    }),
+  );
 });
 
 const {
@@ -28,12 +34,14 @@ const {
   mockUseCreateFeedback,
   mockUseProfile,
   mockUseSaveSettings,
+  mockUseVehicle,
 } = vi.hoisted(() => ({
   mockUseAllCities: vi.fn(),
   mockUseCreateTrip: vi.fn(),
   mockUseCreateFeedback: vi.fn(),
   mockUseProfile: vi.fn(),
   mockUseSaveSettings: vi.fn(),
+  mockUseVehicle: vi.fn(),
 }));
 
 vi.mock("@/queries/useAllCities", () => ({
@@ -60,6 +68,10 @@ vi.mock("@/queries/useSupportQuery", async (importOriginal) => {
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: mockUseProfile,
   useProfileNotificationSettingsMutation: mockUseSaveSettings,
+}));
+
+vi.mock("@/queries/vehicle", () => ({
+  useVehicleQuery: mockUseVehicle,
 }));
 
 import { CreateTripForm } from "@/pages/CreateTripPage";
@@ -132,6 +144,16 @@ describe("CreateTripForm (страница /trips/my/new)", () => {
     );
     const html = render(<CreateTripForm onCreated={() => {}} />);
     expect(html).toContain("Overlap with passenger booking");
+  });
+
+  it("без автомобиля — гейт вместо формы, с дорогой в профиль", () => {
+    mockUseAllCities.mockReturnValue(queryState({ data: CITIES }));
+    mockUseVehicle.mockReturnValue(queryState({ vehicle: null }));
+    const html = render(<CreateTripForm onCreated={() => {}} />);
+    expect(html).toContain("Нужен автомобиль");
+    expect(html).toContain("Добавить автомобиль");
+    expect(html).not.toContain("Маршрут");
+    expect(html).not.toContain("Опубликовать");
   });
 });
 

@@ -117,6 +117,15 @@ input, select, textarea {
   color: var(--tg-theme-destructive-text-color, #d14e4e);
 }
 
+/* Ошибка под конкретным полем формы (рядом с подсвеченным инпутом,
+   а не общим блоком внизу страницы — иначе её не видно). */
+.FieldError {
+  margin: 2px 0 0;
+  color: var(--tg-theme-destructive-text-color, #d14e4e);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .ButtonRow {
   display: grid;
   gap: 8px;

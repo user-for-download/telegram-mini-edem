@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import {
+  Button,
   Chip,
   IconButton,
   Input,
@@ -14,9 +15,10 @@ import {
   Calendar,
   Clock,
   MapPin,
+  Minus,
   Navigation,
+  Plus,
   RussianRuble,
-  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
@@ -29,10 +31,21 @@ import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { useBottomBarAction } from "@/hooks/useBottomBarAction";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useCreateTripMutation } from "@/queries/useTripsQuery";
+import { useVehicleQuery } from "@/queries/vehicle";
 import { validateCreateTripDraft } from "@/helpers/createTripForm";
-import type { TripTag } from "@edem/contracts";
+import { MAX_SEATS, type TripTag } from "@edem/contracts";
 
 const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString();
+
+/** Текст ошибки под полем (виден рядом с красной подсветкой, не внизу страницы). */
+function FieldError({ show, children }: { show: boolean; children: string | null }) {
+  if (!show || !children) return null;
+  return (
+    <p className="FieldError" role="alert">
+      {children}
+    </p>
+  );
+}
 
 /**
  * Создание поездки — отдельная страница (роут /trips/my/new).
@@ -67,8 +80,11 @@ export function CreateTripForm({
   onCreated: (tripId: string) => void;
 }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const cities = useAllCitiesQuery();
   const create = useCreateTripMutation();
+  const vehicleQuery = useVehicleQuery();
+  const hasCar = (vehicleQuery.vehicle ?? null) !== null;
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [fromAddress, setFromAddress] = useState("");
@@ -81,8 +97,16 @@ export function CreateTripForm({
   const [comment, setComment] = useState("");
   const [tags, setTags] = useState<TripTag[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
-  /** Якорь блока ошибок: валидатор отдаёт строку без id поля. */
+  /** id невалидного поля для status="error" и скролла (валидатор отдаёт field). */
+  const [errorField, setErrorField] = useState<string | null>(null);
+  /** Якорь блока ошибок: fallback скролла, когда field нет (общая ошибка). */
   const errorRef = useRef<HTMLParagraphElement | null>(null);
+
+  /** Правка гасит ошибку: текст больше не актуален, подсветка снимается. */
+  const touch = () => {
+    setValidationError(null);
+    setErrorField(null);
+  };
 
   // Несохранённый черновик — Telegram спросит подтверждение закрытия.
   useClosingConfirmation(
@@ -97,6 +121,7 @@ export function CreateTripForm({
 
   const swapCities = () => {
     haptic.selection();
+    touch();
     setFrom(to);
     setTo(from);
     setFromAddress(toAddress);
@@ -105,6 +130,7 @@ export function CreateTripForm({
 
   const toggleTag = (tag: TripTag) => {
     haptic.selection();
+    touch();
     setTags((prev) =>
       prev.includes(tag)
         ? prev.filter((item) => item !== tag)
@@ -112,8 +138,29 @@ export function CreateTripForm({
     );
   };
 
+  /** Степпер мест: целое 1..MAX_SEATS, ручной ввод исключён. */
+  const stepSeats = (delta: 1 | -1) => () => {
+    haptic.selection();
+    touch();
+    setSeats((prev) => {
+      const next = Number(prev);
+      const base = Number.isFinite(next) ? Math.trunc(next) : 1;
+      return String(Math.min(MAX_SEATS, Math.max(1, base + delta)));
+    });
+  };
+
+  /** Скролл к невалидному полю, иначе — к блоку общей ошибки. */
+  const scrollToError = (field: string | null) => {
+    if (field) {
+      document.getElementById(field)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
   const submit = () => {
     setValidationError(null);
+    setErrorField(null);
     const validation = validateCreateTripDraft(
       {
         fromName: from,
@@ -132,7 +179,8 @@ export function CreateTripForm({
     );
     if (!validation.ok) {
       setValidationError(validation.error);
-      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setErrorField(validation.field);
+      scrollToError(validation.field);
       return;
     }
     create.mutate(validation.data, {
@@ -145,25 +193,59 @@ export function CreateTripForm({
         onCreated(trip.id);
       },
       onError: () => {
-        errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        scrollToError(null);
       },
     });
   };
 
   // CTA живёт в нижнем баре (Shell): loading напрямую из мутации.
-  useBottomBarAction({
-    label: "Опубликовать",
-    onSubmit: submit,
-    loading: create.isPending,
-    disabled: false,
-  });
+  useBottomBarAction(
+    hasCar
+      ? {
+        label: "Опубликовать",
+        onSubmit: submit,
+        loading: create.isPending,
+        disabled: false,
+      }
+      : null,
+  );
 
-  if (cities.isLoading) {
+  if (cities.isLoading || vehicleQuery.isLoading) {
     return (
       <Placeholder>
         <Spinner size="m" />
         <>Загружаем города…</>
       </Placeholder>
+    );
+  }
+
+  // Без автомобиля публиковать нельзя — сервер ответил бы 400 NO_CAR
+  // после заполнения всей формы. Показываем гейт сразу, с дорогой в профиль.
+  if (!vehicleQuery.error && !hasCar) {
+    return (
+      <>
+        <OfflineBanner />
+        <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+          <Section header="Нужен автомобиль">
+            <div className="flex flex-col gap-3 p-4">
+              <p className="text-[13px] text-(--tgui--hint_color) leading-relaxed">
+                Чтобы публиковать поездки, сначала добавьте автомобиль в профиле.
+              </p>
+              <Button
+                mode="filled"
+                size="l"
+                stretched
+                onClick={() => {
+                  haptic.light();
+                  navigate("/vehicle");
+                }}
+              >
+                Добавить автомобиль
+              </Button>
+            </div>
+          </Section>
+        </div>
+      </>
     );
   }
 
@@ -174,36 +256,42 @@ export function CreateTripForm({
         <Section header="Маршрут">
           <div className="flex flex-col gap-3 p-4">
             <div className="flex flex-col gap-1.5 relative">
-              <div className="FormField">
-                <label htmlFor="create-from">Город отправления</label>
-                <Select
-                  id="create-from"
-                  value={from}
-                  onChange={(event) => setFrom(event.target.value)}
-                >
-                  <option value="">Откуда едем</option>
-                  {cities.data?.map((city) => (
-                    <option key={city.id} value={city.name}>
-                      {city.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="FormField">
-                <label htmlFor="create-to">Город назначения</label>
-                <Select
-                  id="create-to"
-                  value={to}
-                  onChange={(event) => setTo(event.target.value)}
-                >
-                  <option value="">Куда едем</option>
-                  {cities.data?.map((city) => (
-                    <option key={city.id} value={city.name}>
-                      {city.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+              <Select
+                id="create-from"
+                header="Город отправления"
+                value={from}
+                status={errorField === "create-from" ? "error" : "default"}
+                onChange={(event) => {
+                  touch();
+                  setFrom(event.target.value);
+                }}
+              >
+                <option value="">Откуда едем</option>
+                {cities.data?.map((city) => (
+                  <option key={city.id} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </Select>
+              <FieldError show={errorField === "create-from"}>{validationError}</FieldError>
+              <Select
+                id="create-to"
+                header="Город назначения"
+                value={to}
+                status={errorField === "create-to" ? "error" : "default"}
+                onChange={(event) => {
+                  touch();
+                  setTo(event.target.value);
+                }}
+              >
+                <option value="">Куда едем</option>
+                {cities.data?.map((city) => (
+                  <option key={city.id} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </Select>
+              <FieldError show={errorField === "create-to"}>{validationError}</FieldError>
               <IconButton
                 type="button"
                 size="s"
@@ -215,93 +303,145 @@ export function CreateTripForm({
                 <ArrowRightLeft size={14} className="text-(--app-info)" />
               </IconButton>
             </div>
-            <div className="FormField">
-              <label htmlFor="create-from-address">Адрес отправления</label>
-              <Input
-                id="create-from-address"
-                before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
-                value={fromAddress}
-                onChange={(event) => setFromAddress(event.target.value)}
-                placeholder="Точка встречи"
-              />
-            </div>
-            <div className="FormField">
-              <label htmlFor="create-to-address">Адрес назначения</label>
-              <Input
-                id="create-to-address"
-                before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
-                value={toAddress}
-                onChange={(event) => setToAddress(event.target.value)}
-                placeholder="Точка прибытия"
-              />
-            </div>
+            <Input
+              id="create-from-address"
+              header="Адрес отправления"
+              before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
+              value={fromAddress}
+              status={errorField === "create-from-address" ? "error" : "default"}
+              onChange={(event) => {
+                touch();
+                setFromAddress(event.target.value);
+              }}
+              placeholder="Точка встречи"
+            />
+            <FieldError show={errorField === "create-from-address"}>{validationError}</FieldError>
+            <Input
+              id="create-to-address"
+              header="Адрес назначения"
+              before={<Navigation size={16} className="text-(--tgui--hint_color)" />}
+              value={toAddress}
+              status={errorField === "create-to-address" ? "error" : "default"}
+              onChange={(event) => {
+                touch();
+                setToAddress(event.target.value);
+              }}
+              placeholder="Точка прибытия"
+            />
+            <FieldError show={errorField === "create-to-address"}>{validationError}</FieldError>
           </div>
         </Section>
 
         <Section header="Поездка">
           <div className="flex flex-col gap-3 p-4">
-            <div className="grid grid-cols-2 gap-3">
               <div className="FormField">
-                <label htmlFor="create-date">Дата и время</label>
                 <Input
                   id="create-date"
+                  header="Дата и время"
                   before={<Calendar size={16} className="text-(--tgui--hint_color)" />}
                   type="datetime-local"
                   value={date}
-                  onChange={(event) => setDate(event.target.value)}
+                  status={errorField === "create-date" ? "error" : "default"}
+                  onChange={(event) => {
+                    touch();
+                    setDate(event.target.value);
+                  }}
                 />
+                <FieldError show={errorField === "create-date"}>{validationError}</FieldError>
               </div>
-              <div className="FormField">
-                <label htmlFor="create-duration">В пути, часов</label>
-                <Input
-                  id="create-duration"
-                  before={<Clock size={16} className="text-(--tgui--hint_color)" />}
-                  type="number"
-                  min="1"
-                  max="168"
-                  value={durationHours}
-                  onChange={(event) => setDurationHours(event.target.value)}
-                />
-              </div>
-            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="FormField">
-                <label htmlFor="create-distance">Расстояние, км</label>
-                <Input
-                  id="create-distance"
-                  before={<MapPin size={16} className="text-(--tgui--hint_color)" />}
-                  type="number"
-                  min="1"
-                  max="20000"
-                  value={distanceKm}
-                  onChange={(event) => setDistanceKm(event.target.value)}
-                  placeholder="180"
-                />
-              </div>
-              <div className="FormField">
-                <label htmlFor="create-price">Цена, ₽</label>
                 <Input
                   id="create-price"
+                  header="Цена, ₽"
                   before={<RussianRuble size={16} className="text-(--tgui--hint_color)" />}
                   type="number"
                   min="1"
                   max="100000"
                   value={price}
-                  onChange={(event) => setPrice(event.target.value)}
+                  status={errorField === "create-price" ? "error" : "default"}
+                  onChange={(event) => {
+                    touch();
+                    setPrice(event.target.value);
+                  }}
                 />
+                <FieldError show={errorField === "create-price"}>{validationError}</FieldError>
               </div>
+              <fieldset className="FormField">
+                <legend>Места</legend>
+                <div
+                  id="create-seats"
+                  role="group"
+                  aria-label={`Количество мест: ${seats} из ${MAX_SEATS}`}
+                  className="flex items-center gap-2"
+                >
+                  <IconButton
+                    type="button"
+                    size="s"
+                    mode="bezeled"
+                    onClick={stepSeats(-1)}
+                    disabled={Number(seats) <= 1}
+                    aria-label="Меньше мест"
+                  >
+                    <Minus size={16} />
+                  </IconButton>
+                  <output
+                    aria-live="polite"
+                    aria-label="Выбрано мест"
+                    className="flex-1 text-center text-[17px] font-bold text-(--tgui--text_color)"
+                  >
+                    {seats}
+                  </output>
+                  <IconButton
+                    type="button"
+                    size="s"
+                    mode="bezeled"
+                    onClick={stepSeats(1)}
+                    disabled={Number(seats) >= MAX_SEATS}
+                    aria-label="Больше мест"
+                  >
+                    <Plus size={16} />
+                  </IconButton>
+                </div>
+                <FieldError show={errorField === "create-seats"}>{validationError}</FieldError>
+              </fieldset>
             </div>
-            <div className="FormField">
-              <label htmlFor="create-seats">Места</label>
-              <Input
-                id="create-seats"
-                before={<Users size={16} className="text-(--tgui--hint_color)" />}
-                type="number"
-                min="1"
-                max="3"
-                value={seats}
-                onChange={(event) => setSeats(event.target.value)}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="FormField">
+                <Input
+                  id="create-distance"
+                  header="Расстояние, км"
+                  before={<MapPin size={16} className="text-(--tgui--hint_color)" />}
+                  type="number"
+                  min="1"
+                  max="20000"
+                  value={distanceKm}
+                  status={errorField === "create-distance" ? "error" : "default"}
+                  onChange={(event) => {
+                    touch();
+                    setDistanceKm(event.target.value);
+                  }}
+                  placeholder="180"
+                />
+                <FieldError show={errorField === "create-distance"}>{validationError}</FieldError>
+              </div>
+              <div className="FormField">
+                <Input
+                  id="create-duration"
+                  header="В пути, часов"
+                  before={<Clock size={16} className="text-(--tgui--hint_color)" />}
+                  type="number"
+                  min="1"
+                  max="168"
+                  value={durationHours}
+                  status={errorField === "create-duration" ? "error" : "default"}
+                  onChange={(event) => {
+                    touch();
+                    setDurationHours(event.target.value);
+                  }}
+                />
+                <FieldError show={errorField === "create-duration"}>{validationError}</FieldError>
+              </div>
             </div>
           </div>
         </Section>
@@ -329,21 +469,24 @@ export function CreateTripForm({
                 );
               })}
             </div>
-            <div className="FormField">
-              <label htmlFor="create-comment">Комментарий</label>
-              <Textarea
-                id="create-comment"
-                rows={3}
-                maxLength={500}
-                placeholder="Например: едем спокойно, салон чистый, багажник свободен"
-                value={comment}
-                onChange={(event) => setComment(event.target.value)}
-              />
-            </div>
+            <Textarea
+              id="create-comment"
+              header="Комментарий"
+              rows={3}
+              maxLength={500}
+              placeholder="Например: едем спокойно, салон чистый, багажник свободен"
+              value={comment}
+              status={errorField === "create-comment" ? "error" : "default"}
+              onChange={(event) => {
+                touch();
+                setComment(event.target.value);
+              }}
+            />
+            <FieldError show={errorField === "create-comment"}>{validationError}</FieldError>
           </div>
         </Section>
 
-        {validationError && (
+        {validationError && !errorField && (
           <p ref={errorRef} className="FormError" role="alert">
             {validationError}
           </p>
