@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterCities } from "@/components/CityPickerField";
+import { filterCities, findExactCity } from "@/components/CityPickerField";
 
 const CITIES = [
   { id: "1", name: "Вологда" },
@@ -30,5 +30,19 @@ describe("filterCities", () => {
 
   it("без справочника — пусто", () => {
     expect(filterCities(undefined, "вол")).toEqual([]);
+  });
+});
+
+describe("findExactCity", () => {
+  it("полное имя — находится (trim + case-insensitive)", () => {
+    expect(findExactCity(CITIES, "Вологда")?.id).toBe("1");
+    expect(findExactCity(CITIES, "  череповец  ")?.id).toBe("2");
+  });
+
+  it("подстрока — не точное совпадение", () => {
+    expect(findExactCity(CITIES, "Вол")).toBeNull();
+    expect(findExactCity(CITIES, "")).toBeNull();
+    expect(findExactCity(CITIES, "Москва")).toBeNull();
+    expect(findExactCity(undefined, "Вологда")).toBeNull();
   });
 });

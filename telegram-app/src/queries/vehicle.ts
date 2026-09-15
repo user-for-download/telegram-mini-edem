@@ -21,7 +21,10 @@ export const VEHICLE_KEYS = {
  * empty-state (VK: «Чтобы публиковать поездки, добавьте автомобиль»),
  * а не ошибка.
  */
-export function useVehicleQuery(options?: { enabled?: boolean }) {
+export function useVehicleQuery(options?: {
+  enabled?: boolean;
+  refetchOnMount?: boolean | "always";
+}) {
   const profile = useProfileQuery(options);
   return { ...profile, vehicle: profile.data?.car ?? null };
 }

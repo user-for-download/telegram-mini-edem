@@ -83,8 +83,12 @@ export function CreateTripForm({
   const navigate = useNavigate();
   const cities = useAllCitiesQuery();
   const create = useCreateTripMutation();
-  const vehicleQuery = useVehicleQuery();
+  const vehicleQuery = useVehicleQuery({ refetchOnMount: "always" });
   const hasCar = (vehicleQuery.vehicle ?? null) !== null;
+  // Гейт решает по свежим данным: refetch идёт при каждом монтировании
+  // (кэш профиля мог устареть — авто добавлено мимо app-flow/e2e-sql).
+  const vehicleChecking =
+    vehicleQuery.isLoading || vehicleQuery.isFetching;
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [fromAddress, setFromAddress] = useState("");
@@ -210,7 +214,7 @@ export function CreateTripForm({
       : null,
   );
 
-  if (cities.isLoading || vehicleQuery.isLoading) {
+  if (cities.isLoading || vehicleChecking) {
     return (
       <Placeholder>
         <Spinner size="m" />

@@ -181,9 +181,11 @@ try {
 
   await runStep("create trip: UI публикует поездку с уникальной ценой", async () => {
     await hashUrl(page, "/trips/my/new");
-    // Поля без placeholder (label-обёртка + datalist) — целимся по label.
+    // Пикер городов с вводом: печатаем и кликаем опцию из дропдауна.
     await page.getByLabel("Город отправления").fill(CITY_FROM);
+    await page.getByRole("option", { name: CITY_FROM }).click();
     await page.getByLabel("Город назначения").fill(CITY_TO);
+    await page.getByRole("option", { name: CITY_TO }).click();
     // datetime-local: формат YYYY-MM-DDTHH:mm.
     const dep = new Date(Date.now() + 86400e3);
     const pad = (n) => String(n).padStart(2, "0");
@@ -191,7 +193,10 @@ try {
     await page.locator('input[type="datetime-local"]').fill(local);
     await page.getByLabel("Расстояние, км").fill("180");
     await page.getByLabel("Цена, ₽").fill(String(PRICE));
-    await page.getByLabel("Места").fill("3");
+    // Места — степпер 1..3 (дефолт 1): два клика «Больше мест» → 3.
+    const moreSeats = page.getByRole("button", { name: "Больше мест" });
+    await moreSeats.click();
+    await moreSeats.click();
     await page.getByRole("button", { name: "Опубликовать" }).click();
     // Успех — редирект на /trips/:id.
     await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/, { timeout: 30000 });

@@ -25,6 +25,19 @@ export function filterCities(
 const VISIBLE_LIMIT = 8;
 
 /**
+ * Точное совпадение по имени (trim + case-insensitive): набранное полное
+ * название — подтверждённый выбор (e2e печатает полное имя и жмёт сабмит).
+ */
+export function findExactCity(
+  cities: readonly PickerCity[] | undefined,
+  query: string,
+): PickerCity | null {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+  return cities?.find((city) => city.name.toLowerCase() === q) ?? null;
+}
+
+/**
  * Поле выбора города с вводом (вместо нативного Select: в нём 25+ городов
  * приходится скроллить). Печатаешь подстроку — список фильтруется,
  * тап — выбирает. Закрытие: выбор, Esc, blur. clavier: ↑/↓/Enter.
@@ -69,6 +82,12 @@ export function CityPickerField({
   };
 
   const revert = () => {
+    // Полное имя — автовыбор (иначе текст сотрётся, а выбор не случится).
+    const exact = findExactCity(cities, query);
+    if (exact && exact.name !== value) {
+      choose(exact.name);
+      return;
+    }
     setQuery(value);
     setOpen(false);
   };

@@ -12,11 +12,15 @@ export const PROFILE_KEYS = {
   current: () => [...PROFILE_KEYS.all, "me"] as const,
 };
 
-export function useProfileQuery(options?: { enabled?: boolean }) {
+export function useProfileQuery(options?: {
+  enabled?: boolean;
+  refetchOnMount?: boolean | "always";
+}) {
   return useQuery({
     queryKey: PROFILE_KEYS.current(),
     queryFn: ({ signal }) => profileApi.getCurrentUser(signal),
     enabled: options?.enabled ?? true,
+    refetchOnMount: options?.refetchOnMount,
   });
 }
 
