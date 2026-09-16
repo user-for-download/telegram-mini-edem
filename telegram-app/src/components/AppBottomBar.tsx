@@ -2,7 +2,8 @@ import { Badge, Button, FixedLayout, Tabbar } from "@telegram-apps/telegram-ui";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { ArrowLeft, Bell, Car, Home, Search, User } from "lucide-react";
 
-export type AppTabId = "home" | "trips" | "notifications" | "search" | "profile";
+export type AppTabId =
+  "home" | "trips" | "notifications" | "search" | "profile";
 
 export interface TabsBarProps {
   activeTab: AppTabId;
@@ -25,13 +26,28 @@ export type AppBottomBarProps =
 const TABS = [
   { key: "home", text: "Главная", to: "/", Icon: Home },
   { key: "trips", text: "Поездки", to: "/bookings", Icon: Car },
-  { key: "notifications", text: "Уведомления", to: "/notifications", Icon: Bell },
+  {
+    key: "notifications",
+    text: "Уведомления",
+    to: "/notifications",
+    Icon: Bell,
+  },
   { key: "profile", text: "Профиль", to: "/profile", Icon: User },
 ] as const;
 
-const SEARCH_TAB = { key: "search", text: "Поиск", to: "/trips", Icon: Search } as const;
+const SEARCH_TAB = {
+  key: "search",
+  text: "Поиск",
+  to: "/trips",
+  Icon: Search,
+} as const;
 
-function go(activeTab: AppTabId, key: AppTabId, to: string, onSelect: (to: string) => void) {
+function go(
+  activeTab: AppTabId,
+  key: AppTabId,
+  to: string,
+  onSelect: (to: string) => void,
+) {
   if (activeTab === key) return;
   hapticFeedback.selectionChanged.ifAvailable();
   onSelect(to);
@@ -68,7 +84,9 @@ export function TabsVariant({
               key={key}
               selected={selected}
               text={text}
-              aria-label={showBadge ? `${text}, непрочитанных: ${unreadCount}` : text}
+              aria-label={
+                showBadge ? `${text}, непрочитанных: ${unreadCount}` : text
+              }
               onClick={() => go(activeTab, key, to, onSelect)}
             >
               {/* relative-обёртка для позиционирования Badge поверх иконки */}
@@ -128,19 +146,17 @@ export function ActionVariant({
         >
           {label}
         </Button>
-      <div className="rounded-full border border-gray-300 dark:border-white/20 bg-(--tgui--bg_color)/75 p-1 backdrop-blur-md">
-        <button
-          type="button"
-          aria-label="Назад"
-          onClick={onBack}
-          className="flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-full transition-all duration-200 bg-transparent text-(--tgui--text_color) active:scale-95"
-        >
-          <ArrowLeft size={22} strokeWidth={1.8} />
-          <span className="text-[9px] font-semibold leading-none">
-            Назад
-          </span>
-        </button>
-      </div>
+        <div className="rounded-full border border-gray-300 dark:border-white/20 bg-(--tgui--bg_color)/75 p-1 backdrop-blur-md">
+          <button
+            type="button"
+            aria-label="Назад"
+            onClick={onBack}
+            className="flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-full transition-all duration-200 bg-transparent text-(--tgui--text_color) active:scale-95"
+          >
+            <ArrowLeft size={22} strokeWidth={1.8} />
+            <span className="text-[9px] font-semibold leading-none">Назад</span>
+          </button>
+        </div>
       </div>
     </FixedLayout>
   );

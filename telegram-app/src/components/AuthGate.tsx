@@ -63,7 +63,11 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
       // Не воскрешаем сессию, если пользователь вышел (clearSession),
       // удалил аккаунт или авторизация в состоянии ошибки — refresh мог
       // стартовать ДО логаута.
-      if (state.status === "unauthenticated" || state.status === "error" || state.status === "deleted") {
+      if (
+        state.status === "unauthenticated" ||
+        state.status === "error" ||
+        state.status === "deleted"
+      ) {
         return;
       }
       useAuthStore.setState({
@@ -129,8 +133,10 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
     // с raw initData из стора (submitSupportFeedback маршрутизирует сам).
     return (
       <>
-        <AccountStatePage title="Аккаунт заблокирован"
-          description={`Причина: ${banReason || "Причина не указана"}. Вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт.`} />
+        <AccountStatePage
+          title="Аккаунт заблокирован"
+          description={`Причина: ${banReason || "Причина не указана"}. Вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт.`}
+        />
         <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
           <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
             <span className="text-[13px] font-semibold text-(--tgui--text_color)">
@@ -145,8 +151,10 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
 
   if (status === "deleted") {
     return (
-      <AccountStatePage title="Профиль удалён"
-        description="Аккаунт анонимизирован. Поездки и отзывы сохранены без вашего имени. Восстановление невозможно." />
+      <AccountStatePage
+        title="Профиль удалён"
+        description="Аккаунт анонимизирован. Поездки и отзывы сохранены без вашего имени. Восстановление невозможно."
+      />
     );
   }
 
@@ -157,7 +165,8 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
           header="Слишком много попыток входа"
           description="Сервер временно ограничил вход (защита от перебора). Подождите немного и попробуйте один раз — повторные нажатия продлевают блокировку."
           action={
-            <Button mode="bezeled"
+            <Button
+              mode="bezeled"
               size="l"
               stretched
               disabled={cooldownLeft > 0}
@@ -172,21 +181,41 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
       );
     }
     if (lastAuthError?.code === "SESSION_EXPIRED") {
-      return <AccountStatePage title="Сессия завершилась"
-        description="Для безопасности нужно заново подтвердить вход через Telegram."
-        action={<RetryAction label="Войти снова" onClick={() => void bootstrap()} />} />;
+      return (
+        <AccountStatePage
+          title="Сессия завершилась"
+          description="Для безопасности нужно заново подтвердить вход через Telegram."
+          action={
+            <RetryAction label="Войти снова" onClick={() => void bootstrap()} />
+          }
+        />
+      );
     }
     if (lastAuthError?.code === "INIT_DATA_UNAVAILABLE") {
-      return <AccountStatePage title="Не удалось получить данные Telegram"
-        description="Откройте мини-приложение из Telegram и попробуйте снова. Не вводите initData вручную."
-        action={<RetryAction label="Попробовать снова" onClick={() => void bootstrap()} />} />;
+      return (
+        <AccountStatePage
+          title="Не удалось получить данные Telegram"
+          description="Откройте мини-приложение из Telegram и попробуйте снова. Не вводите initData вручную."
+          action={
+            <RetryAction
+              label="Попробовать снова"
+              onClick={() => void bootstrap()}
+            />
+          }
+        />
+      );
     }
     return (
       <Placeholder
         header="Ошибка авторизации"
         description="Не удалось проверить данные авторизации. Проверьте подключение к интернету."
         action={
-          <Button mode="bezeled" size="l" stretched onClick={() => void bootstrap()}>
+          <Button
+            mode="bezeled"
+            size="l"
+            stretched
+            onClick={() => void bootstrap()}
+          >
             Попробовать снова
           </Button>
         }

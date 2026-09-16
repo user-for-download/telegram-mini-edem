@@ -1,7 +1,12 @@
 import type { FC, PropsWithChildren } from "react";
 import { useEffect } from "react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
-import { miniApp, themeParams, useLaunchParams, useSignal } from "@telegram-apps/sdk-react";
+import {
+  miniApp,
+  themeParams,
+  useLaunchParams,
+  useSignal,
+} from "@telegram-apps/sdk-react";
 import {
   setMiniAppBackgroundColor,
   setMiniAppBottomBarColor,
@@ -16,7 +21,10 @@ import { ApiError } from "@/api/client";
 import { useAppSettings } from "@/utils/appSettings";
 import { Onboarding } from "@/components/Onboarding";
 import { ToastProvider } from "@/components/ToastProvider";
-import { WsProvider, TelegramRealtimeListener } from "@/providers/WebSocketProvider";
+import {
+  WsProvider,
+  TelegramRealtimeListener,
+} from "@/providers/WebSocketProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -189,7 +197,14 @@ export const AppConfig: FC<PropsWithChildren> = ({ children }) => {
       <ErrorBoundary fallback={ErrorFallback}>
         <AppRoot platform={platform} appearance={appearance}>
           <OfflineBanner />
-          <AuthGate><Onboarding><WsProvider><TelegramRealtimeListener /><ToastProvider>{children}</ToastProvider></WsProvider></Onboarding></AuthGate>
+          <AuthGate>
+            <Onboarding>
+              <WsProvider>
+                <TelegramRealtimeListener />
+                <ToastProvider>{children}</ToastProvider>
+              </WsProvider>
+            </Onboarding>
+          </AuthGate>
         </AppRoot>
       </ErrorBoundary>
     </QueryClientProvider>

@@ -142,16 +142,17 @@ describe("HomePage", () => {
     expect(html).toContain("Ближайшая поездка");
   });
 
-  it("без сегментов дня — переход только по овальной «Найти»", () => {
+  it("без сегментов дня — переход только по нативной «Найти»", () => {
     const html = render(<HomePage />);
     // Сегментов дня и swap на экспресс-поиске нет.
     expect(html).not.toContain('role="tablist"');
     expect(html).not.toContain("Сегодня");
     expect(html).not.toContain("Поменять направление");
-    // Единственный submit формы — овальная CTA «Найти поездку» в футере секции.
+    // Единственный submit формы — нативная tgui-кнопка «Найти поездку»
+    // в футере секции (без кастомных классов вроде rounded-full).
     expect(html.match(/type="submit"/g)).toHaveLength(1);
     expect(html).toContain("Найти поездку");
-    expect(html).toContain("rounded-full");
+    expect(html).not.toContain("rounded-full");
   });
 
   it("города — пикеры справочника с вводом", () => {
@@ -162,14 +163,13 @@ describe("HomePage", () => {
     expect(html).toContain("Город или село назначения");
   });
 
-  it("профиль-бар — кнопка перехода в профиль", () => {
+  it("профиль-бар — тап ведёт в профиль", () => {
     mockUseProfile.mockReturnValue(
       queryState({ data: { name: "Александр", rating: 4.8 } }),
     );
     const html = render(<HomePage />);
-    const profileTags =
-      html.match(/<button[^>]*aria-label="Открыть профиль"[^>]*>/g) ?? [];
-    expect(profileTags).toHaveLength(1);
-    expect(profileTags[0]).toContain('type="button"');
+    // Cell-div с onClick (тапы проверены на iPhone): связь по aria-label.
+    expect(html).toContain('aria-label="Открыть профиль"');
+    expect(html).toContain("Александр");
   });
 });

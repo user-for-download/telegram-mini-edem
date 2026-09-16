@@ -9,12 +9,13 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import {
-  backButton,
-  useLaunchParams,
-} from "@telegram-apps/sdk-react";
+import { backButton, useLaunchParams } from "@telegram-apps/sdk-react";
 import { AppHeader } from "@/components/AppHeader";
-import { ActionVariant, TabsVariant, type AppTabId } from "@/components/AppBottomBar";
+import {
+  ActionVariant,
+  TabsVariant,
+  type AppTabId,
+} from "@/components/AppBottomBar";
 import { useSettingsButton } from "@/hooks/useSettingsButton";
 import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
@@ -42,7 +43,13 @@ import {
 
 export { parseTripStartParam };
 
-const ROOT_ROUTES = new Set(["/", "/trips", "/bookings", "/notifications", "/profile"]);
+const ROOT_ROUTES = new Set([
+  "/",
+  "/trips",
+  "/bookings",
+  "/notifications",
+  "/profile",
+]);
 
 export function Shell() {
   const location = useLocation();
@@ -72,7 +79,8 @@ export function Shell() {
     if (handleModalBack()) return;
     const historyIndex = window.history.state?.idx;
     if (typeof historyIndex === "number" && historyIndex > 0) navigate(-1);
-    else if (location.pathname === "/trips/my/new") navigate("/bookings", { replace: true });
+    else if (location.pathname === "/trips/my/new")
+      navigate("/bookings", { replace: true });
     else navigate("/", { replace: true });
   }, [navigate, location.pathname]);
 
@@ -104,15 +112,16 @@ export function Shell() {
     navigate(target, { replace: true });
   }, [navigate, startParam]);
 
-  const activeTab: AppTabId = location.pathname === "/"
-    ? "home"
-    : location.pathname.startsWith("/bookings")
-      ? "trips"
-      : location.pathname.startsWith("/notifications")
-        ? "notifications"
-        : location.pathname.startsWith("/trips")
-          ? "search"
-          : "profile";
+  const activeTab: AppTabId =
+    location.pathname === "/"
+      ? "home"
+      : location.pathname.startsWith("/bookings")
+        ? "trips"
+        : location.pathname.startsWith("/notifications")
+          ? "notifications"
+          : location.pathname.startsWith("/trips")
+            ? "search"
+            : "profile";
 
   const go = (to: string) => {
     navigate(to);
@@ -143,7 +152,11 @@ export function Shell() {
         </div>
       ) : (
         <nav aria-label="Основные разделы">
-          <TabsVariant activeTab={activeTab} onSelect={go} unreadCount={unreadCount} />
+          <TabsVariant
+            activeTab={activeTab}
+            onSelect={go}
+            unreadCount={unreadCount}
+          />
         </nav>
       )}
     </div>
@@ -158,11 +171,20 @@ export function AppRouter() {
           <Route path="/" element={<HomePage />} />
           <Route path="/trips" element={<SearchPage />} />
           <Route path="/trips/:tripId" element={<TripDetailsRoute />} />
-          <Route path="/trips/my" element={<Navigate to="/bookings?segment=driver" replace />} />
-          <Route path="/trips/my/:tripId/requests" element={<TripRequestsRoute />} />
+          <Route
+            path="/trips/my"
+            element={<Navigate to="/bookings?segment=driver" replace />}
+          />
+          <Route
+            path="/trips/my/:tripId/requests"
+            element={<TripRequestsRoute />}
+          />
           <Route path="/trips/my/new" element={<CreateTripPage />} />
           <Route path="/bookings" element={<TripsPage />} />
-          <Route path="/bookings/history" element={<Navigate to="/bookings?segment=history" replace />} />
+          <Route
+            path="/bookings/history"
+            element={<Navigate to="/bookings?segment=history" replace />}
+          />
           <Route path="/ride-requests" element={<RideRequestsRoute />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/edit" element={<EditProfileRoute />} />
