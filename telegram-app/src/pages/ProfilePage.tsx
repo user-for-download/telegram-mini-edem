@@ -1,10 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
 import {
   Avatar,
+  Badge,
   Button,
   Caption,
   Cell,
   Headline,
+  IconContainer,
   List,
   Placeholder,
   Section,
@@ -74,7 +76,12 @@ function MenuRow({
       aria-label={label}
       onClick={onClick}
       before={<span className="shrink-0">{icon}</span>}
-      after={<ChevronRight size={16} className="text-(--tgui--hint_color) shrink-0" />}
+      after={
+        <ChevronRight
+          size={16}
+          className="text-(--tgui--hint_color) shrink-0"
+        />
+      }
       subtitle={subtitle}
       className="w-full text-left"
     >
@@ -106,12 +113,12 @@ function SwitchRow({
     <div className="w-full flex items-center gap-3 p-3 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline)">
       <span className="shrink-0">{icon}</span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[15px] font-medium text-(--tgui--text_color) truncate">
+        <Text Component="span" className="block truncate">
           {title}
-        </span>
-        <span className="block text-[12px] text-(--tgui--hint_color) truncate">
+        </Text>
+        <Caption Component="span" className="block truncate">
           {subtitle}
-        </span>
+        </Caption>
       </span>
       <Switch
         aria-label={label}
@@ -143,7 +150,8 @@ export function ProfilePage() {
   const tgDark = useSignal(miniApp.isDark);
   const dark = themeOverride ? themeOverride === "dark" : tgDark;
   const [notifEnabled, setNotifEnabled] = useState<boolean | null>(null);
-  const notifChecked = notifEnabled ?? profile.data?.notificationsEnabled ?? true;
+  const notifChecked =
+    notifEnabled ?? profile.data?.notificationsEnabled ?? true;
 
   // Один флаг бэкенда на оба канала: тогглы in-app и Telegram — зеркала.
   const toggleNotifications = (next: boolean) => {
@@ -219,68 +227,96 @@ export function ProfilePage() {
             {/* Шапка профиля: поверхность — Section без заголовка. */}
             <Section>
               <div className="flex flex-col gap-3 p-4">
-              <div className="flex items-center gap-3.5">
-                <Avatar
-                  size={48}
-                  src={profile.data.avatar}
-                  acronym={(profile.data.name ?? "П").slice(0, 2).toUpperCase()}
-                />
-                <div className="flex-1 min-w-0">
-                  <Headline weight="2" className="text-[18px]! truncate">
-                    {profile.data.name}
-                  </Headline>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--link_color)">
-                      <Star size={11} className="fill-(--app-rating) text-(--app-rating)" />
-                      {`${profile.data.rating.toFixed(1)} (${profile.data.reviewsCount})`}
-                    </span>
-                    <Caption weight="2" className="text-(--app-success)">
-                      Telegram верифицирован
+                <div className="flex items-center gap-3.5">
+                  <Avatar
+                    size={48}
+                    src={profile.data.avatar}
+                    acronym={(profile.data.name ?? "П")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <Headline weight="2" className="truncate">
+                      {profile.data.name}
+                    </Headline>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge type="number" mode="secondary" large>
+                        <Star size={11} />
+                        <span>{`${profile.data.rating.toFixed(1)} (${profile.data.reviewsCount})`}</span>
+                      </Badge>
+                      <Caption weight="2" className="text-(--app-success)">
+                        Telegram верифицирован
+                      </Caption>
+                    </div>
+                  </div>
+                </div>
+
+                {profile.data.about && (
+                  <Text
+                    Component="p"
+                    className="text-(--tgui--text_color) leading-relaxed"
+                  >
+                    {profile.data.about}
+                  </Text>
+                )}
+
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-(--tgui--outline)">
+                  <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
+                    <Text weight="2" Component="div">
+                      {profile.data.tripsCount}
+                    </Text>
+                    <Caption
+                      Component="div"
+                      className="text-(--tgui--hint_color)"
+                    >
+                      Поездок
+                    </Caption>
+                  </div>
+                  <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
+                    <Text
+                      weight="2"
+                      Component="div"
+                      className="text-(--app-info)"
+                    >
+                      {profile.data.reviewsCount}
+                    </Text>
+                    <Caption
+                      Component="div"
+                      className="text-(--tgui--hint_color)"
+                    >
+                      Отзывов
+                    </Caption>
+                  </div>
+                  <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
+                    <Text
+                      weight="2"
+                      Component="div"
+                      className="text-(--app-rating)"
+                    >
+                      {profile.data.rating.toFixed(1)}
+                    </Text>
+                    <Caption
+                      Component="div"
+                      className="text-(--tgui--hint_color)"
+                    >
+                      Рейтинг
                     </Caption>
                   </div>
                 </div>
-              </div>
 
-              {profile.data.about && (
-                <Text Component="p" className="text-(--tgui--text_color) leading-relaxed">
-                  {profile.data.about}
-                </Text>
-              )}
-
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-(--tgui--outline)">
-                <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
-                  <div className="text-[16px] font-bold text-(--tgui--text_color)">
-                    {profile.data.tripsCount}
-                  </div>
-                  <Caption Component="div" className="text-(--tgui--hint_color)">Поездок</Caption>
-                </div>
-                <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
-                  <div className="text-[16px] font-bold text-(--app-info)">
-                    {profile.data.reviewsCount}
-                  </div>
-                  <Caption Component="div" className="text-(--tgui--hint_color)">Отзывов</Caption>
-                </div>
-                <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
-                  <div className="text-[16px] font-bold text-(--app-rating)">
-                    {profile.data.rating.toFixed(1)}
-                  </div>
-                  <Caption Component="div" className="text-(--tgui--hint_color)">Рейтинг</Caption>
-                </div>
-              </div>
-
-              {subtab === "settings" && (
-                <Button
-                  mode="bezeled"
-                  stretched
-                  size="s"
-                  onClick={() => {
-                    haptic.light();
-                    navigate("/profile/edit");
-                  }}
-                >
-                  Редактировать профиль
-                </Button>
-              )}
+                {subtab === "settings" && (
+                  <Button
+                    mode="bezeled"
+                    stretched
+                    size="s"
+                    onClick={() => {
+                      haptic.light();
+                      navigate("/profile/edit");
+                    }}
+                  >
+                    Редактировать профиль
+                  </Button>
+                )}
               </div>
             </Section>
 
@@ -310,13 +346,17 @@ export function ProfilePage() {
               <List className="p-0! flex flex-col gap-3">
                 <Section header="Мой автомобиль (для поездок)">
                   <MenuRow
-                    label={profile.data.car ? "Автомобиль" : "Добавить автомобиль"}
-                    icon={
-                      <span className="icon-circle icon-circle--info">
-                        <Car size={20} />
-                      </span>
+                    label={
+                      profile.data.car ? "Автомобиль" : "Добавить автомобиль"
                     }
-                    title={profile.data.car ? "Автомобиль" : "Добавить автомобиль"}
+                    icon={
+                      <IconContainer>
+                        <Car size={20} />
+                      </IconContainer>
+                    }
+                    title={
+                      profile.data.car ? "Автомобиль" : "Добавить автомобиль"
+                    }
                     subtitle={
                       profile.data.car
                         ? `${profile.data.car.model} · ${profile.data.car.color}`
@@ -331,9 +371,9 @@ export function ProfilePage() {
                     <SwitchRow
                       label="Тёмная тема"
                       icon={
-                        <span className="icon-circle icon-circle--purple">
+                        <IconContainer>
                           <Moon size={18} />
-                        </span>
+                        </IconContainer>
                       }
                       title="Тёмная тема"
                       subtitle={
@@ -368,9 +408,9 @@ export function ProfilePage() {
                     <SwitchRow
                       label="Уведомления"
                       icon={
-                        <span className="icon-circle icon-circle--info">
+                        <IconContainer>
                           <Bell size={18} />
-                        </span>
+                        </IconContainer>
                       }
                       title="Уведомления"
                       subtitle="Брони, статусы поездок, ответы поддержки"
@@ -380,9 +420,9 @@ export function ProfilePage() {
                     <SwitchRow
                       label="Звуковые эффекты"
                       icon={
-                        <span className="icon-circle icon-circle--warning">
+                        <IconContainer>
                           <Volume2 size={18} />
-                        </span>
+                        </IconContainer>
                       }
                       title="Звуковые эффекты"
                       subtitle="Звуковые сигналы и вибрация"
@@ -400,9 +440,9 @@ export function ProfilePage() {
                     <MenuRow
                       label="Служба поддержки"
                       icon={
-                        <span className="icon-circle icon-circle--purple">
+                        <IconContainer>
                           <TriangleAlert size={18} />
-                        </span>
+                        </IconContainer>
                       }
                       title="Служба поддержки"
                       subtitle="Вопросы и обращения — ответим в течение нескольких минут"
@@ -414,9 +454,9 @@ export function ProfilePage() {
                     <MenuRow
                       label="Жалобы"
                       icon={
-                        <span className="icon-circle icon-circle--danger">
+                        <IconContainer>
                           <Flag size={18} />
-                        </span>
+                        </IconContainer>
                       }
                       title="Жалобы"
                       subtitle="Сообщить о проблеме с пользователем"
@@ -439,14 +479,18 @@ export function ProfilePage() {
                     Выйти
                   </Button>
                   {remove.error && (
-                    <p className="FormError" role="alert">
+                    <Caption
+                      Component="p"
+                      role="alert"
+                      className="text-(--tg-theme-destructive-text-color)"
+                    >
                       {remove.error instanceof ApiError &&
                       remove.error.code === "ACCOUNT_HAS_ACTIVE_OBLIGATIONS"
                         ? "Завершите активные поездки и отмените брони, затем повторите удаление."
                         : remove.error instanceof Error
                           ? remove.error.message
                           : "Не удалось удалить профиль"}
-                    </p>
+                    </Caption>
                   )}
                   {/* Деструктив — только через ConfirmAction (вооружение вместо
                       window.confirm: нативные диалоги ненадёжны в WebView). */}
@@ -466,7 +510,11 @@ export function ProfilePage() {
                   <span className="text-(--tgui--hint_color)">
                     Все отзывы проходят пре-модерацию
                   </span>
-                  <Button size="s" mode="bezeled" onClick={() => navigate("/reviews")}>
+                  <Button
+                    size="s"
+                    mode="bezeled"
+                    onClick={() => navigate("/reviews")}
+                  >
                     Оставить отзыв
                   </Button>
                 </div>
@@ -500,7 +548,10 @@ export function ProfilePage() {
           </div>
         )}
       </QueryState>
-      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      <FeedbackModal
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+      />
     </>
   );
 }

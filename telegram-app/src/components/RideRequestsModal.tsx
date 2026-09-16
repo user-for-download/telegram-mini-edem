@@ -1,6 +1,12 @@
 import { memo } from "react";
 import { useState } from "react";
-import { Button, Input, Modal } from "@telegram-apps/telegram-ui";
+import {
+  Button,
+  Caption,
+  Input,
+  Modal,
+  Text,
+} from "@telegram-apps/telegram-ui";
 import { StatusPill } from "@/components/StatusPill";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -119,7 +125,12 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
     const toCity = cities.data?.find((city) => city.name === to);
     const earliestDate = new Date(earliest);
     const latestDate = new Date(latest);
-    if (!fromCity || !toCity || !Number.isFinite(earliestDate.getTime()) || !Number.isFinite(latestDate.getTime())) {
+    if (
+      !fromCity ||
+      !toCity ||
+      !Number.isFinite(earliestDate.getTime()) ||
+      !Number.isFinite(latestDate.getTime())
+    ) {
       setValidationError("Выберите города и временной интервал");
       return;
     }
@@ -127,9 +138,18 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
       setValidationError("Города отправления и прибытия должны различаться");
       return;
     }
-    const parsed = createRideRequestDtoSchema.safeParse({ fromCityId: fromCity.id, toCityId: toCity.id, earliestAt: earliestDate.toISOString(), latestAt: latestDate.toISOString(), expiresAt: earliestDate.toISOString(), seats: Number(seats) });
+    const parsed = createRideRequestDtoSchema.safeParse({
+      fromCityId: fromCity.id,
+      toCityId: toCity.id,
+      earliestAt: earliestDate.toISOString(),
+      latestAt: latestDate.toISOString(),
+      expiresAt: earliestDate.toISOString(),
+      seats: Number(seats),
+    });
     if (!parsed.success) {
-      setValidationError(parsed.error.issues[0]?.message ?? "Проверьте параметры запроса");
+      setValidationError(
+        parsed.error.issues[0]?.message ?? "Проверьте параметры запроса",
+      );
       return;
     }
     setValidationError(null);
@@ -166,7 +186,9 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
       earliestDate >= latestDate ||
       expiresDate <= new Date()
     ) {
-      setEditError("Срок действия должен быть в будущем, а окно отправления — корректным");
+      setEditError(
+        "Срок действия должен быть в будущем, а окно отправления — корректным",
+      );
       return;
     }
     const parsed = updateRideRequestDtoSchema.safeParse({
@@ -176,7 +198,9 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
       seats: Number(editSeats),
     });
     if (!parsed.success) {
-      setEditError(parsed.error.issues[0]?.message ?? "Проверьте параметры запроса");
+      setEditError(
+        parsed.error.issues[0]?.message ?? "Проверьте параметры запроса",
+      );
       return;
     }
     update.mutate(
@@ -195,176 +219,320 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
     <section aria-label="Ищу попутку">
       <OfflineBanner />
       <div className="flex flex-col gap-3.5 pt-1 pb-6">
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-          Новый запрос
-        </span>
-        <div className="FormField">
-          <label htmlFor="ride-from">Откуда</label>
-          <Input
-            id="ride-from"
-            before={<MapPin size={17} className="text-(--app-info)" />}
-            list="request-cities"
-            value={from}
-            onChange={(event) => setFrom(event.target.value)}
-            placeholder="Город отправления"
-          />
-        </div>
-        <div className="FormField">
-          <label htmlFor="ride-to">Куда</label>
-          <Input
-            id="ride-to"
-            before={<MapPin size={17} className="text-(--app-success)" />}
-            list="request-cities"
-            value={to}
-            onChange={(event) => setTo(event.target.value)}
-            placeholder="Город назначения"
-          />
-        </div>
-        <datalist id="request-cities">{cities.data?.map((city) => <option key={city.id} value={city.name} />)}</datalist>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="FormField">
-            <label htmlFor="ride-earliest">Не раньше</label>
+        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+          <Text weight="2" Component="span">
+            Новый запрос
+          </Text>
+          <div>
+            <label htmlFor="ride-from" className="sr-only">
+              Откуда
+            </label>
             <Input
-              id="ride-earliest"
-              before={<Calendar size={16} className="text-(--tgui--hint_color)" />}
-              type="datetime-local"
-              value={earliest}
-              onChange={(event) => setEarliest(event.target.value)}
+              id="ride-from"
+              header="Откуда"
+              before={<MapPin size={17} className="text-(--app-info)" />}
+              list="request-cities"
+              value={from}
+              onChange={(event) => setFrom(event.target.value)}
+              placeholder="Город отправления"
             />
           </div>
-          <div className="FormField">
-            <label htmlFor="ride-latest">Не позже</label>
+          <div>
+            <label htmlFor="ride-to" className="sr-only">
+              Куда
+            </label>
             <Input
-              id="ride-latest"
-              before={<Calendar size={16} className="text-(--tgui--hint_color)" />}
-              type="datetime-local"
-              value={latest}
-              onChange={(event) => setLatest(event.target.value)}
+              id="ride-to"
+              header="Куда"
+              before={<MapPin size={17} className="text-(--app-success)" />}
+              list="request-cities"
+              value={to}
+              onChange={(event) => setTo(event.target.value)}
+              placeholder="Город назначения"
             />
           </div>
-        </div>
-        <div className="FormField">
-          <label htmlFor="ride-seats">Места</label>
-          <Input
-            id="ride-seats"
-            before={<Users size={16} className="text-(--tgui--hint_color)" />}
-            type="number"
-            min="1"
-            max="3"
-            value={seats}
-            onChange={(event) => setSeats(event.target.value)}
-          />
-        </div>
-        {validationError && <p className="FormError" role="alert">{validationError}</p>}
-        {create.error && <p className="FormError" role="alert">{bookingErrorMessage(create.error)}</p>}
-        <Button mode="bezeled" stretched size="l" className="min-h-11" loading={create.isPending} onClick={submit}>Опубликовать запрос</Button>
-      </div>
-      {(status.error || cancel.error || update.error) && (
-        <p className="FormError" role="alert">
-          {bookingErrorMessage(status.error ?? cancel.error ?? update.error)}
-        </p>
-      )}
-      <QueryState loading={requests.isLoading} error={requests.error} empty={!requests.data?.length} emptyText="Активных запросов нет." onRetry={() => void requests.refetch()}>
-        <div className="flex flex-col gap-3">
-          {requests.data?.map((request) => (
-            <div
-              key={request.id}
-              className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[15px] font-bold text-(--tgui--text_color) truncate">
-                  {`${request.fromCity.name} → ${request.toCity.name}`}
-                </span>
-                <StatusPill
-                  tone={request.status === "active" ? "success" : "warning"}
-                >
-                  {request.status === "active" ? "Активен" : request.status}
-                </StatusPill>
-              </div>
-              <div className="text-[13px] text-(--tgui--hint_color)">
-                {`${request.earliestAt} — ${request.latestAt} · ${request.seats} мест`}
-              </div>
-              {editingId === request.id ? (
-                <>
-                  <div className="FormField">
-                    <label htmlFor={`ride-edit-earliest-${request.id}`}>Не раньше</label>
-                    <Input
-                      id={`ride-edit-earliest-${request.id}`}
-                      type="datetime-local"
-                      value={editEarliest}
-                      onChange={(event) => setEditEarliest(event.target.value)}
-                    />
-                  </div>
-                  <div className="FormField">
-                    <label htmlFor={`ride-edit-latest-${request.id}`}>Не позже</label>
-                    <Input
-                      id={`ride-edit-latest-${request.id}`}
-                      type="datetime-local"
-                      value={editLatest}
-                      onChange={(event) => setEditLatest(event.target.value)}
-                    />
-                  </div>
-                  <div className="FormField">
-                    <label htmlFor={`ride-edit-expires-${request.id}`}>Действует до</label>
-                    <Input
-                      id={`ride-edit-expires-${request.id}`}
-                      type="datetime-local"
-                      value={editExpires}
-                      onChange={(event) => setEditExpires(event.target.value)}
-                    />
-                  </div>
-                  <div className="FormField">
-                    <label htmlFor={`ride-edit-seats-${request.id}`}>Места</label>
-                    <Input
-                      id={`ride-edit-seats-${request.id}`}
-                      type="number"
-                      min="1"
-                      max="3"
-                      value={editSeats}
-                      onChange={(event) => setEditSeats(event.target.value)}
-                    />
-                  </div>
-                  {editError && <p className="FormError" role="alert">{editError}</p>}
-                  <div className="flex gap-2">
-                    <Button mode="bezeled" stretched size="s" className="min-h-11" loading={update.isPending} onClick={() => submitEdit(request.id)}>Сохранить</Button>
-                    <Button mode="bezeled" size="s" stretched className="min-h-11" disabled={update.isPending} onClick={() => setEditingId(null)}>Отмена</Button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {request.status === "active" && (
-                    <Button mode="bezeled" size="s" stretched className="min-h-11" loading={status.isPending && status.variables?.id === request.id} disabled={status.isPending || cancel.isPending} onClick={() => status.mutate({ id: request.id, status: "paused" })}>
-                      Поставить на паузу
-                    </Button>
-                  )}
-                  {request.status === "paused" && (
-                    <Button mode="bezeled" size="s" stretched className="min-h-11" loading={status.isPending && status.variables?.id === request.id} disabled={status.isPending || cancel.isPending} onClick={() => status.mutate({ id: request.id, status: "active" })}>
-                      Возобновить
-                    </Button>
-                  )}
-                  {(request.status === "active" || request.status === "paused") && (
-                    <>
-                      <Button mode="bezeled" size="s" stretched className="min-h-11" disabled={status.isPending || cancel.isPending} onClick={() => startEdit(request)}>
-                        Редактировать
-                      </Button>
-                      <span className="[&_button]:min-h-11 contents">
-                        <ConfirmAction
-                          label="Отменить запрос"
-                          confirmLabel="Отменить запрос"
-                          description="Запрос будет снят с публикации."
-                          pending={cancel.isPending}
-                          onConfirm={() => cancel.mutate(request.id)}
-                        />
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
+          <datalist id="request-cities">
+            {cities.data?.map((city) => (
+              <option key={city.id} value={city.name} />
+            ))}
+          </datalist>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="ride-earliest" className="sr-only">
+                Не раньше
+              </label>
+              <Input
+                id="ride-earliest"
+                header="Не раньше"
+                before={
+                  <Calendar size={16} className="text-(--tgui--hint_color)" />
+                }
+                type="datetime-local"
+                value={earliest}
+                onChange={(event) => setEarliest(event.target.value)}
+              />
             </div>
-          ))}
+            <div>
+              <label htmlFor="ride-latest" className="sr-only">
+                Не позже
+              </label>
+              <Input
+                id="ride-latest"
+                header="Не позже"
+                before={
+                  <Calendar size={16} className="text-(--tgui--hint_color)" />
+                }
+                type="datetime-local"
+                value={latest}
+                onChange={(event) => setLatest(event.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="ride-seats" className="sr-only">
+              Места
+            </label>
+            <Input
+              id="ride-seats"
+              header="Места"
+              before={<Users size={16} className="text-(--tgui--hint_color)" />}
+              type="number"
+              min="1"
+              max="3"
+              value={seats}
+              onChange={(event) => setSeats(event.target.value)}
+            />
+          </div>
+          {validationError && (
+            <Caption
+              Component="p"
+              role="alert"
+              className="text-(--tg-theme-destructive-text-color)"
+            >
+              {validationError}
+            </Caption>
+          )}
+          {create.error && (
+            <Caption
+              Component="p"
+              role="alert"
+              className="text-(--tg-theme-destructive-text-color)"
+            >
+              {bookingErrorMessage(create.error)}
+            </Caption>
+          )}
+          <Button
+            mode="bezeled"
+            stretched
+            size="l"
+            className="min-h-11"
+            loading={create.isPending}
+            onClick={submit}
+          >
+            Опубликовать запрос
+          </Button>
         </div>
-      </QueryState>
+        {(status.error || cancel.error || update.error) && (
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
+            {bookingErrorMessage(status.error ?? cancel.error ?? update.error)}
+          </Caption>
+        )}
+        <QueryState
+          loading={requests.isLoading}
+          error={requests.error}
+          empty={!requests.data?.length}
+          emptyText="Активных запросов нет."
+          onRetry={() => void requests.refetch()}
+        >
+          <div className="flex flex-col gap-3">
+            {requests.data?.map((request) => (
+              <div
+                key={request.id}
+                className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <Text weight="2" Component="span" className="truncate">
+                    {`${request.fromCity.name} → ${request.toCity.name}`}
+                  </Text>
+                  <StatusPill
+                    tone={request.status === "active" ? "success" : "warning"}
+                  >
+                    {request.status === "active" ? "Активен" : request.status}
+                  </StatusPill>
+                </div>
+                <Caption Component="div">
+                  {`${request.earliestAt} — ${request.latestAt} · ${request.seats} мест`}
+                </Caption>
+                {editingId === request.id ? (
+                  <>
+                    <div>
+                      <label
+                        htmlFor={`ride-edit-earliest-${request.id}`}
+                        className="sr-only"
+                      >
+                        Не раньше
+                      </label>
+                      <Input
+                        id={`ride-edit-earliest-${request.id}`}
+                        header="Не раньше"
+                        type="datetime-local"
+                        value={editEarliest}
+                        onChange={(event) =>
+                          setEditEarliest(event.target.value)
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`ride-edit-latest-${request.id}`}
+                        className="sr-only"
+                      >
+                        Не позже
+                      </label>
+                      <Input
+                        id={`ride-edit-latest-${request.id}`}
+                        header="Не позже"
+                        type="datetime-local"
+                        value={editLatest}
+                        onChange={(event) => setEditLatest(event.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`ride-edit-expires-${request.id}`}
+                        className="sr-only"
+                      >
+                        Действует до
+                      </label>
+                      <Input
+                        id={`ride-edit-expires-${request.id}`}
+                        header="Действует до"
+                        type="datetime-local"
+                        value={editExpires}
+                        onChange={(event) => setEditExpires(event.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`ride-edit-seats-${request.id}`}
+                        className="sr-only"
+                      >
+                        Места
+                      </label>
+                      <Input
+                        id={`ride-edit-seats-${request.id}`}
+                        header="Места"
+                        type="number"
+                        min="1"
+                        max="3"
+                        value={editSeats}
+                        onChange={(event) => setEditSeats(event.target.value)}
+                      />
+                    </div>
+                    {editError && (
+                      <Caption
+                        Component="p"
+                        role="alert"
+                        className="text-(--tg-theme-destructive-text-color)"
+                      >
+                        {editError}
+                      </Caption>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        mode="bezeled"
+                        stretched
+                        size="s"
+                        className="min-h-11"
+                        loading={update.isPending}
+                        onClick={() => submitEdit(request.id)}
+                      >
+                        Сохранить
+                      </Button>
+                      <Button
+                        mode="bezeled"
+                        size="s"
+                        stretched
+                        className="min-h-11"
+                        disabled={update.isPending}
+                        onClick={() => setEditingId(null)}
+                      >
+                        Отмена
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {request.status === "active" && (
+                      <Button
+                        mode="bezeled"
+                        size="s"
+                        stretched
+                        className="min-h-11"
+                        loading={
+                          status.isPending &&
+                          status.variables?.id === request.id
+                        }
+                        disabled={status.isPending || cancel.isPending}
+                        onClick={() =>
+                          status.mutate({ id: request.id, status: "paused" })
+                        }
+                      >
+                        Поставить на паузу
+                      </Button>
+                    )}
+                    {request.status === "paused" && (
+                      <Button
+                        mode="bezeled"
+                        size="s"
+                        stretched
+                        className="min-h-11"
+                        loading={
+                          status.isPending &&
+                          status.variables?.id === request.id
+                        }
+                        disabled={status.isPending || cancel.isPending}
+                        onClick={() =>
+                          status.mutate({ id: request.id, status: "active" })
+                        }
+                      >
+                        Возобновить
+                      </Button>
+                    )}
+                    {(request.status === "active" ||
+                      request.status === "paused") && (
+                      <>
+                        <Button
+                          mode="bezeled"
+                          size="s"
+                          stretched
+                          className="min-h-11"
+                          disabled={status.isPending || cancel.isPending}
+                          onClick={() => startEdit(request)}
+                        >
+                          Редактировать
+                        </Button>
+                        <span className="[&_button]:min-h-11 contents">
+                          <ConfirmAction
+                            label="Отменить запрос"
+                            confirmLabel="Отменить запрос"
+                            description="Запрос будет снят с публикации."
+                            pending={cancel.isPending}
+                            onConfirm={() => cancel.mutate(request.id)}
+                          />
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </QueryState>
       </div>
     </section>
   );

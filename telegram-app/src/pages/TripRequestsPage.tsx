@@ -1,12 +1,26 @@
-import { Avatar, Button, Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
+import {
+  Avatar,
+  Button,
+  Caption,
+  Placeholder,
+  Section,
+  Spinner,
+  Text,
+} from "@telegram-apps/telegram-ui";
 import { FeedCard } from "@/components/FeedCard";
 import { StatusPill } from "@/components/StatusPill";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { bookingErrorMessage, isAuthorizationError } from "@/helpers/bookingErrors";
+import {
+  bookingErrorMessage,
+  isAuthorizationError,
+} from "@/helpers/bookingErrors";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useTripBookingsQuery, useUpdateBookingStatusMutation } from "@/queries/useBookingsQuery";
+import {
+  useTripBookingsQuery,
+  useUpdateBookingStatusMutation,
+} from "@/queries/useBookingsQuery";
 
 /**
  * Заявки пассажиров (паритет VK TripDetailsPanel: управление заявками +
@@ -24,7 +38,9 @@ export function TripRequestsPage() {
     return (
       <>
         <PageHeader title="Заявки пассажиров" />
-        <Placeholder><Spinner size="m" /></Placeholder>
+        <Placeholder>
+          <Spinner size="m" />
+        </Placeholder>
       </>
     );
   }
@@ -41,11 +57,27 @@ export function TripRequestsPage() {
               ? "Заявки видит только водитель поездки."
               : bookingErrorMessage(requests.error)
           }
+          action={
+            <>
+              {!forbidden && (
+                <Button
+                  mode="bezeled"
+                  stretched
+                  onClick={() => void requests.refetch()}
+                >
+                  Повторить
+                </Button>
+              )}
+              <Button
+                mode="outline"
+                stretched
+                onClick={() => navigate("/bookings?segment=driver")}
+              >
+                К моим поездкам
+              </Button>
+            </>
+          }
         >
-          <div className="ButtonRow">
-            {!forbidden && <Button mode="bezeled" onClick={() => void requests.refetch()}>Повторить</Button>}
-            <Button mode="outline" onClick={() => navigate("/bookings?segment=driver")}>К моим поездкам</Button>
-          </div>
           {!isOnline && <p>Проверьте подключение к интернету.</p>}
         </Placeholder>
       </>
@@ -61,63 +93,75 @@ export function TripRequestsPage() {
       <PageHeader title="Заявки пассажиров" />
       <OfflineBanner />
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      {update.error && (
-        <p className="FormError" role="alert">
-          {bookingErrorMessage(update.error)}
-        </p>
-      )}
+        {update.error && (
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
+            {bookingErrorMessage(update.error)}
+          </Caption>
+        )}
         {!items.length && <Placeholder header="Заявок нет" />}
         {pending.length > 0 && (
           <Section header={`Ожидают решения (${pending.length})`}>
             <div className="flex flex-col gap-3 p-4">
               {pending.map((booking) => (
-              <FeedCard
-                key={booking.id}
-                className="p-4 flex flex-col gap-3"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Avatar
-                      size={40}
-                      src={booking.passenger.avatar}
-                      acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
-                    />
-                    <div className="min-w-0">
-                      <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
-                        {booking.passenger.name}
-                      </div>
-                      <div className="text-[11px] text-(--tgui--hint_color)">
-                        {`место ${booking.seat}${booking.comment ? ` · «${booking.comment}»` : ""}`}
+                <FeedCard key={booking.id} className="p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Avatar
+                        size={40}
+                        src={booking.passenger.avatar}
+                        acronym={booking.passenger.name
+                          .slice(0, 1)
+                          .toUpperCase()}
+                      />
+                      <div className="min-w-0">
+                        <Text Component="div" className="truncate">
+                          {booking.passenger.name}
+                        </Text>
+                        <Caption Component="div">
+                          {`место ${booking.seat}${booking.comment ? ` · «${booking.comment}»` : ""}`}
+                        </Caption>
                       </div>
                     </div>
+                    <StatusPill tone="warning" className="shrink-0">
+                      Ожидает решения
+                    </StatusPill>
                   </div>
-                  <StatusPill tone="warning" className="shrink-0">
-                    Ожидает решения
-                  </StatusPill>
-                </div>
-                <div className="flex gap-2">
-                  <Button mode="bezeled"
-                    stretched
-                    size="s"
-                    loading={update.isPending && update.variables?.id === booking.id}
-                    disabled={update.isPending}
-                    onClick={() => update.mutate({ id: booking.id, status: "confirmed" })}
-                  >
-                    Принять
-                  </Button>
-                  <Button
-                    mode="bezeled"
-                    stretched
-                    size="s"
-                    loading={update.isPending && update.variables?.id === booking.id}
-                    disabled={update.isPending}
-                    onClick={() => update.mutate({ id: booking.id, status: "declined" })}
-                  >
-                    Отклонить
-                  </Button>
-                </div>
-              </FeedCard>
-            ))}
+                  <div className="flex gap-2">
+                    <Button
+                      mode="bezeled"
+                      stretched
+                      size="s"
+                      loading={
+                        update.isPending && update.variables?.id === booking.id
+                      }
+                      disabled={update.isPending}
+                      onClick={() =>
+                        update.mutate({ id: booking.id, status: "confirmed" })
+                      }
+                    >
+                      Принять
+                    </Button>
+                    <Button
+                      mode="bezeled"
+                      stretched
+                      size="s"
+                      loading={
+                        update.isPending && update.variables?.id === booking.id
+                      }
+                      disabled={update.isPending}
+                      onClick={() =>
+                        update.mutate({ id: booking.id, status: "declined" })
+                      }
+                    >
+                      Отклонить
+                    </Button>
+                  </div>
+                </FeedCard>
+              ))}
             </div>
           </Section>
         )}
@@ -125,41 +169,50 @@ export function TripRequestsPage() {
           <Section header={`Подтверждены (${confirmed.length})`}>
             <div className="flex flex-col gap-3 p-4">
               {confirmed.map((booking) => (
-              <FeedCard
-                key={booking.id}
-                className="p-4 flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Avatar
-                    size={40}
-                    src={booking.passenger.avatar}
-                    acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
-                  />
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
-                      {booking.passenger.name}
-                    </div>
-                    <div className="text-[11px] text-(--tgui--hint_color)">
-                      {`место ${booking.seat}`}
+                <FeedCard
+                  key={booking.id}
+                  className="p-4 flex items-center justify-between gap-2"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar
+                      size={40}
+                      src={booking.passenger.avatar}
+                      acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
+                    />
+                    <div className="min-w-0">
+                      <Text Component="div" className="truncate">
+                        {booking.passenger.name}
+                      </Text>
+                      <Caption Component="div">
+                        {`место ${booking.seat}`}
+                      </Caption>
                     </div>
                   </div>
-                </div>
-                <StatusPill tone="success" className="shrink-0">
-                  Подтверждён
-                </StatusPill>
-              </FeedCard>
-            ))}
+                  <StatusPill tone="success" className="shrink-0">
+                    Подтверждён
+                  </StatusPill>
+                </FeedCard>
+              ))}
             </div>
           </Section>
         )}
-      {requests.hasNextPage && (
-        <Button stretched mode="bezeled" onClick={() => void requests.fetchNextPage()} disabled={requests.isFetchingNextPage}>
-          Показать ещё
+        {requests.hasNextPage && (
+          <Button
+            stretched
+            mode="bezeled"
+            onClick={() => void requests.fetchNextPage()}
+            disabled={requests.isFetchingNextPage}
+          >
+            Показать ещё
+          </Button>
+        )}
+        <Button
+          mode="bezeled"
+          stretched
+          onClick={() => navigate("/bookings?segment=driver")}
+        >
+          К моим поездкам
         </Button>
-      )}
-      <Button mode="bezeled" stretched onClick={() => navigate("/bookings?segment=driver")}>
-        К моим поездкам
-      </Button>
       </div>
     </>
   );

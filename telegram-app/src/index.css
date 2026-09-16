@@ -17,8 +17,14 @@
   /* Safe-area из SDK (viewport.bindCssVars даёт --tg-viewport-*,
      обновляется по safeAreaChanged), fallback — системный env()
      для браузера вне Telegram. */
-  --tg-safe-area-inset-top: var(--tg-viewport-safe-area-inset-top, env(safe-area-inset-top, 0px));
-  --tg-safe-area-inset-bottom: var(--tg-viewport-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --tg-safe-area-inset-top: var(
+    --tg-viewport-safe-area-inset-top,
+    env(safe-area-inset-top, 0px)
+  );
+  --tg-safe-area-inset-bottom: var(
+    --tg-viewport-safe-area-inset-bottom,
+    env(safe-area-inset-bottom, 0px)
+  );
   --tg-viewport-height: 100dvh;
   --tg-viewport-stable-height: 100dvh;
 
@@ -58,7 +64,9 @@
   --app-rating: #f0b93b;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   min-height: 100%;
   min-height: var(--tg-viewport-height, 100dvh);
 }
@@ -81,7 +89,9 @@ body {
 
 /* Prevent auto-zoom on iOS Safari/Telegram WebView when focusing text inputs
    (tgui не выставляет 16px сам — дублируем поверх его стилей). */
-input, select, textarea {
+input,
+select,
+textarea {
   font-size: 16px !important;
 }
 
@@ -101,42 +111,6 @@ input, select, textarea {
 
 .AppShell__content {
   padding-bottom: 96px;
-}
-
-/* Поле формы: div-контейнер + явный <label htmlFor> + tgui-контрол внутри.
-   Outer <label> здесь НЕЛЬЗЯ: корень tgui Input/Select/Textarea — div с
-   внутренним <label> (FormInput), вложенный label в label — невалидно
-   (a11y: invalid nesting). Несколько label на один контрол — валидно. */
-.FormField {
-  display: grid;
-  gap: 6px;
-}
-
-.FormField > label,
-.FormField > legend {
-  color: var(--tgui--hint_color, var(--tg-theme-hint-color, #707579));
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.FormError {
-  margin: 8px 16px;
-  color: var(--tg-theme-destructive-text-color, #d14e4e);
-}
-
-/* Ошибка под конкретным полем формы (рядом с подсвеченным инпутом,
-   а не общим блоком внизу страницы — иначе её не видно). */
-.FieldError {
-  margin: 2px 0 0;
-  color: var(--tg-theme-destructive-text-color, #d14e4e);
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.ButtonRow {
-  display: grid;
-  gap: 8px;
-  padding: 0 16px 16px;
 }
 
 /* Статус-пилюля на --app-* токенах (замена инлайн-суффиксов
@@ -201,73 +175,20 @@ input, select, textarea {
   color: var(--tgui--button_text_color, #ffffff);
 }
 
-/* Кружок иконки для Cell.before (язык ProfileTab примера):
-   w-8 h-8 rounded-full, тон — пастель из --app-* токенов. */
-.icon-circle {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.icon-circle--info {
-  color: var(--app-info);
-  background: var(--app-info-bg);
-}
-
-.icon-circle--success {
-  color: var(--app-success);
-  background: var(--app-success-bg);
-}
-
-.icon-circle--warning {
-  color: var(--app-warning);
-  background: var(--app-warning-bg);
-}
-
-.icon-circle--danger {
-  color: var(--app-danger);
-  background: var(--app-danger-bg);
-}
-
-.icon-circle--purple {
-  color: var(--app-purple);
-  background: var(--app-purple-bg);
-}
-
-.icon-circle--rating {
-  color: var(--app-rating);
-  background: var(--app-warning-bg);
-}
-
 /* Уведомления/поддержка/жалобы: FAQ и карточки обращений — tgui Accordion,
    карточки списков — tailwind-утилиты на tgui-переменных (язык примера). */
-.Onboarding, .AccountState {
+.Onboarding,
+.AccountState {
   box-sizing: border-box;
   width: min(100%, 640px);
   min-height: 100%;
   margin: 0 auto;
-  padding: max(16px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
-}
-
-.Onboarding__legal {
-  margin: 8px 16px 0;
-  color: var(--tg-theme-hint-color, #707579);
-  font-size: 13px;
-  line-height: 1.4;
+  padding: max(16px, env(safe-area-inset-top)) 0
+    max(24px, env(safe-area-inset-bottom));
 }
 
 /* Отзывы: форма — tailwind-карточка, список — карточки, табы —
    tgui SegmentedControl. Звёзды ввода — нативный tgui Rating (см. .RatingInput ниже). */
-
-.ReviewTarget {
-  margin: 4px 16px;
-  font-size: 15px;
-  font-weight: 600;
-}
 
 /* Оценка — нативный tgui Rating (RatingInput: max 5, precision 1,
    radiogroup + aria-labelledby="review-rating-label"). Звёзды tgui 40px →
@@ -283,17 +204,4 @@ input, select, textarea {
 .RatingInput svg {
   width: 44px;
   height: 44px;
-}
-
-.ReviewCounter {
-  margin: 4px 16px 0;
-  color: var(--tg-theme-hint-color, #707579);
-  font-size: 13px;
-  text-align: right;
-}
-
-.ReviewSuccess {
-  margin: 8px 16px;
-  color: var(--app-success);
-  font-size: 14px;
 }

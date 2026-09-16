@@ -1,10 +1,12 @@
 import { memo, useRef, useState } from "react";
 import {
   Button,
+  Caption,
   Input,
   Modal,
   Placeholder,
   Select,
+  Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
@@ -63,19 +65,17 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
   return (
     <FeedCard className="p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
+        <Text weight="2" Component="span">
           {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
-        </span>
+        </Text>
         <StatusPill tone={reportStatusTone(report.status)} className="shrink-0">
           {REPORT_STATUS_LABELS[report.status]}
         </StatusPill>
       </div>
-      <span className="text-[11px] text-(--tgui--hint_color)">
-        {formatDate(report.createdAt)}
-      </span>
-      <div className="text-[13px] text-(--tgui--text_color) leading-relaxed">
+      <Caption Component="span">{formatDate(report.createdAt)}</Caption>
+      <Text Component="div" className="leading-relaxed">
         {report.description}
-      </div>
+      </Text>
     </FeedCard>
   );
 });
@@ -144,7 +144,8 @@ export function ReportsRoute() {
 export const ReportsBody = memo(function ReportsBody() {
   const [targetType, setTargetType] = useState<ReportTargetType>("trip");
   const [targetId, setTargetId] = useState("");
-  const [category, setCategory] = useState<(typeof REPORT_CATEGORIES)[number]>("safety");
+  const [category, setCategory] =
+    useState<(typeof REPORT_CATEGORIES)[number]>("safety");
   const [description, setDescription] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -170,7 +171,9 @@ export const ReportsBody = memo(function ReportsBody() {
       return;
     }
     if (alreadyReported) {
-      setFormError("Жалоба уже отправлена: повторная жалоба на этот объект недоступна.");
+      setFormError(
+        "Жалоба уже отправлена: повторная жалоба на этот объект недоступна.",
+      );
       return;
     }
     setFormError(null);
@@ -222,14 +225,17 @@ export const ReportsBody = memo(function ReportsBody() {
   return (
     <div className="flex flex-col gap-3.5 pt-1 pb-6">
       <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
+        <Text weight="2" Component="span">
           Сообщите о проблеме
-        </span>
+        </Text>
         <MutationError error={create.error} />
-        <div className="FormField">
-          <label htmlFor="report-target-type">Что случилось</label>
+        <div>
+          <label htmlFor="report-target-type" className="sr-only">
+            Что случилось
+          </label>
           <Select
             id="report-target-type"
+            header="Что случилось"
             value={targetType}
             onChange={(event) => {
               const next = event.target.value;
@@ -247,10 +253,13 @@ export const ReportsBody = memo(function ReportsBody() {
             )}
           </Select>
         </div>
-        <div className="FormField">
-          <label htmlFor="report-target-id">Идентификатор объекта</label>
+        <div>
+          <label htmlFor="report-target-id" className="sr-only">
+            Идентификатор объекта
+          </label>
           <Input
             id="report-target-id"
+            header="Идентификатор объекта"
             placeholder="Например: идентификатор поездки из её страницы"
             value={targetId}
             onChange={(event) => {
@@ -260,10 +269,13 @@ export const ReportsBody = memo(function ReportsBody() {
             }}
           />
         </div>
-        <div className="FormField">
-          <label htmlFor="report-category">Причина</label>
+        <div>
+          <label htmlFor="report-category" className="sr-only">
+            Причина
+          </label>
           <Select
             id="report-category"
+            header="Причина"
             value={category}
             onChange={(event) => {
               const next = event.target.value;
@@ -278,16 +290,19 @@ export const ReportsBody = memo(function ReportsBody() {
             ))}
           </Select>
         </div>
-        <div className="FormField">
-          <label htmlFor="report-description">Описание</label>
+        <div>
+          <label htmlFor="report-description" className="sr-only">
+            Описание
+          </label>
           <Textarea
             id="report-description"
+            header="Описание"
             rows={4}
             maxLength={REPORT_DESCRIPTION_MAX_LENGTH}
             placeholder="Опишите, что произошло"
             value={description}
             aria-invalid={Boolean(formError)}
-            status={formError ? "error" : "default"}
+            status={formError ? "error" : undefined}
             onChange={(event) => {
               setDescription(event.target.value);
               if (formError) setFormError(null);
@@ -296,26 +311,32 @@ export const ReportsBody = memo(function ReportsBody() {
           />
         </div>
         {description.length > 0 && (
-          <p className="ReviewCounter" aria-live="polite">
+          <Caption Component="p" className="text-right" aria-live="polite">
             {description.length}/{REPORT_DESCRIPTION_MAX_LENGTH}
-          </p>
+          </Caption>
         )}
         {alreadyReported && (
-          <p className="ReviewCounter" aria-live="polite">
-            Вы уже отправляли жалобу на этот объект. Повторная отправка недоступна.
-          </p>
+          <Caption Component="p" className="text-right" aria-live="polite">
+            Вы уже отправляли жалобу на этот объект. Повторная отправка
+            недоступна.
+          </Caption>
         )}
         {formError && (
-          <p className="FormError" role="alert">
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
             {formError}
-          </p>
+          </Caption>
         )}
         {success && (
-          <p className="ReviewSuccess" role="status">
+          <Text Component="p" role="status" className="text-(--app-success)">
             Жалоба отправлена
-          </p>
+          </Text>
         )}
-        <Button mode="bezeled"
+        <Button
+          mode="bezeled"
           stretched
           size="l"
           className="min-h-11"
@@ -328,9 +349,9 @@ export const ReportsBody = memo(function ReportsBody() {
       </div>
 
       <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
+        <Text weight="2" Component="span">
           Мои жалобы
-        </span>
+        </Text>
         <QueryState
           loading={myReports.isLoading}
           error={myReports.error}

@@ -1,12 +1,11 @@
-import {
-  memo,
-  useMemo,
-} from "react";
+import { memo, useMemo } from "react";
 import {
   Button,
+  Caption,
   Modal,
   Placeholder,
   Spinner,
+  Text,
 } from "@telegram-apps/telegram-ui";
 import { useNavigate, useParams } from "react-router-dom";
 import { LazyAvatar } from "@/components/LazyAvatar";
@@ -51,12 +50,12 @@ const PendingBookingCard = memo(function PendingBookingCard({
             alt={booking.passenger.name}
           />
           <div className="min-w-0">
-            <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
+            <Text Component="div" className="truncate">
               {booking.passenger.name}
-            </div>
-            <div className="text-[11px] text-(--tgui--hint_color)">
+            </Text>
+            <Caption Component="div">
               {`место ${booking.seat}${booking.comment ? ` · «${booking.comment}»` : ""}`}
-            </div>
+            </Caption>
           </div>
         </div>
         <StatusPill tone="warning" className="shrink-0">
@@ -64,7 +63,8 @@ const PendingBookingCard = memo(function PendingBookingCard({
         </StatusPill>
       </div>
       <div className="flex gap-2">
-        <Button mode="bezeled"
+        <Button
+          mode="bezeled"
           stretched
           size="s"
           className="min-h-11"
@@ -104,12 +104,10 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
           alt={booking.passenger.name}
         />
         <div className="min-w-0">
-          <div className="text-[13px] font-medium text-(--tgui--text_color) truncate">
+          <Text Component="div" className="truncate">
             {booking.passenger.name}
-          </div>
-          <div className="text-[11px] text-(--tgui--hint_color)">
-            {`место ${booking.seat}`}
-          </div>
+          </Text>
+          <Caption Component="div">{`место ${booking.seat}`}</Caption>
         </div>
       </div>
       <StatusPill tone="success" className="shrink-0">
@@ -228,24 +226,27 @@ export const TripRequestsBody = memo(function TripRequestsBody({
               ? "Заявки видит только водитель поездки."
               : bookingErrorMessage(requests.error)
           }
-        >
-          <div className="ButtonRow">
-            {!forbidden && (
-              <Button mode="bezeled"
-                className="min-h-11"
-                onClick={() => void requests.refetch()}
+          action={
+            <>
+              {!forbidden && (
+                <Button
+                  mode="bezeled"
+                  stretched
+                  onClick={() => void requests.refetch()}
+                >
+                  Повторить
+                </Button>
+              )}
+              <Button
+                mode="outline"
+                stretched
+                onClick={() => navigate("/bookings?segment=driver")}
               >
-                Повторить
+                К моим поездкам
               </Button>
-            )}
-            <Button
-              mode="outline"
-              className="min-h-11"
-              onClick={() => navigate("/bookings?segment=driver")}
-            >
-              К моим поездкам
-            </Button>
-          </div>
+            </>
+          }
+        >
           {!isOnline && <p>Проверьте подключение к интернету.</p>}
         </Placeholder>
       </>
@@ -257,9 +258,13 @@ export const TripRequestsBody = memo(function TripRequestsBody({
       <OfflineBanner />
       <div className="flex flex-col gap-3.5 pt-1">
         {update.error && (
-          <p className="FormError" role="alert">
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
             {bookingErrorMessage(update.error)}
-          </p>
+          </Caption>
         )}
         {!items.length && <Placeholder header="Заявок нет" />}
         {pending.length > 0 && (
@@ -268,25 +273,31 @@ export const TripRequestsBody = memo(function TripRequestsBody({
             aria-live="polite"
             aria-label="Ожидают решения"
           >
-            <span className="text-[13px] font-semibold text-(--tgui--hint_color) px-1">
+            <Caption weight="2" Component="span" className="px-1">
               {`Ожидают решения (${pending.length})`}
-            </span>
+            </Caption>
             {pending.map((booking) => (
               <PendingBookingCard
                 key={booking.id}
                 booking={booking}
                 pending={update.isPending}
                 onAccept={(id) =>
-                  update.mutate({ id, status: "confirmed" }, {
-                    onSuccess: () => haptic.success(),
-                    onError: () => haptic.error(),
-                  })
+                  update.mutate(
+                    { id, status: "confirmed" },
+                    {
+                      onSuccess: () => haptic.success(),
+                      onError: () => haptic.error(),
+                    },
+                  )
                 }
                 onDecline={(id) =>
-                  update.mutate({ id, status: "declined" }, {
-                    onSuccess: () => haptic.success(),
-                    onError: () => haptic.error(),
-                  })
+                  update.mutate(
+                    { id, status: "declined" },
+                    {
+                      onSuccess: () => haptic.success(),
+                      onError: () => haptic.error(),
+                    },
+                  )
                 }
               />
             ))}
@@ -294,9 +305,9 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         )}
         {confirmed.length > 0 && (
           <div className="flex flex-col gap-3" aria-label="Подтверждены">
-            <span className="text-[13px] font-semibold text-(--tgui--hint_color) px-1">
+            <Caption weight="2" Component="span" className="px-1">
               {`Подтверждены (${confirmed.length})`}
-            </span>
+            </Caption>
             {confirmed.map((booking) => (
               <ConfirmedBookingCard key={booking.id} booking={booking} />
             ))}

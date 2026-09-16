@@ -16,18 +16,19 @@ export function AppHeader() {
                 у «Едем» есть спуск «д» под базой, у капс-пилюли — нет;
                 items-center ставит пилюлю визуально выше строки. */}
             <div className="flex items-baseline justify-center gap-1.5">
-              <Title
-                level="2"
-                weight="2"
-                className="text-[18px]! tracking-tight leading-none font-bold"
-              >
+              <Title level="2" weight="2">
                 Едем
               </Title>
-              <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-(--tgui--secondary_fill) text-(--tgui--link_color) leading-none">
+              <Caption
+                weight="2"
+                caps
+                Component="span"
+                className="text-(--tgui--link_color)"
+              >
                 Попутчики
-              </span>
+              </Caption>
             </div>
-            <Caption className="text-(--tgui--hint_color)! text-[11px]! leading-tight block mt-0.5">
+            <Caption Component="div" className="mt-0.5">
               Вологодская область · между городами и сёлами
             </Caption>
           </div>

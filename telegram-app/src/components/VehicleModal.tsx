@@ -1,9 +1,11 @@
+import { useCallback, useRef, useState } from "react";
 import {
-  useCallback,
-  useRef,
-  useState,
-} from "react";
-import { Button, Input, Modal } from "@telegram-apps/telegram-ui";
+  Button,
+  Caption,
+  Input,
+  Modal,
+  Text,
+} from "@telegram-apps/telegram-ui";
 import { Car, Hash, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
@@ -31,9 +33,21 @@ type Vehicle = NonNullable<ReturnType<typeof useVehicleQuery>["vehicle"]>;
  * Автомобиль водителя — route-backed шторка (роут /vehicle остаётся источником правды, вход из
  * ProfilePage тем же navigate("/vehicle") — см. VehicleRoute).
  */
-export function VehicleModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function VehicleModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   return (
-    <Modal open={open} onOpenChange={(next) => { if (!next) onClose(); }} header={<Modal.Header>Автомобиль</Modal.Header>}>
+    <Modal
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      header={<Modal.Header>Автомобиль</Modal.Header>}
+    >
       <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto">
         <VehicleBody onDone={onClose} />
       </div>
@@ -66,9 +80,15 @@ export function VehicleRoute() {
 /** Терминальный экран бана/удаления mid-session (зеркально VehiclePage). */
 function VehicleTerminal({ deleted }: { deleted: boolean }) {
   return (
-    <p className="FormError px-4 pt-4" role="alert">
-      {deleted ? "Профиль удалён — данные автомобиля недоступны." : "Действие недоступно: аккаунт заблокирован."}
-    </p>
+    <Caption
+      Component="p"
+      className="px-4 pt-4 text-(--tg-theme-destructive-text-color)"
+      role="alert"
+    >
+      {deleted
+        ? "Профиль удалён — данные автомобиля недоступны."
+        : "Действие недоступно: аккаунт заблокирован."}
+    </Caption>
   );
 }
 
@@ -81,23 +101,55 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
   const vehicleQuery = useVehicleQuery();
   const vehicle = vehicleQuery.vehicle ?? null;
   const remove = useRemoveVehicleMutation();
-  if (vehicleQuery.error instanceof ApiError && vehicleQuery.error.status === 403) {
-    return <VehicleTerminal deleted={vehicleQuery.error.message === "Account is deleted"} />;
+  if (
+    vehicleQuery.error instanceof ApiError &&
+    vehicleQuery.error.status === 403
+  ) {
+    return (
+      <VehicleTerminal
+        deleted={vehicleQuery.error.message === "Account is deleted"}
+      />
+    );
   }
   return (
-    <QueryState loading={vehicleQuery.isLoading} error={vehicleQuery.error} empty={!vehicleQuery.data} emptyText="Не удалось загрузить автомобиль." onRetry={() => void vehicleQuery.refetch()}>
+    <QueryState
+      loading={vehicleQuery.isLoading}
+      error={vehicleQuery.error}
+      empty={!vehicleQuery.data}
+      emptyText="Не удалось загрузить автомобиль."
+      onRetry={() => void vehicleQuery.refetch()}
+    >
       {vehicleQuery.data && (
         <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
           {!vehicle && (
-            <p className="text-[13px] text-(--tgui--hint_color) leading-relaxed">
+            <Caption Component="p" className="leading-relaxed">
               Чтобы публиковать поездки, добавьте автомобиль.
-            </p>
+            </Caption>
           )}
           <VehicleForm vehicle={vehicle} onDone={onDone} />
           {vehicle && (
             <>
-              <ConfirmAction label="Удалить автомобиль" confirmLabel="Да, удалить" description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано." pending={remove.isPending} onConfirm={() => remove.mutate(undefined, { onSuccess: () => haptic.success(), onError: () => haptic.error() })} />
-              {remove.isError && <p className="FormError" role="alert">{vehicleRemoveErrorMessage(remove.error)}</p>}
+              <ConfirmAction
+                label="Удалить автомобиль"
+                confirmLabel="Да, удалить"
+                description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано."
+                pending={remove.isPending}
+                onConfirm={() =>
+                  remove.mutate(undefined, {
+                    onSuccess: () => haptic.success(),
+                    onError: () => haptic.error(),
+                  })
+                }
+              />
+              {remove.isError && (
+                <Caption
+                  Component="p"
+                  role="alert"
+                  className="text-(--tg-theme-destructive-text-color)"
+                >
+                  {vehicleRemoveErrorMessage(remove.error)}
+                </Caption>
+              )}
             </>
           )}
         </div>
@@ -107,7 +159,13 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
 }
 
 /** Добавление/редактирование через POST /users/me/car (лимиты — vehicleValidation). */
-function VehicleForm({ vehicle, onDone }: { vehicle: Vehicle | null; onDone: () => void }) {
+function VehicleForm({
+  vehicle,
+  onDone,
+}: {
+  vehicle: Vehicle | null;
+  onDone: () => void;
+}) {
   const upsert = useUpsertVehicleMutation();
   const [model, setModel] = useState(vehicle?.model ?? "");
   const [color, setColor] = useState(vehicle?.color ?? "");
@@ -122,7 +180,10 @@ function VehicleForm({ vehicle, onDone }: { vehicle: Vehicle | null; onDone: () 
   const save = () => {
     if (isSubmittingRef.current) return;
     const error = validateVehicleForm(model, color, plate);
-    if (error) { setFormError(error); return; }
+    if (error) {
+      setFormError(error);
+      return;
+    }
     setFormError(null);
     isSubmittingRef.current = true;
     upsert.mutate(normalizeVehicleForm(model, color, plate), {
@@ -131,27 +192,102 @@ function VehicleForm({ vehicle, onDone }: { vehicle: Vehicle | null; onDone: () 
         onDone();
       },
       onError: () => haptic.error(),
-      onSettled: () => { isSubmittingRef.current = false; },
+      onSettled: () => {
+        isSubmittingRef.current = false;
+      },
     });
   };
   return (
     <>
-      <div className="FormField">
-        <label htmlFor="vehicle-model">Модель</label>
-        <Input id="vehicle-model" before={<Car size={17} className="text-(--app-info)" />} value={model} maxLength={VEHICLE_LIMITS.model} placeholder="Skoda Octavia" onChange={(e) => { setModel(e.target.value.slice(0, VEHICLE_LIMITS.model)); if (formError) setFormError(null); }} />
+      <div>
+        <label htmlFor="vehicle-model" className="sr-only">
+          Модель
+        </label>
+        <Input
+          id="vehicle-model"
+          header="Модель"
+          before={<Car size={17} className="text-(--app-info)" />}
+          value={model}
+          maxLength={VEHICLE_LIMITS.model}
+          placeholder="Skoda Octavia"
+          onChange={(e) => {
+            setModel(e.target.value.slice(0, VEHICLE_LIMITS.model));
+            if (formError) setFormError(null);
+          }}
+        />
       </div>
-      <div className="FormField">
-        <label htmlFor="vehicle-color">Цвет</label>
-        <Input id="vehicle-color" before={<Palette size={16} className="text-(--tgui--hint_color)" />} value={color} maxLength={VEHICLE_LIMITS.color} placeholder="белый" onChange={(e) => { setColor(e.target.value.slice(0, VEHICLE_LIMITS.color)); if (formError) setFormError(null); }} />
+      <div>
+        <label htmlFor="vehicle-color" className="sr-only">
+          Цвет
+        </label>
+        <Input
+          id="vehicle-color"
+          header="Цвет"
+          before={<Palette size={16} className="text-(--tgui--hint_color)" />}
+          value={color}
+          maxLength={VEHICLE_LIMITS.color}
+          placeholder="белый"
+          onChange={(e) => {
+            setColor(e.target.value.slice(0, VEHICLE_LIMITS.color));
+            if (formError) setFormError(null);
+          }}
+        />
       </div>
-      <div className="FormField">
-        <label htmlFor="vehicle-plate">Номер (необязательно)</label>
-        <Input id="vehicle-plate" before={<Hash size={16} className="text-(--tgui--hint_color)" />} value={plate} maxLength={VEHICLE_LIMITS.plate} placeholder="Например: 583" onChange={(e) => { setPlate(e.target.value.toUpperCase().slice(0, VEHICLE_LIMITS.plate)); if (formError) setFormError(null); }} />
+      <div>
+        <label htmlFor="vehicle-plate" className="sr-only">
+          Номер (необязательно)
+        </label>
+        <Input
+          id="vehicle-plate"
+          header="Номер (необязательно)"
+          before={<Hash size={16} className="text-(--tgui--hint_color)" />}
+          value={plate}
+          maxLength={VEHICLE_LIMITS.plate}
+          placeholder="Например: 583"
+          onChange={(e) => {
+            setPlate(
+              e.target.value.toUpperCase().slice(0, VEHICLE_LIMITS.plate),
+            );
+            if (formError) setFormError(null);
+          }}
+        />
       </div>
-      <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">Номер — примета для узнавания, видна только вам. Чтобы убрать номер, очистите поле и сохраните.</p>
-      {(formError || upsert.error) && <p className="FormError" role="alert">{formError ?? vehicleServerErrorMessage(upsert.error)}</p>}
-      <Button mode="bezeled" stretched size="l" loading={upsert.isPending} onClick={save} className="min-h-11">Сохранить автомобиль</Button>
-      <Button mode="bezeled" stretched disabled={upsert.isPending} onClick={() => { setFormError(null); upsert.reset(); onDone(); }} className="min-h-11">Отмена</Button>
+      <Caption Component="p" className="leading-relaxed">
+        Номер — примета для узнавания, видна только вам. Чтобы убрать номер,
+        очистите поле и сохраните.
+      </Caption>
+      {(formError || upsert.error) && (
+        <Caption
+          Component="p"
+          role="alert"
+          className="text-(--tg-theme-destructive-text-color)"
+        >
+          {formError ?? vehicleServerErrorMessage(upsert.error)}
+        </Caption>
+      )}
+      <Button
+        mode="bezeled"
+        stretched
+        size="l"
+        loading={upsert.isPending}
+        onClick={save}
+        className="min-h-11"
+      >
+        Сохранить автомобиль
+      </Button>
+      <Button
+        mode="bezeled"
+        stretched
+        disabled={upsert.isPending}
+        onClick={() => {
+          setFormError(null);
+          upsert.reset();
+          onDone();
+        }}
+        className="min-h-11"
+      >
+        Отмена
+      </Button>
     </>
   );
 }

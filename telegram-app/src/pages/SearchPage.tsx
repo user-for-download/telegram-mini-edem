@@ -56,8 +56,12 @@ function presetFromParams(params: URLSearchParams): SearchFormState {
  */
 export function SearchPage() {
   const [searchParams] = useSearchParams();
-  const [form, setForm] = useState<SearchFormState>(() => presetFromParams(searchParams));
-  const [submitted, setSubmitted] = useState<SearchFormState>(() => presetFromParams(searchParams));
+  const [form, setForm] = useState<SearchFormState>(() =>
+    presetFromParams(searchParams),
+  );
+  const [submitted, setSubmitted] = useState<SearchFormState>(() =>
+    presetFromParams(searchParams),
+  );
   const [showFilters, setShowFilters] = useState(false);
 
   const trips = useInfiniteTripsQuery(buildSearchFilters(submitted));
@@ -73,12 +77,18 @@ export function SearchPage() {
     },
   });
 
-  const set = <K extends keyof SearchFormState>(key: K, value: SearchFormState[K]) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const set = <K extends keyof SearchFormState>(
+    key: K,
+    value: SearchFormState[K],
+  ) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const swapCities = () => {
     haptic.selection();
-    setForm((prev) => ({ ...prev, fromCity: prev.toCity, toCity: prev.fromCity }));
+    setForm((prev) => ({
+      ...prev,
+      fromCity: prev.toCity,
+      toCity: prev.fromCity,
+    }));
   };
 
   const toggleTag = (tag: TripTag) =>
@@ -101,7 +111,9 @@ export function SearchPage() {
   };
 
   const hasActiveFilters =
-    form.maxPrice !== null || form.tags.length > 0 || form.dateSegment !== "all";
+    form.maxPrice !== null ||
+    form.tags.length > 0 ||
+    form.dateSegment !== "all";
 
   return (
     <>
@@ -136,144 +148,147 @@ export function SearchPage() {
               </Chip>
             </div>
 
-          <div className="flex flex-col gap-1.5 relative">
-            <Input
-              id="search-from"
-              before={<MapPin size={17} className="text-(--app-info)" />}
-              after={
-                form.fromCity ? (
-                  <IconButton
-                    type="button"
-                    size="s"
-                    mode="plain"
-                    onClick={() => set("fromCity", "")}
-                    aria-label="Очистить откуда"
-                  >
-                    <X size={14} className="text-(--tgui--hint_color)" />
-                  </IconButton>
-                ) : undefined
-              }
-              value={form.fromCity}
-              onChange={(event) => set("fromCity", event.target.value)}
-              placeholder="Откуда (город или село)"
-            />
-            <Input
-              id="search-to"
-              before={<MapPin size={17} className="text-(--app-success)" />}
-              after={
-                form.toCity ? (
-                  <IconButton
-                    type="button"
-                    size="s"
-                    mode="plain"
-                    onClick={() => set("toCity", "")}
-                    aria-label="Очистить куда"
-                  >
-                    <X size={14} className="text-(--tgui--hint_color)" />
-                  </IconButton>
-                ) : undefined
-              }
-              value={form.toCity}
-              onChange={(event) => set("toCity", event.target.value)}
-              placeholder="Куда (город или село)"
-            />
-            <IconButton
-              type="button"
-              size="s"
-              mode="plain"
-              onClick={swapCities}
-              aria-label="Поменять направление"
-              className="absolute! right-2! top-1/2! -translate-y-1/2! bg-(--tgui--section_bg_color)! shadow-xs!"
-            >
-              <ArrowRightLeft size={14} className="text-(--app-info)" />
-            </IconButton>
-          </div>
-
-          <div role="tablist" aria-label="Дата поездки">
-            <SegmentedControl>
-              {DATE_SEGMENTS.map((option) => (
-                <SegmentedControl.Item
-                  key={option.value}
-                  role="tab"
-                  selected={form.dateSegment === option.value}
-                  aria-selected={form.dateSegment === option.value}
-                  onClick={() => {
-                    haptic.selection();
-                    set("dateSegment", option.value);
-                  }}
-                >
-                  {option.label}
-                </SegmentedControl.Item>
-              ))}
-            </SegmentedControl>
-          </div>
-
-          {showFilters && (
-            <div className="pt-2 border-t border-(--tgui--outline) flex flex-col gap-3">
-              <div className="FormField">
-                <div className="flex items-center justify-between">
-                  <span id="search-max-price-label">Цена не выше</span>
-                  <span
-                    aria-hidden="true"
-                    className="text-xs font-medium text-(--tgui--hint_color)"
-                  >
-                    {formatMaxPriceLabel(form.maxPrice)}
-                  </span>
-                </div>
-                <Slider
-                  min={PRICE_SLIDER_MIN}
-                  max={PRICE_SLIDER_MAX}
-                  step={PRICE_SLIDER_STEP}
-                  value={form.maxPrice ?? PRICE_SLIDER_MAX}
-                  onChange={(value) =>
-                    set("maxPrice", value >= PRICE_SLIDER_MAX ? null : value)
-                  }
-                  aria-labelledby="search-max-price-label"
-                  getAriaValueText={(value) =>
-                    value >= PRICE_SLIDER_MAX
-                      ? "Любая цена"
-                      : formatMaxPriceLabel(value)
-                  }
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-(--tgui--text_color)">
-                  Условия поездки
-                </span>
-                <div className="TagChips">
-                  {TRIP_TAGS.map((tag) => (
-                    <Chip
-                      key={tag}
-                      className="TagChip"
-                      mode={form.tags.includes(tag) ? "elevated" : "mono"}
-                      Component="button"
-                      aria-pressed={form.tags.includes(tag)}
-                      onClick={() => {
-                        haptic.selection();
-                        toggleTag(tag);
-                      }}
+            <div className="flex flex-col gap-1.5 relative">
+              <Input
+                id="search-from"
+                before={<MapPin size={17} className="text-(--app-info)" />}
+                after={
+                  form.fromCity ? (
+                    <IconButton
+                      type="button"
+                      size="s"
+                      mode="plain"
+                      onClick={() => set("fromCity", "")}
+                      aria-label="Очистить откуда"
                     >
-                      {tag}
-                    </Chip>
-                  ))}
+                      <X size={14} className="text-(--tgui--hint_color)" />
+                    </IconButton>
+                  ) : undefined
+                }
+                value={form.fromCity}
+                onChange={(event) => set("fromCity", event.target.value)}
+                placeholder="Откуда (город или село)"
+              />
+              <Input
+                id="search-to"
+                before={<MapPin size={17} className="text-(--app-success)" />}
+                after={
+                  form.toCity ? (
+                    <IconButton
+                      type="button"
+                      size="s"
+                      mode="plain"
+                      onClick={() => set("toCity", "")}
+                      aria-label="Очистить куда"
+                    >
+                      <X size={14} className="text-(--tgui--hint_color)" />
+                    </IconButton>
+                  ) : undefined
+                }
+                value={form.toCity}
+                onChange={(event) => set("toCity", event.target.value)}
+                placeholder="Куда (город или село)"
+              />
+              <IconButton
+                type="button"
+                size="s"
+                mode="plain"
+                onClick={swapCities}
+                aria-label="Поменять направление"
+                className="absolute! right-2! top-1/2! -translate-y-1/2! bg-(--tgui--section_bg_color)! shadow-xs!"
+              >
+                <ArrowRightLeft size={14} className="text-(--app-info)" />
+              </IconButton>
+            </div>
+
+            <div role="tablist" aria-label="Дата поездки">
+              <SegmentedControl>
+                {DATE_SEGMENTS.map((option) => (
+                  <SegmentedControl.Item
+                    key={option.value}
+                    role="tab"
+                    selected={form.dateSegment === option.value}
+                    aria-selected={form.dateSegment === option.value}
+                    onClick={() => {
+                      haptic.selection();
+                      set("dateSegment", option.value);
+                    }}
+                  >
+                    {option.label}
+                  </SegmentedControl.Item>
+                ))}
+              </SegmentedControl>
+            </div>
+
+            {showFilters && (
+              <div className="pt-2 border-t border-(--tgui--outline) flex flex-col gap-3">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span id="search-max-price-label">Цена не выше</span>
+                    <Caption Component="span" aria-hidden="true">
+                      {formatMaxPriceLabel(form.maxPrice)}
+                    </Caption>
+                  </div>
+                  <Slider
+                    min={PRICE_SLIDER_MIN}
+                    max={PRICE_SLIDER_MAX}
+                    step={PRICE_SLIDER_STEP}
+                    value={form.maxPrice ?? PRICE_SLIDER_MAX}
+                    onChange={(value) =>
+                      set("maxPrice", value >= PRICE_SLIDER_MAX ? null : value)
+                    }
+                    aria-labelledby="search-max-price-label"
+                    getAriaValueText={(value) =>
+                      value >= PRICE_SLIDER_MAX
+                        ? "Любая цена"
+                        : formatMaxPriceLabel(value)
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Caption
+                    weight="2"
+                    Component="span"
+                    className="text-(--tgui--text_color)"
+                  >
+                    Условия поездки
+                  </Caption>
+                  <div className="TagChips">
+                    {TRIP_TAGS.map((tag) => (
+                      <Chip
+                        key={tag}
+                        className="TagChip"
+                        mode={form.tags.includes(tag) ? "elevated" : "mono"}
+                        Component="button"
+                        aria-pressed={form.tags.includes(tag)}
+                        onClick={() => {
+                          haptic.selection();
+                          toggleTag(tag);
+                        }}
+                      >
+                        {tag}
+                      </Chip>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <Button size="l" stretched mode="bezeled" before={<SearchIcon size={18} />} onClick={submit}>
-            Найти
-          </Button>
+            <Button
+              size="l"
+              stretched
+              mode="bezeled"
+              before={<SearchIcon size={18} />}
+              onClick={submit}
+            >
+              Найти
+            </Button>
           </div>
         </Section>
 
         <div className="flex items-center justify-between px-1">
-          <Caption className="text-(--tgui--hint_color)! font-medium">
-            Найдено поездок: {items.length}
-          </Caption>
-          <span className="text-[11px] text-(--tgui--hint_color)">
-            Цены без комиссии
-          </span>
+          <Caption weight="2">Найдено поездок: {items.length}</Caption>
+          <Caption Component="span">Цены без комиссии</Caption>
         </div>
 
         <QueryState
@@ -289,7 +304,12 @@ export function SearchPage() {
               header="Поездок не найдено"
               description="Попробуйте изменить города или выбрать другие даты отправления"
             >
-              <Button size="m" mode="bezeled" onClick={reset} disabled={!hasActiveFilters && !form.fromCity && !form.toCity}>
+              <Button
+                size="m"
+                mode="bezeled"
+                onClick={reset}
+                disabled={!hasActiveFilters && !form.fromCity && !form.toCity}
+              >
                 Сбросить фильтры
               </Button>
             </Placeholder>

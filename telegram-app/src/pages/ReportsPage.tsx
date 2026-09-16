@@ -1,10 +1,12 @@
 import { useRef, useState } from "react";
 import {
   Button,
+  Caption,
   Input,
   Placeholder,
   Section,
   Select,
+  Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
@@ -60,19 +62,17 @@ function ReportCard({ report }: { report: Report }) {
   return (
     <FeedCard className="p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-semibold text-(--tgui--text_color)">
+        <Text weight="2" Component="span">
           {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
-        </span>
+        </Text>
         <StatusPill tone={reportStatusTone(report.status)} className="shrink-0">
           {REPORT_STATUS_LABELS[report.status]}
         </StatusPill>
       </div>
-      <span className="text-[11px] text-(--tgui--hint_color)">
-        {formatDate(report.createdAt)}
-      </span>
-      <div className="text-[13px] text-(--tgui--text_color) leading-relaxed">
+      <Caption Component="span">{formatDate(report.createdAt)}</Caption>
+      <Text Component="div" className="leading-relaxed">
         {report.description}
-      </div>
+      </Text>
     </FeedCard>
   );
 }
@@ -88,7 +88,8 @@ function ReportCard({ report }: { report: Report }) {
 export function ReportsPage() {
   const [targetType, setTargetType] = useState<ReportTargetType>("trip");
   const [targetId, setTargetId] = useState("");
-  const [category, setCategory] = useState<(typeof REPORT_CATEGORIES)[number]>("safety");
+  const [category, setCategory] =
+    useState<(typeof REPORT_CATEGORIES)[number]>("safety");
   const [description, setDescription] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -113,7 +114,9 @@ export function ReportsPage() {
       return;
     }
     if (alreadyReported) {
-      setFormError("Жалоба уже отправлена: повторная жалоба на этот объект недоступна.");
+      setFormError(
+        "Жалоба уже отправлена: повторная жалоба на этот объект недоступна.",
+      );
       return;
     }
     setFormError(null);
@@ -165,134 +168,156 @@ export function ReportsPage() {
       <PageHeader title="Жалобы" />
 
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <Section header="Сообщите о проблеме">
-        <div className="flex flex-col gap-3 p-4">
-          <MutationError error={create.error} />
-          <div className="FormField">
-            <label htmlFor="report-target-type">Что случилось</label>
-            <Select
-              id="report-target-type"
-              value={targetType}
-              onChange={(event) => {
-                const next = event.target.value;
-                if (!isReportTargetType(next)) return;
-                setTargetType(next);
-                if (formError) setFormError(null);
-              }}
-            >
-              {(Object.keys(REPORT_TARGET_TYPE_LABELS) as ReportTargetType[]).map(
-                (value) => (
+        <Section header="Сообщите о проблеме">
+          <div className="flex flex-col gap-3 p-4">
+            <MutationError error={create.error} />
+            <div>
+              <label htmlFor="report-target-type" className="sr-only">
+                Что случилось
+              </label>
+              <Select
+                id="report-target-type"
+                header="Что случилось"
+                value={targetType}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (!isReportTargetType(next)) return;
+                  setTargetType(next);
+                  if (formError) setFormError(null);
+                }}
+              >
+                {(
+                  Object.keys(REPORT_TARGET_TYPE_LABELS) as ReportTargetType[]
+                ).map((value) => (
                   <option key={value} value={value}>
                     {REPORT_TARGET_TYPE_LABELS[value]}
                   </option>
-                ),
-              )}
-            </Select>
-          </div>
-          <div className="FormField">
-            <label htmlFor="report-target-id">Идентификатор объекта</label>
-            <Input
-              id="report-target-id"
-              placeholder="Например: идентификатор поездки из её страницы"
-              value={targetId}
-              onChange={(event) => {
-                setTargetId(event.target.value);
-                if (formError) setFormError(null);
-                if (success) setSuccess(false);
-              }}
-            />
-          </div>
-          <div className="FormField">
-            <label htmlFor="report-category">Причина</label>
-            <Select
-              id="report-category"
-              value={category}
-              onChange={(event) => {
-                const next = event.target.value;
-                if (!isReportCategory(next)) return;
-                setCategory(next);
-              }}
-            >
-              {REPORT_CATEGORIES.map((value) => (
-                <option key={value} value={value}>
-                  {REPORT_CATEGORY_LABELS[value]}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="FormField">
-            <label htmlFor="report-description">Описание</label>
-            <Textarea
-              id="report-description"
-              rows={4}
-              maxLength={REPORT_DESCRIPTION_MAX_LENGTH}
-              placeholder="Опишите, что произошло"
-              value={description}
-              aria-invalid={Boolean(formError)}
-              status={formError ? "error" : "default"}
-              onChange={(event) => {
-                setDescription(event.target.value);
-                if (formError) setFormError(null);
-                if (success) setSuccess(false);
-              }}
-            />
-          </div>
-          {description.length > 0 && (
-            <p className="ReviewCounter" aria-live="polite">
-              {description.length}/{REPORT_DESCRIPTION_MAX_LENGTH}
-            </p>
-          )}
-          {alreadyReported && (
-            <p className="ReviewCounter" aria-live="polite">
-              Вы уже отправляли жалобу на этот объект. Повторная отправка недоступна.
-            </p>
-          )}
-          {formError && (
-            <p className="FormError" role="alert">
-              {formError}
-            </p>
-          )}
-          {success && (
-            <p className="ReviewSuccess" role="status">
-              Жалоба отправлена
-            </p>
-          )}
-          <Button mode="bezeled"
-            stretched
-            size="l"
-            loading={create.isPending}
-            disabled={!canSubmit}
-            onClick={submit}
-          >
-            {alreadyReported ? "Жалоба уже отправлена" : "Отправить жалобу"}
-          </Button>
-        </div>
-      </Section>
-
-      <Section header="Мои жалобы">
-        <div className="flex flex-col gap-3 p-4">
-        <QueryState
-          loading={myReports.isLoading}
-          error={myReports.error}
-          empty={false}
-          emptyText=""
-          onRetry={() => void myReports.refetch()}
-        >
-          {!myReports.data || myReports.data.length === 0 ? (
-            <Placeholder
-              header="Вы пока не отправляли жалоб"
-              description="Жалобы на поездки доступны пассажирам с бронью. На свою поездку жаловаться нельзя."
-            />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {myReports.data.map((report) => (
-                <ReportCard key={report.id} report={report} />
-              ))}
+                ))}
+              </Select>
             </div>
-          )}
-        </QueryState>
-        </div>
-      </Section>
+            <div>
+              <label htmlFor="report-target-id" className="sr-only">
+                Идентификатор объекта
+              </label>
+              <Input
+                id="report-target-id"
+                header="Идентификатор объекта"
+                placeholder="Например: идентификатор поездки из её страницы"
+                value={targetId}
+                onChange={(event) => {
+                  setTargetId(event.target.value);
+                  if (formError) setFormError(null);
+                  if (success) setSuccess(false);
+                }}
+              />
+            </div>
+            <div>
+              <label htmlFor="report-category" className="sr-only">
+                Причина
+              </label>
+              <Select
+                id="report-category"
+                header="Причина"
+                value={category}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (!isReportCategory(next)) return;
+                  setCategory(next);
+                }}
+              >
+                {REPORT_CATEGORIES.map((value) => (
+                  <option key={value} value={value}>
+                    {REPORT_CATEGORY_LABELS[value]}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label htmlFor="report-description" className="sr-only">
+                Описание
+              </label>
+              <Textarea
+                id="report-description"
+                header="Описание"
+                rows={4}
+                maxLength={REPORT_DESCRIPTION_MAX_LENGTH}
+                placeholder="Опишите, что произошло"
+                value={description}
+                aria-invalid={Boolean(formError)}
+                status={formError ? "error" : undefined}
+                onChange={(event) => {
+                  setDescription(event.target.value);
+                  if (formError) setFormError(null);
+                  if (success) setSuccess(false);
+                }}
+              />
+            </div>
+            {description.length > 0 && (
+              <Caption Component="p" className="text-right" aria-live="polite">
+                {description.length}/{REPORT_DESCRIPTION_MAX_LENGTH}
+              </Caption>
+            )}
+            {alreadyReported && (
+              <Caption Component="p" className="text-right" aria-live="polite">
+                Вы уже отправляли жалобу на этот объект. Повторная отправка
+                недоступна.
+              </Caption>
+            )}
+            {formError && (
+              <Caption
+                Component="p"
+                role="alert"
+                className="text-(--tg-theme-destructive-text-color)"
+              >
+                {formError}
+              </Caption>
+            )}
+            {success && (
+              <Text
+                Component="p"
+                role="status"
+                className="text-(--app-success)"
+              >
+                Жалоба отправлена
+              </Text>
+            )}
+            <Button
+              mode="bezeled"
+              stretched
+              size="l"
+              loading={create.isPending}
+              disabled={!canSubmit}
+              onClick={submit}
+            >
+              {alreadyReported ? "Жалоба уже отправлена" : "Отправить жалобу"}
+            </Button>
+          </div>
+        </Section>
+
+        <Section header="Мои жалобы">
+          <div className="flex flex-col gap-3 p-4">
+            <QueryState
+              loading={myReports.isLoading}
+              error={myReports.error}
+              empty={false}
+              emptyText=""
+              onRetry={() => void myReports.refetch()}
+            >
+              {!myReports.data || myReports.data.length === 0 ? (
+                <Placeholder
+                  header="Вы пока не отправляли жалоб"
+                  description="Жалобы на поездки доступны пассажирам с бронью. На свою поездку жаловаться нельзя."
+                />
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {myReports.data.map((report) => (
+                    <ReportCard key={report.id} report={report} />
+                  ))}
+                </div>
+              )}
+            </QueryState>
+          </div>
+        </Section>
       </div>
     </>
   );

@@ -2,9 +2,11 @@ import { useRef, useState } from "react";
 import {
   Accordion,
   Button,
+  Caption,
   Input,
   Placeholder,
   Section,
+  Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { MessageSquareText, Send } from "lucide-react";
@@ -88,26 +90,26 @@ function FeedbackCard({
       </Accordion.Summary>
       <Accordion.Content>
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] text-(--tgui--hint_color)">
+          <Caption Component="span">
             {new Date(feedback.createdAt).toLocaleDateString("ru-RU")}
-          </span>
-          <p className="text-[13px] text-(--tgui--text_color) leading-relaxed">
+          </Caption>
+          <Text Component="p" className="leading-relaxed">
             {feedback.text}
-          </p>
+          </Text>
           {feedback.reply ? (
             <>
-              <span className="text-[13px] font-semibold text-(--tgui--text_color) pt-1">
+              <Text weight="2" Component="span" className="pt-1">
                 Ответ поддержки
-              </span>
-              <p className="text-[13px] text-(--tgui--text_color) leading-relaxed">
+              </Text>
+              <Text Component="p" className="leading-relaxed">
                 {feedback.reply}
-              </p>
+              </Text>
             </>
           ) : (
-            <span className="text-[12px] text-(--tgui--hint_color)">
+            <Caption Component="span">
               Поддержка ещё не ответила. Мы свяжемся с вами здесь — список
               обновится автоматически.
-            </span>
+            </Caption>
           )}
         </div>
       </Accordion.Content>
@@ -165,7 +167,10 @@ export function SupportPage() {
 
   // Бан mid-session: requireUser отвечает 403 — терминальный экран плюс
   // рабочая форма обжалования (публичный appeal с initData, без токена).
-  if (myFeedbacks.error instanceof ApiError && myFeedbacks.error.status === 403) {
+  if (
+    myFeedbacks.error instanceof ApiError &&
+    myFeedbacks.error.status === 403
+  ) {
     return (
       <>
         <PageHeader title="Поддержка" />
@@ -174,11 +179,11 @@ export function SupportPage() {
           description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
         />
         <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <Section header="Обжалование блокировки">
-        <div className="flex flex-col gap-3 p-4">
-          <AppealForm />
-        </div>
-      </Section>
+          <Section header="Обжалование блокировки">
+            <div className="flex flex-col gap-3 p-4">
+              <AppealForm />
+            </div>
+          </Section>
         </div>
       </>
     );
@@ -189,135 +194,159 @@ export function SupportPage() {
       <PageHeader title="Поддержка" />
 
       <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-      <Section header="Частые вопросы">
-        <div className="flex flex-col gap-2 p-4">
-        {SUPPORT_FAQ.map((item) => {
-          const isOpen = openedFaqId === item.id;
-          return (
-            <Accordion
-              key={item.id}
-              expanded={isOpen}
-              onChange={(expanded) => setOpenedFaqId(expanded ? item.id : null)}
-            >
-              <Accordion.Summary Component="button">{item.question}</Accordion.Summary>
-              <Accordion.Content>
-                <p className="text-[13px] text-(--tgui--hint_color) leading-relaxed">
-                  {item.answer}
-                </p>
-              </Accordion.Content>
-            </Accordion>
-          );
-        })}
-        </div>
-      </Section>
-
-      <Section header="Мои обращения">
-        <div className="flex flex-col gap-3 p-4">
-        <QueryState
-          loading={myFeedbacks.isLoading}
-          error={myFeedbacks.error}
-          empty={false}
-          emptyText=""
-          onRetry={() => void myFeedbacks.refetch()}
-        >
-          {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
-            <>
-              <p className="text-[14px] font-semibold text-center text-(--tgui--text_color)">
-                У вас пока нет обращений
-              </p>
-              <p className="text-[13px] text-center text-(--tgui--hint_color)">
-                Здесь появятся ваши обращения и ответы поддержки
-              </p>
-            </>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {myFeedbacks.data.map((feedback) => (
-                <FeedbackCard
-                  key={feedback.id}
-                  feedback={feedback}
-                  opened={openedFeedbackId === feedback.id}
-                  onToggle={() =>
-                    setOpenedFeedbackId(
-                      openedFeedbackId === feedback.id ? null : feedback.id,
-                    )
+        <Section header="Частые вопросы">
+          <div className="flex flex-col gap-2 p-4">
+            {SUPPORT_FAQ.map((item) => {
+              const isOpen = openedFaqId === item.id;
+              return (
+                <Accordion
+                  key={item.id}
+                  expanded={isOpen}
+                  onChange={(expanded) =>
+                    setOpenedFaqId(expanded ? item.id : null)
                   }
-                />
-              ))}
+                >
+                  <Accordion.Summary Component="button">
+                    {item.question}
+                  </Accordion.Summary>
+                  <Accordion.Content>
+                    <Caption Component="p" className="leading-relaxed">
+                      {item.answer}
+                    </Caption>
+                  </Accordion.Content>
+                </Accordion>
+              );
+            })}
+          </div>
+        </Section>
+
+        <Section header="Мои обращения">
+          <div className="flex flex-col gap-3 p-4">
+            <QueryState
+              loading={myFeedbacks.isLoading}
+              error={myFeedbacks.error}
+              empty={false}
+              emptyText=""
+              onRetry={() => void myFeedbacks.refetch()}
+            >
+              {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
+                <>
+                  <Text weight="2" Component="p" className="text-center">
+                    У вас пока нет обращений
+                  </Text>
+                  <Caption Component="p" className="text-center">
+                    Здесь появятся ваши обращения и ответы поддержки
+                  </Caption>
+                </>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {myFeedbacks.data.map((feedback) => (
+                    <FeedbackCard
+                      key={feedback.id}
+                      feedback={feedback}
+                      opened={openedFeedbackId === feedback.id}
+                      onToggle={() =>
+                        setOpenedFeedbackId(
+                          openedFeedbackId === feedback.id ? null : feedback.id,
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </QueryState>
+          </div>
+        </Section>
+
+        <Section header="Связаться с нами" aria-label="Связаться с нами">
+          <div className="flex flex-col gap-3 p-4">
+            <MutationError error={create.error} />
+            <div>
+              <label htmlFor="support-subject" className="sr-only">
+                Тема
+              </label>
+              <Input
+                id="support-subject"
+                header="Тема"
+                before={
+                  <MessageSquareText
+                    size={16}
+                    className="text-(--tgui--hint_color)"
+                  />
+                }
+                placeholder="Например: не приходит уведомление"
+                value={subject}
+                maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
+                status={formError ? "error" : undefined}
+                onChange={(event) => {
+                  setSubject(event.target.value);
+                  if (formError) setFormError(null);
+                  if (success) setSuccess(false);
+                }}
+              />
             </div>
-          )}
-        </QueryState>
-        </div>
-      </Section>
-
-      <Section header="Связаться с нами" aria-label="Связаться с нами">
-        <div className="flex flex-col gap-3 p-4">
-          <MutationError error={create.error} />
-          <div className="FormField">
-            <label htmlFor="support-subject">Тема</label>
-            <Input
-              id="support-subject"
-              before={<MessageSquareText size={16} className="text-(--tgui--hint_color)" />}
-              placeholder="Например: не приходит уведомление"
-              value={subject}
-              maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
-              status={formError ? "error" : "default"}
-              onChange={(event) => {
-                setSubject(event.target.value);
-                if (formError) setFormError(null);
-                if (success) setSuccess(false);
-              }}
-            />
+            <div>
+              <label htmlFor="support-text" className="sr-only">
+                Сообщение
+              </label>
+              <Textarea
+                id="support-text"
+                header="Сообщение"
+                rows={4}
+                maxLength={FEEDBACK_TEXT_MAX_LENGTH}
+                placeholder="Расскажите подробнее, что произошло"
+                value={text}
+                aria-invalid={Boolean(formError)}
+                status={formError ? "error" : undefined}
+                onChange={(event) => {
+                  setText(event.target.value);
+                  if (formError) setFormError(null);
+                  if (success) setSuccess(false);
+                }}
+              />
+            </div>
+            {text.length > 0 && (
+              <Caption Component="p" className="text-right" aria-live="polite">
+                {text.length}/{FEEDBACK_TEXT_MAX_LENGTH}
+              </Caption>
+            )}
+            {formError && (
+              <Caption
+                Component="p"
+                role="alert"
+                className="text-(--tg-theme-destructive-text-color)"
+              >
+                {formError}
+              </Caption>
+            )}
+            {success && (
+              <Text
+                Component="p"
+                role="status"
+                className="text-(--app-success)"
+              >
+                Обращение отправлено — мы ответим вам как можно скорее
+              </Text>
+            )}
+            <Button
+              mode="bezeled"
+              stretched
+              size="l"
+              before={<Send size={16} />}
+              loading={create.isPending}
+              disabled={!canSubmit}
+              onClick={submit}
+            >
+              Отправить
+            </Button>
           </div>
-          <div className="FormField">
-            <label htmlFor="support-text">Сообщение</label>
-            <Textarea
-              id="support-text"
-              rows={4}
-              maxLength={FEEDBACK_TEXT_MAX_LENGTH}
-              placeholder="Расскажите подробнее, что произошло"
-              value={text}
-              aria-invalid={Boolean(formError)}
-              status={formError ? "error" : "default"}
-              onChange={(event) => {
-                setText(event.target.value);
-                if (formError) setFormError(null);
-                if (success) setSuccess(false);
-              }}
-            />
-          </div>
-          {text.length > 0 && (
-            <p className="ReviewCounter" aria-live="polite">
-              {text.length}/{FEEDBACK_TEXT_MAX_LENGTH}
-            </p>
-          )}
-          {formError && (
-            <p className="FormError" role="alert">
-              {formError}
-            </p>
-          )}
-          {success && (
-            <p className="ReviewSuccess" role="status">
-              Обращение отправлено — мы ответим вам как можно скорее
-            </p>
-          )}
-          <Button mode="bezeled"
-            stretched
-            size="l"
-            before={<Send size={16} />}
-            loading={create.isPending}
-            disabled={!canSubmit}
-            onClick={submit}
-          >
-            Отправить
-          </Button>
-        </div>
-      </Section>
+        </Section>
 
-      <Section header="Обжалование блокировки">
-        <div className="flex flex-col gap-3 p-4">
-          <AppealForm />
-        </div>
-      </Section>
+        <Section header="Обжалование блокировки">
+          <div className="flex flex-col gap-3 p-4">
+            <AppealForm />
+          </div>
+        </Section>
       </div>
     </>
   );

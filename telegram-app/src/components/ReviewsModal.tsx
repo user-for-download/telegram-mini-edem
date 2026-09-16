@@ -1,15 +1,12 @@
-import {
-  memo,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import {
   Button,
+  Caption,
   Modal,
   Placeholder,
   SegmentedControl,
   Select,
+  Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
@@ -22,11 +19,7 @@ import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { ReviewCard } from "@/components/ReviewCard";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { ApiError } from "@/api/client";
-import {
-  REVIEW_TEXT_MAX_LENGTH,
-  type Trip,
-  type User,
-} from "@edem/contracts";
+import { REVIEW_TEXT_MAX_LENGTH, type Trip, type User } from "@edem/contracts";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useProfileQuery } from "@/queries/profile";
 import {
@@ -146,13 +139,18 @@ export const ReviewsBody = memo(function ReviewsBody({
   const create = useCreateReviewMutation();
 
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
-  const [selectedPassengerId, setSelectedPassengerId] = useState<string | null>(null);
+  const [selectedPassengerId, setSelectedPassengerId] = useState<string | null>(
+    null,
+  );
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   useClosingConfirmation(
-    text !== "" || selectedTripId !== null || selectedPassengerId !== null || rating !== 5,
+    text !== "" ||
+      selectedTripId !== null ||
+      selectedPassengerId !== null ||
+      rating !== 5,
   );
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
   // второй клик до ре-рендера не отправит второй запрос (паттерн VK).
@@ -244,12 +242,16 @@ export const ReviewsBody = memo(function ReviewsBody({
         onError: (error) => {
           haptic.error();
           if (error instanceof ApiError && error.code === "ALREADY_REVIEWED") {
-            setFormError("Вы уже оставили отзыв об этом пользователе в этой поездке");
+            setFormError(
+              "Вы уже оставили отзыв об этом пользователе в этой поездке",
+            );
           } else if (error instanceof ApiError && error.code === "CONFLICT") {
             setFormError("Конфликт параллельной записи — повторите попытку");
           } else {
             setFormError(
-              error instanceof Error ? error.message : "Не удалось отправить отзыв",
+              error instanceof Error
+                ? error.message
+                : "Не удалось отправить отзыв",
             );
           }
         },
@@ -335,10 +337,13 @@ export const ReviewsBody = memo(function ReviewsBody({
             />
           ) : (
             <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-              <div className="FormField">
-                <label htmlFor="review-trip">Поездка</label>
+              <div>
+                <label htmlFor="review-trip" className="sr-only">
+                  Поездка
+                </label>
                 <Select
                   id="review-trip"
+                  header="Поездка"
                   value={selectedTrip.id}
                   onChange={(event) => pickTrip(event.target.value)}
                 >
@@ -351,10 +356,13 @@ export const ReviewsBody = memo(function ReviewsBody({
               </div>
 
               {isDriverTrip ? (
-                <div className="FormField">
-                  <label htmlFor="review-target">Кому оставить отзыв</label>
+                <div>
+                  <label htmlFor="review-target" className="sr-only">
+                    Кому оставить отзыв
+                  </label>
                   <Select
                     id="review-target"
+                    header="Кому оставить отзыв"
                     value={targetUser?.id ?? ""}
                     onChange={(event) => {
                       setSelectedPassengerId(event.target.value);
@@ -369,26 +377,29 @@ export const ReviewsBody = memo(function ReviewsBody({
                   </Select>
                 </div>
               ) : (
-                <p className="ReviewTarget">
+                <Text weight="2" Component="p">
                   Отзыв о {targetUser?.name ?? "водителе"}
-                </p>
+                </Text>
               )}
 
-              <div className="FormField">
+              <div>
                 <span id="review-rating-label">Оценка</span>
                 <RatingInput value={rating} onChange={setRating} />
               </div>
 
-              <div className="FormField">
-                <label htmlFor="review-text">Комментарий</label>
+              <div>
+                <label htmlFor="review-text" className="sr-only">
+                  Комментарий
+                </label>
                 <Textarea
                   id="review-text"
+                  header="Комментарий"
                   rows={3}
                   maxLength={REVIEW_TEXT_MAX_LENGTH}
                   placeholder="Расскажите, что понравилось или что стоит улучшить"
                   value={text}
                   aria-invalid={Boolean(formError)}
-                  status={formError ? "error" : "default"}
+                  status={formError ? "error" : undefined}
                   onChange={(event) => {
                     setText(event.target.value);
                     if (formError) setFormError(null);
@@ -397,22 +408,36 @@ export const ReviewsBody = memo(function ReviewsBody({
                 />
               </div>
               {text.length > 0 && (
-                <p className="ReviewCounter" aria-live="polite">
+                <Caption
+                  Component="p"
+                  className="text-right"
+                  aria-live="polite"
+                >
                   {text.length}/{REVIEW_TEXT_MAX_LENGTH}
-                </p>
+                </Caption>
               )}
 
               {formError && (
-                <p className="FormError" role="alert">
+                <Caption
+                  Component="p"
+                  role="alert"
+                  className="text-(--tg-theme-destructive-text-color)"
+                >
                   {formError}
-                </p>
+                </Caption>
               )}
               {success && (
-                <p className="ReviewSuccess" role="status">
-                  Отзыв отправлен на модерацию — он появится в профиле после одобрения
-                </p>
+                <Text
+                  Component="p"
+                  role="status"
+                  className="text-(--app-success)"
+                >
+                  Отзыв отправлен на модерацию — он появится в профиле после
+                  одобрения
+                </Text>
               )}
-              <Button mode="bezeled"
+              <Button
+                mode="bezeled"
                 stretched
                 size="l"
                 loading={create.isPending}
@@ -440,12 +465,12 @@ export const ReviewsBody = memo(function ReviewsBody({
         >
           {profile.data && (
             <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs text-center">
-              <p className="text-[17px] font-semibold text-(--tgui--text_color)">
+              <Text weight="2" Component="p">
                 {`Рейтинг ${profile.data.rating.toFixed(1)} · ${profile.data.reviewsCount} отзывов`}
-              </p>
-              <p className="text-[12px] text-(--tgui--hint_color) mt-1">
+              </Text>
+              <Caption Component="p" className="mt-1">
                 Рейтинг учитывает только опубликованные отзывы
-              </p>
+              </Caption>
             </div>
           )}
           {aboutItems.length === 0 ? (

@@ -3,6 +3,7 @@ import {
   Button,
   Caption,
   IconButton,
+  IconContainer,
   SegmentedControl,
   Tappable,
   Text,
@@ -48,7 +49,9 @@ function parseSegment(value: string | null): Segment {
 
 /** Единый статус истории для пассажира и водителя: завершена / отменена. */
 function historyCategoryOf(
-  item: { kind: "booking"; booking: PassengerBooking } | { kind: "driving"; trip: Trip },
+  item:
+    | { kind: "booking"; booking: PassengerBooking }
+    | { kind: "driving"; trip: Trip },
 ): "completed" | "cancelled" | "other" {
   if (item.kind === "driving") {
     if (item.trip.status === "completed") return "completed";
@@ -57,13 +60,19 @@ function historyCategoryOf(
   }
   const known = item.booking.historyCategory;
   if (known === "completed" || known === "cancelled") return known;
-  if (item.booking.status === "cancelled" || item.booking.status === "declined") {
+  if (
+    item.booking.status === "cancelled" ||
+    item.booking.status === "declined"
+  ) {
     return "cancelled";
   }
   return "other";
 }
 
-function bookingStatusLabel(status: string): { label: string; tone: StatusTone } {
+function bookingStatusLabel(status: string): {
+  label: string;
+  tone: StatusTone;
+} {
   if (status === "confirmed") return { label: "Подтверждено", tone: "success" };
   if (status === "cancelled") return { label: "Отменено", tone: "danger" };
   if (status === "declined") return { label: "Отклонено", tone: "danger" };
@@ -76,7 +85,8 @@ function tripStatusLabel(trip: Trip): { label: string; tone: StatusTone } {
   const pending = trip.pendingRequestsCount ?? 0;
   if (pending > 0) return { label: `Заявки: ${pending}`, tone: "warning" };
   const confirmed = trip.confirmedBookingsCount ?? 0;
-  if (confirmed > 0) return { label: `Забронировано: ${confirmed}`, tone: "success" };
+  if (confirmed > 0)
+    return { label: `Забронировано: ${confirmed}`, tone: "success" };
   return { label: `Свободно: ${trip.seatsAvailable}`, tone: "info" };
 }
 
@@ -85,23 +95,23 @@ function RouteLine({ trip }: { trip: Trip }) {
   return (
     <div className="flex flex-col gap-2 relative pl-4 border-l-2 border-(--app-info)/30 ml-2 py-0.5">
       <div>
-        <div className="text-[15px] font-bold text-(--tgui--text_color)">
+        <Text weight="2" Component="div">
           {trip.fromCity}
-        </div>
+        </Text>
         {trip.fromAddress && (
-          <div className="text-[12px] text-(--tgui--hint_color) truncate">
+          <Caption className="truncate" Component="div">
             {trip.fromAddress}
-          </div>
+          </Caption>
         )}
       </div>
       <div className="pt-1">
-        <div className="text-[15px] font-bold text-(--tgui--text_color)">
+        <Text weight="2" Component="div">
           {trip.toCity}
-        </div>
+        </Text>
         {trip.toAddress && (
-          <div className="text-[12px] text-(--tgui--hint_color) truncate">
+          <Caption className="truncate" Component="div">
             {trip.toAddress}
-          </div>
+          </Caption>
         )}
       </div>
     </div>
@@ -123,12 +133,12 @@ function ActiveBookingCard({
   return (
     <FeedCard className="p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[12px] font-medium text-(--tgui--hint_color) min-w-0">
+        <Caption className="flex items-center gap-1.5 min-w-0" Component="div">
           <Calendar size={14} className="shrink-0" />
           <span className="truncate">
             {dayLabel(booking.trip.date)}, {booking.trip.time}
           </span>
-        </div>
+        </Caption>
         <StatusPill tone={status.tone} className="shrink-0">
           {status.label}
         </StatusPill>
@@ -144,7 +154,11 @@ function ActiveBookingCard({
             acronym={booking.trip.driver.name.slice(0, 1).toUpperCase()}
           />
           <div className="min-w-0">
-            <Text weight="2" Component="div" className="text-(--tgui--text_color) truncate">
+            <Text
+              weight="2"
+              Component="div"
+              className="text-(--tgui--text_color) truncate"
+            >
               {booking.trip.driver.name}
             </Text>
             <Caption Component="div" className="text-(--tgui--hint_color)">
@@ -153,9 +167,9 @@ function ActiveBookingCard({
           </div>
         </div>
         <div className="text-right shrink-0">
-          <div className="text-[14px] font-bold text-(--tgui--text_color)">
+          <Text weight="2" Component="div">
             {booking.trip.price * booking.seat} ₽
-          </div>
+          </Text>
           <Caption Component="div" className="text-(--tgui--hint_color)">
             {`цена (${booking.seat} ${booking.seat === 1 ? "место" : "места"})`}
           </Caption>
@@ -238,22 +252,27 @@ function DriverTripCard({
         className={`${FEED_CARD_SURFACE} text-left p-3.5 opacity-90 hover:opacity-100 transition`}
       >
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-(--app-info-bg) text-(--app-info)">
+          <Caption weight="2" caps className="text-(--app-info)">
             Вы водитель
-          </span>
+          </Caption>
           <StatusPill tone={status.tone} className="shrink-0">
             {status.label}
           </StatusPill>
         </div>
-        <div className="text-[15px] font-semibold text-(--tgui--text_color)">
+        <Text weight="2" Component="div">
           {trip.fromCity} → {trip.toCity}
-        </div>
-        <div className="flex items-center justify-between mt-2 text-[12px] text-(--tgui--hint_color)">
+        </Text>
+        <Caption
+          className="flex items-center justify-between mt-2"
+          Component="div"
+        >
           <span className="truncate">
             {dayLabel(trip.date)}, {trip.time}
           </span>
-          <span className="font-medium shrink-0">{trip.price} ₽ / место</span>
-        </div>
+          <Text weight="2" Component="span" className="shrink-0">
+            {trip.price} ₽ / место
+          </Text>
+        </Caption>
       </Tappable>
     );
   }
@@ -262,49 +281,61 @@ function DriverTripCard({
   return (
     <FeedCard className="p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-(--app-info-bg) text-(--app-info)">
+        <Caption weight="2" caps className="text-(--app-info)">
           Вы водитель
-        </span>
-        <span className="text-[12px] font-medium text-(--tgui--hint_color) truncate">
+        </Caption>
+        <Caption Component="span" className="truncate">
           {dayLabel(trip.date)}, {trip.time}
-        </span>
+        </Caption>
       </div>
 
       <div>
-        <div className="text-[16px] font-bold text-(--tgui--text_color)">
+        <Text weight="2" Component="div">
           {trip.fromCity} → {trip.toCity}
-        </div>
+        </Text>
         <StatusPill tone={status.tone}>{status.label}</StatusPill>
       </div>
 
-      <Text Component="div" className="flex items-center justify-between p-2.5 rounded-xl bg-(--tgui--tertiary_bg_color)">
+      <Text
+        Component="div"
+        className="flex items-center justify-between p-2.5 rounded-xl bg-(--tgui--tertiary_bg_color)"
+      >
         <div>
           <span className="text-(--tgui--hint_color)">Свободно мест: </span>
-          <span className="font-semibold text-(--app-success)">
+          <Text weight="2" Component="span" className="text-(--app-success)">
             {trip.seatsAvailable} из {trip.seatsTotal}
-          </span>
+          </Text>
         </div>
-        <div className="text-xs font-medium text-(--tgui--hint_color)">
+        <Caption Component="span">
           Цена:{" "}
-          <span className="font-bold text-(--tgui--text_color)">
+          <Text weight="2" Component="span">
             {trip.price} ₽
-          </span>
-        </div>
+          </Text>
+        </Caption>
       </Text>
 
       {pending > 0 && (
         <div className="p-3 rounded-xl border border-dashed border-(--tgui--outline) bg-(--tgui--bg_color)">
-          <div className="flex items-center justify-between text-xs font-semibold text-(--tgui--hint_color) mb-2">
+          <Caption
+            className="flex items-center justify-between mb-2"
+            Component="div"
+          >
             <span>Заявки от попутчиков</span>
-            <span className="text-(--app-warning) font-medium">Новые</span>
-          </div>
+            <Text weight="2" Component="span" className="text-(--app-warning)">
+              Новые
+            </Text>
+          </Caption>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="icon-circle icon-circle--warning shrink-0">
+              <IconContainer className="shrink-0">
                 <Send size={14} />
-              </span>
+              </IconContainer>
               <div className="min-w-0">
-                <Text weight="2" Component="div" className="text-(--tgui--text_color) truncate">
+                <Text
+                  weight="2"
+                  Component="div"
+                  className="text-(--tgui--text_color) truncate"
+                >
                   {`Ожидают решения: ${pending}`}
                 </Text>
               </div>
@@ -392,7 +423,10 @@ export function TripsPage() {
   const completeTrip = useCompleteTripMutation();
 
   const activeBookings = (bookings.data ?? [])
-    .filter((booking) => booking.status === "pending" || booking.status === "confirmed")
+    .filter(
+      (booking) =>
+        booking.status === "pending" || booking.status === "confirmed",
+    )
     .sort((a, b) => {
       const aTime = a.trip.departureAt ? Date.parse(a.trip.departureAt) : 0;
       const bTime = b.trip.departureAt ? Date.parse(b.trip.departureAt) : 0;
@@ -406,7 +440,11 @@ export function TripsPage() {
     | { kind: "booking"; key: string; at: number; booking: PassengerBooking }
     | { kind: "driving"; key: string; at: number; trip: Trip };
 
-  const tripTime = (trip: { departureAt?: string; date: string; time: string }): number => {
+  const tripTime = (trip: {
+    departureAt?: string;
+    date: string;
+    time: string;
+  }): number => {
     if (trip.departureAt) {
       const parsed = Date.parse(trip.departureAt);
       if (!Number.isNaN(parsed)) return parsed;
@@ -415,20 +453,22 @@ export function TripsPage() {
     return Number.isNaN(fallback) ? 0 : fallback;
   };
 
-  const historyItems: HistoryItem[] = [    ...(history.data ?? []).map((booking) => ({
+  const historyItems: HistoryItem[] = [
+    ...(history.data ?? []).map((booking) => ({
       kind: "booking" as const,
       key: `b-${booking.id}`,
       at: tripTime(booking.trip),
       booking,
     })),
-    ...(driverArchive.data?.pages.flatMap((page) => page.items) ?? []).map((trip) => ({
-      kind: "driving" as const,
-      key: `d-${trip.id}`,
-      at: tripTime(trip),
-      trip,
-    })),
-  ]
-    .sort((a, b) => b.at - a.at);
+    ...(driverArchive.data?.pages.flatMap((page) => page.items) ?? []).map(
+      (trip) => ({
+        kind: "driving" as const,
+        key: `d-${trip.id}`,
+        at: tripTime(trip),
+        trip,
+      }),
+    ),
+  ].sort((a, b) => b.at - a.at);
 
   // Сентинелы автодогрузки водительских поездок (контракт
   // useInfiniteMyTripsQuery не меняется; SSR — тихий фолбэк).
@@ -452,10 +492,13 @@ export function TripsPage() {
   const pickSegment = (next: Segment) => {
     if (next === segment) return;
     haptic.selection();
-    setSearchParams(next === "active" ? {} : { segment: next }, { replace: true });
+    setSearchParams(next === "active" ? {} : { segment: next }, {
+      replace: true,
+    });
   };
 
-  const mutationError = cancelBooking.error ?? cancelTrip.error ?? completeTrip.error;
+  const mutationError =
+    cancelBooking.error ?? cancelTrip.error ?? completeTrip.error;
 
   return (
     <>
@@ -478,16 +521,22 @@ export function TripsPage() {
         </div>
 
         {mutationError && (
-          <p className="FormError" role="alert">
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
             {bookingErrorMessage(mutationError)}
-          </p>
+          </Caption>
         )}
 
         {segment === "active" && (
           <QueryState
             loading={bookings.isLoading || driverActive.isLoading}
             error={bookings.error ?? driverActive.error}
-            empty={activeBookings.length === 0 && activeDriverTrips.length === 0}
+            empty={
+              activeBookings.length === 0 && activeDriverTrips.length === 0
+            }
             emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
             skeleton={<TripCardsSkeleton />}
             onRetry={() => {
@@ -573,10 +622,18 @@ export function TripsPage() {
                   </Button>
                 </>
               )}
-              <Button size="l" mode="bezeled" onClick={() => navigate("/trips")}>
+              <Button
+                size="l"
+                mode="bezeled"
+                onClick={() => navigate("/trips")}
+              >
                 Найти поездку
               </Button>
-              <Button size="l" mode="bezeled" onClick={() => navigate("/trips/my/new")}>
+              <Button
+                size="l"
+                mode="bezeled"
+                onClick={() => navigate("/trips/my/new")}
+              >
                 + Создать поездку
               </Button>
             </div>
@@ -629,27 +686,39 @@ export function TripsPage() {
                     }}
                     className={`${FEED_CARD_SURFACE} text-left p-3.5 opacity-90 hover:opacity-100 transition`}
                   >
-                    <div className="flex items-center justify-between text-[12px] text-(--tgui--hint_color) mb-1.5">
+                    <Caption
+                      className="flex items-center justify-between mb-1.5"
+                      Component="div"
+                    >
                       <span>{dayLabel(booking.trip.date)}</span>
-                      <span
+                      <Text
+                        weight="2"
+                        Component="span"
                         className={
                           category === "completed"
-                            ? "font-semibold text-(--app-success)"
-                            : "font-semibold text-(--app-danger)"
+                            ? "text-(--app-success)"
+                            : "text-(--app-danger)"
                         }
                       >
-                        {category === "completed" ? "Поездка завершена" : "Поездка отменена"}
-                      </span>
-                    </div>
-                    <div className="text-[15px] font-semibold text-(--tgui--text_color)">
+                        {category === "completed"
+                          ? "Поездка завершена"
+                          : "Поездка отменена"}
+                      </Text>
+                    </Caption>
+                    <Text weight="2" Component="div">
                       {booking.trip.fromCity} → {booking.trip.toCity}
-                    </div>
-                    <div className="flex items-center justify-between mt-2 text-[12px] text-(--tgui--hint_color)">
-                      <span className="truncate">Водитель: {booking.trip.driver.name}</span>
-                      <span className="font-medium shrink-0">
-                        {`взнос ~${booking.trip.price * booking.seat} ₽`}
+                    </Text>
+                    <Caption
+                      className="flex items-center justify-between mt-2"
+                      Component="div"
+                    >
+                      <span className="truncate">
+                        Водитель: {booking.trip.driver.name}
                       </span>
-                    </div>
+                      <Text weight="2" Component="span" className="shrink-0">
+                        {`взнос ~${booking.trip.price * booking.seat} ₽`}
+                      </Text>
+                    </Caption>
                   </Tappable>
                 );
               })}
@@ -684,7 +753,6 @@ export function TripsPage() {
             </div>
           </QueryState>
         )}
-
       </div>
     </>
   );

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Button,
+  Caption,
   Chip,
   Input,
   Textarea,
@@ -97,41 +98,55 @@ export function EditTripForm({
     <>
       <div className="flex flex-col gap-3 border-t border-(--tgui--outline) pt-3">
         <p>Маршрут изменить нельзя — только адреса, время и условия.</p>
-        <div className="FormField">
-          <label htmlFor="edit-from">Адрес отправления</label>
+        <div>
+          <label htmlFor="edit-from" className="sr-only">
+            Адрес отправления
+          </label>
           <Input
             id="edit-from"
+            header="Адрес отправления"
             before={<MapPin size={17} className="text-(--app-info)" />}
             value={fromAddress}
             onChange={(event) => setFromAddress(event.target.value)}
             placeholder="Например: м. Тёплый Стан"
           />
         </div>
-        <div className="FormField">
-          <label htmlFor="edit-to">Адрес назначения</label>
+        <div>
+          <label htmlFor="edit-to" className="sr-only">
+            Адрес назначения
+          </label>
           <Input
             id="edit-to"
+            header="Адрес назначения"
             before={<MapPin size={17} className="text-(--app-success)" />}
             value={toAddress}
             onChange={(event) => setToAddress(event.target.value)}
             placeholder="Например: пр-т Ленина"
           />
         </div>
-        <div className="FormField">
-          <label htmlFor="edit-departure">Дата и время</label>
+        <div>
+          <label htmlFor="edit-departure" className="sr-only">
+            Дата и время
+          </label>
           <Input
             id="edit-departure"
-            before={<Calendar size={16} className="text-(--tgui--hint_color)" />}
+            header="Дата и время"
+            before={
+              <Calendar size={16} className="text-(--tgui--hint_color)" />
+            }
             type="datetime-local"
             value={departure}
             onChange={(event) => setDeparture(event.target.value)}
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="FormField">
-            <label htmlFor="edit-duration">В пути, часов</label>
+          <div>
+            <label htmlFor="edit-duration" className="sr-only">
+              В пути, часов
+            </label>
             <Input
               id="edit-duration"
+              header="В пути, часов"
               before={<Clock size={16} className="text-(--tgui--hint_color)" />}
               type="number"
               min="1"
@@ -140,10 +155,13 @@ export function EditTripForm({
               onChange={(event) => setDurationHours(event.target.value)}
             />
           </div>
-          <div className="FormField">
-            <label htmlFor="edit-distance">Расстояние, км</label>
+          <div>
+            <label htmlFor="edit-distance" className="sr-only">
+              Расстояние, км
+            </label>
             <Input
               id="edit-distance"
+              header="Расстояние, км"
               type="number"
               min="1"
               max="20000"
@@ -153,11 +171,16 @@ export function EditTripForm({
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="FormField">
-            <label htmlFor="edit-price">Цена, ₽</label>
+          <div>
+            <label htmlFor="edit-price" className="sr-only">
+              Цена, ₽
+            </label>
             <Input
               id="edit-price"
-              before={<RussianRuble size={16} className="text-(--tgui--hint_color)" />}
+              header="Цена, ₽"
+              before={
+                <RussianRuble size={16} className="text-(--tgui--hint_color)" />
+              }
               type="number"
               min="1"
               max="100000"
@@ -165,10 +188,13 @@ export function EditTripForm({
               onChange={(event) => setPrice(event.target.value)}
             />
           </div>
-          <div className="FormField">
-            <label htmlFor="edit-seats">Места (1–{MAX_SEATS})</label>
+          <div>
+            <label htmlFor="edit-seats" className="sr-only">
+              Места
+            </label>
             <Input
               id="edit-seats"
+              header="Места"
               before={<Users size={16} className="text-(--tgui--hint_color)" />}
               type="number"
               min="1"
@@ -178,7 +204,7 @@ export function EditTripForm({
             />
           </div>
         </div>
-        <fieldset className="FormField">
+        <fieldset>
           <legend>Особенности</legend>
           <div className="TagChips">
             {TRIP_TAGS.map((tag) => {
@@ -199,33 +225,56 @@ export function EditTripForm({
             })}
           </div>
         </fieldset>
-        <div className="FormField">
-          <label htmlFor="edit-comment">Комментарий пассажирам</label>
+        <div>
+          <label htmlFor="edit-comment" className="sr-only">
+            Комментарий пассажирам
+          </label>
           <Textarea
             id="edit-comment"
+            header="Комментарий пассажирам"
             value={comment}
             maxLength={500}
             rows={3}
             placeholder="Например: одна остановка в пути, багажник свободен"
-            status={validationError ? "error" : "default"}
+            status={validationError ? "error" : undefined}
             onChange={(event) => setComment(event.target.value)}
           />
         </div>
         {validationError && (
-          <p className="FormError" role="alert">
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
             {validationError}
-          </p>
+          </Caption>
         )}
         {update.error && (
-          <p className="FormError" role="alert">
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
             {bookingErrorMessage(update.error)}
-          </p>
+          </Caption>
         )}
         <div className="flex gap-2">
-          <Button mode="bezeled" stretched size="m" loading={update.isPending} onClick={submit}>
+          <Button
+            mode="bezeled"
+            stretched
+            size="m"
+            loading={update.isPending}
+            onClick={submit}
+          >
             Сохранить
           </Button>
-          <Button mode="bezeled" size="m" stretched disabled={update.isPending} onClick={onDone}>
+          <Button
+            mode="bezeled"
+            size="m"
+            stretched
+            disabled={update.isPending}
+            onClick={onDone}
+          >
             Отмена
           </Button>
         </div>

@@ -54,40 +54,37 @@ export function TripCard({ trip }: { trip: Trip }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[17px] font-bold text-(--tgui--text_color)">
+            <Text weight="2" Component="span">
               {trip.time}
-            </span>
-            {duration && (
-              <span className="text-xs text-(--tgui--hint_color)">({duration})</span>
-            )}
-            {arrival && (
-              <span className="text-[15px] font-medium text-(--tgui--hint_color)">
-                → {arrival}
-              </span>
-            )}
+            </Text>
+            {duration && <Caption Component="span">({duration})</Caption>}
+            {arrival && <Caption Component="span">→ {arrival}</Caption>}
           </div>
-          <div className="text-[14px] font-semibold text-(--tgui--text_color) mt-0.5 truncate">
+          <Text weight="2" Component="div" className="mt-0.5 truncate">
             {trip.fromCity} → {trip.toCity}
-          </div>
-          <div className="text-[12px] text-(--tgui--hint_color)">
-            {dayLabel(trip.date)}
-          </div>
+          </Text>
+          <Caption Component="div">{dayLabel(trip.date)}</Caption>
         </div>
         <div className="text-right shrink-0">
-          <div className="text-[16px] font-bold text-(--tgui--text_color)">
+          <Text weight="2" Component="div">
             {trip.price} ₽
-          </div>
+          </Text>
           <Caption className="text-(--tgui--hint_color)">за место</Caption>
         </div>
       </div>
 
       {(trip.fromAddress || trip.toAddress) && (
-        <div className="text-[12px] text-(--tgui--hint_color) flex flex-col gap-0.5 border-l-2 border-(--tgui--outline) pl-2.5">
+        <Caption
+          Component="div"
+          className="flex flex-col gap-0.5 border-l-2 border-(--tgui--outline) pl-2.5"
+        >
           {trip.fromAddress && (
             <div className="truncate">Посадка: {trip.fromAddress}</div>
           )}
-          {trip.toAddress && <div className="truncate">Высадка: {trip.toAddress}</div>}
-        </div>
+          {trip.toAddress && (
+            <div className="truncate">Высадка: {trip.toAddress}</div>
+          )}
+        </Caption>
       )}
 
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-(--tgui--outline)">
@@ -99,7 +96,11 @@ export function TripCard({ trip }: { trip: Trip }) {
             alt={trip.driver.name}
           />
           <div className="min-w-0">
-            <Text weight="2" Component="div" className="flex items-center gap-1 text-(--tgui--text_color)">
+            <Text
+              weight="2"
+              Component="div"
+              className="flex items-center gap-1 text-(--tgui--text_color)"
+            >
               <span className="truncate">{trip.driver.name}</span>
               {trip.driver.isVerified && (
                 <ShieldCheck
@@ -108,8 +109,14 @@ export function TripCard({ trip }: { trip: Trip }) {
                 />
               )}
             </Text>
-            <Caption Component="div" className="flex items-center gap-1 text-(--tgui--hint_color)">
-              <Star size={11} className="fill-(--app-rating) text-(--app-rating)" />
+            <Caption
+              Component="div"
+              className="flex items-center gap-1 text-(--tgui--hint_color)"
+            >
+              <Star
+                size={11}
+                className="fill-(--app-rating) text-(--app-rating)"
+              />
               <span>{trip.driver.rating.toFixed(1)}</span>
             </Caption>
           </div>
@@ -117,7 +124,13 @@ export function TripCard({ trip }: { trip: Trip }) {
 
         <div className="flex flex-col items-end gap-1 shrink-0">
           <StatusPill
-            tone={trip.seatsAvailable === 0 ? "danger" : fewSeats ? "warning" : "success"}
+            tone={
+              trip.seatsAvailable === 0
+                ? "danger"
+                : fewSeats
+                  ? "warning"
+                  : "success"
+            }
             className="shrink-0"
           >
             {trip.seatsAvailable === 0

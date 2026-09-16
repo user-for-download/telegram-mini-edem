@@ -1,5 +1,11 @@
 import { useState, type SubmitEvent } from "react";
-import { Button, Modal, Select, Textarea } from "@telegram-apps/telegram-ui";
+import {
+  Button,
+  Caption,
+  Modal,
+  Select,
+  Textarea,
+} from "@telegram-apps/telegram-ui";
 import { Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ToastProvider";
@@ -90,72 +96,82 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-        <div className="text-xs text-(--tgui--hint_color)">
-          Если у вас возникли сложности с бронированием или поездкой, опишите
-          ситуацию. Наша команда поддержки оперативно поможет вам.
-        </div>
+      <Caption Component="div">
+        Если у вас возникли сложности с бронированием или поездкой, опишите
+        ситуацию. Наша команда поддержки оперативно поможет вам.
+      </Caption>
 
-        <div className="FormField">
-          <label htmlFor="feedback-topic">Тема обращения</label>
-          <Select
-            id="feedback-topic"
-            value={topic}
-            onChange={(event) => setTopic(event.target.value)}
-          >
-            {TOPICS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div className="FormField">
-          <label htmlFor="feedback-text">Текст сообщения</label>
-          <Textarea
-            id="feedback-text"
-            rows={4}
-            maxLength={FEEDBACK_TEXT_MAX_LENGTH}
-            value={message}
-            onChange={(event) => {
-              setMessage(event.target.value);
-              if (formError) setFormError(null);
-            }}
-            placeholder="Опишите детали вашего обращения..."
-          />
-        </div>
-
-        {formError && (
-          <p className="FormError" role="alert">
-            {formError}
-          </p>
-        )}
-
-        <Button
-          size="l"
-          mode="bezeled"
-          stretched
-          type="submit"
-          loading={create.isPending}
-          disabled={create.isPending || message.trim().length === 0}
-          before={<Send size={16} />}
+      <div>
+        <label htmlFor="feedback-topic" className="sr-only">
+          Тема обращения
+        </label>
+        <Select
+          id="feedback-topic"
+          header="Тема обращения"
+          value={topic}
+          onChange={(event) => setTopic(event.target.value)}
         >
-          Отправить в поддержку
-        </Button>
+          {TOPICS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </Select>
+      </div>
 
-        <Button
-          size="m"
-          mode="bezeled"
-          stretched
-          type="button"
-          onClick={() => {
-            haptic.light();
-            onClose();
-            navigate("/profile/support");
+      <div>
+        <label htmlFor="feedback-text" className="sr-only">
+          Текст сообщения
+        </label>
+        <Textarea
+          id="feedback-text"
+          header="Текст сообщения"
+          rows={4}
+          maxLength={FEEDBACK_TEXT_MAX_LENGTH}
+          value={message}
+          onChange={(event) => {
+            setMessage(event.target.value);
+            if (formError) setFormError(null);
           }}
+          placeholder="Опишите детали вашего обращения..."
+        />
+      </div>
+
+      {formError && (
+        <Caption
+          Component="p"
+          role="alert"
+          className="text-(--tg-theme-destructive-text-color)"
         >
-          Мои обращения
-        </Button>
-      </form>
+          {formError}
+        </Caption>
+      )}
+
+      <Button
+        size="l"
+        mode="bezeled"
+        stretched
+        type="submit"
+        loading={create.isPending}
+        disabled={create.isPending || message.trim().length === 0}
+        before={<Send size={16} />}
+      >
+        Отправить в поддержку
+      </Button>
+
+      <Button
+        size="m"
+        mode="bezeled"
+        stretched
+        type="button"
+        onClick={() => {
+          haptic.light();
+          onClose();
+          navigate("/profile/support");
+        }}
+      >
+        Мои обращения
+      </Button>
+    </form>
   );
 }

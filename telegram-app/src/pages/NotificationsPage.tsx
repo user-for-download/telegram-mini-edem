@@ -1,5 +1,13 @@
 import { useMemo } from "react";
-import { Button, Link, Placeholder, Section, VisuallyHidden } from "@telegram-apps/telegram-ui";
+import {
+  Button,
+  Caption,
+  Link,
+  Placeholder,
+  Section,
+  Text,
+  VisuallyHidden,
+} from "@telegram-apps/telegram-ui";
 import { BellRing, CheckCheck, Settings2 } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
 import { StatusPill } from "@/components/StatusPill";
@@ -84,9 +92,9 @@ function NotificationCard({
   return (
     <FeedCard className="p-4 flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] font-semibold text-(--tgui--text_color)">
+        <Text weight="2" Component="span">
           {notification.title}
-        </span>
+        </Text>
         {critical ? (
           <StatusPill tone="danger" className="shrink-0">
             Важное
@@ -97,18 +105,12 @@ function NotificationCard({
           </StatusPill>
         ) : null}
       </div>
-      <p className="text-[13px] text-(--tgui--text_color) leading-relaxed wrap-anywhere">
+      <Text Component="p" className="leading-relaxed wrap-anywhere">
         {notification.body}
-      </p>
-      <span className="text-[11px] text-(--tgui--hint_color)">
-        {formatDate(notification.createdAt)}
-      </span>
+      </Text>
+      <Caption Component="span">{formatDate(notification.createdAt)}</Caption>
       <div className="flex items-center gap-3 pt-1 border-t border-(--tgui--outline)">
-        {route && (
-          <Link href={`#${route}`}>
-            Открыть
-          </Link>
-        )}
+        {route && <Link href={`#${route}`}>Открыть</Link>}
         {!notification.isRead && (
           <Button
             size="s"
@@ -184,109 +186,110 @@ export function NotificationsPage() {
         skeleton={<NotificationCardsSkeleton />}
         onRetry={() => void inbox.refetch()}
       >
-      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-        {/* Инфо-панель: поверхность — Section без заголовка. */}
-        <Section>
-          <div className="flex flex-col gap-3 p-4">
-            <div className="flex items-center gap-2">
-              <BellRing size={16} className="text-(--app-info) shrink-0" />
-              <p className="text-[14px] text-(--tgui--text_color)" aria-live="polite">
-                {unreadCount > 0
-                  ? `Непрочитанных: ${unreadCount}.`
-                  : "Все уведомления прочитаны."}
-              </p>
-            </div>
-            <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
-              Важные статусы поездки и брони сохраняются всегда, даже если
-              некритичные уведомления выключены.
-            </p>
-            <div className="flex gap-2">
-              {/* Кнопка-ссылка: официальный паттерн tgui (стори Blocks/Button → Link):
+        <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+          {/* Инфо-панель: поверхность — Section без заголовка. */}
+          <Section>
+            <div className="flex flex-col gap-3 p-4">
+              <div className="flex items-center gap-2">
+                <BellRing size={16} className="text-(--app-info) shrink-0" />
+                <Text Component="p" aria-live="polite">
+                  {unreadCount > 0
+                    ? `Непрочитанных: ${unreadCount}.`
+                    : "Все уведомления прочитаны."}
+                </Text>
+              </div>
+              <Caption Component="p" className="leading-relaxed">
+                Важные статусы поездки и брони сохраняются всегда, даже если
+                некритичные уведомления выключены.
+              </Caption>
+              <div className="flex gap-2">
+                {/* Кнопка-ссылка: официальный паттерн tgui (стори Blocks/Button → Link):
                   Button с Component="a" вместо самописного <a> со стилями. */}
-              <Button
-                Component="a"
-                href="#/settings"
-                mode="bezeled"
-                size="s"
-                before={<Settings2 size={15} />}
-                className="flex-1"
-              >
-                Настройки уведомлений
-              </Button>
-              <Button
-                stretched
-                size="s"
-                mode="bezeled"
-                before={<CheckCheck size={15} />}
-                loading={markAll.isPending}
-                disabled={markAll.isPending || unreadCount === 0}
-                onClick={() => markAll.mutate()}
-              >
-                Прочитать все
-              </Button>
+                <Button
+                  Component="a"
+                  href="#/settings"
+                  mode="bezeled"
+                  size="s"
+                  before={<Settings2 size={15} />}
+                  className="flex-1"
+                >
+                  Настройки уведомлений
+                </Button>
+                <Button
+                  stretched
+                  size="s"
+                  mode="bezeled"
+                  before={<CheckCheck size={15} />}
+                  loading={markAll.isPending}
+                  disabled={markAll.isPending || unreadCount === 0}
+                  onClick={() => markAll.mutate()}
+                >
+                  Прочитать все
+                </Button>
+              </div>
             </div>
-          </div>
-        </Section>
+          </Section>
 
-        {/* Лента: поверхность — Section без заголовка (шаблон групп:
+          {/* Лента: поверхность — Section без заголовка (шаблон групп:
             TripRequests, популярные). Пустое состояние — тексты прямо
             на поверхности, карточки хранят свой хром (фаза 2). */}
-        <Section>
-          <div className="flex flex-col gap-3 p-4">
-            {items.length === 0 ? (
-              <>
-                <p className="text-[16px] font-semibold text-center text-(--tgui--text_color)">
-                  Пока нет уведомлений
-                </p>
-                <p className="text-[13px] text-center text-(--tgui--hint_color)">
-                  Подтверждения брони, отмены и завершение поездок появятся здесь
-                </p>
-              </>
-            ) : (
-              <>
-                {items.map((notification) => (
-                  <NotificationCard
-                    key={notification.id}
-                    notification={notification}
-                    marking={markRead.isPending}
-                    onMarkRead={(id) => markRead.mutate(id)}
-                  />
-                ))}
-                {inbox.hasNextPage && (
-                  <>
-                    {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
-                        высота (min-h-12) держит скролл от прыжков. */}
-                    <div
-                      ref={sentinelRef}
-                      aria-hidden="true"
-                      className="flex min-h-12 items-center justify-center"
-                      style={{ overflowAnchor: "none" }}
+          <Section>
+            <div className="flex flex-col gap-3 p-4">
+              {items.length === 0 ? (
+                <>
+                  <Text weight="2" Component="p" className="text-center">
+                    Пока нет уведомлений
+                  </Text>
+                  <Caption Component="p" className="text-center">
+                    Подтверждения брони, отмены и завершение поездок появятся
+                    здесь
+                  </Caption>
+                </>
+              ) : (
+                <>
+                  {items.map((notification) => (
+                    <NotificationCard
+                      key={notification.id}
+                      notification={notification}
+                      marking={markRead.isPending}
+                      onMarkRead={(id) => markRead.mutate(id)}
                     />
-                    {inbox.isFetchingNextPage && (
+                  ))}
+                  {inbox.hasNextPage && (
+                    <>
+                      {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
+                        высота (min-h-12) держит скролл от прыжков. */}
                       <div
-                        role="status"
-                        aria-label="Загрузка ещё уведомлений"
-                        className="flex flex-col gap-3"
+                        ref={sentinelRef}
+                        aria-hidden="true"
+                        className="flex min-h-12 items-center justify-center"
+                        style={{ overflowAnchor: "none" }}
+                      />
+                      {inbox.isFetchingNextPage && (
+                        <div
+                          role="status"
+                          aria-label="Загрузка ещё уведомлений"
+                          className="flex flex-col gap-3"
+                        >
+                          <NotificationCardSkeleton />
+                        </div>
+                      )}
+                      <Button
+                        mode="bezeled"
+                        stretched
+                        loading={inbox.isFetchingNextPage}
+                        disabled={inbox.isFetchingNextPage}
+                        onClick={() => void inbox.fetchNextPage()}
                       >
-                        <NotificationCardSkeleton />
-                      </div>
-                    )}
-                    <Button
-                      mode="bezeled"
-                      stretched
-                      loading={inbox.isFetchingNextPage}
-                      disabled={inbox.isFetchingNextPage}
-                      onClick={() => void inbox.fetchNextPage()}
-                    >
-                      Показать ещё
-                    </Button>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </Section>
-      </div>
+                        Показать ещё
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </Section>
+        </div>
       </QueryState>
     </>
   );

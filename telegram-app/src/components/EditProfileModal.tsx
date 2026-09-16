@@ -1,15 +1,21 @@
 import { memo, useState } from "react";
-import { Button, Input, Modal, Textarea } from "@telegram-apps/telegram-ui";
+import {
+  Button,
+  Caption,
+  Input,
+  Modal,
+  Textarea,
+} from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { useToast } from "@/components/ToastProvider";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useProfileQuery, useProfileUpdateMutation } from "@/queries/profile";
 import {
-  useProfileQuery,
-  useProfileUpdateMutation,
-} from "@/queries/profile";
-import { normalizeProfileForm, validateProfileForm } from "@/pages/profileValidation";
+  normalizeProfileForm,
+  validateProfileForm,
+} from "@/pages/profileValidation";
 
 /**
  * Редактирование профиля — модальная шторка поверх «Профиля»
@@ -68,7 +74,8 @@ export const EditProfileBody = memo(function EditProfileBody({
   const [formError, setFormError] = useState<string | null>(null);
 
   useClosingConfirmation(
-    name !== (profile.data?.name ?? "") || about !== (profile.data?.about ?? ""),
+    name !== (profile.data?.name ?? "") ||
+      about !== (profile.data?.about ?? ""),
   );
 
   const save = () => {
@@ -90,22 +97,31 @@ export const EditProfileBody = memo(function EditProfileBody({
   };
 
   if (profile.isLoading) {
-    return <p role="status" aria-label="Загрузка профиля">Загрузка…</p>;
+    return (
+      <p role="status" aria-label="Загрузка профиля">
+        Загрузка…
+      </p>
+    );
   }
   if (!profile.data) {
     return (
       <p role="alert">
-        {profile.error instanceof Error ? profile.error.message : "Не удалось загрузить профиль"}
+        {profile.error instanceof Error
+          ? profile.error.message
+          : "Не удалось загрузить профиль"}
       </p>
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="FormField">
-        <label htmlFor="profile-name">Имя</label>
+      <div>
+        <label htmlFor="profile-name" className="sr-only">
+          Имя
+        </label>
         <Input
           id="profile-name"
+          header="Имя"
           value={name}
           maxLength={100}
           onChange={(event) => {
@@ -114,10 +130,13 @@ export const EditProfileBody = memo(function EditProfileBody({
           }}
         />
       </div>
-      <div className="FormField">
-        <label htmlFor="profile-about">О себе</label>
+      <div>
+        <label htmlFor="profile-about" className="sr-only">
+          О себе
+        </label>
         <Textarea
           id="profile-about"
+          header="О себе"
           rows={3}
           maxLength={500}
           placeholder="Например: за рулём 7 лет, люблю музыку 80-х"
@@ -129,12 +148,20 @@ export const EditProfileBody = memo(function EditProfileBody({
         />
       </div>
       {(formError || update.error) && (
-        <p className="FormError" role="alert">
-          {formError ?? (update.error instanceof Error ? update.error.message : "Не удалось сохранить")}
-        </p>
+        <Caption
+          Component="p"
+          role="alert"
+          className="text-(--tg-theme-destructive-text-color)"
+        >
+          {formError ??
+            (update.error instanceof Error
+              ? update.error.message
+              : "Не удалось сохранить")}
+        </Caption>
       )}
       <div className="flex flex-col gap-2">
-        <Button mode="bezeled"
+        <Button
+          mode="bezeled"
           stretched
           size="l"
           loading={update.isPending}
@@ -143,7 +170,13 @@ export const EditProfileBody = memo(function EditProfileBody({
         >
           Сохранить изменения
         </Button>
-        <Button mode="bezeled" size="l" stretched disabled={update.isPending} onClick={onDone}>
+        <Button
+          mode="bezeled"
+          size="l"
+          stretched
+          disabled={update.isPending}
+          onClick={onDone}
+        >
           Отмена
         </Button>
       </div>

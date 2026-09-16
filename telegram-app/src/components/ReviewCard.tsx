@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { REVIEW_STATUS, type Review } from "@edem/contracts";
 import type { MyReview } from "@/api/reviews.api";
 import { LazyAvatar } from "@/components/LazyAvatar";
@@ -34,10 +35,10 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
             alt={review.author.name}
           />
           <div className="min-w-0">
-            <div className="text-[13px] font-semibold text-(--tgui--text_color) truncate">
+            <Text weight="2" Component="div" className="truncate">
               {review.author.name}
-            </div>
-            <div className="text-[11px] text-(--tgui--hint_color)">{review.date}</div>
+            </Text>
+            <Caption Component="div">{review.date}</Caption>
           </div>
         </div>
         <div
@@ -49,19 +50,28 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
           ))}
         </div>
       </div>
-      <div className="text-[13px] text-(--tgui--text_color) leading-relaxed">
+      <Text Component="div" className="leading-relaxed">
         {review.text}
-      </div>
-      <div className="flex items-center justify-between gap-2 text-[11px] text-(--tgui--hint_color) pt-1 border-t border-(--tgui--outline)">
+      </Text>
+      <Caption
+        Component="div"
+        className="flex items-center justify-between gap-2 pt-1 border-t border-(--tgui--outline)"
+      >
         <span className="truncate">Маршрут: {review.tripRoute}</span>
         {badge ? (
           <StatusPill tone={badge.tone} className="shrink-0">
             {badge.label}
           </StatusPill>
         ) : (
-          <span className="text-(--app-success) font-medium shrink-0">Опубликован</span>
+          <Text
+            weight="2"
+            Component="span"
+            className="text-(--app-success) shrink-0"
+          >
+            Опубликован
+          </Text>
         )}
-      </div>
+      </Caption>
     </FeedCard>
   );
 }

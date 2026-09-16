@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Caption, Input, Section } from "@telegram-apps/telegram-ui";
+import {
+  Button,
+  Caption,
+  IconContainer,
+  Input,
+  Section,
+  Text,
+} from "@telegram-apps/telegram-ui";
 import { Car, Palette, Hash } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { QueryState } from "@/components/QueryState";
@@ -60,23 +67,34 @@ export function VehiclePage() {
     }
   }, [vehicleQuery.data, editing]);
 
-  if (vehicleQuery.error instanceof ApiError && vehicleQuery.error.status === 403) {
+  if (
+    vehicleQuery.error instanceof ApiError &&
+    vehicleQuery.error.status === 403
+  ) {
     if (vehicleQuery.error.message === "Account is deleted") {
       return (
         <>
           <PageHeader title="Автомобиль" />
-          <p className="FormError" role="alert">
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
             Профиль удалён — данные автомобиля недоступны.
-          </p>
+          </Caption>
         </>
       );
     }
     return (
       <>
         <PageHeader title="Автомобиль" />
-        <p className="FormError" role="alert">
+        <Caption
+          Component="p"
+          role="alert"
+          className="text-(--tg-theme-destructive-text-color)"
+        >
           Действие недоступно: аккаунт заблокирован.
-        </p>
+        </Caption>
       </>
     );
   }
@@ -112,7 +130,10 @@ export function VehiclePage() {
 
   return (
     <>
-      <PageHeader title="Автомобиль" action={{ label: "Профиль", to: "/profile" }} />
+      <PageHeader
+        title="Автомобиль"
+        action={{ label: "Профиль", to: "/profile" }}
+      />
       <QueryState
         loading={vehicleQuery.isLoading}
         error={vehicleQuery.error}
@@ -122,133 +143,191 @@ export function VehiclePage() {
       >
         {vehicleQuery.data && (
           <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-          {/* Форма/карточка автомобиля: поверхность — Section без заголовка
+            {/* Форма/карточка автомобиля: поверхность — Section без заголовка
               (заголовок страницы — PageHeader выше). */}
-          <Section>
-            <div className="flex flex-col gap-3 p-4">
-              {editing ? (
-                <>
-                  <div className="FormField">
-                    <label htmlFor="vehicle-model">Модель</label>
-                    <Input
-                      id="vehicle-model"
-                      before={<Car size={17} className="text-(--app-info)" />}
-                      value={model}
-                      maxLength={VEHICLE_LIMITS.model}
-                      placeholder="Skoda Octavia"
-                      onChange={(event) => {
-                        setModel(event.target.value.slice(0, VEHICLE_LIMITS.model));
-                        if (formError) setFormError(null);
-                      }}
-                    />
-                  </div>
-                  <div className="FormField">
-                    <label htmlFor="vehicle-color">Цвет</label>
-                    <Input
-                      id="vehicle-color"
-                      before={<Palette size={16} className="text-(--tgui--hint_color)" />}
-                      value={color}
-                      maxLength={VEHICLE_LIMITS.color}
-                      placeholder="белый"
-                      onChange={(event) => {
-                        setColor(event.target.value.slice(0, VEHICLE_LIMITS.color));
-                        if (formError) setFormError(null);
-                      }}
-                    />
-                  </div>
-                  <div className="FormField">
-                    <label htmlFor="vehicle-plate">Номер (необязательно)</label>
-                    <Input
-                      id="vehicle-plate"
-                      before={<Hash size={16} className="text-(--tgui--hint_color)" />}
-                      value={plate}
-                      maxLength={VEHICLE_LIMITS.plate}
-                      placeholder="Например: 583"
-                      onChange={(event) => {
-                        setPlate(
-                          event.target.value.toUpperCase().slice(0, VEHICLE_LIMITS.plate),
-                        );
-                        if (formError) setFormError(null);
-                      }}
-                    />
-                  </div>
-                  <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
-                    Номер — примета для узнавания, видна только вам. Чтобы убрать номер,
-                    очистите поле и сохраните.
-                  </p>
-                  {(formError || upsert.error) && (
-                    <p className="FormError" role="alert">
-                      {formError ?? vehicleServerErrorMessage(upsert.error)}
-                    </p>
-                  )}
-                  <Button mode="bezeled" stretched size="l" loading={upsert.isPending} onClick={save}>
-                    Сохранить автомобиль
-                  </Button>
-                  <Button
-                    mode="bezeled"
-                    stretched
-                    disabled={upsert.isPending}
-                    onClick={cancelEditing}
-                  >
-                    Отмена
-                  </Button>
-                </>
-              ) : vehicle ? (
-                <>
-                  <div className="flex items-center gap-3">
-                    <span className="icon-circle icon-circle--info">
-                      <Car size={20} />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="text-[16px] font-semibold text-(--tgui--text_color) truncate">
-                        {vehicle.model}
-                      </div>
-                      <Caption Component="div" className="text-(--tgui--hint_color)">
-                        {vehicle.plate ? `${vehicle.color} · ${vehicle.plate}` : vehicle.color}
-                      </Caption>
-                    </div>
-                  </div>
-                  <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
-                    Модель и цвет видят другие пользователи, номер — только вы.
-                  </p>
-                  <Button mode="bezeled" stretched size="s" onClick={startEditing}>
-                    Изменить автомобиль
-                  </Button>
-                  <ConfirmAction
-                    label="Удалить автомобиль"
-                    confirmLabel="Да, удалить"
-                    description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано."
-                    pending={remove.isPending}
-                    onConfirm={() => remove.mutate(undefined)}
-                  />
-                  {remove.isError && (
-                    <p className="FormError" role="alert">
-                      {vehicleRemoveErrorMessage(remove.error)}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-3">
-                    <span className="icon-circle icon-circle--warning">
-                      <Car size={20} />
-                    </span>
+            <Section>
+              <div className="flex flex-col gap-3 p-4">
+                {editing ? (
+                  <>
                     <div>
-                      <div className="text-[16px] font-semibold text-(--tgui--text_color)">
-                        Автомобиль не добавлен
-                      </div>
-                      <Caption Component="div" className="text-(--tgui--hint_color)">
-                        Чтобы публиковать поездки, добавьте автомобиль.
-                      </Caption>
+                      <label htmlFor="vehicle-model" className="sr-only">
+                        Модель
+                      </label>
+                      <Input
+                        id="vehicle-model"
+                        header="Модель"
+                        before={<Car size={17} className="text-(--app-info)" />}
+                        value={model}
+                        maxLength={VEHICLE_LIMITS.model}
+                        placeholder="Skoda Octavia"
+                        onChange={(event) => {
+                          setModel(
+                            event.target.value.slice(0, VEHICLE_LIMITS.model),
+                          );
+                          if (formError) setFormError(null);
+                        }}
+                      />
                     </div>
-                  </div>
-                  <Button mode="bezeled" stretched size="l" onClick={startEditing}>
-                    Добавить автомобиль
-                  </Button>
-                </>
-              )}
-            </div>
-          </Section>
+                    <div>
+                      <label htmlFor="vehicle-color" className="sr-only">
+                        Цвет
+                      </label>
+                      <Input
+                        id="vehicle-color"
+                        header="Цвет"
+                        before={
+                          <Palette
+                            size={16}
+                            className="text-(--tgui--hint_color)"
+                          />
+                        }
+                        value={color}
+                        maxLength={VEHICLE_LIMITS.color}
+                        placeholder="белый"
+                        onChange={(event) => {
+                          setColor(
+                            event.target.value.slice(0, VEHICLE_LIMITS.color),
+                          );
+                          if (formError) setFormError(null);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="vehicle-plate" className="sr-only">
+                        Номер (необязательно)
+                      </label>
+                      <Input
+                        id="vehicle-plate"
+                        header="Номер (необязательно)"
+                        before={
+                          <Hash
+                            size={16}
+                            className="text-(--tgui--hint_color)"
+                          />
+                        }
+                        value={plate}
+                        maxLength={VEHICLE_LIMITS.plate}
+                        placeholder="Например: 583"
+                        onChange={(event) => {
+                          setPlate(
+                            event.target.value
+                              .toUpperCase()
+                              .slice(0, VEHICLE_LIMITS.plate),
+                          );
+                          if (formError) setFormError(null);
+                        }}
+                      />
+                    </div>
+                    <Caption Component="p" className="leading-relaxed">
+                      Номер — примета для узнавания, видна только вам. Чтобы
+                      убрать номер, очистите поле и сохраните.
+                    </Caption>
+                    {(formError || upsert.error) && (
+                      <Caption
+                        Component="p"
+                        role="alert"
+                        className="text-(--tg-theme-destructive-text-color)"
+                      >
+                        {formError ?? vehicleServerErrorMessage(upsert.error)}
+                      </Caption>
+                    )}
+                    <Button
+                      mode="bezeled"
+                      stretched
+                      size="l"
+                      loading={upsert.isPending}
+                      onClick={save}
+                    >
+                      Сохранить автомобиль
+                    </Button>
+                    <Button
+                      mode="bezeled"
+                      stretched
+                      disabled={upsert.isPending}
+                      onClick={cancelEditing}
+                    >
+                      Отмена
+                    </Button>
+                  </>
+                ) : vehicle ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <IconContainer>
+                        <Car size={20} />
+                      </IconContainer>
+                      <div className="min-w-0">
+                        <Text weight="2" Component="div" className="truncate">
+                          {vehicle.model}
+                        </Text>
+                        <Caption
+                          Component="div"
+                          className="text-(--tgui--hint_color)"
+                        >
+                          {vehicle.plate
+                            ? `${vehicle.color} · ${vehicle.plate}`
+                            : vehicle.color}
+                        </Caption>
+                      </div>
+                    </div>
+                    <Caption Component="p" className="leading-relaxed">
+                      Модель и цвет видят другие пользователи, номер — только
+                      вы.
+                    </Caption>
+                    <Button
+                      mode="bezeled"
+                      stretched
+                      size="s"
+                      onClick={startEditing}
+                    >
+                      Изменить автомобиль
+                    </Button>
+                    <ConfirmAction
+                      label="Удалить автомобиль"
+                      confirmLabel="Да, удалить"
+                      description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано."
+                      pending={remove.isPending}
+                      onConfirm={() => remove.mutate(undefined)}
+                    />
+                    {remove.isError && (
+                      <Caption
+                        Component="p"
+                        role="alert"
+                        className="text-(--tg-theme-destructive-text-color)"
+                      >
+                        {vehicleRemoveErrorMessage(remove.error)}
+                      </Caption>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <IconContainer>
+                        <Car size={20} />
+                      </IconContainer>
+                      <div>
+                        <Text weight="2" Component="div">
+                          Автомобиль не добавлен
+                        </Text>
+                        <Caption
+                          Component="div"
+                          className="text-(--tgui--hint_color)"
+                        >
+                          Чтобы публиковать поездки, добавьте автомобиль.
+                        </Caption>
+                      </div>
+                    </div>
+                    <Button
+                      mode="bezeled"
+                      stretched
+                      size="l"
+                      onClick={startEditing}
+                    >
+                      Добавить автомобиль
+                    </Button>
+                  </>
+                )}
+              </div>
+            </Section>
           </div>
         )}
       </QueryState>

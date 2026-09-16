@@ -86,8 +86,10 @@ export function CityPickerField({
   // placeholder/value на plain Input: тексты и связи для тестов те же.
   if (typeof document === "undefined") {
     return (
-      <div className="FormField">
-        <label htmlFor={id} className="sr-only">{label}</label>
+      <div>
+        <label htmlFor={id} className="sr-only">
+          {label}
+        </label>
         <Input
           id={id}
           header={label}
@@ -102,11 +104,13 @@ export function CityPickerField({
   }
 
   return (
-    <div className="FormField">
+    <div>
       {/* Видимую подпись рисует сам Multiselect через header (стандарт tgui);
           внешний label — только sr-only: header на iOS не рендерится
           (нужен скринридерам), а связка htmlFor+id держит e2e getByLabel. */}
-      <label htmlFor={id} className="sr-only">{label}</label>
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
       <Multiselect
         id={id}
         header={label}

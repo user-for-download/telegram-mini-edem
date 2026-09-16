@@ -1,9 +1,4 @@
-import {
-  memo,
-  useCallback,
-  useRef,
-  useState,
-} from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import {
   Accordion,
   Button,
@@ -62,23 +57,33 @@ const FeedbackCard = memo(function FeedbackCard({
           <Caption className="text-(--tgui--hint_color)">
             {new Date(feedback.createdAt).toLocaleDateString("ru-RU")}
           </Caption>
-          <Text Component="p" className="text-(--tgui--text_color) leading-relaxed">
+          <Text
+            Component="p"
+            className="text-(--tgui--text_color) leading-relaxed"
+          >
             {feedback.text}
           </Text>
           {feedback.reply ? (
             <>
-              <Subheadline weight="2" Component="span" className="text-(--tgui--text_color) pt-1">
+              <Subheadline
+                weight="2"
+                Component="span"
+                className="text-(--tgui--text_color) pt-1"
+              >
                 Ответ поддержки
               </Subheadline>
-              <Text Component="p" className="text-(--tgui--text_color) leading-relaxed">
+              <Text
+                Component="p"
+                className="text-(--tgui--text_color) leading-relaxed"
+              >
                 {feedback.reply}
               </Text>
             </>
           ) : (
-            <span className="text-[12px] text-(--tgui--hint_color)">
+            <Caption Component="span">
               Поддержка ещё не ответила. Мы свяжемся с вами здесь — список
               обновится автоматически.
-            </span>
+            </Caption>
           )}
         </div>
       </Accordion.Content>
@@ -195,7 +200,10 @@ export const SupportBody = memo(function SupportBody() {
   // Бан mid-session: requireUser отвечает 403 — терминальный экран плюс
   // рабочая форма обжалования (публичный appeal с initData, без токена).
   // PageHeader нет — закрытие через header модалки.
-  if (myFeedbacks.error instanceof ApiError && myFeedbacks.error.status === 403) {
+  if (
+    myFeedbacks.error instanceof ApiError &&
+    myFeedbacks.error.status === 403
+  ) {
     return (
       <>
         <Placeholder
@@ -204,7 +212,11 @@ export const SupportBody = memo(function SupportBody() {
         />
         <div className="flex flex-col gap-3.5 pt-1">
           <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-            <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
+            <Subheadline
+              weight="2"
+              Component="span"
+              className="text-(--tgui--text_color)"
+            >
               Обжалование блокировки
             </Subheadline>
             <AppealForm />
@@ -220,7 +232,11 @@ export const SupportBody = memo(function SupportBody() {
         aria-label="Частые вопросы"
         className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-2"
       >
-        <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
+        <Subheadline
+          weight="2"
+          Component="span"
+          className="text-(--tgui--text_color)"
+        >
           Частые вопросы
         </Subheadline>
         {SUPPORT_FAQ.map((item) => {
@@ -231,9 +247,14 @@ export const SupportBody = memo(function SupportBody() {
               expanded={isOpen}
               onChange={(expanded) => setOpenedFaqId(expanded ? item.id : null)}
             >
-              <Accordion.Summary Component="button">{item.question}</Accordion.Summary>
+              <Accordion.Summary Component="button">
+                {item.question}
+              </Accordion.Summary>
               <Accordion.Content>
-                <Text Component="p" className="text-(--tgui--hint_color) leading-relaxed">
+                <Text
+                  Component="p"
+                  className="text-(--tgui--hint_color) leading-relaxed"
+                >
                   {item.answer}
                 </Text>
               </Accordion.Content>
@@ -246,7 +267,11 @@ export const SupportBody = memo(function SupportBody() {
         aria-label="Мои обращения"
         className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
       >
-        <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
+        <Subheadline
+          weight="2"
+          Component="span"
+          className="text-(--tgui--text_color)"
+        >
           Мои обращения
         </Subheadline>
         <QueryState
@@ -258,15 +283,19 @@ export const SupportBody = memo(function SupportBody() {
         >
           {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
             <>
-              <p className="text-[14px] font-semibold text-center text-(--tgui--text_color)">
+              <Text weight="2" Component="p" className="text-center">
                 У вас пока нет обращений
-              </p>
-              <Text Component="p" className="text-center text-(--tgui--hint_color)">
-                Здесь появятся ваши обращения и ответы поддержки
               </Text>
+              <Caption Component="p" className="text-center">
+                Здесь появятся ваши обращения и ответы поддержки
+              </Caption>
             </>
           ) : (
-            <div className="flex flex-col gap-2" aria-live="polite" aria-label="Список обращений">
+            <div
+              className="flex flex-col gap-2"
+              aria-live="polite"
+              aria-label="Список обращений"
+            >
               {myFeedbacks.data.map((feedback) => (
                 <FeedbackCard
                   key={feedback.id}
@@ -288,19 +317,31 @@ export const SupportBody = memo(function SupportBody() {
         aria-label="Связаться с нами"
         className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
       >
-        <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
+        <Subheadline
+          weight="2"
+          Component="span"
+          className="text-(--tgui--text_color)"
+        >
           Связаться с нами
         </Subheadline>
         <MutationError error={create.error} />
-        <div className="FormField">
-          <label htmlFor="support-subject">Тема</label>
+        <div>
+          <label htmlFor="support-subject" className="sr-only">
+            Тема
+          </label>
           <Input
             id="support-subject"
-            before={<MessageSquareText size={16} className="text-(--tgui--hint_color)" />}
+            header="Тема"
+            before={
+              <MessageSquareText
+                size={16}
+                className="text-(--tgui--hint_color)"
+              />
+            }
             placeholder="Например: не приходит уведомление"
             value={subject}
             maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
-            status={formError ? "error" : "default"}
+            status={formError ? "error" : undefined}
             onChange={(event) => {
               setSubject(event.target.value);
               if (formError) setFormError(null);
@@ -308,16 +349,19 @@ export const SupportBody = memo(function SupportBody() {
             }}
           />
         </div>
-        <div className="FormField">
-          <label htmlFor="support-text">Сообщение</label>
+        <div>
+          <label htmlFor="support-text" className="sr-only">
+            Сообщение
+          </label>
           <Textarea
             id="support-text"
+            header="Сообщение"
             rows={4}
             maxLength={FEEDBACK_TEXT_MAX_LENGTH}
             placeholder="Расскажите подробнее, что произошло"
             value={text}
             aria-invalid={Boolean(formError)}
-            status={formError ? "error" : "default"}
+            status={formError ? "error" : undefined}
             onChange={(event) => {
               setText(event.target.value);
               if (formError) setFormError(null);
@@ -326,21 +370,26 @@ export const SupportBody = memo(function SupportBody() {
           />
         </div>
         {text.length > 0 && (
-          <p className="ReviewCounter" aria-live="polite">
+          <Caption Component="p" className="text-right" aria-live="polite">
             {text.length}/{FEEDBACK_TEXT_MAX_LENGTH}
-          </p>
+          </Caption>
         )}
         {formError && (
-          <p className="FormError" role="alert">
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
             {formError}
-          </p>
+          </Caption>
         )}
         {success && (
-          <p className="ReviewSuccess" role="status">
+          <Text Component="p" role="status" className="text-(--app-success)">
             Обращение отправлено — мы ответим вам как можно скорее
-          </p>
+          </Text>
         )}
-        <Button mode="bezeled"
+        <Button
+          mode="bezeled"
           stretched
           size="l"
           className="min-h-11"
@@ -357,7 +406,11 @@ export const SupportBody = memo(function SupportBody() {
         aria-label="Обжалование блокировки"
         className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
       >
-        <Subheadline weight="2" Component="span" className="text-(--tgui--text_color)">
+        <Subheadline
+          weight="2"
+          Component="span"
+          className="text-(--tgui--text_color)"
+        >
           Обжалование блокировки
         </Subheadline>
         <AppealForm />

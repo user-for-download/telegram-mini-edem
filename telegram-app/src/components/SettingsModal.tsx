@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { Button, Modal } from "@telegram-apps/telegram-ui";
+import {
+  Button,
+  Caption,
+  IconContainer,
+  Modal,
+  Text,
+} from "@telegram-apps/telegram-ui";
 import { Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
@@ -111,16 +117,17 @@ export function SettingsBody() {
         <div className="flex flex-col gap-3.5 pt-1 pb-4">
           <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="icon-circle icon-circle--info">
+              <IconContainer>
                 {enabled ? <BellRing size={18} /> : <Bell size={18} />}
-              </span>
-              <p className="text-[14px] text-(--tgui--text_color)" aria-live="polite">
+              </IconContainer>
+              <Text Component="p" aria-live="polite">
                 {enabled
                   ? "Уведомления включены — подтверждение брони, отмена и завершение поездки."
                   : "Некритичные уведомления выключены — критичные статусы поездки и брони останутся в приложении."}
-              </p>
+              </Text>
             </div>
-            <Button mode="bezeled"
+            <Button
+              mode="bezeled"
               stretched
               size="l"
               className="min-h-11"
@@ -131,14 +138,18 @@ export function SettingsBody() {
               {enabled ? "Выключить некритичные" : "Включить уведомления"}
             </Button>
             {showSaved && (
-              <p className="text-[13px] text-(--tgui--link_color)" role="status">
+              <Text
+                Component="p"
+                className="text-(--tgui--link_color)"
+                role="status"
+              >
                 Настройки сохранены
-              </p>
+              </Text>
             )}
-            <p className="text-[12px] text-(--tgui--hint_color) leading-relaxed">
-              Настройка синхронизируется с аккаунтом. Отдельные настройки звука и типов уведомлений пока
-              не поддерживаются.
-            </p>
+            <Caption Component="p" className="leading-relaxed">
+              Настройка синхронизируется с аккаунтом. Отдельные настройки звука
+              и типов уведомлений пока не поддерживаются.
+            </Caption>
             <Button
               mode="bezeled"
               size="m"

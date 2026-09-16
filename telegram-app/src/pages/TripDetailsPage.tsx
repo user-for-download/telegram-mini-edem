@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Button, Chip, IconButton, Placeholder, Spinner } from "@telegram-apps/telegram-ui";
+import {
+  Button,
+  Caption,
+  Chip,
+  IconButton,
+  Placeholder,
+  Spinner,
+  Text,
+  Textarea,
+} from "@telegram-apps/telegram-ui";
 import { Phone, Send, ShieldCheck, Star } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,6 +17,7 @@ import { ConfirmAction } from "@/components/ConfirmAction";
 import { EditTripForm } from "@/components/EditTripForm";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { StatusPill } from "@/components/StatusPill";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { shareTrip } from "@/helpers/tripShare";
@@ -63,12 +73,30 @@ export function TripDetailsPage() {
         <OfflineBanner />
         <Placeholder
           header="Поездка не найдена"
-          description={trip.error ? bookingErrorMessage(trip.error) : "Вернитесь к поиску и выберите другую поездку."}
+          description={
+            trip.error
+              ? bookingErrorMessage(trip.error)
+              : "Вернитесь к поиску и выберите другую поездку."
+          }
+          action={
+            <>
+              <Button
+                mode="bezeled"
+                stretched
+                onClick={() => void trip.refetch()}
+              >
+                Повторить
+              </Button>
+              <Button
+                mode="outline"
+                stretched
+                onClick={() => navigate("/trips")}
+              >
+                К поиску
+              </Button>
+            </>
+          }
         >
-          <div className="ButtonRow">
-            <Button mode="bezeled" onClick={() => void trip.refetch()}>Повторить</Button>
-            <Button mode="outline" onClick={() => navigate("/trips")}>К поиску</Button>
-          </div>
           {!isOnline && <p>Проверьте подключение к интернету.</p>}
         </Placeholder>
       </>
@@ -77,7 +105,9 @@ export function TripDetailsPage() {
 
   const item = trip.data;
   const isDriver = item.driver.id === user?.id;
-  const departureTime = item.departureAt ? new Date(item.departureAt).getTime() : null;
+  const departureTime = item.departureAt
+    ? new Date(item.departureAt).getTime()
+    : null;
   const departed = departureTime !== null && departureTime <= Date.now();
   const isActive = !item.status || item.status === "active";
   const hasActiveBooking =
@@ -93,23 +123,35 @@ export function TripDetailsPage() {
     departureTime > Date.now();
 
   const takenSeats = item.bookedSeats ?? [];
-  const availableSeats = Array.from({ length: item.seatsTotal }, (_, index) => index + 1).filter(
-    (seat) => !takenSeats.includes(seat),
-  );
+  const availableSeats = Array.from(
+    { length: item.seatsTotal },
+    (_, index) => index + 1,
+  ).filter((seat) => !takenSeats.includes(seat));
   const effectiveSeat =
     selectedSeat !== null && !takenSeats.includes(selectedSeat)
       ? selectedSeat
       : (availableSeats[0] ?? null);
 
-  const canCompleteTrip = isDriver && isActive && departureTime !== null && departureTime <= Date.now();
+  const canCompleteTrip =
+    isDriver &&
+    isActive &&
+    departureTime !== null &&
+    departureTime <= Date.now();
   const arrival = formatArrivalTime(item.time, item.durationMinutes);
 
   const handleShare = () => {
     setShareStatus(null);
     void shareTrip(item.id).then((result) => {
-      if (result === "shared") setShareStatus("Ссылка отправлена — поделитесь поездкой с попутчиками");
-      else if (result === "copied") setShareStatus("Ссылка скопирована — поделитесь поездкой с попутчиками");
-      else setShareStatus("Не удалось поделиться — скопируйте адрес страницы вручную");
+      if (result === "shared")
+        setShareStatus("Ссылка отправлена — поделитесь поездкой с попутчиками");
+      else if (result === "copied")
+        setShareStatus(
+          "Ссылка скопирована — поделитесь поездкой с попутчиками",
+        );
+      else
+        setShareStatus(
+          "Не удалось поделиться — скопируйте адрес страницы вручную",
+        );
       hapticFeedback.notificationOccurred.ifAvailable("success");
     });
   };
@@ -120,25 +162,33 @@ export function TripDetailsPage() {
 
       {hasActiveBooking && item.myBooking && (
         <div className="p-3 rounded-xl bg-(--app-success-bg) border border-(--app-success)/20 flex items-center justify-between gap-2">
-          <div className="text-xs font-semibold text-(--app-success)">
-            Вы записались попутчиком
-            <div className="text-[11px] font-medium text-(--app-success)/80">
-              Место №{item.myBooking.seat} · {item.price * item.myBooking.seat} ₽
-            </div>
+          <div>
+            <Text weight="2" Component="div" className="text-(--app-success)">
+              Вы записались попутчиком
+            </Text>
+            <Caption Component="div" className="text-(--app-success)/80">
+              Место №{item.myBooking.seat} · {item.price * item.myBooking.seat}{" "}
+              ₽
+            </Caption>
           </div>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-(--app-success) text-white font-medium shrink-0">
-            {item.myBooking.status === "confirmed" ? "Подтверждено" : "На рассмотрении"}
-          </span>
+          <StatusPill
+            tone={item.myBooking.status === "confirmed" ? "success" : "warning"}
+          >
+            {item.myBooking.status === "confirmed"
+              ? "Подтверждено"
+              : "На рассмотрении"}
+          </StatusPill>
         </div>
       )}
 
       <div className="p-3.5 rounded-2xl bg-(--tgui--tertiary_bg_color) flex flex-col gap-3">
-        <div className="flex items-center justify-between text-xs font-medium text-(--tgui--hint_color)">
+        <Caption className="flex items-center justify-between" Component="div">
           <span>{dayLabel(item.date)}</span>
           <span>
-            В пути ~ {formatDurationLocal(item.durationMinutes)} · {item.distanceKm} км
+            В пути ~ {formatDurationLocal(item.durationMinutes)} ·{" "}
+            {item.distanceKm} км
           </span>
-        </div>
+        </Caption>
 
         <TripRouteTimeline
           fromCity={item.fromCity}
@@ -159,17 +209,27 @@ export function TripDetailsPage() {
             alt={item.driver.name}
           />
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 font-semibold text-sm text-(--tgui--text_color)">
+            <Text
+              weight="2"
+              Component="div"
+              className="flex items-center gap-1.5"
+            >
               <span className="truncate">{item.driver.name}</span>
               {item.driver.isVerified && (
-                <ShieldCheck size={15} className="text-(--app-info) fill-(--app-info-bg) shrink-0" />
+                <ShieldCheck
+                  size={15}
+                  className="text-(--app-info) fill-(--app-info-bg) shrink-0"
+                />
               )}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-(--tgui--hint_color)">
-              <Star size={12} className="fill-(--app-rating) text-(--app-rating)" />
+            </Text>
+            <Caption Component="div" className="flex items-center gap-1">
+              <Star
+                size={12}
+                className="fill-(--app-rating) text-(--app-rating)"
+              />
               <span>{item.driver.rating.toFixed(1)}</span>
               <span>({item.driver.reviewsCount} отзывов)</span>
-            </div>
+            </Caption>
           </div>
         </div>
 
@@ -184,12 +244,15 @@ export function TripDetailsPage() {
             <Send size={16} />
           </IconButton>
           {hasActiveBooking && (
-            <span
-              className="p-2 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--hint_color) min-w-11 min-h-11 flex items-center justify-center"
+            <IconButton
+              size="m"
+              mode="gray"
+              disabled
               title="Телефон водителя доступен после подтверждения"
+              aria-label="Телефон водителя доступен после подтверждения"
             >
               <Phone size={16} />
-            </span>
+            </IconButton>
           )}
         </div>
       </div>
@@ -204,19 +267,19 @@ export function TripDetailsPage() {
         Поделиться поездкой с попутчиком в Telegram
       </Button>
       {shareStatus && (
-        <p role="status" className="text-xs text-(--tgui--hint_color) -mt-2">
+        <Caption Component="p" role="status" className="-mt-2">
           {shareStatus}
-        </p>
+        </Caption>
       )}
 
       {item.driver.car && (
         <div className="p-3 rounded-xl bg-(--tgui--tertiary_bg_color) flex items-center justify-between text-xs">
-          <span className="font-semibold text-(--tgui--text_color)">
+          <Text weight="2" Component="span">
             {item.driver.car.model} · {item.driver.car.color}
-          </span>
-          <span className="text-(--tgui--hint_color)">
+          </Text>
+          <Caption Component="span">
             {item.driver.car.plate ?? "Госномер после брони"}
-          </span>
+          </Caption>
         </div>
       )}
 
@@ -232,16 +295,17 @@ export function TripDetailsPage() {
 
       {item.comment && (
         <div className="p-3 rounded-xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) text-xs text-(--tgui--text_color) leading-relaxed">
-          <span className="font-semibold text-(--tgui--hint_color) block mb-0.5">
+          <Caption weight="2" Component="span" className="block mb-0.5">
             Комментарий водителя:
-          </span>
+          </Caption>
           {item.comment}
         </div>
       )}
 
       {item.myBooking && (
         <div className="flex flex-col gap-2 pt-2 border-t border-(--tgui--outline)">
-          {(item.myBooking.status === "pending" || item.myBooking.status === "confirmed") && (
+          {(item.myBooking.status === "pending" ||
+            item.myBooking.status === "confirmed") && (
             <ConfirmAction
               label="Отменить бронирование"
               confirmLabel="Отменить бронь"
@@ -256,9 +320,13 @@ export function TripDetailsPage() {
             />
           )}
           {cancelBooking.error && (
-            <p className="FormError" role="alert">
+            <Caption
+              Component="p"
+              role="alert"
+              className="text-(--tg-theme-destructive-text-color)"
+            >
               {bookingErrorMessage(cancelBooking.error)}
-            </p>
+            </Caption>
           )}
         </div>
       )}
@@ -266,15 +334,26 @@ export function TripDetailsPage() {
       {canBook && (
         <div className="flex flex-col gap-3 pt-2 border-t border-(--tgui--outline)">
           <div role="group" aria-label="Выбор места">
-            <p className="text-sm font-medium text-(--tgui--text_color) mb-2">Место</p>
-            <div className="ButtonRow">
-              {Array.from({ length: item.seatsTotal }, (_, index) => index + 1).map((seat) =>
+            <Text weight="2" Component="p" className="mb-2">
+              Место
+            </Text>
+            <div className="grid gap-2">
+              {Array.from(
+                { length: item.seatsTotal },
+                (_, index) => index + 1,
+              ).map((seat) =>
                 takenSeats.includes(seat) ? (
-                  <Button key={seat} mode="outline" disabled aria-label={`Место ${seat} занято`}>
+                  <Button
+                    key={seat}
+                    mode="outline"
+                    disabled
+                    aria-label={`Место ${seat} занято`}
+                  >
                     {seat} (зан.)
                   </Button>
                 ) : effectiveSeat === seat ? (
-                  <Button mode="bezeled"
+                  <Button
+                    mode="bezeled"
                     key={seat}
                     disabled={createBooking.isPending}
                     onClick={() => setSelectedSeat(seat)}
@@ -294,33 +373,36 @@ export function TripDetailsPage() {
                   >
                     {seat}
                   </Button>
-                )
+                ),
               )}
             </div>
           </div>
-          <label className="FormField">
-            Комментарий водителю
-            <textarea
+          <div>
+            <label htmlFor="booking-comment" className="sr-only">
+              Комментарий водителю
+            </label>
+            <Textarea
+              id="booking-comment"
+              header="Комментарий водителю"
               value={comment}
               maxLength={300}
               rows={3}
               placeholder="Например: буду с небольшим чемоданом, подойду к 9:25"
               onChange={(event) => setComment(event.target.value)}
             />
-          </label>
+          </div>
           <div className="flex items-center justify-between py-1">
             <div>
-              <div className="text-xs text-(--tgui--hint_color)">
-                Цена за место
-              </div>
-              <div className="text-xl font-bold text-(--tgui--text_color)">
+              <Caption Component="div">Цена за место</Caption>
+              <Text weight="2" Component="div">
                 {item.price} ₽
-              </div>
+              </Text>
             </div>
-            <div className="text-right text-[11px] text-(--tgui--hint_color)">
+            <Caption Component="div" className="text-right">
               Оплата водителю
-              <br />при посадке
-            </div>
+              <br />
+              при посадке
+            </Caption>
           </div>
           <Button
             mode="bezeled"
@@ -360,21 +442,37 @@ export function TripDetailsPage() {
             Забронировать место · {item.price} ₽
           </Button>
           {createBooking.error && (
-            <p className="FormError" role="alert">
+            <Caption
+              Component="p"
+              role="alert"
+              className="text-(--tg-theme-destructive-text-color)"
+            >
               {bookingErrorMessage(createBooking.error)}
-            </p>
+            </Caption>
           )}
         </div>
       )}
 
-      {!isDriver && isActive && !departed && item.seatsAvailable <= 0 && !hasActiveBooking && (
-        <Placeholder header="Свободных мест нет" description="Попробуйте другую поездку или оставьте запрос попутчика." />
-      )}
+      {!isDriver &&
+        isActive &&
+        !departed &&
+        item.seatsAvailable <= 0 &&
+        !hasActiveBooking && (
+          <Placeholder
+            header="Свободных мест нет"
+            description="Попробуйте другую поездку или оставьте запрос попутчика."
+          />
+        )}
       {!isDriver && isActive && departed && (
-        <Placeholder header="Поездка уже отправилась" description="Бронирование недоступно. Найдите другую поездку." />
+        <Placeholder
+          header="Поездка уже отправилась"
+          description="Бронирование недоступно. Найдите другую поездку."
+        />
       )}
       {item.status === "cancelled" && <Placeholder header="Поездка отменена" />}
-      {item.status === "completed" && <Placeholder header="Поездка завершена" />}
+      {item.status === "completed" && (
+        <Placeholder header="Поездка завершена" />
+      )}
 
       {isDriver && (
         <DriverBlock
@@ -421,27 +519,43 @@ function DriverBlock({
 
   return (
     <div className="flex flex-col gap-2 pt-2 border-t border-(--tgui--outline)">
-      <div className="text-sm font-semibold text-(--tgui--text_color)">
+      <Text weight="2" Component="div">
         Управление поездкой
-      </div>
+      </Text>
       {status === "completed" && (
-        <p className="text-xs text-(--tgui--hint_color)">Поездка завершена — пассажиры могут оставить отзыв.</p>
+        <Caption Component="p">
+          Поездка завершена — пассажиры могут оставить отзыв.
+        </Caption>
       )}
       {status === "cancelled" && (
-        <p className="text-xs text-(--tgui--hint_color)">Поездка отменена — недоступна для бронирования.</p>
+        <Caption Component="p">
+          Поездка отменена — недоступна для бронирования.
+        </Caption>
       )}
       {isActive && (
         <>
-          <Button mode="bezeled" stretched onClick={() => navigate(`/trips/my/${tripId}/requests`)}>
+          <Button
+            mode="bezeled"
+            stretched
+            onClick={() => navigate(`/trips/my/${tripId}/requests`)}
+          >
             Заявки пассажиров{bookings.data ? ` (${pendingCount})` : ""}
           </Button>
           {bookings.isError && (
-            <p className="FormError" role="alert">
+            <Caption
+              Component="p"
+              role="alert"
+              className="text-(--tg-theme-destructive-text-color)"
+            >
               {bookingErrorMessage(bookings.error)}{" "}
-              <Button mode="plain" size="s" onClick={() => void bookings.refetch()}>
+              <Button
+                mode="plain"
+                size="s"
+                onClick={() => void bookings.refetch()}
+              >
                 Повторить
               </Button>
-            </p>
+            </Caption>
           )}
           <Button mode="bezeled" stretched onClick={onToggleEdit}>
             {editing ? "Скрыть редактирование" : "Редактировать поездку"}
@@ -452,11 +566,15 @@ function DriverBlock({
             confirmLabel="Завершить"
             description="Поездка будет перенесена в архив, а пассажиры смогут оставить отзывы."
             pending={completeTrip.isPending}
-            disabled={!canCompleteTrip || completeTrip.isPending || cancelTrip.isPending}
+            disabled={
+              !canCompleteTrip || completeTrip.isPending || cancelTrip.isPending
+            }
             onConfirm={() => completeTrip.mutate(tripId)}
           />
           {!canCompleteTrip && (
-            <p className="text-xs text-(--tgui--hint_color)">Завершение станет доступно после времени отправления.</p>
+            <p className="text-xs text-(--tgui--hint_color)">
+              Завершение станет доступно после времени отправления.
+            </p>
           )}
           <ConfirmAction
             label="Отменить поездку"
@@ -466,9 +584,13 @@ function DriverBlock({
             onConfirm={() => cancelTrip.mutate(tripId)}
           />
           {(cancelTrip.error || completeTrip.error) && (
-            <p className="FormError" role="alert">
+            <Caption
+              Component="p"
+              role="alert"
+              className="text-(--tg-theme-destructive-text-color)"
+            >
               {bookingErrorMessage(cancelTrip.error ?? completeTrip.error)}
-            </p>
+            </Caption>
           )}
         </>
       )}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@telegram-apps/telegram-ui";
+import { Button, Text } from "@telegram-apps/telegram-ui";
 
 /**
  * Confirm-guard для деструктивных действий (паритет VK ConfirmProvider):
@@ -38,9 +38,15 @@ export function ConfirmAction({
     );
   }
   return (
-    <div role="alertdialog" aria-label={label} aria-describedby="confirm-action-desc">
-      <p id="confirm-action-desc">{description}</p>
-      <div className="ButtonRow">
+    <div
+      role="alertdialog"
+      aria-label={label}
+      aria-describedby="confirm-action-desc"
+    >
+      <Text Component="p" id="confirm-action-desc">
+        {description}
+      </Text>
+      <div className="flex flex-col gap-2 mt-2">
         {/* Подтверждение деструктива — всегда filled: иначе неотличимо
             от «Назад» (исключение из правила «всё bezeled»). */}
         <Button
@@ -56,7 +62,13 @@ export function ConfirmAction({
         >
           {confirmLabel}
         </Button>
-        <Button mode="bezeled" size="s" stretched disabled={pending} onClick={() => setArmed(false)}>
+        <Button
+          mode="bezeled"
+          size="s"
+          stretched
+          disabled={pending}
+          onClick={() => setArmed(false)}
+        >
           Назад
         </Button>
       </div>

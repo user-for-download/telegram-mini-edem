@@ -1,5 +1,11 @@
 import { useRef, useState } from "react";
-import { Button, Input, Textarea } from "@telegram-apps/telegram-ui";
+import {
+  Button,
+  Caption,
+  Input,
+  Text,
+  Textarea,
+} from "@telegram-apps/telegram-ui";
 import { MessageSquareText, Send } from "lucide-react";
 import {
   FEEDBACK_SUBJECT_MAX_LENGTH,
@@ -64,11 +70,19 @@ export function AppealForm() {
 
   return (
     <>
-      <div className="FormField">
-        <label htmlFor="appeal-subject">Тема</label>
+      <div>
+        <label htmlFor="appeal-subject" className="sr-only">
+          Тема
+        </label>
         <Input
           id="appeal-subject"
-          before={<MessageSquareText size={16} className="text-(--tgui--hint_color)" />}
+          header="Тема"
+          before={
+            <MessageSquareText
+              size={16}
+              className="text-(--tgui--hint_color)"
+            />
+          }
           value={subject}
           maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
           status={formError ? "error" : undefined}
@@ -79,10 +93,13 @@ export function AppealForm() {
           }}
         />
       </div>
-      <div className="FormField">
-        <label htmlFor="appeal-text">Сообщение</label>
+      <div>
+        <label htmlFor="appeal-text" className="sr-only">
+          Сообщение
+        </label>
         <Textarea
           id="appeal-text"
+          header="Сообщение"
           rows={4}
           maxLength={FEEDBACK_TEXT_MAX_LENGTH}
           placeholder="Почему блокировка ошибочна и что просите пересмотреть"
@@ -97,32 +114,35 @@ export function AppealForm() {
         />
       </div>
       {text.length > 0 && (
-        <p className="ReviewCounter" aria-live="polite">
+        <Caption Component="p" className="text-right" aria-live="polite">
           {text.length}/{FEEDBACK_TEXT_MAX_LENGTH}
-        </p>
+        </Caption>
       )}
       {formError && (
-        <p className="FormError" role="alert">
+        <Caption
+          Component="p"
+          role="alert"
+          className="text-(--tg-theme-destructive-text-color)"
+        >
           {formError}
-        </p>
+        </Caption>
       )}
       {success && (
-        <p className="ReviewSuccess" role="status">
+        <Text Component="p" role="status" className="text-(--app-success)">
           Обращение отправлено — администрация рассмотрит его как можно скорее
-        </p>
+        </Text>
       )}
-      <div className="ButtonRow">
-        <Button mode="bezeled"
-          stretched
-          size="l"
-          before={<Send size={16} />}
-          loading={appeal.isPending}
-          disabled={!canSubmit}
-          onClick={submit}
-        >
-          Отправить обжалование
-        </Button>
-      </div>
+      <Button
+        mode="bezeled"
+        stretched
+        size="l"
+        before={<Send size={16} />}
+        loading={appeal.isPending}
+        disabled={!canSubmit}
+        onClick={submit}
+      >
+        Отправить обжалование
+      </Button>
     </>
   );
 }
