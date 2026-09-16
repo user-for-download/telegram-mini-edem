@@ -1,6 +1,6 @@
 import type { FC, PropsWithChildren } from "react";
 import { useEffect } from "react";
-import { AppRoot } from "@telegram-apps/telegram-ui";
+import { AppRoot, Button, Placeholder } from "@telegram-apps/telegram-ui";
 import {
   miniApp,
   themeParams,
@@ -58,24 +58,26 @@ const queryClient = new QueryClient({
 });
 
 function ErrorFallback({ error }: { error: unknown }) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : JSON.stringify(error);
   return (
-    <div className="RootError">
-      <div className="RootError__content">
-        <p>Что-то пошло не так:</p>
-        <blockquote>
-          <code>
-            {error instanceof Error
-              ? error.message
-              : typeof error === "string"
-                ? error
-                : JSON.stringify(error)}
-          </code>
-        </blockquote>
-        <button type="button" onClick={() => window.location.reload()}>
+    <Placeholder
+      header="Что-то пошло не так"
+      description={<code>{message}</code>}
+      action={
+        <Button
+          size="l"
+          mode="bezeled"
+          onClick={() => window.location.reload()}
+        >
           Обновить
-        </button>
-      </div>
-    </div>
+        </Button>
+      }
+    />
   );
 }
 

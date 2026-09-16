@@ -297,28 +297,3 @@ input, select, textarea {
   color: var(--app-success);
   font-size: 14px;
 }
-
-/* Fallback-экраны без telegram-ui (ошибки до/после AppRoot):
-   кнопка нативная осознанно, цвет — семантический токен. */
-.RootError {
-  box-sizing: border-box;
-  display: grid;
-  min-height: 100vh;
-  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
-  place-items: center;
-  text-align: center;
-}
-
-.RootError__content {
-  max-width: 420px;
-}
-
-.RootError button {
-  border: 0;
-  border-radius: 8px;
-  background: var(--app-info);
-  color: #fff;
-  cursor: pointer;
-  font: inherit;
-  padding: 12px 18px;
-}

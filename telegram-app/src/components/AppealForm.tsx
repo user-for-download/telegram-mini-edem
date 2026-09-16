@@ -71,7 +71,7 @@ export function AppealForm() {
           before={<MessageSquareText size={16} className="text-(--tgui--hint_color)" />}
           value={subject}
           maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
-          status={formError ? "error" : "default"}
+          status={formError ? "error" : undefined}
           onChange={(event) => {
             setSubject(event.target.value);
             if (formError) setFormError(null);
@@ -88,7 +88,7 @@ export function AppealForm() {
           placeholder="Почему блокировка ошибочна и что просите пересмотреть"
           value={text}
           aria-invalid={Boolean(formError)}
-          status={formError ? "error" : "default"}
+          status={formError ? "error" : undefined}
           onChange={(event) => {
             setText(event.target.value);
             if (formError) setFormError(null);

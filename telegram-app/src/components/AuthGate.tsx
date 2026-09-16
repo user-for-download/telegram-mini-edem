@@ -1,5 +1,5 @@
 import { type FC, type PropsWithChildren, useEffect, useState } from "react";
-import { Button, Placeholder, Spinner } from "@telegram-apps/telegram-ui";
+import { Button, Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
 import { useAuthStore } from "@/store/useAuthStore";
 import { apiClient } from "@/api/client";
 import { AccountStatePage, RetryAction } from "@/pages/AccountStatePage";
@@ -137,14 +137,11 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
           title="Аккаунт заблокирован"
           description={`Причина: ${banReason || "Причина не указана"}. Вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт.`}
         />
-        <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-            <span className="text-[13px] font-semibold text-(--tgui--text_color)">
-              Обжалование блокировки
-            </span>
+        <Section header="Обжалование блокировки">
+          <div className="flex flex-col gap-3 p-4">
             <AppealForm />
           </div>
-        </div>
+        </Section>
       </>
     );
   }
