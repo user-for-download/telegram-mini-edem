@@ -1,9 +1,16 @@
 /* Базовые стили telegram-app: тема и компоненты — @telegram-apps/telegram-ui
    (tgui.xelene.me), раскладка — Tailwind v4 утилитами на tgui-переменных
-   (язык примера edem-telegram-mini-app). Сам tgui-stylesheet подключён
-   в main.tsx раньше этого файла — наши правила приоритетнее.
+   (язык примера edem-telegram-mini-app).
+   Каскад (CSS Cascade 5): Tailwind v4 живёт в слоях
+   theme/base/components/utilities, а tgui-stylesheet — неслойный, и неслойные
+   стили бьют слойные всегда, независимо от порядка импортов. Поэтому tgui
+   импортируется сюда же в собственный слой `tgui` между base и components:
+   preflight (base) нативные стили tgui не трогает, а utilities/components
+   и наши неслойные классы ниже законно переопределяют tgui без !important.
    Здесь только токены + семантические классы, которых нет в tgui. */
+@layer theme, base, tgui, components, utilities;
 @import "tailwindcss";
+@import "@telegram-apps/telegram-ui/dist/styles.css" layer(tgui);
 
 :root {
   color-scheme: light dark;
@@ -181,9 +188,9 @@ input, select, textarea {
 }
 
 /* Выбранный тег условий — голубой (переопределение tgui Chip:
-   aria-pressed уже выставляется в DOM, правило бьёт hashed-классы
-   tgui за счёт специфичности). Действует везде, где TagChips:
-   создание, поиск, редактирование поездки. */
+   aria-pressed уже выставляется в DOM; правило бьёт hashed-классы
+   tgui за счёт слоя — наши неслойные классы приоритетнее слоя tgui.
+   Действует везде, где TagChips: создание, поиск, редактирование поездки. */
 .TagChips .TagChip[aria-pressed="true"] {
   background: var(--tgui--button_color, #007aff);
   border-color: transparent;

@@ -57,11 +57,21 @@ export function dateSegmentToRange(
   return { dateFrom: toIsoDate(saturday), dateTo: toIsoDate(sunday) };
 }
 
+/**
+ * Границы слайдера «Цена не выше» (SearchPage, tgui Slider):
+ * сид-цены 300–1100 ₽, межгород с запасом — до 3000, шаг 100.
+ * Крайнее правое положение (MAX) означает «любая цена» — фильтр снимается.
+ */
+export const PRICE_SLIDER_MIN = 100;
+export const PRICE_SLIDER_MAX = 3000;
+export const PRICE_SLIDER_STEP = 100;
+
 export interface SearchFormState {
   fromCity: string;
   toCity: string;
   dateSegment: DateSegment;
-  maxPrice: string;
+  /** null — без лимита («любая цена», крайнее правое положение слайдера). */
+  maxPrice: number | null;
   tags: TripTag[];
 }
 
@@ -69,7 +79,7 @@ export const EMPTY_SEARCH_FORM: SearchFormState = {
   fromCity: "",
   toCity: "",
   dateSegment: "all",
-  maxPrice: "",
+  maxPrice: null,
   tags: [],
 };
 
@@ -84,10 +94,22 @@ export function buildSearchFilters(
   const range = dateSegmentToRange(state.dateSegment);
   if (range.dateFrom) result.dateFrom = range.dateFrom;
   if (range.dateTo) result.dateTo = range.dateTo;
-  const maxPrice = Number(state.maxPrice);
-  if (state.maxPrice.trim() && Number.isFinite(maxPrice) && maxPrice > 0) {
+  // Слайдер всегда отдаёт число в [MIN, MAX]; MAX означает «любая цена».
+  const maxPrice = state.maxPrice;
+  if (
+    maxPrice !== null &&
+    Number.isFinite(maxPrice) &&
+    maxPrice > 0 &&
+    maxPrice < PRICE_SLIDER_MAX
+  ) {
     result.maxPrice = Math.floor(maxPrice);
   }
   if (state.tags.length > 0) result.tags = [...state.tags];
   return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/** Подпись слайдера цены: «до 1 500 ₽» или «Любая цена» без лимита. */
+export function formatMaxPriceLabel(maxPrice: number | null): string {
+  if (maxPrice === null) return "Любая цена";
+  return `до ${maxPrice.toLocaleString("ru-RU")} ₽`;
 }

@@ -7,6 +7,23 @@
 
 ## [Unreleased]
 
+### Fixed
+
+#### Telegram Cascade Layers (tgui в слое tgui)
+
+- **Диагноз**: конфликт был системный, а не точечный. В Tailwind v4 весь фреймворк (`@import "tailwindcss"`) живёт в каскадных слоях (`@layer theme, base, components, utilities`), а стили tgui импортировались напрямую в `main.tsx` — без слоя. По CSS Cascade 5 неслойные стили побеждают слойные всегда, независимо от порядка импортов и специфичности. Поэтому комментарий «стили tgui ПЕРВЫМИ — чтобы наши переопределения имели приоритет» не работал: Tailwind-утилиты проигрывали tgui в любом конфликте. Симптом: ~30 `!`-хвостов в 7 файлах (AppBottomBar, AppHeader, CityPickerField, HomePage, ProfilePage, SearchPage, CreateTripPage).
+- **`telegram-app/src/index.css`**: объявлен порядок `@layer theme, base, tgui, components, utilities`, tgui импортируется с `layer(tgui)` между base и components — preflight (base) нативные стили tgui не трогает, а utilities/components и неслойные классы приложения переопределяют tgui без `!important`.
+- **`telegram-app/src/main.tsx`**: прямой импорт tgui-стилей убран (был единственным местом импорта).
+- Существенные `!`-модификаторы сознательно не тронуты: после фикса они избыточны, но безвредны (страховка от собственных неслойных правил). Возможный ожидаемый эффект: ранее молча проигрывавшие tgui утилиты теперь применяются — ключевые экраны (таббар, хедер, модалки) проверить визуально в dev-режиме.
+
+### Changed
+
+#### Фильтр цены в поиске — слайдер вместо ручного ввода
+
+- `SearchPage`: «Цена не выше» — нативный tgui `Slider` (100–3000 ₽, шаг 100) вместо `<Input type="number">`: удобнее на мобильном, значение физически не выходит за диапазон — класс ошибок валидации ввода исчезает. Крайнее правое положение = «Любая цена» (фильтр снят), текущее значение показывается подписью рядом с заголовком.
+- `searchFilters`: `maxPrice: string` → `number | null` (`null` — без лимита), константы `PRICE_SLIDER_MIN/MAX/STEP`, форматтер подписи `formatMaxPriceLabel`. API (`SearchTripsFilters.maxPrice`) и бэкенд без изменений.
+- A11y: слайдер связан подписью через `aria-labelledby`, значение озвучивается через `getAriaValueText` («до …» / «Любая цена»).
+
 ### Added
 
 #### Telegram App — Фаза 1 (фундамент telegram-app)

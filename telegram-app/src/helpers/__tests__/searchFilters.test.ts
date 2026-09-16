@@ -3,7 +3,9 @@ import {
   buildSearchFilters,
   dateSegmentToRange,
   EMPTY_SEARCH_FORM,
+  formatMaxPriceLabel,
   parseDateSegmentParam,
+  PRICE_SLIDER_MAX,
 } from "@/helpers/searchFilters";
 
 // Фиксированное «сегодня» — среда 2026-09-09 (локальная дата),
@@ -79,7 +81,7 @@ describe("buildSearchFilters", () => {
       fromCity: "Вологда",
       toCity: "Череповец",
       dateSegment: "today",
-      maxPrice: "1500",
+      maxPrice: 1500,
       tags: ["Не курить"],
     });
     expect(filters).toMatchObject({
@@ -93,10 +95,10 @@ describe("buildSearchFilters", () => {
     expect(filters?.dateFrom).toBe(filters?.dateTo);
   });
 
-  it("ignores a non-numeric price instead of sending NaN", () => {
+  it("omits the price filter when the slider is at max (any price)", () => {
     const filters = buildSearchFilters({
       ...EMPTY_SEARCH_FORM,
-      maxPrice: "много",
+      maxPrice: PRICE_SLIDER_MAX,
     });
     expect(filters).toBeUndefined();
   });
@@ -107,5 +109,15 @@ describe("buildSearchFilters", () => {
       fromCity: "  Вологда  ",
     });
     expect(filters).toMatchObject({ fromCity: "Вологда" });
+  });
+});
+
+describe("formatMaxPriceLabel", () => {
+  it("returns any-price text without a limit", () => {
+    expect(formatMaxPriceLabel(null)).toBe("Любая цена");
+  });
+
+  it("formats the cap with roubles", () => {
+    expect(formatMaxPriceLabel(1500)).toMatch(/до.*1\s?500.*₽/);
   });
 });

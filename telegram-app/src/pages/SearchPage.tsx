@@ -7,6 +7,7 @@ import {
   Placeholder,
   Section,
   SegmentedControl,
+  Slider,
   Caption,
 } from "@telegram-apps/telegram-ui";
 import {
@@ -25,7 +26,11 @@ import { TRIP_TAGS } from "@/consts/tags";
 import {
   DATE_SEGMENTS,
   EMPTY_SEARCH_FORM,
+  PRICE_SLIDER_MAX,
+  PRICE_SLIDER_MIN,
+  PRICE_SLIDER_STEP,
   buildSearchFilters,
+  formatMaxPriceLabel,
   parseDateSegmentParam,
   type SearchFormState,
 } from "@/helpers/searchFilters";
@@ -96,7 +101,7 @@ export function SearchPage() {
   };
 
   const hasActiveFilters =
-    Boolean(form.maxPrice.trim()) || form.tags.length > 0 || form.dateSegment !== "all";
+    form.maxPrice !== null || form.tags.length > 0 || form.dateSegment !== "all";
 
   return (
     <>
@@ -206,15 +211,29 @@ export function SearchPage() {
           {showFilters && (
             <div className="pt-2 border-t border-(--tgui--outline) flex flex-col gap-3">
               <div className="FormField">
-                <label htmlFor="search-max-price">Цена не выше, ₽</label>
-                <Input
-                  id="search-max-price"
-                  type="number"
-                  min={1}
-                  inputMode="numeric"
-                  value={form.maxPrice}
-                  onChange={(event) => set("maxPrice", event.target.value)}
-                  placeholder="Например: 300"
+                <div className="flex items-center justify-between">
+                  <span id="search-max-price-label">Цена не выше</span>
+                  <span
+                    aria-hidden="true"
+                    className="text-xs font-medium text-(--tgui--hint_color)"
+                  >
+                    {formatMaxPriceLabel(form.maxPrice)}
+                  </span>
+                </div>
+                <Slider
+                  min={PRICE_SLIDER_MIN}
+                  max={PRICE_SLIDER_MAX}
+                  step={PRICE_SLIDER_STEP}
+                  value={form.maxPrice ?? PRICE_SLIDER_MAX}
+                  onChange={(value) =>
+                    set("maxPrice", value >= PRICE_SLIDER_MAX ? null : value)
+                  }
+                  aria-labelledby="search-max-price-label"
+                  getAriaValueText={(value) =>
+                    value >= PRICE_SLIDER_MAX
+                      ? "Любая цена"
+                      : formatMaxPriceLabel(value)
+                  }
                 />
               </div>
               <div className="flex flex-col gap-2">

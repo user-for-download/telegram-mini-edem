@@ -1,6 +1,6 @@
-// Стили telegram-ui ПЕРВЫМИ — чтобы наши переопределения имели приоритет.
-import "@telegram-apps/telegram-ui/dist/styles.css";
-
+// tgui-стили подключаются в index.css в слое `tgui` (см. комментарий там):
+// неслойное бьёт слойное всегда, поэтому порядок импортов здесь на каскад
+// не влияет — прямой импорт styles.css убран (был единственным местом).
 import ReactDOM from "react-dom/client";
 import { StrictMode } from "react";
 import { retrieveLaunchParams } from "@telegram-apps/sdk-react";
