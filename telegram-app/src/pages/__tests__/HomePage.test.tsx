@@ -122,7 +122,9 @@ describe("HomePage", () => {
     expect(html).toContain("Александр");
     expect(html).not.toContain("undefined");
     expect(html).toContain("2030-06-01 · 09:00");
-    expect(html).toContain("2 места");
+    // seat — номер места, слово всегда в единственном числе.
+    expect(html).toContain("2 место");
+    expect(html).not.toContain("2 места");
     // 450 ₽ × 2 места.
     expect(html).toContain("900");
   });

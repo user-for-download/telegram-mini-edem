@@ -8,8 +8,7 @@ import {
   Tappable,
   Badge,
   Caption,
-  Subheadline,
-  Info
+  Info,
 } from "@telegram-apps/telegram-ui";
 import {
   PlusCircle,
@@ -46,7 +45,10 @@ export function HomePage() {
   const [toCity, setToCity] = useState("");
 
   const activeBooking = (bookings.data ?? [])
-    .filter((booking) => booking.status === "confirmed" || booking.status === "pending")
+    .filter(
+      (booking) =>
+        booking.status === "confirmed" || booking.status === "pending",
+    )
     .sort((a, b) => {
       const aTime = a.trip.departureAt ? Date.parse(a.trip.departureAt) : 0;
       const bTime = b.trip.departureAt ? Date.parse(b.trip.departureAt) : 0;
@@ -96,13 +98,20 @@ export function HomePage() {
                   <Avatar
                     size={40}
                     src={profile.data?.avatar}
-                    acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
+                    acronym={(profile.data?.name ?? "ЕД")
+                      .slice(0, 2)
+                      .toUpperCase()}
                   />
                 }
                 after={
                   <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--text_color) text-xs font-semibold shrink-0">
-                    <Star size={13} className="fill-(--app-rating) text-(--app-rating)" />
-                    <span>{profile.data ? profile.data.rating.toFixed(1) : "—"}</span>
+                    <Star
+                      size={13}
+                      className="fill-(--app-rating) text-(--app-rating)"
+                    />
+                    <span>
+                      {profile.data ? profile.data.rating.toFixed(1) : "—"}
+                    </span>
                   </span>
                 }
               >
@@ -170,64 +179,53 @@ export function HomePage() {
         ) : (
           !bookings.error &&
           activeBooking && (
-              <Section header="Ближайшая поездка"
-              >
-                {/* Cell — настоящей кнопкой (Component="button"): голый onClick
-                    рендерит div без клавиатуры и без анонса скринридером. */}
-                <Cell
-                  Component="button"
-                  type="button"
-                  subhead={
-                    <Badge
-                      mode="white"
-                      type="number"
-                    >
-                      {activeBooking.status === "confirmed" ? "Подтверждено" : "Ожидает подтверждения"}
-                    </Badge>
-                }
+            <Section header="Ближайшая поездка">
+              {/* Component="button" + text-left: кнопка даёт клавиатуру,
+                    text-left гасит UA-центровку текста в <button>. */}
+              <Cell
+                Component="button"
+                type="button"
+                className="text-left"
                 onClick={() => {
                   haptic.light();
                   navigate(`/trips/${activeBooking.trip.id}`);
                 }}
-                  subtitle={
-                    <Caption
-                      level="1"
-                      weight="3"
-                    >
-                      {activeBooking.trip.driver.car
-                        ? `${activeBooking.trip.driver.car.model} · ${activeBooking.trip.driver.name}`
-                        : activeBooking.trip.driver.name}
-                    </Caption>
-
-                  }
-                  description={
-                    <Subheadline
-                      level="1"
-                      weight="3"
-                    >
-                      { `${activeBooking.trip.date} · ${activeBooking.trip.time}` }
-                    </Subheadline>
-
-                  }
+                after={
+                  <Info subtitle={`${activeBooking.seat} место`} type="text">
+                    <span className="font-bold text-(--tgui--text_color)">
+                      {activeBooking.trip.price * activeBooking.seat} ₽
+                    </span>
+                  </Info>
+                }
                 before={
                   <Avatar
                     src={activeBooking.trip.driver.avatar}
                     size={48}
-                    acronym={(activeBooking.trip.driver.name ?? "?").slice(0, 2).toUpperCase()}
+                    acronym={(activeBooking.trip.driver.name ?? "?")
+                      .slice(0, 2)
+                      .toUpperCase()}
                   />
                 }
-                  after={
-                  <>
-                    <Info
-                      subtitle={`${activeBooking.seat} ${activeBooking.seat === 1 ? "место" : "места"}`}
-                      type="text"
-                    >
-                      <span className="font-bold text-(--tgui--text_color)">
-                        {activeBooking.trip.price * activeBooking.seat} ₽
-                      </span>
-                      </Info>
-                  </>
-
+                description={
+                  <Badge
+                    mode={
+                      activeBooking.status === "confirmed" ? "primary" : "gray"
+                    }
+                    type="number"
+                    className="m-0"
+                  >
+                    {activeBooking.status === "confirmed"
+                      ? "Подтверждено"
+                      : "Ожидает подтверждения"}
+                  </Badge>
+                }
+                subhead={`${activeBooking.trip.date} · ${activeBooking.trip.time}`}
+                subtitle={
+                  <Caption level="1" weight="3">
+                    {activeBooking.trip.driver.car
+                      ? `${activeBooking.trip.driver.car.model} · ${activeBooking.trip.driver.name}`
+                      : activeBooking.trip.driver.name}
+                  </Caption>
                 }
               >
                 {activeBooking.trip.fromCity} → {activeBooking.trip.toCity}
@@ -279,7 +277,9 @@ export function HomePage() {
                   {route.from} → {route.to}
                 </div>
                 <div className="flex items-center justify-between mt-1 text-[11px] text-(--tgui--hint_color)">
-                  <span className="font-medium text-(--app-info)">Найти попутку</span>
+                  <span className="font-medium text-(--app-info)">
+                    Найти попутку
+                  </span>
                 </div>
               </Tappable>
             ))}
@@ -288,38 +288,37 @@ export function HomePage() {
 
         {/* Преимущества: эталон Section + Cell — не трогаем. */}
         <Section header="Преимущества Едем">
-            <Cell
-              before={
-                <div className="icon-circle icon-circle--info">
-                  <ShieldCheck size={18} />
-                </div>
-              }
-              subtitle="Верификация через Telegram ID"
-            >
-              Безопасность и проверка
-            </Cell>
-            <Cell
-              before={
-                <div className="icon-circle icon-circle--warning">
-                  <Star size={18} />
-                </div>
-              }
-              subtitle="Честные отзывы только после завершённых поездок"
-            >
-              Честный рейтинг
-            </Cell>
-            <Cell
-              before={
-                <div className="icon-circle icon-circle--success">
-                  <TrendingUp size={18} />
-                </div>
-              }
-              subtitle="Дешевле, чем автобус или такси между районами области"
-            >
-              Выгодные цены
-            </Cell>
-          </Section>
-
+          <Cell
+            before={
+              <div className="icon-circle icon-circle--info">
+                <ShieldCheck size={18} />
+              </div>
+            }
+            subtitle="Верификация через Telegram ID"
+          >
+            Безопасность и проверка
+          </Cell>
+          <Cell
+            before={
+              <div className="icon-circle icon-circle--warning">
+                <Star size={18} />
+              </div>
+            }
+            subtitle="Честные отзывы только после завершённых поездок"
+          >
+            Честный рейтинг
+          </Cell>
+          <Cell
+            before={
+              <div className="icon-circle icon-circle--success">
+                <TrendingUp size={18} />
+              </div>
+            }
+            subtitle="Дешевле, чем автобус или такси между районами области"
+          >
+            Выгодные цены
+          </Cell>
+        </Section>
       </div>
     </>
   );
