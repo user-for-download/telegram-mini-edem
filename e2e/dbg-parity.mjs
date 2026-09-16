@@ -181,11 +181,12 @@ try {
 
   await runStep("create trip: UI публикует поездку с уникальной ценой", async () => {
     await hashUrl(page, "/trips/my/new");
-    // Пикер городов с вводом: печатаем и кликаем опцию из дропдауна.
+    // Multiselect: печатаем и кликаем ячейку дропдауна по точному тексту
+    // (у опций tgui нет role=option — только у выбранных чипов).
     await page.getByLabel("Город отправления").fill(CITY_FROM);
-    await page.getByRole("option", { name: CITY_FROM }).click();
+    await page.getByText(CITY_FROM, { exact: true }).first().click();
     await page.getByLabel("Город назначения").fill(CITY_TO);
-    await page.getByRole("option", { name: CITY_TO }).click();
+    await page.getByText(CITY_TO, { exact: true }).first().click();
     // datetime-local: формат YYYY-MM-DDTHH:mm.
     const dep = new Date(Date.now() + 86400e3);
     const pad = (n) => String(n).padStart(2, "0");

@@ -27,9 +27,9 @@ psql(`DELETE FROM "Trip" WHERE "driverId" = '${devRow}' AND "status" = 'active'`
 psql(`INSERT INTO "Car" ("id", "userId", "model", "color") VALUES (gen_random_uuid(), '${devRow}', 'Lada', 'белая') ON CONFLICT ("userId") DO NOTHING`);
 await page.goto(`${TG_URL}/#/trips/my/new`, { waitUntil: "commit" });
 await page.getByLabel("Город отправления").fill(CITY_FROM);
-await page.getByRole("option", { name: CITY_FROM }).click();
+await page.getByText(CITY_FROM, { exact: true }).first().click();
 await page.getByLabel("Город назначения").fill(CITY_TO);
-await page.getByRole("option", { name: CITY_TO }).click();
+await page.getByText(CITY_TO, { exact: true }).first().click();
 const dep = new Date(Date.now() + 14 * 86400e3 + (Date.now() % 3600000) + (process.pid % 60) * 60000);
 const pad = (n) => String(n).padStart(2, "0");
 await page.locator('input[type="datetime-local"]').fill(`${dep.getFullYear()}-${pad(dep.getMonth() + 1)}-${pad(dep.getDate())}T${pad(dep.getHours())}:${pad(dep.getMinutes())}`);

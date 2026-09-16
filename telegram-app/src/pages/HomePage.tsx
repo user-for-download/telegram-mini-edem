@@ -1,41 +1,34 @@
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import {
   Avatar,
   Banner,
   Button,
   Cell,
-  Input,
   Section,
-  SegmentedControl,
-  IconButton,
   Tappable,
+  Badge,
+  Caption,
+  Subheadline,
+  Info
 } from "@telegram-apps/telegram-ui";
 import {
-  ChevronRight,
-  MapPin,
   PlusCircle,
   Search,
   ShieldCheck,
   Star,
   TrendingUp,
-  ArrowRightLeft,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StatusPill } from "@/components/StatusPill";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ProfileBarSkeleton } from "@/components/Skeletons";
 import { TripCardSkeleton } from "@/components/Skeletons";
+import { CityPickerField } from "@/components/CityPickerField";
 import { POPULAR_ROUTES } from "@/consts/popularRoutes";
 import { haptic } from "@/utils/haptics";
-import type { DateSegment } from "@/helpers/searchFilters";
 import { useProfileQuery } from "@/queries/profile";
+import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
-
-const DAY_SEGMENTS: ReadonlyArray<{ value: Exclude<DateSegment, "all">; label: string }> = [
-  { value: "today", label: "Сегодня" },
-  { value: "tomorrow", label: "Завтра" },
-  { value: "weekend", label: "Выходные" },
-];
 
 /**
  * Главная (лендинг, язык HomeTab примера): профиль-бар с рейтингом,
@@ -47,10 +40,10 @@ export function HomePage() {
   const navigate = useNavigate();
   const profile = useProfileQuery();
   const bookings = useMyBookingsQuery();
+  const cities = useAllCitiesQuery();
 
   const [fromCity, setFromCity] = useState("");
   const [toCity, setToCity] = useState("");
-  const [day, setDay] = useState<Exclude<DateSegment, "all">>("today");
 
   const activeBooking = (bookings.data ?? [])
     .filter((booking) => booking.status === "confirmed" || booking.status === "pending")
@@ -60,24 +53,17 @@ export function HomePage() {
       return aTime - bTime;
     })[0];
 
-  const swapCities = () => {
-    haptic.selection();
-    setFromCity(toCity);
-    setToCity(fromCity);
-  };
-
-  const goToSearch = (from?: string, to?: string, segment?: DateSegment) => {
+  const goToSearch = (from?: string, to?: string) => {
     haptic.light();
     const params = new URLSearchParams();
     const fromValue = from ?? fromCity;
     const toValue = to ?? toCity;
     if (fromValue.trim()) params.set("from", fromValue.trim());
     if (toValue.trim()) params.set("to", toValue.trim());
-    params.set("segment", segment ?? day);
     navigate(`/trips?${params.toString()}`);
   };
 
-  const submitSearch = (event: FormEvent) => {
+  const submitSearch = (event: SubmitEvent) => {
     event.preventDefault();
     goToSearch();
   };
@@ -92,96 +78,86 @@ export function HomePage() {
           <ProfileBarSkeleton />
         ) : (
           <Section>
-            <Cell
-              before={
-                <Avatar
-                  size={40}
-                  src={profile.data?.avatar}
-                  acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
-                />
-              }
-              after={
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--text_color) text-xs font-semibold shrink-0">
-                  <Star size={13} className="fill-(--app-rating) text-(--app-rating)" />
-                  <span>{profile.data ? profile.data.rating.toFixed(1) : "—"}</span>
-                </span>
-              }
+            {/* Тап по профиль-бару — вкладка профиля (паттерн Tappable
+                баннера ближайшей брони ниже). Ошибка профиля переходу
+                не мешает — страница профиля отработает свои состояния сама. */}
+            <Tappable
+              Component="button"
+              type="button"
+              onClick={() => {
+                haptic.light();
+                navigate("/profile");
+              }}
+              aria-label="Открыть профиль"
+              className="block w-full text-left"
             >
-              {profile.data?.name ?? "Попутчик"}
-            </Cell>
+              <Cell
+                before={
+                  <Avatar
+                    size={40}
+                    src={profile.data?.avatar}
+                    acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
+                  />
+                }
+                after={
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-(--tgui--secondary_fill) text-(--tgui--text_color) text-xs font-semibold shrink-0">
+                    <Star size={13} className="fill-(--app-rating) text-(--app-rating)" />
+                    <span>{profile.data ? profile.data.rating.toFixed(1) : "—"}</span>
+                  </span>
+                }
+              >
+                {profile.data?.name ?? "Попутчик"}
+              </Cell>
+            </Tappable>
           </Section>
         )}
 
-        {/* Экспресс-поиск: форма — единственный ребёнок Section
-            (дивайдеров нет), поверхность и отступы — нативные. */}
-        <Section header="Куда поедем?">
-          <form onSubmit={submitSearch} className="flex flex-col gap-2.5 p-4">
-              <div className="flex flex-col gap-1.5 relative">
-                {/* tgui header скрыт на iOS (только base) — внешний label виден везде. */}
-                <div className="FormField">
-                  <label htmlFor="home-from">Откуда</label>
-                  <Input
-                    id="home-from"
-                    before={<MapPin size={17} className="text-(--app-info)" />}
-                    value={fromCity}
-                    onChange={(event) => setFromCity(event.target.value)}
-                    placeholder="Город или село отправления"
-                  />
-                </div>
-                <div className="FormField">
-                  <label htmlFor="home-to">Куда</label>
-                  <Input
-                    id="home-to"
-                    before={<MapPin size={17} className="text-(--app-success)" />}
-                    value={toCity}
-                    onChange={(event) => setToCity(event.target.value)}
-                    placeholder="Город или село назначения"
-                  />
-                </div>
-                <IconButton
-                  type="button"
-                  size="s"
-                  mode="gray"
-                  onClick={swapCities}
-                  aria-label="Поменять направление"
-                  className="absolute! right-2! top-1/2! -translate-y-1/2! bg-(--tgui--section_bg_color)! shadow-xs!"
+        {/* Экспресс-поиск: города — CityPickerField с автодополнением
+            из справочника БД (как на создании поездки). Пикеры — прямые
+            дети Section (дивайдеры ставит сама Section), у каждого свой
+            видимый label (видно везде, включая iOS). Swap здесь нет:
+            absolute-оверлей несовместим с Multiselect, экспресс-форма
+            минимальна (swap остался на создании поездки). Сегментов дня
+            нет — пресет на /trips без дат (все даты), частичное имя
+            ищется contains-поиском бэкенда. Кнопка — в footer секции
+            (не в children: иначе Section поставила бы дивайдер), овальная
+            за счёт utilities-слоя поверх tgui (без !important). */}
+        <form onSubmit={submitSearch}>
+          <Section
+            header="Куда поедем?"
+            footer={
+              <div className="p-4">
+                <Button
+                  size="l"
+                  stretched
+                  mode="bezeled"
+                  before={<Search size={18} />}
+                  type="submit"
+                  className="rounded-full"
                 >
-                  <ArrowRightLeft size={15} className="text-(--app-info)" />
-                </IconButton>
+                  Найти поездку
+                </Button>
               </div>
-
-              <div role="tablist" aria-label="День поездки" className="mt-1">
-                <SegmentedControl>
-                  {DAY_SEGMENTS.map((option) => (
-                    <SegmentedControl.Item
-                      key={option.value}
-                      type="button"
-                      role="tab"
-                      selected={day === option.value}
-                      aria-selected={day === option.value}
-                      onClick={() => {
-                        haptic.selection();
-                        setDay(option.value);
-                      }}
-                    >
-                      {option.label}
-                    </SegmentedControl.Item>
-                  ))}
-                </SegmentedControl>
-              </div>
-
-              <Button
-                size="l"
-                stretched
-                mode="bezeled"
-                className="mt-1"
-                before={<Search size={18} />}
-                type="submit"
-              >
-                Найти поездку
-              </Button>
-            </form>
-        </Section>
+            }
+          >
+            <CityPickerField
+              id="home-from"
+              label="Откуда"
+              value={fromCity}
+              cities={cities.data}
+              placeholder="Город или село отправления"
+              onSelect={setFromCity}
+            />
+            <CityPickerField
+              id="home-to"
+              label="Куда"
+              value={toCity}
+              cities={cities.data}
+              placeholder="Город или село назначения"
+              onSelect={setToCity}
+            />
+          </Section>
+        </form>
 
         {/* Ближайшая бронь: поверхность — Section, статус-пилюля внутри.
             Загрузка — скелетон, ошибка броней лендинг не блокирует. */}
@@ -194,46 +170,68 @@ export function HomePage() {
         ) : (
           !bookings.error &&
           activeBooking && (
-            <Section header="Ближайшая поездка">
-              <Tappable
-                Component="button"
-                type="button"
+              <Section header="Ближайшая поездка"
+              >
+                {/* Cell — настоящей кнопкой (Component="button"): голый onClick
+                    рендерит div без клавиатуры и без анонса скринридером. */}
+                <Cell
+                  Component="button"
+                  type="button"
+                  subhead={
+                    <Badge
+                      mode="white"
+                      type="number"
+                    >
+                      {activeBooking.status === "confirmed" ? "Подтверждено" : "Ожидает подтверждения"}
+                    </Badge>
+                }
                 onClick={() => {
                   haptic.light();
                   navigate(`/trips/${activeBooking.trip.id}`);
                 }}
-                className="block w-full p-4 text-left"
+                  subtitle={
+                    <Caption
+                      level="1"
+                      weight="3"
+                    >
+                      {activeBooking.trip.driver.car
+                        ? `${activeBooking.trip.driver.car.model} · ${activeBooking.trip.driver.name}`
+                        : activeBooking.trip.driver.name}
+                    </Caption>
+
+                  }
+                  description={
+                    <Subheadline
+                      level="1"
+                      weight="3"
+                    >
+                      { `${activeBooking.trip.date} · ${activeBooking.trip.time}` }
+                    </Subheadline>
+
+                  }
+                before={
+                  <Avatar
+                    src={activeBooking.trip.driver.avatar}
+                    size={48}
+                    acronym={(activeBooking.trip.driver.name ?? "?").slice(0, 2).toUpperCase()}
+                  />
+                }
+                  after={
+                  <>
+                    <Info
+                      subtitle={`${activeBooking.seat} ${activeBooking.seat === 1 ? "место" : "места"}`}
+                      type="text"
+                    >
+                      <span className="font-bold text-(--tgui--text_color)">
+                        {activeBooking.trip.price * activeBooking.seat} ₽
+                      </span>
+                      </Info>
+                  </>
+
+                }
               >
-                <div className="flex items-center justify-between mb-2">
-                  <StatusPill
-                    tone={activeBooking.status === "confirmed" ? "success" : "warning"}
-                    className="shrink-0"
-                  >
-                    {activeBooking.status === "confirmed" ? "Подтверждено" : "Ожидает подтверждения"}
-                  </StatusPill>
-                  <ChevronRight size={16} className="text-(--app-info)" />
-                </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-[16px] font-bold text-(--tgui--text_color) truncate">
-                    {activeBooking.trip.fromCity} → {activeBooking.trip.toCity}
-                  </div>
-                  <div className="text-[12px] text-(--tgui--hint_color) flex items-center gap-1 mt-0.5">
-                    <span className="truncate">Водитель: {activeBooking.trip.driver.name}</span>
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0">
-                  <div className="text-[15px] font-bold text-(--tgui--text_color)">
-                    {activeBooking.trip.price * activeBooking.seat} ₽
-                  </div>
-                  <div className="text-[11px] text-(--tgui--hint_color) font-medium">
-                    Цена поездки
-                  </div>
-                </div>
-              </div>
-            </Tappable>
+                {activeBooking.trip.fromCity} → {activeBooking.trip.toCity}
+              </Cell>
             </Section>
           )
         )}
@@ -273,7 +271,7 @@ export function HomePage() {
                 Component="button"
                 key={`${route.from}-${route.to}`}
                 type="button"
-                onClick={() => goToSearch(route.from, route.to, "all")}
+                onClick={() => goToSearch(route.from, route.to)}
                 className="text-left p-3 rounded-xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) cursor-pointer hover:border-(--app-info) transition"
               >
                 <div className="text-lg mb-1">{route.icon}</div>

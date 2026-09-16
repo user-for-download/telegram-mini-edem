@@ -13,12 +13,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockUseProfile.mockReturnValue(queryState({ data: null }));
   mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
+  mockUseAllCities.mockReturnValue(queryState({ data: [] }));
 });
 
-const { mockUseProfile, mockUseMyBookings } = vi.hoisted(() => ({
-  mockUseProfile: vi.fn(),
-  mockUseMyBookings: vi.fn(),
-}));
+const { mockUseProfile, mockUseMyBookings, mockUseAllCities } = vi.hoisted(
+  () => ({
+    mockUseProfile: vi.fn(),
+    mockUseMyBookings: vi.fn(),
+    mockUseAllCities: vi.fn(),
+  }),
+);
 
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: mockUseProfile,
@@ -26,6 +30,10 @@ vi.mock("@/queries/profile", () => ({
 
 vi.mock("@/queries/useBookingsQuery", () => ({
   useMyBookingsQuery: mockUseMyBookings,
+}));
+
+vi.mock("@/queries/useAllCities", () => ({
+  useAllCitiesQuery: mockUseAllCities,
 }));
 
 import { HomePage } from "@/pages/HomePage";
@@ -77,7 +85,6 @@ describe("HomePage", () => {
     // Экспресс-поиск.
     expect(html).toContain("Куда поедем?");
     expect(html).toContain("Найти поездку");
-    expect(html).toContain("Сегодня");
     // CTA водителю.
     expect(html).toContain("Едете на машине?");
     expect(html).toContain("Создать поездку");
@@ -110,6 +117,12 @@ describe("HomePage", () => {
     expect(html).toContain("Ближайшая поездка");
     expect(html).toContain("Вологда");
     expect(html).toContain("Череповец");
+    // Нативный Cell: subtitle — авто · водитель (без авто — только имя,
+    // без "undefined"), дата/время — description, места — с плюрализацией.
+    expect(html).toContain("Александр");
+    expect(html).not.toContain("undefined");
+    expect(html).toContain("2030-06-01 · 09:00");
+    expect(html).toContain("2 места");
     // 450 ₽ × 2 места.
     expect(html).toContain("900");
   });
@@ -127,21 +140,34 @@ describe("HomePage", () => {
     expect(html).toContain("Ближайшая поездка");
   });
 
-  it("сегменты дня и swap не сабмитят форму — переход только по «Найти»", () => {
-    // SegmentedControl.Item рендерит <button> без type по умолчанию:
-    // в форме такой тап сабмитит поиск и уводит на /trips.
+  it("без сегментов дня — переход только по овальной «Найти»", () => {
     const html = render(<HomePage />);
-    const segmentTags =
-      html.match(/<button[^>]*role="tab"[^>]*>/g) ?? [];
-    expect(segmentTags).toHaveLength(3);
-    for (const tag of segmentTags) {
-      expect(tag).toContain('type="button"');
-    }
-    const swapTags =
-      html.match(/<button[^>]*aria-label="Поменять направление"[^>]*>/g) ?? [];
-    expect(swapTags).toHaveLength(1);
-    expect(swapTags[0]).toContain('type="button"');
-    // Единственный submit формы — CTA «Найти поездку».
+    // Сегментов дня и swap на экспресс-поиске нет.
+    expect(html).not.toContain('role="tablist"');
+    expect(html).not.toContain("Сегодня");
+    expect(html).not.toContain("Поменять направление");
+    // Единственный submit формы — овальная CTA «Найти поездку» в футере секции.
     expect(html.match(/type="submit"/g)).toHaveLength(1);
+    expect(html).toContain("Найти поездку");
+    expect(html).toContain("rounded-full");
+  });
+
+  it("города — пикеры справочника с вводом", () => {
+    const html = render(<HomePage />);
+    expect(html).toContain("Откуда");
+    expect(html).toContain("Куда");
+    expect(html).toContain("Город или село отправления");
+    expect(html).toContain("Город или село назначения");
+  });
+
+  it("профиль-бар — кнопка перехода в профиль", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({ data: { name: "Александр", rating: 4.8 } }),
+    );
+    const html = render(<HomePage />);
+    const profileTags =
+      html.match(/<button[^>]*aria-label="Открыть профиль"[^>]*>/g) ?? [];
+    expect(profileTags).toHaveLength(1);
+    expect(profileTags[0]).toContain('type="button"');
   });
 });

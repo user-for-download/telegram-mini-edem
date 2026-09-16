@@ -36,11 +36,11 @@ psql(`INSERT INTO "City" ("id", "name", "nameNormalized", "createdAt", "updatedA
 
 await page.goto(`${TG_URL}/#/trips/my/new`, { waitUntil: "commit" });
 await page.getByLabel("Город отправления").fill(CITY_FROM);
-const opts = await page.getByRole("option").allTextContents().catch((e) => `NO-OPTIONS: ${e.message.slice(0, 100)}`);
+const opts = await page.getByText(CITY_FROM, { exact: true }).allTextContents().catch((e) => `NO-OPTIONS: ${e.message.slice(0, 100)}`);
 console.log("OPTIONS-FROM:", JSON.stringify(opts));
-await page.getByRole("option", { name: CITY_FROM }).click({ timeout: 8000 }).catch((e) => console.log("CLICK-FROM-FAIL:", e.message.slice(0, 150)));
+await page.getByText(CITY_FROM, { exact: true }).first().click({ timeout: 8000 }).catch((e) => console.log("CLICK-FROM-FAIL:", e.message.slice(0, 150)));
 await page.getByLabel("Город назначения").fill(CITY_TO);
-await page.getByRole("option", { name: CITY_TO }).click({ timeout: 8000 }).catch((e) => console.log("CLICK-TO-FAIL:", e.message.slice(0, 150)));
+await page.getByText(CITY_TO, { exact: true }).first().click({ timeout: 8000 }).catch((e) => console.log("CLICK-TO-FAIL:", e.message.slice(0, 150)));
 const dep = new Date(Date.now() + 14 * 86400e3 + (Date.now() % 3600000) + (process.pid % 60) * 60000);
 const pad = (n) => String(n).padStart(2, "0");
 await page.locator('input[type="datetime-local"]').fill(`${dep.getFullYear()}-${pad(dep.getMonth() + 1)}-${pad(dep.getDate())}T${pad(dep.getHours())}:${pad(dep.getMinutes())}`);

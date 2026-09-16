@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { Button, Modal, Select, Textarea } from "@telegram-apps/telegram-ui";
 import { Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -58,7 +58,7 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
   useClosingConfirmation(message !== "");
   const [formError, setFormError] = useState<string | null>(null);
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: SubmitEvent) => {
     event.preventDefault();
     const error = validateSupportForm(topic, message);
     if (error) {

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { IconButton, Input } from "@telegram-apps/telegram-ui";
-import { MapPin, X } from "lucide-react";
+import { useMemo } from "react";
+import { Input, Multiselect } from "@telegram-apps/telegram-ui";
+import { MapPin } from "lucide-react";
 import { haptic } from "@/utils/haptics";
 
 export interface PickerCity {
@@ -8,41 +8,55 @@ export interface PickerCity {
   name: string;
 }
 
-/**
- * Чистый фильтр справочника по подстроке (case-insensitive).
- * Вынесен ради юнит-тестов без DOM.
- */
-export function filterCities(
+/** Опция списка (структурно совместима с MultiselectOption tgui). */
+export interface CityOption {
+  value: string;
+  label: string;
+}
+
+/** Справочник БД → опции (value = id, label = имя). */
+export function toCityOptions(
   cities: readonly PickerCity[] | undefined,
-  query: string,
-): PickerCity[] {
+): CityOption[] {
   if (!cities) return [];
-  const q = query.trim().toLowerCase();
-  if (!q) return [...cities];
-  return cities.filter((city) => city.name.toLowerCase().includes(q));
+  return cities.map((city) => ({ value: city.id, label: city.name }));
 }
 
-const VISIBLE_LIMIT = 8;
-
 /**
- * Точное совпадение по имени (trim + case-insensitive): набранное полное
- * название — подтверждённый выбор (e2e печатает полное имя и жмёт сабмит).
+ * Выбранная опция по имени (max = 1): strict-lookup в справочнике.
+ * Имя вне справочника (устаревшие данные) — пусто, выбор начинается заново.
  */
-export function findExactCity(
+export function selectedCityOptions(
   cities: readonly PickerCity[] | undefined,
-  query: string,
-): PickerCity | null {
-  const q = query.trim().toLowerCase();
-  if (!q) return null;
-  return cities?.find((city) => city.name.toLowerCase() === q) ?? null;
+  value: string,
+): CityOption[] {
+  const found = cities?.find((city) => city.name === value);
+  return found ? [{ value: found.id, label: found.name }] : [];
 }
 
 /**
- * Поле выбора города с вводом (вместо нативного Select: в нём 25+ городов
- * приходится скроллить). Печатаешь подстроку — список фильтруется,
- * тап — выбирает. Закрытие: выбор, Esc, blur. clavier: ↑/↓/Enter.
- * Значение для родителя — имя города (валидатор createTripForm без изменений).
- * SSR-safe: эффектов с DOM нет, дропдаун по умолчанию закрыт.
+ * max = 1: из picked берём последний (повторный выбор заменяет текущий);
+ * пусто (снятие чипа крестиком/Backspace) → "" — то же снятие, что раньше
+ * крестиком в after-слоте. creatable выключен: все picked из справочника,
+ * имя резолвим по id.
+ */
+export function cityNameFromPicked(
+  cities: readonly PickerCity[] | undefined,
+  picked: ReadonlyArray<{ value: string | number; label?: unknown }>,
+): string {
+  const last = picked[picked.length - 1];
+  if (!last) return "";
+  return cities?.find((city) => city.id === String(last.value))?.name ?? "";
+}
+
+/**
+ * Поле выбора города из справочника БД на нативном tgui Multiselect
+ * (вместо кастомного дропдауна): печать фильтрует (дефолтный filterFn),
+ * тап/Enter — выбирает, чип снимается. max = 1 — клампом в onChange
+ * (у Multiselect нет max-пропа). creatable={false} осознанно: валидатор
+ * createTripForm и бэкенд требуют город из справочника (fromCityId/
+ * toCityId), свободный ввод запрещён. Значение для родителя — имя города
+ * (контракт onSelect без изменений). SSR-safe: дропдаун по умолчанию закрыт.
  */
 export function CityPickerField({
   id,
@@ -61,138 +75,56 @@ export function CityPickerField({
   status?: "default" | "error";
   onSelect: (name: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState(value);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const options = useMemo(() => toCityOptions(cities), [cities]);
+  const selected = useMemo(
+    () => selectedCityOptions(cities, value),
+    [cities, value],
+  );
 
-  // Внешние изменения значения (swap городов) — подтягиваем в поле.
-  useEffect(() => {
-    setQuery(value);
-  }, [value]);
-
-  const matches = filterCities(cities, open ? query : "");
-  const visible = matches.slice(0, VISIBLE_LIMIT);
-
-  const choose = (name: string) => {
-    haptic.selection();
-    onSelect(name);
-    setOpen(false);
-    inputRef.current?.blur();
-  };
-
-  const revert = () => {
-    // Полное имя — автовыбор (иначе текст сотрётся, а выбор не случится).
-    const exact = findExactCity(cities, query);
-    if (exact && exact.name !== value) {
-      choose(exact.name);
-      return;
-    }
-    setQuery(value);
-    setOpen(false);
-  };
+  // Multiselect трогает document при рендере (useGlobalClicks) — в SSR
+  // (только тесты; прод — CSR, e2e — браузер) отдаём те же label/id/
+  // placeholder/value на plain Input: тексты и связи для тестов те же.
+  if (typeof document === "undefined") {
+    return (
+      <div className="FormField">
+        <label htmlFor={id} className="sr-only">{label}</label>
+        <Input
+          id={id}
+          header={label}
+          before={<MapPin size={17} className="ml-1 text-(--app-info)" />}
+          value={value}
+          placeholder={placeholder}
+          status={status}
+          readOnly
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="FormField">
-      <label htmlFor={id}>{label}</label>
-      <div className="relative">
-        <Input
-          id={id}
-          ref={inputRef}
-          before={<MapPin size={17} className="text-(--app-info)" />}
-          after={
-            value ? (
-              <IconButton
-                type="button"
-                size="s"
-                mode="plain"
-                onClick={() => choose("")}
-                aria-label={`Очистить: ${label}`}
-              >
-                <X size={14} className="text-(--tgui--hint_color)" />
-              </IconButton>
-            ) : undefined
-          }
-          value={open ? query : value}
-          status={status}
-          autoComplete="off"
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={`${id}-listbox`}
-          aria-autocomplete="list"
-          placeholder={placeholder}
-          onFocus={() => {
-            setQuery(value);
-            setActiveIndex(0);
-            setOpen(true);
-          }}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setActiveIndex(0);
-            setOpen(true);
-          }}
-          onBlur={revert}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              revert();
-              inputRef.current?.blur();
-            } else if (event.key === "ArrowDown") {
-              event.preventDefault();
-              setActiveIndex((prev) => Math.min(prev + 1, visible.length - 1));
-            } else if (event.key === "ArrowUp") {
-              event.preventDefault();
-              setActiveIndex((prev) => Math.max(prev - 1, 0));
-            } else if (event.key === "Enter") {
-              const pick = visible[activeIndex];
-              if (open && pick) {
-                event.preventDefault();
-                choose(pick.name);
-              }
-            }
-          }}
-        />
-        {open && (
-          <div
-            id={`${id}-listbox`}
-            role="listbox"
-            aria-label={label}
-            className="absolute! left-0! right-0! top-full! z-10! mt-1! max-h-56! overflow-y-auto! rounded-xl! border! border-(--tgui--outline)! bg-(--tgui--section_bg_color)! shadow-lg!"
-          >
-            {visible.map((city, index) => (
-              <button
-                key={city.id}
-                type="button"
-                role="option"
-                aria-selected={value === city.name}
-                // mousedown раньше blur: выбор срабатывает до закрытия.
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => choose(city.name)}
-                onMouseEnter={() => setActiveIndex(index)}
-                className={[
-                  "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[15px] transition-colors",
-                  index === activeIndex
-                    ? "bg-(--tgui--secondary_fill) text-(--tgui--text_color)"
-                    : "text-(--tgui--text_color)",
-                ].join(" ")}
-              >
-                <MapPin size={15} className="shrink-0 text-(--tgui--hint_color)" />
-                <span className="truncate">{city.name}</span>
-              </button>
-            ))}
-            {visible.length === 0 && (
-              <p className="px-3 py-2.5 text-[13px] text-(--tgui--hint_color)">
-                Нет таких городов в справочнике
-              </p>
-            )}
-            {matches.length > VISIBLE_LIMIT && (
-              <p className="px-3 py-1.5 text-[11px] text-(--tgui--hint_color)">
-                {`Показаны первые ${VISIBLE_LIMIT} — уточните запрос`}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Видимую подпись рисует сам Multiselect через header (стандарт tgui);
+          внешний label — только sr-only: header на iOS не рендерится
+          (нужен скринридерам), а связка htmlFor+id держит e2e getByLabel. */}
+      <label htmlFor={id} className="sr-only">{label}</label>
+      <Multiselect
+        id={id}
+        header={label}
+        before={<MapPin size={17} className="ml-2 text-(--app-info)" />}
+        options={options}
+        value={selected}
+        onChange={(picked) => {
+          haptic.selection();
+          onSelect(cityNameFromPicked(cities, picked.slice(-1)));
+        }}
+        placeholder={placeholder}
+        // status отдаём только на ошибку: "default" глушил бы нативный
+        // focused-стиль при открытом дропдауне (controlledStatus внутри).
+        status={status === "error" ? "error" : undefined}
+        creatable={false}
+        closeDropdownAfterSelect
+        emptyText="Нет таких городов в справочнике"
+      />
     </div>
   );
 }
