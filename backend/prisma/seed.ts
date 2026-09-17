@@ -1,6 +1,6 @@
 // backend/prisma/seed.ts
 import { PrismaPg } from "@prisma/adapter-pg";
-import { MAX_SEATS } from "@edem/contracts";
+import { MAX_SEATS, tripTagSchema } from "@edem/contracts";
 import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { seedCityId, seedReportId, seedRideRequestId } from "./seed-ids.js";
@@ -1262,7 +1262,7 @@ const trips: SeedTrip[] = [
     price: 450,
     seatsTotal: 3,
     status: "active",
-    tags: ["Без животных"],
+    tags: ["Не курить"],
     bookings: [
       { passengerId: "u-15", seat: 1, status: "confirmed" },
       {
@@ -1818,6 +1818,24 @@ function validateSeedData(): void {
   for (const trip of trips) {
     if (trip.seatsTotal < 1 || trip.seatsTotal > MAX_SEATS) {
       throw new Error(`Invalid seatsTotal for seed trip ${trip.id}`);
+    }
+
+    // Теги обязаны входить в tripTagSchema контракта. Невалидный тег
+    // ломает zod-валидацию всего ответа списка поездок в мини-апе
+    // (падает не одна карточка, а весь список: и поиск, и «мои поездки»).
+    for (const tag of trip.tags) {
+      if (!tripTagSchema.safeParse(tag).success) {
+        throw new Error(`Unknown tag «${tag}» in seed trip ${trip.id}`);
+      }
+    }
+
+    // Длины/положительность — как требует tripSchema (иначе ответ
+    // эндпоинта не пройдёт валидацию на клиенте).
+    if (trip.comment !== undefined && trip.comment.length > 500) {
+      throw new Error(`Comment too long in seed trip ${trip.id}`);
+    }
+    if (trip.durationMinutes <= 0 || trip.distanceKm <= 0 || trip.price <= 0) {
+      throw new Error(`Non-positive numbers in seed trip ${trip.id}`);
     }
 
     // Активная поездка не может отправляться в прошлом: поиск скрывает
