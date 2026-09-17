@@ -530,6 +530,24 @@ const users: SeedUser[] = [
     about: "Демо-пользователь для проверки soft-delete в админке.",
     deletedAtDaysAgo: 5,
   },
+  // DEV-аккаунт браузерного стенда: mockEnv.ts подставляет initData с
+  // user.id = 9800001 («Dev Telegram»), dev-bypass бэкенда находит/создаёт
+  // пользователя по этому telegramUserId. Сид заранее создаёт его с
+  // поездками, бронями и заявками — чтобы сразу после запуска `npm run dev`
+  // в обычном браузере главная показывала все секции (брони, заявки).
+  {
+    id: "u-dev",
+    telegramUserId: 9800001n,
+    name: "Dev Telegram",
+    avatar: DEFAULT_AVATAR_URL,
+    rating: 4.8,
+    reviewsCount: 2,
+    tripsCount: 3,
+    tgChatJoinedAtDaysAgo: 1,
+    isVerified: true,
+    about: "Тестовый аккаунт разработчика (dev-стенд).",
+    car: { model: "Lada Vesta", color: "графитовый", plate: "А 001 ДЕ 35" },
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -1196,6 +1214,169 @@ const trips: SeedTrip[] = [
     comment: "Отменил, планы изменились.",
     bookings: [],
   },
+  // ── DEV-аккаунт (u-dev, telegramUserId 9800001) ──
+  // Поездки u-dev как водителя: заявки для секции «Рассмотрите заявки».
+  {
+    id: "t-dev-1",
+    driverId: "u-dev",
+    fromCity: "Вологда",
+    fromAddress: "Ж/д вокзал",
+    toCity: "Череповец",
+    toAddress: "Автовокзал",
+    daysFromNow: 1,
+    durationMinutes: 110,
+    distanceKm: 155,
+    price: 450,
+    seatsTotal: 3,
+    status: "active",
+    tags: ["Тихая поездка"],
+    comment: "Выезжаю от вокзала, могу заехать по пути.",
+    bookings: [
+      {
+        passengerId: "u-14",
+        seat: 1,
+        status: "pending",
+        comment: "Буду с рюкзаком, еду к родителям.",
+      },
+      { passengerId: "u-19", seat: 2, status: "pending" },
+      {
+        passengerId: "u-20",
+        seat: 3,
+        status: "pending",
+        comment: "Поеду до Суды, можно по пути высадить?",
+      },
+    ],
+  },
+  // Подтверждённая поездка u-dev как водителя (полная комплектация:
+  // 1 confirmed + 2 pending — демо «Рассмотрите заявки» и «Показать все»).
+  {
+    id: "t-dev-2",
+    driverId: "u-dev",
+    fromCity: "Череповец",
+    fromAddress: "Площадь Гагарина",
+    toCity: "Вологда",
+    toAddress: "ТЦ «Мармелад»",
+    daysFromNow: 3,
+    durationMinutes: 115,
+    distanceKm: 160,
+    price: 450,
+    seatsTotal: 3,
+    status: "active",
+    tags: ["Без животных"],
+    bookings: [
+      { passengerId: "u-15", seat: 1, status: "confirmed" },
+      {
+        passengerId: "u-21",
+        seat: 2,
+        status: "pending",
+        comment: "Еду с маленькой сумкой.",
+      },
+      { passengerId: "u-22", seat: 3, status: "pending" },
+    ],
+  },
+  // u-dev как пассажир: подтверждённая бронь → секция «Ваша поездка».
+  {
+    id: "t-dev-3",
+    driverId: "u-2",
+    fromCity: "Вологда",
+    fromAddress: "Торговый центр",
+    toCity: "Сокол",
+    toAddress: "Автостанция",
+    daysFromNow: 2,
+    durationMinutes: 95,
+    distanceKm: 130,
+    price: 400,
+    seatsTotal: 3,
+    status: "active",
+    tags: ["Тихая поездка"],
+    bookings: [
+      {
+        passengerId: "u-dev",
+        seat: 1,
+        status: "confirmed",
+        comment: "Могу выйти у трассы, если удобно.",
+      },
+    ],
+  },
+  // u-dev как пассажир: заявка в ожидании → «Ожидают подтверждения».
+  {
+    id: "t-dev-4",
+    driverId: "u-6",
+    fromCity: "Череповец",
+    fromAddress: "Центральный рынок",
+    toCity: "Кириллов",
+    toAddress: "Автостанция",
+    daysFromNow: 5,
+    durationMinutes: 130,
+    distanceKm: 130,
+    price: 500,
+    seatsTotal: 3,
+    status: "active",
+    tags: ["С остановками"],
+    bookings: [
+      {
+        passengerId: "u-dev",
+        seat: 2,
+        status: "pending",
+        comment: "Возвращаюсь из командировки.",
+      },
+    ],
+  },
+  // u-dev как пассажир: вторая подтверждённая будущая бронь —
+  // секция «Ваши поездки» во множественном числе.
+  {
+    id: "t-dev-5",
+    driverId: "u-3",
+    fromCity: "Вологда",
+    fromAddress: "Автовокзал",
+    toCity: "Череповец",
+    toAddress: "Ж/д вокзал",
+    daysFromNow: 4,
+    durationMinutes: 105,
+    distanceKm: 150,
+    price: 420,
+    seatsTotal: 3,
+    status: "active",
+    tags: ["Можно с животными"],
+    comment: "Забираю пассажиров от автовокзала.",
+    bookings: [
+      { passengerId: "u-dev", seat: 1, status: "confirmed" },
+    ],
+  },
+  // Прошлые поездки u-dev — источник отзывов r-29/r-30 (валидация сидa
+  // требует: автор отзыва — confirmed-пассажир этой поездки).
+  {
+    id: "t-dev-past-1",
+    driverId: "u-dev",
+    fromCity: "Вологда",
+    fromAddress: "Ж/д вокзал",
+    toCity: "Череповец",
+    toAddress: "Автовокзал",
+    daysFromNow: -10,
+    durationMinutes: 110,
+    distanceKm: 155,
+    price: 450,
+    seatsTotal: 3,
+    status: "completed",
+    tags: ["Тихая поездка"],
+    bookings: [{ passengerId: "u-14", seat: 1, status: "confirmed" }],
+  },
+  {
+    id: "t-dev-past-2",
+    driverId: "u-2",
+    fromCity: "Вологда",
+    fromAddress: "Торговый центр",
+    toCity: "Сокол",
+    toAddress: "Автостанция",
+    daysFromNow: -6,
+    durationMinutes: 95,
+    distanceKm: 130,
+    price: 400,
+    seatsTotal: 3,
+    status: "completed",
+    tags: [],
+    bookings: [{ passengerId: "u-dev", seat: 1, status: "confirmed" }],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -1493,6 +1674,29 @@ const reviews: SeedReview[] = [
     text: "Роман немного опоздал, в остальном всё отлично.",
     tripRoute: "Грязовец → Вологда",
     tripId: "t-past-7",
+  },
+  // Отзывы о DEV-аккаунте: профиль и бейджи рейтинга не пустые.
+  {
+    id: "r-29",
+    authorId: "u-14",
+    targetUserId: "u-dev",
+    targetRole: "driver",
+    rating: 5,
+    status: "published",
+    text: "Вежливый водитель, машина чистая, доехали без проблем.",
+    tripRoute: "Вологда → Череповец",
+    tripId: "t-dev-past-1",
+  },
+  {
+    id: "r-30",
+    authorId: "u-2",
+    targetUserId: "u-dev",
+    targetRole: "passenger",
+    rating: 5,
+    status: "published",
+    text: "Аккуратный пассажир, на связи, приехал заранее.",
+    tripRoute: "Вологда → Сокол",
+    tripId: "t-dev-past-2",
   },
 ];
 
@@ -2066,6 +2270,28 @@ async function main() {
       title: "Новая заявка на поездку",
       body: "Вы отправили заявку на поездку Вологда → Череповец.",
       isRead: true,
+    },
+    // DEV-аккаунт: уведомления по его поездкам и броням.
+    {
+      userId: "u-dev",
+      type: "booking_created",
+      title: "Новая заявка на поездку",
+      body: "Дарья Петрова хочет присоединиться к вашей поездке Вологда → Череповец.",
+      isRead: false,
+    },
+    {
+      userId: "u-dev",
+      type: "booking_confirmed",
+      title: "Бронирование подтверждено",
+      body: "Марина Ковалёва подтвердила вашу бронь Вологда → Сокол.",
+      isRead: false,
+    },
+    {
+      userId: "u-dev",
+      type: "booking_confirmed",
+      title: "Бронирование подтверждено",
+      body: "Алексей Громов подтвердил вашу бронь Вологда → Череповец.",
+      isRead: false,
     },
     {
       userId: "u-16",
