@@ -132,15 +132,54 @@ describe("HomePage", () => {
     expect(html).not.toContain("Ожидают подтверждения");
     expect(html).toContain("Вологда");
     expect(html).toContain("Череповец");
-    // Banner: авто · водитель (без "undefined"), дата/время, места/цена.
-    expect(html).toContain("Александр");
+    // Ячейка: маршрут в subtitle, дата и цена — в children.
     expect(html).not.toContain("undefined");
-    expect(html).toContain("2030-06-01 · 09:00");
-    // seat — плюрализация форматаSeats: 2 → «2 места».
-    expect(html).toContain("2 места");
-    expect(html).not.toContain("2 мест ·");
-    // 450 ₽ × 2 места.
-    expect(html).toContain("900");
+    expect(html).toContain("2030-06-01");
+    // Цена брони = цена одного места (450), без умножения на номер.
+    // (в SSR-выводе между JSX-узлами React вставляет комментарии,
+    // поэтому проверяем число, а не строку «450 ₽» целиком)
+    expect(html).toContain("450");
+    expect(html).not.toContain("900");
+  });
+
+  it("в «Ваша поездка» показывает комментарий водителя (Blockquote), свой — нет", () => {
+    mockUseMyBookings.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "b-1",
+            seat: 1,
+            status: "confirmed",
+            comment: "Буду с рюкзаком",
+            trip: makeTrip({ comment: "Остановка у метро" }),
+          },
+        ],
+      }),
+    );
+    const html = render(<HomePage />);
+    // Комментарий водителя о поездке — в Blockquote (стиль «other»).
+    expect(html).toContain("Остановка у метро");
+    // Свой комментарий пассажира на главной не показывается (он для водителя).
+    expect(html).not.toContain("Буду с рюкзаком");
+  });
+
+  it("в «Ожидают подтверждения» комментария водителя нет", () => {
+    mockUseMyBookings.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "b-2",
+            seat: 1,
+            status: "pending",
+            trip: makeTrip({ comment: "Остановка у метро" }),
+          },
+        ],
+      }),
+    );
+    const html = render(<HomePage />);
+    expect(html).toContain("Ожидают подтверждения");
+    // Заметки водителя актуальны только для одобренных заявок.
+    expect(html).not.toContain("Остановка у метро");
   });
 
   it("показывает pending-бронь в секции «Ожидают подтверждения»", () => {
@@ -218,12 +257,12 @@ describe("HomePage", () => {
       queryState({ data: [makeDriverRequest()] }),
     );
     const html = render(<HomePage />);
-    expect(html).toContain("Заявки на поездки");
+    expect(html).toContain("Рассмотрите заявки");
     expect(html).toContain("Вологда → Череповец");
     // Рейтинг пассажира — бейджем на аватаре.
     expect(html).toContain("4.9");
-    // Плюрализация мест в subtitle.
-    expect(html).toContain("1 место");
+    // Порядковый номер места в subtitle (бронь = 1 место).
+    expect(html).toContain("место №1");
     // Единственное действие в списке — «+» (решение внутри досье).
     expect(html).toContain('aria-label="Открыть заявку Пётр"');
     expect(html).not.toContain("Одобрить заявку");

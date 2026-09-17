@@ -10,7 +10,7 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { Star, X } from "lucide-react";
 import type { Booking, DriverBookingAction, Review } from "@edem/contracts";
-import { formatSeats } from "@/utils/bookingSplit";
+import { formatSeatNumber } from "@/utils/bookingSplit";
 
 /**
  * Досье пассажира в нижней модалке (vaul): аватар с бейджем рейтинга,
@@ -120,7 +120,7 @@ export function PassengerRequestModalBody({
           {`${trip.fromCity} → ${trip.toCity}`}
         </Text>
         <Caption>
-          {`${trip.date} · ${trip.time} · ${formatSeats(booking.seat)} · ${trip.price * booking.seat} ₽`}
+          {`${trip.date} · ${trip.time} · ${formatSeatNumber(booking.seat)} · ${trip.price} ₽`}
         </Caption>
         {booking.comment && <Caption>Комментарий: {booking.comment}</Caption>}
       </Section>

@@ -2,17 +2,20 @@ import { useMemo, useState, type SubmitEvent } from "react";
 import {
   Avatar,
   Badge,
-  Banner,
   Button,
   Cell,
   IconContainer,
+  IconButton,
   List,
   Placeholder,
   Section,
   Skeleton,
   Headline,
+  Blockquote,
+  Subheadline,
+  Caption,
 } from "@telegram-apps/telegram-ui";
-import { PlusCircle, Route, Search, Star } from "lucide-react";
+import { ChevronRight, PlusCircle, Route, Search, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CitySelectField } from "@/components/CitySelectField";
 import { DriverRequestsSection } from "@/components/DriverRequestsSection";
@@ -20,13 +23,13 @@ import { POPULAR_ROUTES } from "@/consts/popularRoutes";
 import { haptic } from "@/utils/haptics";
 import {
   confirmedSectionHeader,
+  formatSeatNumber,
   splitBookingsByStatus,
 } from "@/utils/bookingSplit";
 import { useProfileQuery } from "@/queries/profile";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
 import type { PassengerBooking } from "@edem/contracts";
-import { formatSeats } from "@/utils/bookingSplit";
 
 /**
  * Главная — только нативные компоненты @telegram-apps/telegram-ui
@@ -135,14 +138,14 @@ export function HomePage() {
         {confirmed.length > 0 && (
           <Section header={confirmedSectionHeader(confirmed.length)}>
             {confirmed.map((booking) => (
-              <BookingBanner key={booking.id} booking={booking} />
+              <BookingCell key={booking.id} booking={booking} />
             ))}
           </Section>
         )}
         {pending.length > 0 && (
           <Section header="Ожидают подтверждения">
             {pending.map((booking) => (
-              <BookingBanner key={booking.id} booking={booking} />
+              <BookingCell key={booking.id} booking={booking} />
             ))}
           </Section>
         )}
@@ -186,31 +189,65 @@ export function HomePage() {
 }
 
 /**
- * Баннер брони пассажира: маршрут, время, водитель, места/цена.
- * Статус не дублируется в описании — он задан заголовком секции.
+ * Бронь пассажира — нативная ячейка: аватар водителя, маршрут с dot-бейджем,
+ * «когда и время», описание — комментарий водителя о поездке с атрибуцией
+ * «От водителя: …» (свой комментарий пассажира здесь не показываем —
+ * он виден водителю в досье заявки). Статус не дублируется — он задан
+ * заголовком секции.
  */
-function BookingBanner({ booking }: { booking: PassengerBooking }) {
+function BookingCell({ booking }: { booking: PassengerBooking }) {
   const navigate = useNavigate();
+  const openTrip = () => {
+    haptic.light();
+    navigate(`/trips/${booking.trip.id}`);
+  };
+  // Комментарий пассажира (booking.comment) на главной не показываем:
+  // это текст для водителя. Пассажиру актуален комментарий водителя
+  // к поездке — с явной атрибуцией, чей это текст.
+  const driverComment = booking.trip.comment;
   return (
-    <Banner
-      type="section"
-      onClick={() => {
-        haptic.light();
-        navigate(`/trips/${booking.trip.id}`);
-      }}
+    <Cell
+      type="button"
+      multiline
+      onClick={openTrip}
       before={
         <Avatar
           size={48}
-          src={booking.trip.driver.avatar}
           acronym={(booking.trip.driver.name ?? "?").slice(0, 2).toUpperCase()}
-        />
+          src={booking.trip.driver.avatar}
+        >
+          <Avatar.Badge mode="white" type="number">
+            {booking.trip.driver.rating}
+          </Avatar.Badge>
+        </Avatar>
       }
-      header={`${booking.trip.fromCity} → ${booking.trip.toCity}`}
-      subheader={`${booking.trip.date} · ${booking.trip.time} · Водитель: ${booking.trip.driver.name ?? "—"}`}
-      description={`${formatSeats(booking.seat)} · ${booking.trip.price * booking.seat} ₽`}
-      callout={
-        booking.status === "confirmed" ? booking.trip.comment : undefined
+      subtitle={
+        <Subheadline weight="1">
+          {booking.trip.fromCity} → {booking.trip.toCity}
+        </Subheadline>
       }
-    />
+      description={
+        booking.status === "confirmed" && driverComment ? (
+          <Caption level="2">
+            <Blockquote type="other">{`${driverComment}`}</Blockquote>
+          </Caption>
+        ) : undefined
+      }
+      after={
+        <IconButton
+          mode="bezeled"
+          size="s"
+          aria-label="Открыть поездку"
+          onClick={openTrip}
+        >
+          <ChevronRight size={20} />
+        </IconButton>
+      }
+    >
+      {`${booking.trip.date}`}
+      <Badge mode="secondary" type="number">
+        {booking.trip.price}₽
+      </Badge>
+    </Cell>
   );
 }

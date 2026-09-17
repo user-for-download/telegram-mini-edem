@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { PassengerBooking } from "@edem/contracts";
 import {
   confirmedSectionHeader,
-  formatSeats,
+  formatSeatNumber,
   isUpcomingBooking,
   splitBookingsByStatus,
 } from "@/utils/bookingSplit";
@@ -106,13 +106,10 @@ describe("confirmedSectionHeader", () => {
   });
 });
 
-describe("formatSeats", () => {
-  it("плюрализация русских числительных", () => {
-    expect(formatSeats(1)).toBe("1 место");
-    expect(formatSeats(2)).toBe("2 места");
-    expect(formatSeats(4)).toBe("4 места");
-    expect(formatSeats(5)).toBe("5 мест");
-    expect(formatSeats(11)).toBe("11 мест");
-    expect(formatSeats(21)).toBe("21 место");
+describe("formatSeatNumber", () => {
+  it("seat — порядковый номер места, не количество", () => {
+    expect(formatSeatNumber(1)).toBe("место №1");
+    expect(formatSeatNumber(2)).toBe("место №2");
+    expect(formatSeatNumber(3)).toBe("место №3");
   });
 });

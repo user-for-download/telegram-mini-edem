@@ -91,8 +91,10 @@ describe("PassengerRequestModalBody", () => {
     expect(html).toContain("5 поездок");
     expect(html).toContain("3 отзывов");
     expect(html).toContain("Вологда → Череповец");
-    expect(html).toContain("2 места");
-    expect(html).toContain("900"); // 450 × 2
+    expect(html).toContain("место №2");
+    // Цена брони = цена места, без умножения на номер места.
+    expect(html).toContain("450 ₽");
+    expect(html).not.toContain("900");
   });
 
   it("показывает только отзывы о пассажире (targetRole=passenger), не о нём как водителе", () => {

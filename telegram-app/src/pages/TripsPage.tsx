@@ -168,10 +168,10 @@ function ActiveBookingCard({
         </div>
         <div className="text-right shrink-0">
           <Text weight="2" Component="div">
-            {booking.trip.price * booking.seat} ₽
+            {booking.trip.price} ₽
           </Text>
           <Caption Component="div" className="text-(--tgui--hint_color)">
-            {`цена (${booking.seat} ${booking.seat === 1 ? "место" : "места"})`}
+            {`место №${booking.seat}`}
           </Caption>
         </div>
       </div>
@@ -716,7 +716,7 @@ export function TripsPage() {
                         Водитель: {booking.trip.driver.name}
                       </span>
                       <Text weight="2" Component="span" className="shrink-0">
-                        {`взнос ~${booking.trip.price * booking.seat} ₽`}
+                        {`взнос ~${booking.trip.price} ₽`}
                       </Text>
                     </Caption>
                   </Tappable>

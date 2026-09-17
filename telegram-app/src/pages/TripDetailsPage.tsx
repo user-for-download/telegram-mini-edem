@@ -167,7 +167,7 @@ export function TripDetailsPage() {
               Вы записались попутчиком
             </Text>
             <Caption Component="div" className="text-(--app-success)/80">
-              Место №{item.myBooking.seat} · {item.price * item.myBooking.seat}{" "}
+              Место №{item.myBooking.seat} · {item.price}{" "}
               ₽
             </Caption>
           </div>

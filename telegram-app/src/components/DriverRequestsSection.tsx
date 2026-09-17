@@ -16,11 +16,11 @@ import {
 import { useUserReviewsQuery } from "@/queries/useReviewsQuery";
 import { useToast } from "@/components/ToastProvider";
 import { PassengerRequestModal } from "@/components/PassengerRequestModal";
-import { formatSeats } from "@/utils/bookingSplit";
+import { formatSeatNumber } from "@/utils/bookingSplit";
 import { haptic } from "@/utils/haptics";
 
 /**
- * «Заявки на поездки» — сводка pending-заявок водителя по всем его
+ * «Рассмотрите заявки» — сводка pending-заявок водителя по всем его
  * активным поездкам (только нативные компоненты tgui: Section/Cell/
  * Avatar.Badge/IconButton/ButtonCell). Тап по ячейке — страница заявок
  * поездки; тап по «+» — досье пассажира в нижней модалке, где и
@@ -37,15 +37,12 @@ export function DriverRequestsSection() {
   const updateStatus = useUpdateBookingStatusMutation();
 
   const [active, setActive] = useState<Booking | null>(null);
-  const [pendingAction, setPendingAction] = useState<DriverBookingAction | null>(
-    null,
-  );
+  const [pendingAction, setPendingAction] =
+    useState<DriverBookingAction | null>(null);
   const [expanded, setExpanded] = useState(false);
 
   // Отзывы пассажира подгружаются только при открытой модалке.
-  const reviews = useUserReviewsQuery(active?.passenger.id ?? "", {
-    enabled: Boolean(active),
-  });
+  const reviews = useUserReviewsQuery(active?.passenger.id ?? "");
 
   if (requests.error || !requests.data?.length) return null;
 
@@ -61,7 +58,8 @@ export function DriverRequestsSection() {
         onSuccess: () => {
           haptic.success();
           toast.show({
-            text: action === "confirmed" ? "Заявка принята" : "Заявка отклонена",
+            text:
+              action === "confirmed" ? "Заявка принята" : "Заявка отклонена",
           });
           setPendingAction(null);
           setActive(null);
@@ -76,7 +74,7 @@ export function DriverRequestsSection() {
 
   return (
     <>
-      <Section header="Заявки на поездки">
+      <Section header="Рассмотрите заявки">
         {visible.map((booking) => (
           <Cell
             key={booking.id}
@@ -96,7 +94,7 @@ export function DriverRequestsSection() {
                 </Avatar.Badge>
               </Avatar>
             }
-            subtitle={`${booking.trip.date} · ${booking.trip.time} · ${formatSeats(booking.seat)}`}
+            subtitle={`${booking.trip.date} · ${booking.trip.time} · ${formatSeatNumber(booking.seat)}`}
             after={
               <IconButton
                 mode="bezeled"
@@ -121,9 +119,7 @@ export function DriverRequestsSection() {
             before={<List size={20} />}
             onClick={() => setExpanded((value) => !value)}
           >
-            {expanded
-              ? "Свернуть"
-              : `Показать все (${allRequests.length})`}
+            {expanded ? "Свернуть" : `Показать все (${allRequests.length})`}
           </ButtonCell>
         )}
       </Section>

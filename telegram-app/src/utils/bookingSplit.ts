@@ -68,13 +68,10 @@ export function confirmedSectionHeader(count: number): string {
 }
 
 /**
- * «1 место», «2 места», «5 мест» — для subtitle ячеек и описаний.
+ * Номер места в поездке. Бронь всегда ровно на 1 место: seat — это
+ * ПОРЯДКОВЫЙ НОМЕР места на схеме (1..MAX_SEATS), а не количество.
+ * Цена брони всегда равна цене места (trip.price), без умножений.
  */
-export function formatSeats(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${count} место`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
-    return `${count} места`;
-  return `${count} мест`;
+export function formatSeatNumber(seat: number): string {
+  return `место №${seat}`;
 }
