@@ -3,6 +3,7 @@ import { Prisma } from "../generated/prisma/client.js";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import {
+  bookingSchema,
   createBookingDtoSchema,
   updateBookingStatusDtoSchema,
   paginatedBookingsResponseSchema,
@@ -382,6 +383,61 @@ bookingsRouter.get("/history", async (c) => {
   });
 
   return c.json(formatted);
+});
+
+/**
+ * Pending-заявки на все активные поездки текущего водителя.
+ *
+ * Нужен главной странице мини-аппа: водитель видит сводку заявок
+ * по всем своим будущим поездкам и открывает досье пассажира в модалке.
+ *
+ * Условия выборки:
+ * - только pending, ещё не истёкшие по TTL (expiresAt);
+ * - поездка активна и отправляется в будущем;
+ * - сортировка по времени отправления, затем по времени создания.
+ */
+bookingsRouter.get("/driver", async (c) => {
+  const user = c.get("user");
+  const now = new Date();
+
+  const bookings = await db.booking.findMany({
+    where: {
+      status: "pending",
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      trip: {
+        driverId: user.id,
+        status: "active",
+        departureAt: { gt: now },
+      },
+    },
+    include: {
+      trip: {
+        include: {
+          driver: { include: { car: true } },
+        },
+      },
+      passenger: { include: { car: true } },
+    },
+    orderBy: [
+      { trip: { departureAt: "asc" } },
+      { createdAt: "asc" },
+      { id: "asc" },
+    ],
+    take: MAX_BOOKINGS_LIMIT,
+  });
+
+  const response = bookings.map((booking) => serializeBooking(booking));
+
+  const validation = z.array(bookingSchema).safeParse(response);
+  if (!validation.success) {
+    logger.error(
+      { issues: validation.error.issues },
+      "driver_bookings_response_validation_failed",
+    );
+    return c.json({ message: "Internal response validation failed" }, 500);
+  }
+
+  return c.json(validation.data);
 });
 
 /**
