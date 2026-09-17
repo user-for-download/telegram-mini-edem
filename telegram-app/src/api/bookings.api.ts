@@ -12,11 +12,19 @@ import {
 import { apiClient } from "./client";
 
 const passengerBookingsSchema = z.array(passengerBookingSchema);
+const bookingsListSchema = z.array(bookingSchema);
 const successSchema = z.object({ success: z.boolean() }).strict();
 
 export const bookingsApi = {
   getUserBookings: (signal?: AbortSignal): Promise<PassengerBooking[]> =>
     apiClient.request("/bookings/my", { signal }, passengerBookingsSchema),
+
+  /**
+   * Pending-заявки на все активные поездки текущего водителя
+   * (сводка для главной страницы).
+   */
+  getDriverRequests: (signal?: AbortSignal): Promise<Booking[]> =>
+    apiClient.request("/bookings/driver", { signal }, bookingsListSchema),
 
   getHistory: (signal?: AbortSignal): Promise<PassengerBooking[]> =>
     apiClient.request("/bookings/history", { signal }, passengerBookingsSchema),

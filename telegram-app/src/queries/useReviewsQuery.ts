@@ -27,12 +27,15 @@ export function useMyReviewsQuery(options?: { enabled?: boolean }) {
   });
 }
 
-export function useUserReviewsQuery(userId: string) {
+export function useUserReviewsQuery(
+  userId: string,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: REVIEW_KEYS.user(userId),
     queryFn: async ({ signal }) =>
       (await reviewsApi.getUserReviews(userId, undefined, 20, signal)).items,
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && (options?.enabled ?? true),
   });
 }
 

@@ -15,6 +15,7 @@ export const BOOKING_KEYS = {
   history: () => [...BOOKING_KEYS.all, "history"] as const,
   trip: (tripId: string) =>
     [...BOOKING_KEYS.all, "trip", tripId] as const,
+  driver: () => [...BOOKING_KEYS.all, "driver"] as const,
 };
 
 export function useMyBookingsQuery(options?: { enabled?: boolean }) {
@@ -32,6 +33,17 @@ export function usePassengerHistoryQuery(options?: { enabled?: boolean }) {
     queryFn: ({ signal }) => bookingsApi.getHistory(signal),
     enabled: options?.enabled ?? true,
     placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Pending-заявки на все активные поездки водителя — сводка для главной.
+ */
+export function useDriverRequestsQuery(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: BOOKING_KEYS.driver(),
+    queryFn: ({ signal }) => bookingsApi.getDriverRequests(signal),
+    enabled: options?.enabled ?? true,
   });
 }
 

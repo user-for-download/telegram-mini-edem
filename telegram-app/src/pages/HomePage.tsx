@@ -1,39 +1,41 @@
-import { useState, type SubmitEvent } from "react";
+import { useMemo, useState, type SubmitEvent } from "react";
 import {
   Avatar,
+  Badge,
+  Banner,
   Button,
   Cell,
-  Section,
-  Badge,
   IconContainer,
-  Info,
   List,
-  Blockquote,
+  Placeholder,
+  Section,
   Skeleton,
-  Text,
+  Headline,
 } from "@telegram-apps/telegram-ui";
-import {
-  PlusCircle,
-  Route,
-  Search,
-  ShieldCheck,
-  Star,
-  TrendingUp,
-} from "lucide-react";
+import { PlusCircle, Route, Search, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { StatusPill } from "@/components/StatusPill";
-import { CityPickerField } from "@/components/CityPickerField";
+import { CitySelectField } from "@/components/CitySelectField";
+import { DriverRequestsSection } from "@/components/DriverRequestsSection";
 import { POPULAR_ROUTES } from "@/consts/popularRoutes";
 import { haptic } from "@/utils/haptics";
+import {
+  confirmedSectionHeader,
+  splitBookingsByStatus,
+} from "@/utils/bookingSplit";
 import { useProfileQuery } from "@/queries/profile";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
+import type { PassengerBooking } from "@edem/contracts";
+import { formatSeats } from "@/utils/bookingSplit";
 
 /**
- * Главная (лендинг, язык HomeTab примера): профиль-бар с рейтингом,
- * экспресс-поиск (города + день) с переходом на /trips с пресетом,
- * ближайшая активная бронь, CTA водителю, популярные направления,
- * преимущества. Данные — реальные queries (profile/bookings).
+ * Главная — только нативные компоненты @telegram-apps/telegram-ui
+ * (List/Section/Cell/Badge/Banner/Placeholder), без кастомного CSS:
+ * профиль-бар с рейтингом (Badge), экспресс-поиск на нативных Select
+ * (системный дропдаун — без «напечатай и Enter»), брони двумя секциями
+ * по статусу («Ваша поездка» / «Ожидают подтверждения»), сводка заявок
+ * водителя (DriverRequestsSection), популярные направления (вертикальный
+ * Cell-список), CTA водителю (Placeholder). Данные — реальные queries.
  */
 export function HomePage() {
   const navigate = useNavigate();
@@ -44,16 +46,11 @@ export function HomePage() {
   const [fromCity, setFromCity] = useState("");
   const [toCity, setToCity] = useState("");
 
-  const activeBooking = (bookings.data ?? [])
-    .filter(
-      (booking) =>
-        booking.status === "confirmed" || booking.status === "pending",
-    )
-    .sort((a, b) => {
-      const aTime = a.trip.departureAt ? Date.parse(a.trip.departureAt) : 0;
-      const bTime = b.trip.departureAt ? Date.parse(b.trip.departureAt) : 0;
-      return aTime - bTime;
-    })[0];
+  // Брони двумя группами по статусу (будущие confirmed и pending).
+  const { confirmed, pending } = useMemo(
+    () => splitBookingsByStatus(bookings.data ?? []),
+    [bookings.data],
+  );
 
   const goToSearch = (from?: string, to?: string) => {
     haptic.light();
@@ -72,7 +69,7 @@ export function HomePage() {
 
   return (
     <List>
-      <Skeleton visible={profile.isLoading ? true : false} withoutAnimation>
+      <Skeleton visible={profile.isLoading} withoutAnimation>
         <Cell
           type="button"
           onClick={() => {
@@ -81,8 +78,11 @@ export function HomePage() {
           }}
           after={
             <>
-              <Star size={16} />
-              <span>{profile.data ? profile.data.rating.toFixed(1) : "—"}</span>
+              <Badge type="number" large mode="secondary">
+                <Headline weight="2">
+                  {profile.data ? profile.data.rating.toFixed(1) : "—"}
+                </Headline>
+              </Badge>
             </>
           }
           before={
@@ -92,9 +92,8 @@ export function HomePage() {
               acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
             />
           }
-          aria-label="Открыть профиль"
           subtitle={`Поездок: ${profile.data?.tripsCount ?? 0}`}
-          titleBadge={<Badge type="dot" />}
+          aria-label="Открыть профиль"
         >
           {profile.data?.name ?? "Попутчик"}
         </Cell>
@@ -114,7 +113,7 @@ export function HomePage() {
             </Button>
           }
         >
-          <CityPickerField
+          <CitySelectField
             id="home-from"
             label="Откуда"
             value={fromCity}
@@ -122,7 +121,7 @@ export function HomePage() {
             placeholder="Город или село отправления"
             onSelect={setFromCity}
           />
-          <CityPickerField
+          <CitySelectField
             id="home-to"
             label="Куда"
             value={toCity}
@@ -132,60 +131,23 @@ export function HomePage() {
           />
         </Section>
       </form>
-      <Skeleton visible={bookings.isLoading ? true : false} withoutAnimation>
-        {!bookings.error && activeBooking && (
-          <Section
-            header="Ближайшая поездка"
-            footer={
-              activeBooking.status === "confirmed" ? (
-                <Blockquote type="other">
-                  {activeBooking.trip.comment}
-                </Blockquote>
-              ) : undefined
-            }
-          >
-            <Cell
-              type="button"
-              onClick={() => {
-                haptic.light();
-                navigate(`/trips/${activeBooking.trip.id}`);
-              }}
-              after={
-                <Info subtitle={`${activeBooking.seat} место`} type="text">
-                  <Text weight="2">
-                    {activeBooking.trip.price * activeBooking.seat} ₽
-                  </Text>
-                </Info>
-              }
-              before={
-                <Avatar
-                  src={activeBooking.trip.driver.avatar}
-                  size={48}
-                  acronym={(activeBooking.trip.driver.name ?? "?")
-                    .slice(0, 2)
-                    .toUpperCase()}
-                />
-              }
-
-              subhead={`${activeBooking.trip.date} · ${activeBooking.trip.time}`}
-              subtitle={`Водитель: ${activeBooking.trip.driver.name ?? "—"}`}
-              description={
-                <StatusPill
-                  tone={
-                    activeBooking.status === "confirmed" ? "success" : "warning"
-                  }
-                >
-                  {activeBooking.status === "confirmed"
-                    ? "Подтверждено"
-                    : "Ожидает подтверждения"}
-                </StatusPill>
-              }
-            >
-              {activeBooking.trip.fromCity} → {activeBooking.trip.toCity}
-            </Cell>
+      <Skeleton visible={bookings.isLoading} withoutAnimation>
+        {confirmed.length > 0 && (
+          <Section header={confirmedSectionHeader(confirmed.length)}>
+            {confirmed.map((booking) => (
+              <BookingBanner key={booking.id} booking={booking} />
+            ))}
+          </Section>
+        )}
+        {pending.length > 0 && (
+          <Section header="Ожидают подтверждения">
+            {pending.map((booking) => (
+              <BookingBanner key={booking.id} booking={booking} />
+            ))}
           </Section>
         )}
       </Skeleton>
+      <DriverRequestsSection />
       <Section header="Популярные направления">
         {POPULAR_ROUTES.map((route) => (
           <Cell
@@ -202,62 +164,53 @@ export function HomePage() {
           </Cell>
         ))}
       </Section>
-      <Section
+      <Placeholder
         header="Едете на машине?"
-        footer={
+        description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы"
+        action={
           <Button
             size="l"
-            stretched
             mode="bezeled"
-            type="button"
+            before={<PlusCircle size={16} />}
             onClick={() => {
               haptic.light();
               navigate("/trips/my/new");
             }}
-            before={<PlusCircle size={16} />}
           >
             Создать поездку
           </Button>
         }
-      >
-        <Section.Header large>
-          Найдите попутчиков в дорогу по области, чтобы разделить путь и
-          совместные расходы
-        </Section.Header>
-      </Section>
-
-      <Section header="Преимущества Едем">
-        <Cell
-          before={
-            <IconContainer>
-              <ShieldCheck size={22} />
-            </IconContainer>
-          }
-          subtitle="Верификация через Telegram ID"
-        >
-          Безопасность и проверка
-        </Cell>
-        <Cell
-          before={
-            <IconContainer>
-              <Star size={22} />
-            </IconContainer>
-          }
-          subtitle="Честные отзывы только после завершённых поездок"
-        >
-          Честный рейтинг
-        </Cell>
-        <Cell
-          before={
-            <IconContainer>
-              <TrendingUp size={22} />
-            </IconContainer>
-          }
-          subtitle="Дешевле, чем автобус или такси между районами области"
-        >
-          Выгодные цены
-        </Cell>
-      </Section>
+      />
     </List>
+  );
+}
+
+/**
+ * Баннер брони пассажира: маршрут, время, водитель, места/цена.
+ * Статус не дублируется в описании — он задан заголовком секции.
+ */
+function BookingBanner({ booking }: { booking: PassengerBooking }) {
+  const navigate = useNavigate();
+  return (
+    <Banner
+      type="section"
+      onClick={() => {
+        haptic.light();
+        navigate(`/trips/${booking.trip.id}`);
+      }}
+      before={
+        <Avatar
+          size={48}
+          src={booking.trip.driver.avatar}
+          acronym={(booking.trip.driver.name ?? "?").slice(0, 2).toUpperCase()}
+        />
+      }
+      header={`${booking.trip.fromCity} → ${booking.trip.toCity}`}
+      subheader={`${booking.trip.date} · ${booking.trip.time} · Водитель: ${booking.trip.driver.name ?? "—"}`}
+      description={`${formatSeats(booking.seat)} · ${booking.trip.price * booking.seat} ₽`}
+      callout={
+        booking.status === "confirmed" ? booking.trip.comment : undefined
+      }
+    />
   );
 }
