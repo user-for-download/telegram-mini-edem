@@ -62,6 +62,12 @@ interface SeedBooking {
   seat: number;
   status: "pending" | "confirmed" | "declined" | "cancelled";
   comment?: string;
+  // TTL ожидания подтверждения в часах (только для pending). Рантайм
+  // ставит pending-брони ровно 24 часа (PENDING_BOOKING_TTL_MS,
+  // src/bookings/index.ts) и автозакрывает истёкшие; сид воспроизводит
+  // это поле, чтобы GET /bookings/driver и фильтры «не истёкшая» вели
+  // себя на dev-стенде так же, как в бою. По умолчанию — 24, как рантайм.
+  expiresAtInHours?: number;
   // Только для cancelled: кто отменил и почему (как пишет рантайм).
   cancelledByType?: "passenger" | "driver";
   cancellationReason?: string;
@@ -928,7 +934,27 @@ const trips: SeedTrip[] = [
     status: "active",
     tags: ["Есть багаж"],
     comment: "Обычный рейс по субботам.",
-    bookings: [],
+    // 3 pending + 1 на t-1 → у водителя u-1 четыре заявки: демо
+    // «Показать все (4)» в секции «Заявки на поездки» на главной.
+    bookings: [
+      {
+        passengerId: "u-14",
+        seat: 1,
+        status: "pending",
+        comment: "Здравствуйте! Есть место на субботу?",
+      },
+      {
+        passengerId: "u-19",
+        seat: 2,
+        status: "pending",
+        comment: "Хочу к вам, еду с небольшим чемоданом.",
+      },
+      {
+        passengerId: "u-21",
+        seat: 3,
+        status: "pending",
+      },
+    ],
   },
   {
     id: "t-13",
@@ -1685,6 +1711,22 @@ function validateSeedData(): void {
     referencedUsers.add(trip.driverId);
     for (const booking of trip.bookings) {
       referencedUsers.add(booking.passengerId);
+      // TTL заявки имеет смысл только у pending (рантайм ставит его
+      // при создании pending и не трогает у остальных статусов).
+      if (booking.status !== "pending" && booking.expiresAtInHours !== undefined) {
+        throw new Error(
+          `expiresAtInHours у не-pending брони ${trip.id}/${booking.passengerId}`,
+        );
+      }
+      if (
+        booking.status === "pending" &&
+        booking.expiresAtInHours !== undefined &&
+        booking.expiresAtInHours <= 0
+      ) {
+        throw new Error(
+          `Неположительный TTL брони ${trip.id}/${booking.passengerId}`,
+        );
+      }
       // Отменённая бронь обязана иметь причину (как пишет рантайм).
       if (booking.status === "cancelled" && !booking.cancellationReason) {
         throw new Error(`Cancelled seed booking in ${trip.id} без причины`);
@@ -1913,6 +1955,14 @@ async function main() {
             seat: b.seat,
             status: b.status,
             comment: b.comment,
+            // Как рантайм: pending живёт 24ч (TTL), остальные — null.
+            expiresAt:
+              b.status === "pending"
+                ? new Date(
+                    seedNow.getTime() +
+                      (b.expiresAtInHours ?? 24) * 60 * 60 * 1000,
+                  )
+                : null,
             cancelledAt: b.status === "cancelled" ? seedNow : null,
             cancelledByType:
               b.status === "cancelled" ? (b.cancelledByType ?? "passenger") : null,
@@ -1982,6 +2032,13 @@ async function main() {
 
   // Create Notifications
   const notifications = [
+    {
+      userId: "u-1",
+      type: "booking_created",
+      title: "Новая заявка на поездку",
+      body: "Павел Никитин хочет присоединиться к вашей поездке Вологда → Череповец.",
+      isRead: false,
+    },
     {
       userId: "u-3",
       type: "booking_created",
