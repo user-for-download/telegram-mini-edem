@@ -80,13 +80,11 @@ export function HomePage() {
             navigate("/profile");
           }}
           after={
-            <>
-              <Badge type="number" large mode="secondary">
-                <Headline weight="2">
-                  {profile.data ? profile.data.rating.toFixed(1) : "—"}
-                </Headline>
-              </Badge>
-            </>
+            <Badge type="number" large mode="secondary">
+              <Headline weight="2">
+                {profile.data ? profile.data.rating.toFixed(1) : "—"}
+              </Headline>
+            </Badge>
           }
           before={
             <Avatar
@@ -189,11 +187,12 @@ export function HomePage() {
 }
 
 /**
- * Бронь пассажира — нативная ячейка: аватар водителя, маршрут с dot-бейджем,
- * «когда и время», описание — комментарий водителя о поездке с атрибуцией
- * «От водителя: …» (свой комментарий пассажира здесь не показываем —
- * он виден водителю в досье заявки). Статус не дублируется — он задан
- * заголовком секции.
+ * Бронь пассажира — нативная ячейка: аватар водителя с бейджем рейтинга,
+ * маршрут в subtitle, дата и время с ценой места в children. Описание —
+ * Blockquote с комментарием водителя о поездке, и только у одобренных
+ * заявок (свой комментарий пассажира здесь не показываем — он виден
+ * водителю в досье заявки, а заметки водителя актуальны после
+ * подтверждения). Статус не дублируется — он задан заголовком секции.
  */
 function BookingCell({ booking }: { booking: PassengerBooking }) {
   const navigate = useNavigate();
@@ -217,14 +216,16 @@ function BookingCell({ booking }: { booking: PassengerBooking }) {
           src={booking.trip.driver.avatar}
         >
           <Avatar.Badge mode="white" type="number">
-            {booking.trip.driver.rating}
+            {booking.trip.driver.rating != null
+              ? booking.trip.driver.rating.toFixed(1)
+              : "—"}
           </Avatar.Badge>
         </Avatar>
       }
       subtitle={
-        <Subheadline weight="1">
+        <Caption weight="1">
           {booking.trip.fromCity} → {booking.trip.toCity}
-        </Subheadline>
+        </Caption>
       }
       description={
         booking.status === "confirmed" && driverComment ? (
@@ -244,7 +245,7 @@ function BookingCell({ booking }: { booking: PassengerBooking }) {
         </IconButton>
       }
     >
-      {`${booking.trip.date}`}
+      {`${booking.trip.date}, ${booking.trip.time}`}
       <Badge mode="secondary" type="number">
         {booking.trip.price}₽
       </Badge>

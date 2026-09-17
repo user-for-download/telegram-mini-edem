@@ -118,7 +118,7 @@ describe("PassengerRequestModalBody", () => {
     expect(html).not.toContain("Отзыв о водителе");
   });
 
-  it("пустой список отзывов — заглушка текстом", () => {
+  it("пустой список отзывов — секция не рендерится", () => {
     const html = render(
       <PassengerRequestModalBody
         booking={makeBooking()}
@@ -128,7 +128,25 @@ describe("PassengerRequestModalBody", () => {
         reviewsLoading={false}
       />,
     );
-    expect(html).toContain("Отзывов пока нет");
+    expect(html).not.toContain("Отзывы");
+  });
+
+  it("отзывы свернуты в аккордеон со счётчиком", () => {
+    const html = render(
+      <PassengerRequestModalBody
+        booking={makeBooking()}
+        onDecide={vi.fn()}
+        busy={null}
+        reviews={[
+          makeReview({ id: "r-1", text: "Отличный пассажир" }),
+          makeReview({ id: "r-2", text: "Вовремя пришёл" }),
+        ]}
+        reviewsLoading={false}
+      />,
+    );
+    expect(html).toContain("Отзывы (2)");
+    // Контент остаётся в DOM свернутым (aria-hidden) — тексты видны.
+    expect(html).toContain("Отличный пассажир");
   });
 
   it("комментарий брони виден водителю", () => {

@@ -89,7 +89,7 @@ export function DriverRequestsSection() {
                 src={booking.passenger.avatar}
                 acronym={booking.passenger.name.slice(0, 2).toUpperCase()}
               >
-                <Avatar.Badge large type="number">
+                <Avatar.Badge mode="white" type="number">
                   {booking.passenger.rating.toFixed(1)}
                 </Avatar.Badge>
               </Avatar>
