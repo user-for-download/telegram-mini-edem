@@ -1,8 +1,6 @@
 import { useState } from "react";
 import {
-  Avatar,
   ButtonCell,
-  Cell,
   IconButton,
   Section,
 } from "@telegram-apps/telegram-ui";
@@ -16,6 +14,7 @@ import {
 import { useUserReviewsQuery } from "@/queries/useReviewsQuery";
 import { useToast } from "@/components/ToastProvider";
 import { PassengerRequestModal } from "@/components/PassengerRequestModal";
+import { TripCell } from "@/components/TripCell";
 import { formatSeatNumber } from "@/utils/bookingSplit";
 import { haptic } from "@/utils/haptics";
 
@@ -28,7 +27,6 @@ import { haptic } from "@/utils/haptics";
  */
 
 const PREVIEW_LIMIT = 3;
-const REVIEWS_PREVIEW = 2;
 
 export function DriverRequestsSection() {
   const navigate = useNavigate();
@@ -73,28 +71,19 @@ export function DriverRequestsSection() {
   };
 
   return (
-    <>
+    <div>
       <Section header="Рассмотрите заявки">
         {visible.map((booking) => (
-          <Cell
+          <TripCell
             key={booking.id}
-            type="button"
-            onClick={() => {
-              haptic.light();
-              navigate(`/trips/my/${booking.trip.id}/requests`);
+            avatar={{
+              src: booking.passenger.avatar,
+              name: booking.passenger.name,
+              rating: booking.passenger.rating,
             }}
-            before={
-              <Avatar
-                size={48}
-                src={booking.passenger.avatar}
-                acronym={booking.passenger.name.slice(0, 2).toUpperCase()}
-              >
-                <Avatar.Badge mode="white" type="number">
-                  {booking.passenger.rating.toFixed(1)}
-                </Avatar.Badge>
-              </Avatar>
-            }
-            subtitle={`${booking.trip.date} · ${booking.trip.time} · ${formatSeatNumber(booking.seat)}`}
+            title={`${booking.trip.fromCity} → ${booking.trip.toCity}`}
+            subtitle={booking.passenger.name}
+            description={`${booking.trip.price}₽ · ${formatSeatNumber(booking.seat)} · ${booking.trip.date} · ${booking.trip.time}`}
             after={
               <IconButton
                 mode="bezeled"
@@ -109,9 +98,11 @@ export function DriverRequestsSection() {
                 <Plus size={20} />
               </IconButton>
             }
-          >
-            {`${booking.trip.fromCity} → ${booking.trip.toCity}`}
-          </Cell>
+            onOpen={() => {
+              haptic.light();
+              navigate(`/trips/my/${booking.trip.id}/requests`);
+            }}
+          />
         ))}
         {allRequests.length > PREVIEW_LIMIT && (
           <ButtonCell
@@ -133,6 +124,6 @@ export function DriverRequestsSection() {
         reviews={reviews.data ?? []}
         reviewsLoading={reviews.isLoading}
       />
-    </>
+    </div>
   );
 }

@@ -13,6 +13,17 @@ import type { PickerCity } from "@/components/CityPickerField";
  * (Multiselect трогает document через useGlobalClicks — здесь этого нет).
  * Пустое значение — disabled/hidden option с placeholder-текстом.
  */
+interface CitySelectFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  cities: readonly PickerCity[] | undefined;
+  placeholder: string;
+  onSelect: (name: string) => void;
+  /** Город-партнёр: другой селект уже выбрал его — исключаем из списка. */
+  exclude?: string;
+}
+
 export function CitySelectField({
   id,
   label,
@@ -20,20 +31,12 @@ export function CitySelectField({
   cities,
   placeholder,
   onSelect,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  cities: readonly PickerCity[] | undefined;
-  placeholder: string;
-  onSelect: (name: string) => void;
-}) {
+  exclude,
+}: CitySelectFieldProps) {
   const selectedId = cities?.find((city) => city.name === value)?.id ?? "";
 
   return (
     <div>
-      {/* header рисует сам Select (FormInput); внешний label — sr-only
-          для скринридеров и e2e getByLabel. */}
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
@@ -50,11 +53,13 @@ export function CitySelectField({
         <option value="" disabled hidden>
           {placeholder}
         </option>
-        {cities?.map((city) => (
-          <option key={city.id} value={city.id}>
-            {city.name}
-          </option>
-        ))}
+        {cities
+          ?.filter((city) => !exclude || city.name !== exclude)
+          .map((city) => (
+            <option key={city.id} value={city.id}>
+              {city.name}
+            </option>
+          ))}
       </Select>
     </div>
   );

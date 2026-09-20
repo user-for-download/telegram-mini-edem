@@ -131,7 +131,7 @@ describe("PassengerRequestModalBody", () => {
     expect(html).not.toContain("Отзывы");
   });
 
-  it("отзывы свернуты в аккордеон со счётчиком", () => {
+  it("отзывы — обычная секция с двумя цитатами", () => {
     const html = render(
       <PassengerRequestModalBody
         booking={makeBooking()}
@@ -144,8 +144,8 @@ describe("PassengerRequestModalBody", () => {
         reviewsLoading={false}
       />,
     );
-    expect(html).toContain("Отзывы (2)");
-    // Контент остаётся в DOM свернутым (aria-hidden) — тексты видны.
+    expect(html).toContain("Последние отзывы");
+    // Две цитаты видны сразу, без аккордеона.
     expect(html).toContain("Отличный пассажир");
   });
 

@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 import type { PassengerBooking } from "@edem/contracts";
 import {
   confirmedSectionHeader,
+  formatRelativeDeparture,
   formatSeatNumber,
   isUpcomingBooking,
   splitBookingsByStatus,
 } from "@/utils/bookingSplit";
 
-function makeBooking(overrides: Record<string, unknown> = {}): PassengerBooking {
+function makeBooking(
+  overrides: Record<string, unknown> = {},
+): PassengerBooking {
   return {
     id: "b-1",
     seat: 1,
@@ -21,7 +24,13 @@ function makeBooking(overrides: Record<string, unknown> = {}): PassengerBooking 
       time: "09:00",
       departureAt: "2030-06-01T09:00:00.000Z",
       price: 450,
-      driver: { name: "Александр", avatar: "https://t.me/a.png", rating: 5, reviewsCount: 0, tripsCount: 0 },
+      driver: {
+        name: "Александр",
+        avatar: "https://t.me/a.png",
+        rating: 5,
+        reviewsCount: 0,
+        tripsCount: 0,
+      },
     },
     ...overrides,
   } as unknown as PassengerBooking;
@@ -43,10 +52,7 @@ describe("isUpcomingBooking", () => {
 
   it("отсутствие даты отправления — не активная", () => {
     expect(
-      isUpcomingBooking(
-        makeBooking({ trip: { departureAt: undefined } }),
-        now,
-      ),
+      isUpcomingBooking(makeBooking({ trip: { departureAt: undefined } }), now),
     ).toBe(false);
   });
 });
@@ -111,5 +117,34 @@ describe("formatSeatNumber", () => {
     expect(formatSeatNumber(1)).toBe("место №1");
     expect(formatSeatNumber(2)).toBe("место №2");
     expect(formatSeatNumber(3)).toBe("место №3");
+  });
+});
+
+describe("formatRelativeDeparture", () => {
+  // MSK: now — полдень 20 сентября, отправления — в тот же день,
+  // на следующий и через неделю (часы — московские).
+  const now = new Date("2030-09-20T09:00:00.000Z");
+
+  it("сегодня", () => {
+    expect(formatRelativeDeparture("2030-09-20T14:30:00.000Z", now)).toBe(
+      "Сегодня, 17:30",
+    );
+  });
+
+  it("завтра", () => {
+    expect(formatRelativeDeparture("2030-09-21T06:00:00.000Z", now)).toBe(
+      "Завтра, 09:00",
+    );
+  });
+
+  it("точная дата", () => {
+    expect(formatRelativeDeparture("2030-09-27T05:00:00.000Z", now)).toBe(
+      "27 сент., 08:00",
+    );
+  });
+
+  it("пусто и мусор — прочерк", () => {
+    expect(formatRelativeDeparture(undefined, now)).toBe("—");
+    expect(formatRelativeDeparture("not-a-date", now)).toBe("—");
   });
 });

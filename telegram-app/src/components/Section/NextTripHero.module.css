@@ -1,0 +1,75 @@
+/*
+ * Hero ближайшей поездки на главной.
+ *
+ * Поверхность — Banner type=inline кита (с крестиком onCloseIcon),
+ * внутри свой контент: шапка дата — места — цена, маршрут одной строкой,
+ * стек пассажиров. Свои селекторы удвоены (.head.head) — стили кита
+ * подключены позже своих, !important не используем.
+ */
+
+/* Баннер hero — Card type=plain: отступы как у карточки поиска
+ * (margin 12px 16px, вертикальные поля 8px), скругление с защитой
+ * от «склейки» кита (четыре класса выигрывают его каскад). */
+.card.card {
+  display: block;
+  margin: 12px 16px;
+  padding: 6px 16px;
+  border: var(--tgui--border--width, 1px) solid var(--tgui--outline);
+}
+
+/*
+ * Кит внутри Section оформляет карточки как «склейку» списка —
+ * перебивает радиус Card своими селекторами (0-3-0 против 0-1-0).
+ * Наши карточки самостоятельные, поэтому жёстко возвращаем скругление
+ * всем четырём углам: четыре класса (0-4-0) выигрывают каскад кита.
+ */
+.card.card.card.card {
+  border-radius: 20px;
+}
+
+/* Шапка карточки: дата слева — места в центре — цена справа.
+ * Внутренние ряды без боковых паддингов — поля задаёт сама карточка. */
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.price.price {
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--tgui--link_color);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Маршрут баннера — одна строка, мельче заголовка. */
+.route.route {
+  margin-top: 2px;
+  font-size: 15px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Строка «мест» в шапке карточки: приглушённый цвет подписи;
+ * выравнивание baseline, как у соседей по шапке. */
+.seats.seats {
+  color: var(--tgui--subtitle_text_color);
+  white-space: nowrap;
+}
+
+/* Строка пассажиров: стек + подпись. */
+.passengerStack {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.passengersLabel {
+  color: var(--tgui--hint_color);
+}

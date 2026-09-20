@@ -15,20 +15,27 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockUseProfile.mockReturnValue(queryState({ data: null }));
   mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
+  mockUseMyTrips.mockReturnValue(queryState({ data: undefined }));
   mockUseAllCities.mockReturnValue(queryState({ data: [] }));
   mockUseDriverRequests.mockReturnValue(queryState({ data: [] }));
   mockUseUpdateBookingStatus.mockReturnValue({ mutate: vi.fn() });
 });
 
-const { mockUseProfile, mockUseMyBookings, mockUseAllCities, mockUseDriverRequests, mockUseUpdateBookingStatus } = vi.hoisted(
-  () => ({
-    mockUseProfile: vi.fn(),
-    mockUseMyBookings: vi.fn(),
-    mockUseAllCities: vi.fn(),
-    mockUseDriverRequests: vi.fn(),
-    mockUseUpdateBookingStatus: vi.fn(),
-  }),
-);
+const {
+  mockUseProfile,
+  mockUseMyBookings,
+  mockUseAllCities,
+  mockUseDriverRequests,
+  mockUseUpdateBookingStatus,
+  mockUseMyTrips,
+} = vi.hoisted(() => ({
+  mockUseProfile: vi.fn(),
+  mockUseMyBookings: vi.fn(),
+  mockUseAllCities: vi.fn(),
+  mockUseDriverRequests: vi.fn(),
+  mockUseUpdateBookingStatus: vi.fn(),
+  mockUseMyTrips: vi.fn(),
+}));
 
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: mockUseProfile,
@@ -42,6 +49,10 @@ vi.mock("@/queries/useBookingsQuery", () => ({
 
 vi.mock("@/queries/useAllCities", () => ({
   useAllCitiesQuery: mockUseAllCities,
+}));
+
+vi.mock("@/queries/useTripsQuery", () => ({
+  useInfiniteMyTripsQuery: mockUseMyTrips,
 }));
 
 vi.mock("@/queries/useReviewsQuery", () => ({
@@ -80,12 +91,45 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
     time: "09:00",
     departureAt: "2030-06-01T09:00:00.000Z",
     price: 450,
+    seatsTotal: 4,
+    seatsAvailable: 2,
     driver: { name: "Александр" },
     ...overrides,
   };
 }
 
 describe("HomePage", () => {
+  it("hero показывает ближайшую подтверждённую поездку", () => {
+    mockUseMyBookings.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "b-1",
+            seat: 2,
+            status: "confirmed",
+            trip: makeTrip({
+              departureAt: new Date(Date.now() + 3_600_000).toISOString(),
+              seatsTotal: 4,
+              seatsAvailable: 2,
+            }),
+          },
+        ],
+      }),
+    );
+    const html = render(<HomePage />);
+    expect(html).toContain("Вологда");
+    expect(html).toContain("Череповец");
+    // Бронь пассажира: статус вместо счётчика мест.
+    expect(html).toContain("Бронь №");
+    expect(html).toMatch(/Сегодня|Завтра/);
+    // Состав пассажиров API не отдаёт — честный фолбэк.
+    expect(html).toContain("нет активных броней");
+  });
+
+  it("hero скрыт без upcoming-поездок", () => {
+    const html = render(<HomePage />);
+    expect(html).not.toContain("Ближайшая поездка");
+  });
   it("показывает экспресс-поиск, направления и преимущества", () => {
     mockUseProfile.mockReturnValue(
       queryState({
@@ -96,8 +140,7 @@ describe("HomePage", () => {
     // Профиль-бар с реальным именем и рейтингом из query.
     expect(html).toContain("Александр");
     expect(html).toContain("4.8");
-    // Экспресс-поиск.
-    expect(html).toContain("Куда поедем?");
+    // Экспресс-поиск — карточка без заголовка.
     expect(html).toContain("Найти поездку");
     // CTA водителю.
     expect(html).toContain("Едете на машине?");
@@ -142,7 +185,7 @@ describe("HomePage", () => {
     expect(html).not.toContain("900");
   });
 
-  it("в «Ваша поездка» показывает комментарий водителя (Blockquote), свой — нет", () => {
+  it("в «Ваша поездка» ячейка по шаблону: маршрут, водитель, мета — без комментариев", () => {
     mockUseMyBookings.mockReturnValue(
       queryState({
         data: [
@@ -157,8 +200,11 @@ describe("HomePage", () => {
       }),
     );
     const html = render(<HomePage />);
-    // Комментарий водителя о поездке — в Blockquote (стиль «other»).
-    expect(html).toContain("Остановка у метро");
+    // Эталон TripCell: title — маршрут, subtitle — кто, description — мета.
+    expect(html).toContain("Вологда → Череповец");
+    // Комментарии (и водителя, и свой) на главной не показываются —
+    // детали внутри поездки.
+    expect(html).not.toContain("Остановка у метро");
     // Свой комментарий пассажира на главной не показывается (он для водителя).
     expect(html).not.toContain("Буду с рюкзаком");
   });

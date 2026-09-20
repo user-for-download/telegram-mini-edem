@@ -9,6 +9,8 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { FeedCard } from "@/components/FeedCard";
 import { StatusPill } from "@/components/StatusPill";
+import { TripCell } from "@/components/TripCell";
+import { formatSeatNumber } from "@/utils/bookingSplit";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -104,36 +106,25 @@ export function TripRequestsPage() {
         )}
         {!items.length && <Placeholder header="Заявок нет" />}
         {pending.length > 0 && (
-          <Section header={`Ожидают решения (${pending.length})`}>
-            <div className="flex flex-col gap-3 p-4">
-              {pending.map((booking) => (
-                <FeedCard key={booking.id} className="p-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Avatar
-                        size={40}
-                        src={booking.passenger.avatar}
-                        acronym={booking.passenger.name
-                          .slice(0, 1)
-                          .toUpperCase()}
-                      />
-                      <div className="min-w-0">
-                        <Text Component="div" className="truncate">
-                          {booking.passenger.name}
-                        </Text>
-                        <Caption Component="div">
-                          {`место ${booking.seat}${booking.comment ? ` · «${booking.comment}»` : ""}`}
-                        </Caption>
-                      </div>
-                    </div>
-                    <StatusPill tone="warning" className="shrink-0">
-                      Ожидает решения
-                    </StatusPill>
-                  </div>
+          <Section
+            header={`Ожидают решения (${pending.length})`}
+            footer="Рассмотрите заявки — решение сразу уйдёт пассажиру."
+          >
+            {pending.map((booking) => (
+              <TripCell
+                key={booking.id}
+                avatar={{
+                  src: booking.passenger.avatar,
+                  name: booking.passenger.name,
+                  rating: booking.passenger.rating,
+                }}
+                title={`${booking.trip.fromCity} → ${booking.trip.toCity}`}
+                subtitle={booking.passenger.name}
+                description={`${formatSeatNumber(booking.seat)}${booking.comment ? ` · «${booking.comment}»` : ""}`}
+                after={
                   <div className="flex gap-2">
                     <Button
                       mode="bezeled"
-                      stretched
                       size="s"
                       loading={
                         update.isPending && update.variables?.id === booking.id
@@ -147,7 +138,6 @@ export function TripRequestsPage() {
                     </Button>
                     <Button
                       mode="bezeled"
-                      stretched
                       size="s"
                       loading={
                         update.isPending && update.variables?.id === booking.id
@@ -160,9 +150,9 @@ export function TripRequestsPage() {
                       Отклонить
                     </Button>
                   </div>
-                </FeedCard>
-              ))}
-            </div>
+                }
+              />
+            ))}
           </Section>
         )}
         {confirmed.length > 0 && (

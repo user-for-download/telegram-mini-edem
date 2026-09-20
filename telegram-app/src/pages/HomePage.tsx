@@ -1,35 +1,20 @@
-import { useMemo, useState, type SubmitEvent } from "react";
 import {
-  Avatar,
-  Badge,
   Button,
-  Cell,
-  IconContainer,
-  IconButton,
   List,
   Placeholder,
   Section,
-  Skeleton,
-  Headline,
-  Blockquote,
-  Subheadline,
-  Caption,
+  Banner,
 } from "@telegram-apps/telegram-ui";
-import { ChevronRight, PlusCircle, Route, Search, Star } from "lucide-react";
+import { Car, PlusCircle, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { CitySelectField } from "@/components/CitySelectField";
-import { DriverRequestsSection } from "@/components/DriverRequestsSection";
-import { POPULAR_ROUTES } from "@/consts/popularRoutes";
+import { DriverRequestsSection } from "@/components/Section/DriverRequestsSection";
+import { PopularRoutesSection } from "@/components/Section/PopularRoutesSection";
+import { MyTripsSection } from "@/components/Section/MyTripsSection";
+import { NextTripHero } from "@/components/Section/NextTripHero";
+import { ProfileSection } from "@/components/Section/ProfileSection";
+import { TripSearchSection } from "@/components/Section/TripSearchSection";
 import { haptic } from "@/utils/haptics";
-import {
-  confirmedSectionHeader,
-  formatSeatNumber,
-  splitBookingsByStatus,
-} from "@/utils/bookingSplit";
-import { useProfileQuery } from "@/queries/profile";
-import { useAllCitiesQuery } from "@/queries/useAllCities";
-import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
-import type { PassengerBooking } from "@edem/contracts";
+import { Fragment } from "react";
 
 /**
  * Главная — только нативные компоненты @telegram-apps/telegram-ui
@@ -42,129 +27,24 @@ import type { PassengerBooking } from "@edem/contracts";
  */
 export function HomePage() {
   const navigate = useNavigate();
-  const profile = useProfileQuery();
-  const bookings = useMyBookingsQuery();
-  const cities = useAllCitiesQuery();
-
-  const [fromCity, setFromCity] = useState("");
-  const [toCity, setToCity] = useState("");
-
-  // Брони двумя группами по статусу (будущие confirmed и pending).
-  const { confirmed, pending } = useMemo(
-    () => splitBookingsByStatus(bookings.data ?? []),
-    [bookings.data],
-  );
 
   const goToSearch = (from?: string, to?: string) => {
     haptic.light();
     const params = new URLSearchParams();
-    const fromValue = from ?? fromCity;
-    const toValue = to ?? toCity;
-    if (fromValue.trim()) params.set("from", fromValue.trim());
-    if (toValue.trim()) params.set("to", toValue.trim());
+    if (from?.trim()) params.set("from", from.trim());
+    if (to?.trim()) params.set("to", to.trim());
     navigate(`/trips?${params.toString()}`);
-  };
-
-  const submitSearch = (event: SubmitEvent) => {
-    event.preventDefault();
-    goToSearch();
   };
 
   return (
     <List>
-      <Skeleton visible={profile.isLoading} withoutAnimation>
-        <Cell
-          type="button"
-          onClick={() => {
-            haptic.light();
-            navigate("/profile");
-          }}
-          after={
-            <Badge type="number" large mode="secondary">
-              <Headline weight="2">
-                {profile.data ? profile.data.rating.toFixed(1) : "—"}
-              </Headline>
-            </Badge>
-          }
-          before={
-            <Avatar
-              size={40}
-              src={profile.data?.avatar}
-              acronym={(profile.data?.name ?? "ЕД").slice(0, 2).toUpperCase()}
-            />
-          }
-          subtitle={`Поездок: ${profile.data?.tripsCount ?? 0}`}
-          aria-label="Открыть профиль"
-        >
-          {profile.data?.name ?? "Попутчик"}
-        </Cell>
-      </Skeleton>
-      <form onSubmit={submitSearch}>
-        <Section
-          header="Куда поедем?"
-          footer={
-            <Button
-              size="l"
-              stretched
-              mode="bezeled"
-              before={<Search size={18} />}
-              type="submit"
-            >
-              Найти поездку
-            </Button>
-          }
-        >
-          <CitySelectField
-            id="home-from"
-            label="Откуда"
-            value={fromCity}
-            cities={cities.data}
-            placeholder="Город или село отправления"
-            onSelect={setFromCity}
-          />
-          <CitySelectField
-            id="home-to"
-            label="Куда"
-            value={toCity}
-            cities={cities.data}
-            placeholder="Город или село назначения"
-            onSelect={setToCity}
-          />
-        </Section>
-      </form>
-      <Skeleton visible={bookings.isLoading} withoutAnimation>
-        {confirmed.length > 0 && (
-          <Section header={confirmedSectionHeader(confirmed.length)}>
-            {confirmed.map((booking) => (
-              <BookingCell key={booking.id} booking={booking} />
-            ))}
-          </Section>
-        )}
-        {pending.length > 0 && (
-          <Section header="Ожидают подтверждения">
-            {pending.map((booking) => (
-              <BookingCell key={booking.id} booking={booking} />
-            ))}
-          </Section>
-        )}
-      </Skeleton>
+      <ProfileSection />
+
+      <NextTripHero />
+      <TripSearchSection onSearch={goToSearch} />
+      <MyTripsSection />
       <DriverRequestsSection />
-      <Section header="Популярные направления">
-        {POPULAR_ROUTES.map((route) => (
-          <Cell
-            key={`${route.from}-${route.to}`}
-            type="button"
-            onClick={() => goToSearch(route.from, route.to)}
-            before={
-              <IconContainer>
-                <Route size={22} />
-              </IconContainer>
-            }
-          >
-            {route.from} → {route.to}
-          </Cell>
-        ))}
-      </Section>
+      <PopularRoutesSection onSelect={goToSearch} />
       <Placeholder
         header="Едете на машине?"
         description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы"
@@ -183,72 +63,5 @@ export function HomePage() {
         }
       />
     </List>
-  );
-}
-
-/**
- * Бронь пассажира — нативная ячейка: аватар водителя с бейджем рейтинга,
- * маршрут в subtitle, дата и время с ценой места в children. Описание —
- * Blockquote с комментарием водителя о поездке, и только у одобренных
- * заявок (свой комментарий пассажира здесь не показываем — он виден
- * водителю в досье заявки, а заметки водителя актуальны после
- * подтверждения). Статус не дублируется — он задан заголовком секции.
- */
-function BookingCell({ booking }: { booking: PassengerBooking }) {
-  const navigate = useNavigate();
-  const openTrip = () => {
-    haptic.light();
-    navigate(`/trips/${booking.trip.id}`);
-  };
-  // Комментарий пассажира (booking.comment) на главной не показываем:
-  // это текст для водителя. Пассажиру актуален комментарий водителя
-  // к поездке — с явной атрибуцией, чей это текст.
-  const driverComment = booking.trip.comment;
-  return (
-    <Cell
-      type="button"
-      multiline
-      onClick={openTrip}
-      before={
-        <Avatar
-          size={48}
-          acronym={(booking.trip.driver.name ?? "?").slice(0, 2).toUpperCase()}
-          src={booking.trip.driver.avatar}
-        >
-          <Avatar.Badge mode="white" type="number">
-            {booking.trip.driver.rating != null
-              ? booking.trip.driver.rating.toFixed(1)
-              : "—"}
-          </Avatar.Badge>
-        </Avatar>
-      }
-      subtitle={
-        <Caption weight="1">
-          {booking.trip.fromCity} → {booking.trip.toCity}
-        </Caption>
-      }
-      description={
-        booking.status === "confirmed" && driverComment ? (
-          <Caption level="2">
-            <Blockquote type="other">{`${driverComment}`}</Blockquote>
-          </Caption>
-        ) : undefined
-      }
-      after={
-        <IconButton
-          mode="bezeled"
-          size="s"
-          aria-label="Открыть поездку"
-          onClick={openTrip}
-        >
-          <ChevronRight size={20} />
-        </IconButton>
-      }
-    >
-      {`${booking.trip.date}, ${booking.trip.time}`}
-      <Badge mode="secondary" type="number">
-        {booking.trip.price}₽
-      </Badge>
-    </Cell>
   );
 }

@@ -1,0 +1,24 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tgui--secondary_bg_color, rgba(127, 127, 127, 0.12));
+  color: var(--tgui--text_color, inherit);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.small {
+  padding: 1px 6px;
+  font-size: 12px;
+}
+
+.star {
+  /* Золото рейтинга из темы (светлая/тёмная настроены в index.css). */
+  color: var(--app-rating);
+  display: inline-flex;
+}

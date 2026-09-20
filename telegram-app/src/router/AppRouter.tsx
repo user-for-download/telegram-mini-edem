@@ -21,6 +21,7 @@ import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
 import { getCurrent, subscribe } from "@/utils/bottomBarRegistry";
 import { HomePage } from "@/pages/HomePage";
+import { ShowcasePage } from "@/pages/ShowcasePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { TripDetailsRoute } from "@/components/TripDetailsModal";
 import { CreateTripPage } from "@/pages/CreateTripPage";
@@ -119,9 +120,11 @@ export function Shell() {
         ? "trips"
         : location.pathname.startsWith("/notifications")
           ? "notifications"
-          : location.pathname.startsWith("/trips")
-            ? "search"
-            : "profile";
+          : location.pathname.startsWith("/showcase")
+            ? "showcase"
+            : location.pathname.startsWith("/trips")
+              ? "search"
+              : "profile";
 
   const go = (to: string) => {
     navigate(to);
@@ -194,6 +197,7 @@ export function AppRouter() {
           <Route path="/profile/support" element={<SupportRoute />} />
           <Route path="/profile/reports" element={<ReportsRoute />} />
           <Route path="/vehicle" element={<VehicleRoute />} />
+          <Route path="/showcase" element={<ShowcasePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

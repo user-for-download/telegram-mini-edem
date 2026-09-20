@@ -1,0 +1,17 @@
+/* Компактный блок «кто»: имя + счётчик поездок без зазоров TGUI. */
+.who {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--tgui--text_color, inherit);
+}
+
+.trips {
+  font-size: 13px;
+  color: var(--tgui--hint_color, inherit);
+}

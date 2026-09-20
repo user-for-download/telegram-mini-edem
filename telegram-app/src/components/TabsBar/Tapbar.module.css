@@ -1,0 +1,35 @@
+/* Плавающий нижний тапбар-пилюля: геометрия и отступы здесь,
+   интерактив и selected-состояния — нативные (TGUI Tabbar). Цвета и
+   шрифты только из токенов --tgui--* / --tg-theme-*, чтобы жила тема
+   клиента (light/dark). */
+
+.fixed {
+  z-index: 2;
+}
+
+.tapbar {
+  margin-left: 16px;
+  margin-right: 16px;
+  margin-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-inset-bottom, 0px)
+  );
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--tgui--secondary_bg_color);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.16);
+}
+
+.iconWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  pointer-events: none;
+}

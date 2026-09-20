@@ -1,6 +1,6 @@
 import type { FC, PropsWithChildren } from "react";
 import { useEffect } from "react";
-import { AppRoot, Button, Placeholder } from "@telegram-apps/telegram-ui";
+import { AppRoot } from "@telegram-apps/telegram-ui";
 import {
   miniApp,
   themeParams,
@@ -64,20 +64,22 @@ function ErrorFallback({ error }: { error: unknown }) {
       : typeof error === "string"
         ? error
         : JSON.stringify(error);
+  // Чистый HTML: фолбэк живёт СНАРУЖИ AppRoot, TGUI здесь упадёт
+  // с «Wrap your app with <AppRoot>» и замаскирует исходную ошибку.
   return (
-    <Placeholder
-      header="Что-то пошло не так"
-      description={<code>{message}</code>}
-      action={
-        <Button
-          size="l"
-          mode="bezeled"
-          onClick={() => window.location.reload()}
-        >
-          Обновить
-        </Button>
-      }
-    />
+    <div style={{ padding: "32px 16px", textAlign: "center" }}>
+      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Что-то пошло не так</h1>
+      <p style={{ opacity: 0.7, marginBottom: 16 }}>
+        <code>{message}</code>
+      </p>
+      <button
+        type="button"
+        style={{ padding: "10px 20px", fontSize: 16 }}
+        onClick={() => window.location.reload()}
+      >
+        Обновить
+      </button>
+    </div>
   );
 }
 

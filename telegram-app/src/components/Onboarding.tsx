@@ -8,6 +8,7 @@ import {
   Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
+import { ChevronRight } from "lucide-react";
 import { usersApi } from "@/api/users.api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ONBOARDING_VERSION } from "@/onboarding/version";
@@ -103,27 +104,56 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
 
   return (
     <main className="Onboarding" aria-labelledby="onboarding-title">
-      <Placeholder
-        header="Добро пожаловать в «Едем»"
-        description="Сервис поиска попутчиков для совместных поездок. Вы общаетесь и рассчитываетесь напрямую с другими пользователями."
+      <List
+        style={{
+          background: "var(--tgui--secondary_bg_color)",
+        }}
       >
-        <VisuallyHidden Component="span" id="onboarding-title">
-          Первый вход
-        </VisuallyHidden>
-      </Placeholder>
-      {error && (
-        <Caption
-          Component="p"
-          role="alert"
-          className="text-(--tg-theme-destructive-text-color)"
+        <Placeholder
+          header="Добро пожаловать в «Едем»"
+          description="Сервис поиска попутчиков для совместных поездок. Вы общаетесь и рассчитываетесь напрямую с другими пользователями."
         >
-          {error}
-        </Caption>
-      )}
-      <Section
-        header="Перед началом"
-        footer={
-          <div className="flex flex-col gap-2">
+          <VisuallyHidden Component="span" id="onboarding-title">
+            Первый вход
+          </VisuallyHidden>
+        </Placeholder>
+        {error && (
+          <Caption
+            Component="p"
+            role="alert"
+            className="text-(--tg-theme-destructive-text-color)"
+          >
+            {error}
+          </Caption>
+        )}
+        <Section
+          header="Перед началом"
+          footer="Сервис доступен пользователям старше 14 лет. Нажимая кнопку, вы принимаете оба документа"
+        >
+          <Cell
+            multiline
+            subtitle={
+              <Caption level="1" weight="3">
+                Обработка данных о поездках
+              </Caption>
+            }
+            after={<ChevronRight />}
+          >
+            Пользовательское соглашение
+          </Cell>
+          <Cell
+            multiline
+            subtitle={
+              <Caption level="1" weight="3">
+                Как мы храним и используем ваши данные
+              </Caption>
+            }
+            after={<ChevronRight />}
+          >
+            Политика конфиденциальности
+          </Cell>
+
+          <div>
             <Button
               mode="bezeled"
               size="l"
@@ -138,30 +168,15 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
               size="l"
               mode="plain"
               stretched
+              style={{ color: "var(--tgui--destructive_text_color)" }}
               disabled={busy}
               onClick={() => setDeclined(true)}
             >
-              Не принимать
+              Отклонить
             </Button>
           </div>
-        }
-      >
-        <List>
-          <Cell
-            multiline
-            subtitle="Обработка имени, аватара и данных о поездках для работы сервиса"
-          >
-            Пользовательское соглашение
-          </Cell>
-          <Cell multiline subtitle="Как мы храним и используем ваши данные">
-            Политика конфиденциальности
-          </Cell>
-        </List>
-        <Caption Component="p">
-          Сервис доступен пользователям старше 14 лет. Нажимая кнопку, вы
-          принимаете оба документа.
-        </Caption>
-      </Section>
+        </Section>
+      </List>
     </main>
   );
 };

@@ -75,3 +75,46 @@ export function confirmedSectionHeader(count: number): string {
 export function formatSeatNumber(seat: number): string {
   return `место №${seat}`;
 }
+
+const MOSCOW_TZ = "Europe/Moscow";
+
+/**
+ * Относительная дата отправления (МСК): «Сегодня, 14:30»,
+ * «Завтра, 09:00», иначе «20 сен, 08:00». Невалидная дата — «—».
+ */
+export function formatRelativeDeparture(
+  departureAt: string | undefined,
+  now: Date = new Date(),
+): string {
+  if (!departureAt) return "—";
+  const time = Date.parse(departureAt);
+  if (!Number.isFinite(time)) return "—";
+
+  const timeFmt = new Intl.DateTimeFormat("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: MOSCOW_TZ,
+  });
+  const dayFmt = new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "short",
+    timeZone: MOSCOW_TZ,
+  });
+  const dayKey = (d: Date): string =>
+    new Intl.DateTimeFormat("ru-RU", {
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+      timeZone: MOSCOW_TZ,
+    }).format(d);
+
+  const dep = new Date(time);
+  const depKey = dayKey(dep);
+  const todayKey = dayKey(now);
+  const tomorrowKey = dayKey(new Date(now.getTime() + 86_400_000));
+  const clock = timeFmt.format(dep);
+
+  if (depKey === todayKey) return `Сегодня, ${clock}`;
+  if (depKey === tomorrowKey) return `Завтра, ${clock}`;
+  return `${dayFmt.format(dep)}, ${clock}`;
+}

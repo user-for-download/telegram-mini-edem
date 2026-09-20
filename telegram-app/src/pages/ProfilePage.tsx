@@ -351,7 +351,7 @@ export function ProfilePage() {
                     }
                     icon={
                       <IconContainer>
-                        <Car size={20} />
+                        <Car size={18} />
                       </IconContainer>
                     }
                     title={
