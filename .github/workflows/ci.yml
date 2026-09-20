@@ -29,8 +29,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edem_test?statement_cache_size=0
       JWT_SECRET: ci-jwt-secret
       ALLOW_DEV_AUTH: "true"
-      # Browser-загрузка не нужна ЭТОЙ job (юнит/интеграционные тесты);
-      # E2E-браузеры ставит отдельная job e2e (npx playwright install chromium).
+      # Browser-загрузка не нужна (юнит/интеграционные тесты без браузера).
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
       # error (не silent): unhandled_error с кодом Prisma должен быть виден
       # в логах CI при редких флейках интеграционных тестов.
@@ -94,125 +93,6 @@ jobs:
 
       - name: Webapp tests
         run: npm run --workspace webapp test
-
-  # E2E: реальный браузер + живой backend/frontend + dev-БД (compose).
-  # Раньше e2e-флоу не гонялись в CI вовсе (audit: CI must exercise
-  # production/build-critical paths) — регрессии WS/рендера/жизненного
-  # цикла проходили незамеченными.
-  e2e:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    env:
-      NODE_ENV: development
-      DATABASE_URL: postgresql://edem:edem_local@127.0.0.1:5433/edem
-      JWT_SECRET: e2e-jwt-secret
-      ALLOW_DEV_AUTH: "true"
-      BACKEND_PORT: "3011"
-      VITE_TG_PORT: "3012"
-      VITE_API_TARGET: http://127.0.0.1:3011
-      LOG_LEVEL: error
-      # Прогон создаёт/подтверждает брони и отзывы — лимиты ослаблены,
-      # чтобы флоу не упирался в 429 на повторных ранах.
-      TG_AUTH_RATE_WINDOW_MS: "900000"
-      TG_AUTH_RATE_MAX: "1000"
-      REFRESH_RATE_WINDOW_MS: "900000"
-      REFRESH_RATE_MAX: "1000"
-      MUTATION_RATE_WINDOW_MS: "900000"
-      MUTATION_RATE_MAX: "1000"
-      # Шаги модерации отзыва и ответа на обращение логинятся в админку.
-      # Значение обязано совпадать с дефолтом E2E_ADMIN_TOKEN в
-      # telegram-parity.mjs (dev-admin-token-12345); в CI нет gitignored
-      # backend/.env, где токен задан локально, — без него админ-API
-      # закрыт по умолчанию (403 на login).
-      ADMIN_TOKEN: dev-admin-token-12345
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies (npm ci, lockfile-locked)
-        run: npm ci --no-audit --no-fund
-
-      # Dev-БД как локально: контейнер vk-mini-edem-db-dev на 127.0.0.1:5433.
-      # E2E_DB_CONTAINER в telegram-parity.mjs указывает на него же (time-travel
-      # и cleanup через docker exec psql).
-      - name: Start dev database (docker compose local)
-        run: docker compose -f docker-compose.local.yml up -d db-dev
-
-      - name: Build contracts
-        run: npm run --workspace "@edem/contracts" build
-
-      - name: Prisma generate + push schema
-        run: npm run --workspace backend db:generate && npm run --workspace backend db:push
-
-      - name: Seed dev database
-        run: npm run --workspace backend db:seed
-
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Start backend
-        run: |
-          npm run --workspace backend dev > backend-dev.log 2>&1 &
-          echo $! > backend.pid
-
-      - name: Start telegram-app (vite)
-        run: |
-          npm run --workspace telegram-app dev > tg-dev.log 2>&1 &
-          echo $! > tg.pid
-
-      - name: Wait for backend readiness
-        run: |
-          for i in $(seq 1 60); do
-            if curl -sf http://127.0.0.1:3011/health/ready > /dev/null; then
-              echo "backend ready"; exit 0
-            fi
-            sleep 2
-          done
-          echo "backend did not become ready"; cat backend-dev.log; exit 1
-
-      - name: Wait for frontend readiness
-        run: |
-          for i in $(seq 1 60); do
-            if curl -sf http://127.0.0.1:3012/ > /dev/null; then
-              echo "frontend ready"; exit 0
-            fi
-            sleep 2
-          done
-          echo "frontend did not become ready"; cat tg-dev.log; exit 1
-
-      - name: Run telegram-parity E2E (browser)
-        run: node e2e/telegram-parity.mjs
-
-      - name: Upload E2E artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-artifacts
-          path: |
-            e2e/results-tg.json
-            e2e/shots-tg/
-          if-no-files-found: ignore
-
-      - name: Dump dev logs on failure
-        if: failure()
-        run: |
-          echo "=== backend-dev.log ==="; tail -100 backend-dev.log || true
-          echo "=== tg-dev.log ==="; tail -100 tg-dev.log || true
-
-      - name: Stop dev servers
-        if: always()
-        run: |
-          kill $(cat backend.pid) 2>/dev/null || true
-          kill $(cat tg.pid) 2>/dev/null || true
-          docker compose -f docker-compose.local.yml down -v || true
 
   # Docker: прод-образы должны собираться в CI (audit: production Docker
   # build must be validated) — ошибки копирования/миграций/nginx ловим

@@ -130,6 +130,32 @@ describe("HomePage", () => {
     const html = render(<HomePage />);
     expect(html).not.toContain("Ближайшая поездка");
   });
+
+  it("hero своей поездки без броней показывает все места свободными", () => {
+    mockUseMyTrips.mockReturnValue(
+      queryState({
+        data: {
+          pages: [
+            {
+              items: [
+                makeTrip({
+                  id: "t-own",
+                  departureAt: new Date(Date.now() + 3_600_000).toISOString(),
+                  seatsTotal: 3,
+                  seatsAvailable: 3,
+                  confirmedBookingsCount: 0,
+                }),
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    const html = render(<HomePage />);
+    // Нет броней — свободны все 3 места, а не «мест нет».
+    expect(html).toContain("мест:");
+    expect(html).not.toContain("мест нет");
+  });
   it("показывает экспресс-поиск, направления и преимущества", () => {
     mockUseProfile.mockReturnValue(
       queryState({
@@ -173,16 +199,20 @@ describe("HomePage", () => {
     const html = render(<HomePage />);
     expect(html).toContain("Ваша поездка");
     expect(html).not.toContain("Ожидают подтверждения");
+    // Шапка карточки: дата — статус — цена.
+    expect(html).toContain("Бронь №");
+    // Маршрут — Timeline кита (города отдельными строками).
     expect(html).toContain("Вологда");
     expect(html).toContain("Череповец");
-    // Ячейка: маршрут в subtitle, дата и цена — в children.
     expect(html).not.toContain("undefined");
-    expect(html).toContain("2030-06-01");
     // Цена брони = цена одного места (450), без умножения на номер.
     // (в SSR-выводе между JSX-узлами React вставляет комментарии,
     // поэтому проверяем число, а не строку «450 ₽» целиком)
     expect(html).toContain("450");
     expect(html).not.toContain("900");
+    // Cell водителя: имя, машина.
+    expect(html).toContain("Александр");
+    expect(html).toContain("Водитель");
   });
 
   it("в «Ваша поездка» ячейка по шаблону: маршрут, водитель, мета — без комментариев", () => {
@@ -200,13 +230,38 @@ describe("HomePage", () => {
       }),
     );
     const html = render(<HomePage />);
-    // Эталон TripCell: title — маршрут, subtitle — кто, description — мета.
-    expect(html).toContain("Вологда → Череповец");
+    // Карточка MyTripCard: шапка (Бронь №), маршрут, Cell водителя.
+    expect(html).toContain("Бронь №");
+    expect(html).toContain("Вологда");
+    expect(html).toContain("Череповец");
+    expect(html).toContain("Водитель");
     // Комментарии (и водителя, и свой) на главной не показываются —
     // детали внутри поездки.
     expect(html).not.toContain("Остановка у метро");
     // Свой комментарий пассажира на главной не показывается (он для водителя).
     expect(html).not.toContain("Буду с рюкзаком");
+  });
+
+  it("в карточке — машина и цвет", () => {
+    mockUseMyBookings.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "b-1",
+            seat: 1,
+            status: "confirmed",
+            trip: makeTrip({
+              driver: {
+                name: "Александр",
+                car: { model: "Lada Vesta", color: "белый" },
+              },
+            }),
+          },
+        ],
+      }),
+    );
+    const html = render(<HomePage />);
+    expect(html).toContain("Lada Vesta · белый");
   });
 
   it("в «Ожидают подтверждения» комментария водителя нет", () => {

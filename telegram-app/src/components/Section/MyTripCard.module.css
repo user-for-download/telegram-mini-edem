@@ -1,0 +1,153 @@
+/*
+ * Карточка «Ваши поездки»: шапка как в баннере, Timeline маршрута,
+ * Cell водителя. Свои селекторы удвоены — стили кита подключены позже
+ * своих, !important не используем, хэш-классы кита не используем.
+ */
+
+.card.card {
+  display: block;
+  margin: 12px 16px;
+  padding: 4px 0;
+  border: var(--tgui--border--width, 1px) solid var(--tgui--outline);
+  cursor: pointer;
+}
+
+/* «Склейка» Section перебивает радиус Card — возвращаем скругление
+ * всем четырём углам (четыре класса выигрывают каскад кита). */
+.card.card.card.card {
+  border-radius: 20px;
+}
+
+/* Шапка: дата слева — статус в центре — цена справа, всё по центру. */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 16px 0;
+}
+
+/* Дата с иконкой-календарём. */
+.when {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tgui--hint_color);
+  white-space: nowrap;
+}
+
+.price.price {
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--tgui--link_color);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.seats.seats {
+  display: inline-flex;
+  align-items: center;
+  color: var(--tgui--subtitle_text_color);
+  white-space: nowrap;
+}
+
+/*
+ * Свой вертикальный маршрут: колонка «рельса» (номерная точка + сегмент
+ * линии, flex:1) и текст (город + место) справа. Сегменты линий соседних
+ * пунктов стыкуются встык, поэтому линия непрерывна при любой высоте
+ * текста и одинакова на iOS и Android.
+ */
+.route {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 16px 2px;
+}
+
+/* Один пункт маршрута: рельса слева, текст справа. */
+.stop {
+  display: flex;
+  gap: 12px;
+}
+
+/* Рельса: точка сверху, сегмент линии тянется до низа пункта.
+ * Фиксированная ширина = ширине точки, иначе линия сместится. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  width: 16px;
+}
+
+/* Стрелка вниз у отправления — вместо верхнего кружка. */
+.arrow {
+  display: block;
+  flex: none;
+  color: var(--tgui--link_color);
+}
+
+/* Иконка места вместо кружка: синяя метка. */
+.pin {
+  display: block;
+  flex: none;
+  color: var(--tgui--link_color);
+}
+
+/* Вертикальный сегмент: круглые точки по оси. Маска снизу срезает
+ * частично умещающийся тайл — обрезанных точек не бывает. */
+.vbar {
+  flex: 1;
+  min-height: 8px;
+  width: 5px;
+  background-image: radial-gradient(
+    circle,
+    var(--tgui--link_color) 0 2.5px,
+    transparent 2.5px
+  );
+  background-size: 5px 18px;
+  background-repeat: repeat-y;
+  background-position: top center;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 5px),
+    transparent calc(100% - 5px)
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 5px),
+    transparent calc(100% - 5px)
+  );
+}
+
+/* Текст пункта: город вплотную к месту посадки. */
+.stopBody {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+
+/* У последнего пункта нижний отступ не нужен (линия там не рисуется). */
+.stop:last-child .stopBody {
+  padding-bottom: 0;
+}
+
+.city {
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.place {
+  margin-top: 0;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--tgui--subtitle_text_color);
+}
+
+/* Машина с иконкой в подписи водителя. */
+.car {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

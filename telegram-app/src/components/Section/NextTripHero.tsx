@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
 import { useInfiniteMyTripsQuery } from "@/queries/useTripsQuery";
 import { formatRelativeDeparture } from "@/utils/bookingSplit";
+import { StatusPill } from "@/components/StatusPill";
 import styles from "./NextTripHero.module.css";
 
 export interface HeroPassenger {
@@ -74,11 +75,6 @@ export function pickNearestTrip(
     .sort((a, b) => tripTime(a.trip) - tripTime(b.trip))[0];
 
   const withCount = (trip: OwnTripLike): HeroTrip => {
-    const occupied =
-      typeof trip.seatsTotal === "number" &&
-      typeof trip.seatsAvailable === "number"
-        ? trip.seatsTotal - trip.seatsAvailable
-        : 0;
     const confirmed = (trip as { confirmedBookingsCount?: unknown })
       .confirmedBookingsCount;
     return {
@@ -94,9 +90,11 @@ export function pickNearestTrip(
       bookingStatus: null,
       bookingSeat: null,
       passengers: trip.passengers,
+      // Только реальный счётчик бэка. Нет поля — неизвестно (null),
+      // выдумывать пассажиров из занятых мест нельзя.
       passengersCount:
         trip.passengersCount ??
-        (typeof confirmed === "number" ? confirmed : occupied),
+        (typeof confirmed === "number" ? confirmed : null),
     };
   };
 
@@ -167,6 +165,11 @@ export function NextTripHero() {
   const passengers = trip.passengers ?? [];
   const passengersCount =
     trip.passengersCount ?? (passengers.length > 0 ? passengers.length : 0);
+  // Точно нет броней (счётчик 0) — свободны все места, а не «мест нет».
+  const effectiveFreeSeats =
+    passengersCount === 0 && typeof trip.seatsTotal === "number"
+      ? trip.seatsTotal
+      : freeSeats;
 
   return (
     <Card type="plain" className={styles.card}>
@@ -180,17 +183,25 @@ export function NextTripHero() {
           {formatRelativeDeparture(trip.departureAt ?? undefined)}
         </Subheadline>
         <div className={styles.seats}>
-          {trip.bookingStatus == null && freeSeats !== null && (
-            <>
-              мест:{" "}
-              <Badge type="number" mode="white" large>
-                {freeSeats}
-              </Badge>
-            </>
+          {trip.bookingStatus == null &&
+            effectiveFreeSeats !== null &&
+            (effectiveFreeSeats > 0 ? (
+              <>
+                мест:{" "}
+                <Badge type="number" mode="white">
+                  {effectiveFreeSeats}
+                </Badge>
+              </>
+            ) : (
+              <>мест нет</>
+            ))}
+          {trip.bookingStatus === "pending" && (
+            <StatusPill tone="warning">Ожидает</StatusPill>
           )}
-          {trip.bookingStatus === "pending" && <>Ожидает</>}
           {trip.bookingStatus === "confirmed" && (
-            <>Бронь №{trip.bookingSeat ?? "—"}</>
+            <StatusPill tone="success">
+              Бронь №{trip.bookingSeat ?? "—"}
+            </StatusPill>
           )}
         </div>
         {typeof trip.price === "number" && (

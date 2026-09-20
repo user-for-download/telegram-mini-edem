@@ -1,17 +1,11 @@
 import { useMemo, useState } from "react";
-import {
-  ButtonCell,
-  IconButton,
-  Section,
-  Skeleton,
-} from "@telegram-apps/telegram-ui";
-import { ChevronRight, List as ListIcon } from "lucide-react";
+import { ButtonCell, Section, Skeleton } from "@telegram-apps/telegram-ui";
+import { List as ListIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { TripCell } from "@/components/TripCell";
+import { MyTripCard } from "@/components/Section/MyTripCard";
 import { haptic } from "@/utils/haptics";
 import {
   confirmedSectionHeader,
-  formatSeatNumber,
   splitBookingsByStatus,
 } from "@/utils/bookingSplit";
 import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
@@ -21,9 +15,9 @@ const PREVIEW_LIMIT = 3;
 
 /**
  * «Ваши поездки» с главной: подтверждённые и ожидающие брони пассажира
- * на шаблоне TripCell (title — маршрут, subtitle — водитель,
- * description — `цена₽ · место · дата · время`). Списки длиннее превью
- * раскрываются кнопкой «Показать все». Скрыта, если бронирований нет.
+ * карточками MyTripCard (шапка как в баннере, Timeline маршрута,
+ * Cell водителя). Списки длиннее превью раскрываются кнопкой
+ * «Показать все». Скрыта, если бронирований нет.
  */
 export function MyTripsSection() {
   const navigate = useNavigate();
@@ -50,27 +44,12 @@ export function MyTripsSection() {
             ? confirmed
             : confirmed.slice(0, PREVIEW_LIMIT)
           ).map((booking) => (
-            <TripCell
+            <MyTripCard
               key={booking.id}
-              avatar={{
-                src: booking.trip.driver.avatar,
-                name: booking.trip.driver.name ?? "?",
-                rating: booking.trip.driver.rating,
-              }}
-              title={`${booking.trip.fromCity} → ${booking.trip.toCity}`}
-              subtitle={booking.trip.driver.name ?? "Водитель"}
-              description={`${booking.trip.price}₽ · ${formatSeatNumber(booking.seat)} · ${booking.trip.date} · ${booking.trip.time}`}
-              after={
-                <IconButton
-                  mode="bezeled"
-                  size="s"
-                  aria-label="Открыть поездку"
-                  onClick={() => openTrip(booking.trip.id)}
-                >
-                  <ChevronRight size={20} />
-                </IconButton>
-              }
-              onOpen={() => openTrip(booking.trip.id)}
+              seat={booking.seat}
+              status="confirmed"
+              trip={booking.trip}
+              onOpen={openTrip}
             />
           ))}
           {confirmed.length > PREVIEW_LIMIT && (
@@ -90,27 +69,12 @@ export function MyTripsSection() {
         <Section header="Ожидают подтверждения">
           {(expandedPending ? pending : pending.slice(0, PREVIEW_LIMIT)).map(
             (booking) => (
-              <TripCell
+              <MyTripCard
                 key={booking.id}
-                avatar={{
-                  src: booking.trip.driver.avatar,
-                  name: booking.trip.driver.name ?? "?",
-                  rating: booking.trip.driver.rating,
-                }}
-                title={`${booking.trip.fromCity} → ${booking.trip.toCity}`}
-                subtitle={booking.trip.driver.name ?? "Водитель"}
-                description={`${booking.trip.price}₽ · ${formatSeatNumber(booking.seat)} · ${booking.trip.date} · ${booking.trip.time}`}
-                after={
-                  <IconButton
-                    mode="bezeled"
-                    size="s"
-                    aria-label="Открыть поездку"
-                    onClick={() => openTrip(booking.trip.id)}
-                  >
-                    <ChevronRight size={20} />
-                  </IconButton>
-                }
-                onOpen={() => openTrip(booking.trip.id)}
+                seat={booking.seat}
+                status="pending"
+                trip={booking.trip}
+                onOpen={openTrip}
               />
             ),
           )}

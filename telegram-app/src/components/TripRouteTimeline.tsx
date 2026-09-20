@@ -3,7 +3,8 @@ import { Timeline } from "@telegram-apps/telegram-ui";
 export interface TripRouteTimelineProps {
   fromCity: string;
   fromAddress?: string | null;
-  fromTime: string;
+  /** Время отправления; без него — только город (время уже в шапке карточки). */
+  fromTime?: string | null;
   toCity: string;
   toAddress?: string | null;
   arrival?: string | null;
@@ -26,12 +27,15 @@ export function TripRouteTimeline({
 }: TripRouteTimelineProps) {
   return (
     <Timeline>
-      <Timeline.Item header={`${fromTime} · ${fromCity}`}>
+      <Timeline.Item
+        header={fromTime ? `${fromTime} · ${fromCity}` : fromCity}
+        mode="active"
+      >
         <span>{fromAddress ?? ADDRESS_FALLBACK}</span>
       </Timeline.Item>
       <Timeline.Item
         header={arrival ? `${arrival} · ${toCity}` : toCity}
-        mode="pre-active"
+        mode="active"
       >
         <span>{toAddress ?? ADDRESS_FALLBACK}</span>
       </Timeline.Item>
