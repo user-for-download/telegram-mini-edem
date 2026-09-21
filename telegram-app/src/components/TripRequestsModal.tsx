@@ -12,7 +12,7 @@ import { LazyAvatar } from "@/components/LazyAvatar";
 import { StatusPill } from "@/components/StatusPill";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { haptic } from "@/utils/haptics";
-import { TripsPage } from "@/pages/TripsPage";
+import { TripPage } from "@/pages/Trip/TripPage";
 import {
   bookingErrorMessage,
   isAuthorizationError,
@@ -119,7 +119,7 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
 
 /**
  * Заявки пассажиров — route-backed шторка поверх «Поездок»; роут /trips/my/:tripId/requests остаётся источником правды,
- * точки входа TripsPage:425 + TripDetailsPage:347 — тот же navigate —
+ * точки входа TripActivePage + TripDetailsPage:347 — тот же navigate —
  * не меняются).
  *
  * a11y: telegram-ui Modal даёт role=dialog и Esc-закрытие (onOpenChange),
@@ -153,11 +153,11 @@ export function TripRequestsModal({
 }
 
 /**
- * Роут /trips/my/:tripId/requests: фон — «Поездки» (сегмент водителя,
- * точка входа TripsPage:425; вход TripDetailsPage:347 — тот же путь),
+ * Роут /trips/my/:tripId/requests: фон — «Поездки» (активный сегмент;
+ * вход TripDetailsPage:347 — тот же путь),
  * поверх — шторка заявок. Закрытие — назад по истории (native Back/Shell
  * backButton через handleModalBack), иначе fallback на
- * /bookings?segment=driver. Путь не меняется.
+ * /bookings. Путь не меняется.
  */
 export function TripRequestsRoute() {
   const navigate = useNavigate();
@@ -165,11 +165,11 @@ export function TripRequestsRoute() {
   const close = () => {
     const historyIndex = window.history.state?.idx;
     if (typeof historyIndex === "number" && historyIndex > 0) navigate(-1);
-    else navigate("/bookings?segment=driver", { replace: true });
+    else navigate("/bookings", { replace: true });
   };
   return (
     <>
-      <TripsPage />
+      <TripPage />
       <TripRequestsModal open onClose={close} tripId={tripId} />
     </>
   );

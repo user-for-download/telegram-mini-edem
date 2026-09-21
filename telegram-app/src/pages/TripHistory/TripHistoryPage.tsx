@@ -6,7 +6,7 @@ import {
   Section,
 } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
-import { CarFront } from "lucide-react";
+import { CarFront, CircleUserRound } from "lucide-react";
 import { QueryState } from "@/components/QueryState";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { haptic } from "@/utils/haptics";
@@ -36,8 +36,31 @@ function tripTime(trip: {
 }
 
 /**
+ * Текст статуса строки истории (только текст, без пилюли — раскладка
+ * Cell не меняется, смысл не зависит от цвета).
+ * Пассажир — по historyCategory бэкенда; водитель — по статусу поездки.
+ */
+function historyStatusLabel(item: HistoryItem): string {
+  if (item.kind === "driving") {
+    if (item.trip.status === "completed") return "Завершена";
+    if (item.trip.status === "cancelled") return "Отменена";
+    return "В архиве";
+  }
+  const category = item.booking.historyCategory;
+  if (category === "completed") return "Завершена";
+  if (category === "cancelled") return "Отменена";
+  if (
+    item.booking.status === "cancelled" ||
+    item.booking.status === "declined"
+  ) {
+    return "Отменена";
+  }
+  return "В архиве";
+}
+
+/**
  * История поездок: простые Cell (без карточек).
- * Водитель — иконка машины, пассажир — аватар водителя с рейтингом.
+ * Водитель — иконка машины, пассажир — иконка человечка.
  * Отступы как везде (бока 8, вертикаль 12).
  */
 export function TripHistoryPage() {
@@ -99,16 +122,21 @@ export function TripHistoryPage() {
             // иначе серый бейдж с ценой.
             const needReview =
               item.kind === "booking" && item.booking.canReview === true;
+            const status = historyStatusLabel(item);
             return (
               <Cell
                 key={item.key}
                 type="button"
                 before={
                   <IconContainer>
-                    <CarFront size={22} />
+                    {item.kind === "driving" ? (
+                      <CarFront size={22} />
+                    ) : (
+                      <CircleUserRound size={22} />
+                    )}
                   </IconContainer>
                 }
-                subtitle={`${dayLabel(trip.date)}, ${trip.time}`}
+                subtitle={`${dayLabel(trip.date)}, ${trip.time} · ${status}`}
                 after={
                   needReview ? (
                     <Badge type="number" mode="critical">
@@ -121,8 +149,8 @@ export function TripHistoryPage() {
                 onClick={() => open(trip.id)}
                 aria-label={
                   needReview
-                    ? `Поездка ${trip.fromCity} — ${trip.toCity}, оставьте отзыв`
-                    : `Поездка ${trip.fromCity} — ${trip.toCity}`
+                    ? `Поездка ${trip.fromCity} — ${trip.toCity}, ${status}, оставьте отзыв`
+                    : `Поездка ${trip.fromCity} — ${trip.toCity}, ${status}`
                 }
               >
                 {trip.fromCity} → {trip.toCity}

@@ -155,6 +155,17 @@
   gap: 4px;
 }
 
+/* Персона: убираем китовые отступы средней колонки (padding 16px 0, gap 2px).
+ * Padding — через var-хук кита, gap — у прямых детей (before/middle/after
+ * без своих паддингов, безопасно). */
+.person.person {
+  --tgui--cell--middle--padding: 5px 0;
+}
+
+.person.person > div {
+  gap: 0;
+}
+
 /* Слот действий: кнопки под персоной, с верхней hairline как раньше. */
 .footer {
   display: flex;

@@ -42,6 +42,7 @@ export type TripCardVariant =
   | {
       kind: "driving";
       trip: Trip;
+      driverRating?: number | null;
       onShare: (id: string) => void;
       onCancel: (id: string) => void;
       cancelPending: boolean;
@@ -107,7 +108,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
             </Button>
             <IconButton
               size="s"
-              mode="bezeled"
+              mode="plain"
               aria-label="Поделиться поездкой"
               title="Поделиться поездкой"
               onClick={(event) => {
@@ -127,6 +128,8 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
                   confirmLabel="Отменить бронь"
                   description="Заявка будет отменена, а место снова станет доступно."
                   pending={cancelPending}
+                  mode="plain"
+                  destructive
                   onConfirm={() => onCancel(booking.id)}
                 />
               </span>
@@ -137,7 +140,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
     );
   }
 
-  const { trip, onShare, onCancel, cancelPending } = variant;
+  const { trip, driverRating, onShare, onCancel, cancelPending } = variant;
   const status = tripStatusLabel(trip);
   const pending = trip.pendingRequestsCount ?? 0;
   // Футер одинаковый для обеих ролей: Детали — поделиться — Отмена.
@@ -155,6 +158,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
       person={{
         name: "Вы водитель",
         subtitle: `Свободно ${trip.seatsAvailable} из ${trip.seatsTotal}`,
+        rating: driverRating ?? null,
       }}
       // Есть активные заявки — вместо «Вы водитель» строки заявок с −/+.
       personOverride={
@@ -184,7 +188,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
             </Button>
             <IconButton
               size="s"
-              mode="bezeled"
+              mode="plain"
               aria-label="Поделиться поездкой"
               title="Поделиться поездкой"
               onClick={(event) => {
@@ -201,6 +205,8 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
                 confirmLabel="Отменить поездку"
                 description="Поездка станет недоступна, а пассажиры получат уведомление."
                 pending={cancelPending}
+                mode="plain"
+                destructive
                 onConfirm={() => onCancel(trip.id)}
               />
             </span>

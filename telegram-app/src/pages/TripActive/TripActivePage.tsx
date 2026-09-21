@@ -1,9 +1,10 @@
-import { Button } from "@telegram-apps/telegram-ui";
+import { Button, Caption } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
 import { TripCard } from "@/components/Trip/TripCard";
 import { QueryState } from "@/components/QueryState";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { useToast } from "@/components/ToastProvider";
+import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { shareTrip } from "@/helpers/tripShare";
 import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
@@ -15,6 +16,7 @@ import {
   useCancelTripMutation,
   useInfiniteMyTripsQuery,
 } from "@/queries/useTripsQuery";
+import { useProfileQuery } from "@/queries/profile";
 import styles from "./TripActivePage.module.css";
 
 export function TripActivePage() {
@@ -23,8 +25,11 @@ export function TripActivePage() {
 
   const bookings = useMyBookingsQuery();
   const driverActive = useInfiniteMyTripsQuery({ status: "active" });
+  const profile = useProfileQuery();
   const cancelBooking = useCancelBookingMutation();
   const cancelTrip = useCancelTripMutation();
+
+  const mutationError = cancelBooking.error ?? cancelTrip.error;
 
   // Активные — только scope active: бэкенд метит history завершённые
   // и уехавшие (departureAt <= now), даже если бронь confirmed.
@@ -53,17 +58,23 @@ export function TripActivePage() {
   });
 
   return (
-    <QueryState
-      loading={bookings.isLoading || driverActive.isLoading}
-      error={bookings.error ?? driverActive.error}
-      empty={activeBookings.length === 0 && activeDriverTrips.length === 0}
-      emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
-      skeleton={<TripCardsSkeleton />}
-      onRetry={() => {
-        void bookings.refetch();
-        void driverActive.refetch();
-      }}
-    >
+    <>
+      {mutationError && (
+        <Caption Component="p" role="alert" className={styles.alert}>
+          {bookingErrorMessage(mutationError)}
+        </Caption>
+      )}
+      <QueryState
+        loading={bookings.isLoading || driverActive.isLoading}
+        error={bookings.error ?? driverActive.error}
+        empty={activeBookings.length === 0 && activeDriverTrips.length === 0}
+        emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
+        skeleton={<TripCardsSkeleton />}
+        onRetry={() => {
+          void bookings.refetch();
+          void driverActive.refetch();
+        }}
+      >
       <div className={styles.list}>
         {activeBookings.map((booking) => (
           <TripCard
@@ -88,6 +99,7 @@ export function TripActivePage() {
             variant={{
               kind: "driving",
               trip,
+              driverRating: profile.data?.rating ?? null,
               onShare: (id) => {
                 haptic.light();
                 void shareTrip(id);
@@ -142,5 +154,6 @@ export function TripActivePage() {
         </Button>
       </div>
     </QueryState>
-  );
+  </>
+);
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button, Text } from "@telegram-apps/telegram-ui";
 
 /**
@@ -13,6 +13,7 @@ export function ConfirmAction({
   pending = false,
   mode = "bezeled",
   disabled = false,
+  destructive = false,
   onConfirm,
 }: {
   label: string;
@@ -21,8 +22,10 @@ export function ConfirmAction({
   pending?: boolean;
   mode?: "bezeled" | "plain";
   disabled?: boolean;
+  destructive?: boolean;
   onConfirm: () => void;
 }) {
+  const descId = useId();
   const [armed, setArmed] = useState(false);
   if (!armed) {
     return (
@@ -31,6 +34,11 @@ export function ConfirmAction({
         size="s"
         stretched
         disabled={disabled || pending}
+        style={
+          destructive
+            ? { color: "var(--tgui--destructive_text_color)" }
+            : undefined
+        }
         onClick={() => setArmed(true)}
       >
         {label}
@@ -41,9 +49,9 @@ export function ConfirmAction({
     <div
       role="alertdialog"
       aria-label={label}
-      aria-describedby="confirm-action-desc"
+      aria-describedby={descId}
     >
-      <Text Component="p" id="confirm-action-desc">
+      <Text Component="p" id={descId}>
         {description}
       </Text>
       <div className="flex flex-col gap-2 mt-2">

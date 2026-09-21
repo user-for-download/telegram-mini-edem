@@ -22,7 +22,6 @@ import { TripDetailsRoute } from "@/components/TripDetailsModal";
 import { CreateTripPage } from "@/pages/CreateTripPage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
 import { VehicleRoute } from "@/components/VehicleModal";
-import { TripsPage } from "@/pages/TripsPage";
 import { TripPage } from "@/pages/Trip/TripPage";
 import { RideRequestsRoute } from "@/components/RideRequestsModal";
 import { TripRequestsRoute } from "@/components/TripRequestsModal";
@@ -157,7 +156,7 @@ export function AppRouter() {
           <Route path="/trips/:tripId" element={<TripDetailsRoute />} />
           <Route
             path="/trips/my"
-            element={<Navigate to="/bookings?segment=driver" replace />}
+            element={<Navigate to="/bookings" replace />}
           />
           <Route
             path="/trips/my/:tripId/requests"
@@ -165,8 +164,6 @@ export function AppRouter() {
           />
           <Route path="/trips/my/new" element={<CreateTripPage />} />
           <Route path="/bookings" element={<TripPage />} />
-          {/* Легаси: старая страница вкладки (миграция идёт постепенно). */}
-          <Route path="/bookings/legacy" element={<TripsPage />} />
           <Route
             path="/bookings/history"
             element={<Navigate to="/bookings?segment=history" replace />}

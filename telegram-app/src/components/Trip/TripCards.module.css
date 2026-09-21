@@ -83,10 +83,58 @@
   flex-direction: column;
 }
 
+/* Заявка: те же убранные отступы средней колонки, что у персоны. */
+.requestCell.requestCell {
+  --tgui--cell--middle--padding: 5px 0;
+}
+
+.requestCell.requestCell > div {
+  gap: 0;
+}
+
 .requestActions {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Ошибка загрузки/обновления заявок: деструктивный текст. */
+.requestError.requestError {
+  color: var(--tgui--destructive_text_color);
+}
+
+/* Скелетон строк заявок: зеркало requestCell (аватар 40 + строки).
+ * Skeleton — overlay: форму задают children, фон/шиммер — сам кит. */
+.requestSkeletonRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+}
+
+.requestSkeletonAvatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.requestSkeletonLines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.requestSkeletonName {
+  width: 40%;
+  height: 14px;
+}
+
+.requestSkeletonSeat {
+  width: 25%;
+  height: 12px;
 }
 
 /* Место с иконкой сиденья в подписи заявки (как .car в стандарте). */

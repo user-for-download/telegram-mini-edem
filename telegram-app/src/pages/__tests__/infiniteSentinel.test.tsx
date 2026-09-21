@@ -61,8 +61,12 @@ vi.mock("@/queries/useNotificationsQuery", () => ({
   useMarkAllNotificationsReadMutation: mockUseMarkAll,
 }));
 
+vi.mock("@/queries/profile", () => ({
+  useProfileQuery: () => ({ data: { rating: 5 } }),
+}));
+
 import { SearchPage } from "@/pages/SearchPage";
-import { TripsPage } from "@/pages/TripsPage";
+import { TripPage } from "@/pages/Trip/TripPage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
 import { ToastProvider } from "@/components/ToastProvider";
 
@@ -228,12 +232,12 @@ describe("SearchPage: сентинел (SSR, без IntersectionObserver)", () =
   });
 });
 
-describe("TripsPage (driver): сентинел (SSR, без IntersectionObserver)", () => {
+describe("TripPage (active): сентинел (SSR, без IntersectionObserver)", () => {
   it("happy: сентинел + fallback-кнопка при hasNextPage", () => {
     mockUseInfiniteMyTrips.mockReturnValue(
       tripsInfinite([makeTrip()], { hasNextPage: true }),
     );
-    const html = render(<TripsPage />, "/bookings?segment=driver");
+    const html = render(<TripPage />, "/bookings?segment=driver");
     expect(html).toContain("Вы водитель");
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain("_sentinel_");
@@ -244,7 +248,7 @@ describe("TripsPage (driver): сентинел (SSR, без IntersectionObserver
     mockUseInfiniteMyTrips.mockReturnValue(
       tripsInfinite([makeTrip()], { hasNextPage: false }),
     );
-    const html = render(<TripsPage />, "/bookings?segment=driver");
+    const html = render(<TripPage />, "/bookings?segment=driver");
     expect(html).toContain("Вы водитель");
     expect(html).not.toContain("_sentinel_");
     expect(html).not.toContain("Показать ещё");
@@ -257,7 +261,7 @@ describe("TripsPage (driver): сентинел (SSR, без IntersectionObserver
         isFetchingNextPage: true,
       }),
     );
-    const html = render(<TripsPage />, "/bookings?segment=driver");
+    const html = render(<TripPage />, "/bookings?segment=driver");
     expect(html).toContain('aria-label="Загрузка ещё поездок"');
   });
 });

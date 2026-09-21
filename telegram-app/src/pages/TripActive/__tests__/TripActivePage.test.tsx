@@ -12,6 +12,10 @@ const { mockUseMyBookings, mockUseInfiniteMyTrips } = vi.hoisted(() => ({
   mockUseInfiniteMyTrips: vi.fn(),
 }));
 
+vi.mock("@/queries/profile", () => ({
+  useProfileQuery: () => ({ data: { rating: 4.9 } }),
+}));
+
 vi.mock("@/queries/useBookingsQuery", () => ({
   useMyBookingsQuery: mockUseMyBookings,
   useCancelBookingMutation: () => ({ mutate: vi.fn(), isPending: false }),

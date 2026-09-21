@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { List, TabsList } from "@telegram-apps/telegram-ui";
+import { haptic } from "@/utils/haptics";
 import { TripActivePage } from "../TripActive/TripActivePage";
 import { TripHistoryPage } from "../TripHistory/TripHistoryPage";
 import styles from "./TripPage.module.css";
@@ -11,8 +12,21 @@ const SEGMENTS: ReadonlyArray<{ value: TripSegment; label: string }> = [
   { value: "history", label: "История" },
 ];
 
+function parseSegment(value: string | null): TripSegment {
+  return value === "history" ? "history" : "active";
+}
+
 export function TripPage() {
-  const [segment, setSegment] = useState<TripSegment>("active");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const segment = parseSegment(searchParams.get("segment"));
+
+  const pickSegment = (next: TripSegment) => {
+    if (next === segment) return;
+    haptic.selection();
+    setSearchParams(next === "active" ? {} : { segment: next }, {
+      replace: true,
+    });
+  };
 
   return (
     <List>
@@ -21,7 +35,7 @@ export function TripPage() {
           <TabsList.Item
             key={option.value}
             selected={segment === option.value}
-            onClick={() => setSegment(option.value)}
+            onClick={() => pickSegment(option.value)}
           >
             {option.label}
           </TabsList.Item>

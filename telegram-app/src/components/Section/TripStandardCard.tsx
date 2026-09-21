@@ -63,8 +63,6 @@ export function TripStandardCard({
     <Card
       type="plain"
       className={styles.card}
-      role="button"
-      aria-label={`Открыть поездку ${fromCity} — ${toCity}`}
       onClick={() => onOpen(tripId)}
     >
       <div className={styles.head}>
@@ -108,6 +106,7 @@ export function TripStandardCard({
       </div>
       {personOverride ?? (
         <Cell
+          className={styles.person}
           before={
             <Avatar
               size={40}

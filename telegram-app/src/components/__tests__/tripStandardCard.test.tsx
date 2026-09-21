@@ -20,7 +20,7 @@ const TRIP = {
 };
 
 describe("TripStandardCard", () => {
-  it("шапка: дата — статус — цена; маршрут; персона; тап", () => {
+  it("шапка: дата — статус — цена; маршрут; персона; действия", () => {
     const onOpen = vi.fn();
     const html = render(
       <TripStandardCard
@@ -36,7 +36,9 @@ describe("TripStandardCard", () => {
         onOpen={onOpen}
       />,
     );
-    expect(html).toContain("Открыть поездку Вологда — Череповец");
+    // Карточка — не role=button (внутри свои кнопки): открытие —
+    // через явную кнопку действий в футере.
+    expect(html).not.toContain('role="button"');
     expect(html).toContain("Ожидает");
     expect(html).toContain("450");
     expect(html).toContain("Вологда");

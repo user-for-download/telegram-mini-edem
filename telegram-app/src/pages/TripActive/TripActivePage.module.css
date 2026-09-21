@@ -7,6 +7,11 @@
   padding: 0 8px;
 }
 
+.alert {
+  color: var(--tg-theme-destructive-text-color, #ff3b30);
+  padding: 0 8px;
+}
+
 .sentinel {
   display: flex;
   min-height: 48px;
