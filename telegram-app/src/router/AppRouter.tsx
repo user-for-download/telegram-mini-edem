@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import {
   HashRouter,
@@ -11,15 +11,10 @@ import {
 } from "react-router-dom";
 import { backButton, useLaunchParams } from "@telegram-apps/sdk-react";
 import { AppHeader } from "@/components/AppHeader";
-import {
-  ActionVariant,
-  TabsVariant,
-  type AppTabId,
-} from "@/components/AppBottomBar";
+import { TabsVariant, type AppTabId } from "@/components/AppBottomBar";
 import { useSettingsButton } from "@/hooks/useSettingsButton";
 import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
-import { getCurrent, subscribe } from "@/utils/bottomBarRegistry";
 import { HomePage } from "@/pages/HomePage";
 import { ShowcasePage } from "@/pages/ShowcasePage";
 import { SearchPage } from "@/pages/SearchPage";
@@ -65,14 +60,11 @@ export function Shell() {
   // локацию не меняют, хук их не трогает.
   useScrollRestore(routeScrollKey(location.pathname, location.search));
 
-  // Активное действие бара из реестра: есть регистрация — action-вариант,
-  // иначе — обычные табы. motion.div key=pathname перемонтирует страницу,
-  // cleanup реестра срабатывает автоматически. Третий аргумент —
-  // getServerSnapshot для SSR (renderToString): на сервере реестр пуст.
-  const action = useSyncExternalStore(subscribe, getCurrent, getCurrent);
+  // Нижний бар — всегда табы. Контекстных CTA в баре больше нет:
+  // «Опубликовать» и «Забронировать» живут инлайн в своих формах.
 
   /**
-   * Общий назад для нативного BackButton и стрелки бара: сначала верхняя
+   * Общий назад для нативного BackButton: сначала верхняя
    * state-модалка, затем история, затем fallback (create — в /bookings).
    */
   const goBack = useCallback(() => {
@@ -143,25 +135,13 @@ export function Shell() {
           <Outlet />
         </motion.div>
       </main>
-      {action ? (
-        <div aria-label="Действия страницы">
-          <ActionVariant
-            label={action.label}
-            onBack={goBack}
-            onSubmit={action.onSubmit}
-            loading={action.loading}
-            disabled={action.disabled}
-          />
-        </div>
-      ) : (
-        <nav aria-label="Основные разделы">
-          <TabsVariant
-            activeTab={activeTab}
-            onSelect={go}
-            unreadCount={unreadCount}
-          />
-        </nav>
-      )}
+      <nav aria-label="Основные разделы">
+        <TabsVariant
+          activeTab={activeTab}
+          onSelect={go}
+          unreadCount={unreadCount}
+        />
+      </nav>
     </div>
   );
 }

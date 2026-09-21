@@ -30,7 +30,6 @@ import { useToast } from "@/components/ToastProvider";
 import { TRIP_TAGS } from "@/consts/tags";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
-import { useBottomBarAction } from "@/hooks/useBottomBarAction";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useCreateTripMutation } from "@/queries/useTripsQuery";
 import { useVehicleQuery } from "@/queries/vehicle";
@@ -66,8 +65,8 @@ function FieldError({
  * (max-h 82dvh) неудобна — клавиатура перекрывает поля, CTA уезжает,
  * свайп-закрытие конфликтует со скроллом. На странице — естественный
  * скролл WebView, нативный BackButton (Shell показывает его на
- * некорневых роутах), CTA — кнопка «Опубликовать» в нижнем баре
- * (регистрация через useBottomBarAction) и всегда на виду.
+ * некорневых роутах), CTA — кнопка «Опубликовать» инлайн в конце формы
+ * (как «Забронировать» в деталях поездки).
  *
  * Поверхности — нативные Section, города — Select из справочника
  * (datalist в WebView не даёт нативного пикера), теги — Chip
@@ -214,18 +213,6 @@ export function CreateTripForm({
       },
     });
   };
-
-  // CTA живёт в нижнем баре (Shell): loading напрямую из мутации.
-  useBottomBarAction(
-    hasCar
-      ? {
-          label: "Опубликовать",
-          onSubmit: submit,
-          loading: create.isPending,
-          disabled: false,
-        }
-      : null,
-  );
 
   if (cities.isLoading || vehicleChecking) {
     return (
@@ -574,6 +561,16 @@ export function CreateTripForm({
           </Text>
         )}
         <MutationError error={create.error} />
+        <Button
+          mode="filled"
+          size="l"
+          stretched
+          loading={create.isPending}
+          disabled={create.isPending}
+          onClick={submit}
+        >
+          Опубликовать
+        </Button>
       </div>
     </>
   );

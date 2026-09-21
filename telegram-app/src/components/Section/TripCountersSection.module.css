@@ -1,0 +1,23 @@
+/* Сводка-счётчики главной: Card-пилюля как поиск, внутри ряд кнопок. */
+
+/* Геометрия 1:1 как поисковая карточка (display block + margin + padding). */
+.card.card {
+  display: block;
+  margin: 24px 16px;
+  padding: 12px 16px;
+}
+
+/* Иконка с бейджем-счётчиком поверх (как в таббаре). */
+.iconBadge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge {
+  position: absolute;
+  top: -8px;
+  right: -14px;
+  pointer-events: none;
+}

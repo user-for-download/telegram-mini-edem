@@ -102,13 +102,10 @@ describe("splitBookingsByStatus", () => {
 });
 
 describe("confirmedSectionHeader", () => {
-  it("одна бронь — единственное число", () => {
-    expect(confirmedSectionHeader(1)).toBe("Ваша поездка");
-  });
-
-  it("несколько броней — множественное", () => {
-    expect(confirmedSectionHeader(2)).toBe("Ваши поездки");
-    expect(confirmedSectionHeader(5)).toBe("Ваши поездки");
+  it("всегда «Вы пассажир»", () => {
+    expect(confirmedSectionHeader(1)).toBe("Вы пассажир");
+    expect(confirmedSectionHeader(2)).toBe("Вы пассажир");
+    expect(confirmedSectionHeader(5)).toBe("Вы пассажир");
   });
 });
 

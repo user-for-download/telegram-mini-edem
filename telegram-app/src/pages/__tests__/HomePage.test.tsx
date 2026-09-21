@@ -99,63 +99,6 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 }
 
 describe("HomePage", () => {
-  it("hero показывает ближайшую подтверждённую поездку", () => {
-    mockUseMyBookings.mockReturnValue(
-      queryState({
-        data: [
-          {
-            id: "b-1",
-            seat: 2,
-            status: "confirmed",
-            trip: makeTrip({
-              departureAt: new Date(Date.now() + 3_600_000).toISOString(),
-              seatsTotal: 4,
-              seatsAvailable: 2,
-            }),
-          },
-        ],
-      }),
-    );
-    const html = render(<HomePage />);
-    expect(html).toContain("Вологда");
-    expect(html).toContain("Череповец");
-    // Бронь пассажира: статус вместо счётчика мест.
-    expect(html).toContain("Бронь №");
-    expect(html).toMatch(/Сегодня|Завтра/);
-    // Состав пассажиров API не отдаёт — честный фолбэк.
-    expect(html).toContain("нет активных броней");
-  });
-
-  it("hero скрыт без upcoming-поездок", () => {
-    const html = render(<HomePage />);
-    expect(html).not.toContain("Ближайшая поездка");
-  });
-
-  it("hero своей поездки без броней показывает все места свободными", () => {
-    mockUseMyTrips.mockReturnValue(
-      queryState({
-        data: {
-          pages: [
-            {
-              items: [
-                makeTrip({
-                  id: "t-own",
-                  departureAt: new Date(Date.now() + 3_600_000).toISOString(),
-                  seatsTotal: 3,
-                  seatsAvailable: 3,
-                  confirmedBookingsCount: 0,
-                }),
-              ],
-            },
-          ],
-        },
-      }),
-    );
-    const html = render(<HomePage />);
-    // Нет броней — свободны все 3 места, а не «мест нет».
-    expect(html).toContain("мест:");
-    expect(html).not.toContain("мест нет");
-  });
   it("показывает экспресс-поиск, направления и преимущества", () => {
     mockUseProfile.mockReturnValue(
       queryState({
@@ -174,132 +117,37 @@ describe("HomePage", () => {
     // Популярные направления (вертикальный список).
     expect(html).toContain("Популярные направления");
     expect(html).toContain("Кириллов");
-    // Без броней секций броней нет.
-    expect(html).not.toContain("Ваша поездка");
-    expect(html).not.toContain("Ожидают подтверждения");
+    // Без данных кнопок сводки нет.
+    expect(html).not.toContain("Поездки");
+    expect(html).not.toContain("Брони");
+    expect(html).not.toContain("Заявки");
   });
 
-  it("показывает confirmed-бронь в секции «Ваша поездка»", () => {
-    mockUseProfile.mockReturnValue(
-      queryState({ data: { name: "Я", rating: 5 } }),
-    );
-    mockUseMyBookings.mockReturnValue(
+  it("сводка: активные поездки за рулём — кнопка «Поездки»", () => {
+    mockUseMyTrips.mockReturnValue(
       queryState({
-        data: [
-          { id: "b-2", seat: 1, status: "cancelled", trip: makeTrip() },
-          {
-            id: "b-1",
-            seat: 2,
-            status: "confirmed",
-            trip: makeTrip(),
-          },
-        ],
+        data: {
+          pages: [
+            {
+              items: [
+                makeTrip({
+                  id: "t-own",
+                  departureAt: new Date(Date.now() + 3_600_000).toISOString(),
+                }),
+              ],
+            },
+          ],
+        },
       }),
     );
     const html = render(<HomePage />);
-    expect(html).toContain("Ваша поездка");
-    expect(html).not.toContain("Ожидают подтверждения");
-    // Шапка карточки: дата — статус — цена.
-    expect(html).toContain("Бронь №");
-    // Маршрут — Timeline кита (города отдельными строками).
-    expect(html).toContain("Вологда");
-    expect(html).toContain("Череповец");
-    expect(html).not.toContain("undefined");
-    // Цена брони = цена одного места (450), без умножения на номер.
-    // (в SSR-выводе между JSX-узлами React вставляет комментарии,
-    // поэтому проверяем число, а не строку «450 ₽» целиком)
-    expect(html).toContain("450");
-    expect(html).not.toContain("900");
-    // Cell водителя: имя, машина.
-    expect(html).toContain("Александр");
-    expect(html).toContain("Водитель");
+    expect(html).toContain("Поездки");
+    expect(html).toContain("активных: 1");
+    expect(html).not.toContain("Брони");
+    expect(html).not.toContain("Заявки");
   });
 
-  it("в «Ваша поездка» ячейка по шаблону: маршрут, водитель, мета — без комментариев", () => {
-    mockUseMyBookings.mockReturnValue(
-      queryState({
-        data: [
-          {
-            id: "b-1",
-            seat: 1,
-            status: "confirmed",
-            comment: "Буду с рюкзаком",
-            trip: makeTrip({ comment: "Остановка у метро" }),
-          },
-        ],
-      }),
-    );
-    const html = render(<HomePage />);
-    // Карточка MyTripCard: шапка (Бронь №), маршрут, Cell водителя.
-    expect(html).toContain("Бронь №");
-    expect(html).toContain("Вологда");
-    expect(html).toContain("Череповец");
-    expect(html).toContain("Водитель");
-    // Комментарии (и водителя, и свой) на главной не показываются —
-    // детали внутри поездки.
-    expect(html).not.toContain("Остановка у метро");
-    // Свой комментарий пассажира на главной не показывается (он для водителя).
-    expect(html).not.toContain("Буду с рюкзаком");
-  });
-
-  it("в карточке — машина и цвет", () => {
-    mockUseMyBookings.mockReturnValue(
-      queryState({
-        data: [
-          {
-            id: "b-1",
-            seat: 1,
-            status: "confirmed",
-            trip: makeTrip({
-              driver: {
-                name: "Александр",
-                car: { model: "Lada Vesta", color: "белый" },
-              },
-            }),
-          },
-        ],
-      }),
-    );
-    const html = render(<HomePage />);
-    expect(html).toContain("Lada Vesta · белый");
-  });
-
-  it("в «Ожидают подтверждения» комментария водителя нет", () => {
-    mockUseMyBookings.mockReturnValue(
-      queryState({
-        data: [
-          {
-            id: "b-2",
-            seat: 1,
-            status: "pending",
-            trip: makeTrip({ comment: "Остановка у метро" }),
-          },
-        ],
-      }),
-    );
-    const html = render(<HomePage />);
-    expect(html).toContain("Ожидают подтверждения");
-    // Заметки водителя актуальны только для одобренных заявок.
-    expect(html).not.toContain("Остановка у метро");
-  });
-
-  it("показывает pending-бронь в секции «Ожидают подтверждения»", () => {
-    mockUseProfile.mockReturnValue(
-      queryState({ data: { name: "Я", rating: 5 } }),
-    );
-    mockUseMyBookings.mockReturnValue(
-      queryState({
-        data: [{ id: "b-3", seat: 1, status: "pending", trip: makeTrip() }],
-      }),
-    );
-    const html = render(<HomePage />);
-    expect(html).toContain("Ожидают подтверждения");
-    expect(html).not.toContain("Ваша поездка");
-    // Статус задан заголовком секции — в описании баннера не дублируется.
-    expect(html).not.toContain("Подтверждено");
-  });
-
-  it("разделяет confirmed и pending по разным секциям одновременно", () => {
+  it("сводка: брони — кнопка с разбивкой в aria-label", () => {
     mockUseMyBookings.mockReturnValue(
       queryState({
         data: [
@@ -314,10 +162,37 @@ describe("HomePage", () => {
       }),
     );
     const html = render(<HomePage />);
-    expect(html).toContain("Ваша поездка");
-    expect(html).toContain("Ожидают подтверждения");
-    expect(html).toContain("Череповец");
-    expect(html).toContain("Сокол");
+    // Есть заявка — кнопка «Ожидают», разбивка в aria-label.
+    expect(html).toContain("Ожидают");
+    expect(html).toContain("подтверждено: 1, ожидает: 1");
+    expect(html).not.toContain("Поездки");
+  });
+
+  it("сводка: заявки пассажиров — кнопка при count > 0", () => {
+    mockUseDriverRequests.mockReturnValue(
+      queryState({ data: [makeDriverRequest()] }),
+    );
+    const html = render(<HomePage />);
+    expect(html).toContain("Заявки");
+    expect(html).toContain("новых: 1");
+    expect(html).not.toContain("Поездки");
+    expect(html).not.toContain("Брони");
+  });
+
+  it("сводка скрыта при загрузке (без мигания)", () => {
+    mockUseMyBookings.mockReturnValue(queryState({ isLoading: true }));
+    mockUseMyTrips.mockReturnValue(
+      queryState({
+        data: {
+          pages: [{ items: [makeTrip({ id: "t-own" })] }],
+        },
+        isLoading: true,
+      }),
+    );
+    const html = render(<HomePage />);
+    expect(html).not.toContain("Поездки");
+    expect(html).not.toContain("Брони");
+    expect(html).not.toContain("Заявки");
   });
 
   it("без сегментов дня — переход только по нативной «Найти»", () => {
@@ -353,21 +228,15 @@ describe("HomePage", () => {
     expect(html).toContain("Александр");
   });
 
-  it("показывает сводку заявок водителя с рейтингом пассажира", () => {
+  it("сводка заявок водителя: кнопка, без досье на главной", () => {
     mockUseDriverRequests.mockReturnValue(
       queryState({ data: [makeDriverRequest()] }),
     );
     const html = render(<HomePage />);
-    expect(html).toContain("Рассмотрите заявки");
-    expect(html).toContain("Вологда → Череповец");
-    // Рейтинг пассажира — бейджем на аватаре.
-    expect(html).toContain("4.9");
-    // Порядковый номер места в subtitle (бронь = 1 место).
-    expect(html).toContain("место №1");
-    // Единственное действие в списке — «+» (решение внутри досье).
-    expect(html).toContain('aria-label="Открыть заявку Пётр"');
-    expect(html).not.toContain("Одобрить заявку");
-    expect(html).not.toContain("Отказать");
+    expect(html).toContain("Заявки");
+    // Досье заявки (маршрут, рейтинг, место) — внутри поездки, не на главной.
+    expect(html).not.toContain("Вологда → Череповец");
+    expect(html).not.toContain("место №1");
   });
 });
 

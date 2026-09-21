@@ -45,7 +45,6 @@ import {
   Steps,
   Subheadline,
   Switch,
-  Tabbar,
   TabsList,
   Text,
   Textarea,
@@ -53,17 +52,7 @@ import {
   Title,
   Tooltip,
 } from "@telegram-apps/telegram-ui";
-import {
-  Bell,
-  Car,
-  Check,
-  Home,
-  Info,
-  Plus,
-  Search,
-  Star,
-  User,
-} from "lucide-react";
+import { Car, Check, Info, Plus, Search, Star, User } from "lucide-react";
 
 function Row({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-wrap items-center gap-2">{children}</div>;
@@ -516,22 +505,9 @@ export function ShowcasePage() {
 
       <Section
         header="12. Служебное"
-        footer="Tabbar — каркас приложения (внизу), остальное — утилиты."
+        footer="Tabbar — каркас приложения: живой внизу экрана, демо здесь не рендерим (TGUI Tabbar всегда fixed и лёг бы вторым слоем)."
       >
-        <Tabbar>
-          <Tabbar.Item text="Главная" selected>
-            <Home size={28} />
-          </Tabbar.Item>
-          <Tabbar.Item text="Поиск">
-            <Search size={28} />
-          </Tabbar.Item>
-          <Tabbar.Item text="Профиль">
-            <User size={28} />
-          </Tabbar.Item>
-          <Tabbar.Item text="Уведомления">
-            <Bell size={28} />
-          </Tabbar.Item>
-        </Tabbar>
+        <Caption>Остальное — утилиты (haptic, openLink, shareURL).</Caption>
       </Section>
     </List>
   );

@@ -1,4 +1,4 @@
-import { Badge, FixedLayout, Tabbar } from "@telegram-apps/telegram-ui";
+import { Badge, Tabbar } from "@telegram-apps/telegram-ui";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { Bell, Car, Home, LayoutGrid, Search, User } from "lucide-react";
 import styles from "./Tapbar.module.css";
@@ -61,43 +61,43 @@ export function TabsBar({
   const items = [...TABS, SEARCH_TAB];
 
   return (
-    <FixedLayout vertical="bottom" className={styles.fixed}>
-      {/* Овальная плавающая пилюля: скругление + боковые отступы, снизу —
-          реальный инсет Телеграма (env() в WebView равен 0). overflow-hidden
-          чтобы фоны айтемов не торчали из скруглённых углов. */}
-      <Tabbar className={styles.tapbar}>
-        {items.map(({ key, text, to, Icon }) => {
-          const selected = activeTab === key;
-          const showBadge = key === "notifications" && unreadCount > 0;
+    /* Tabbar сам рендерит FixedLayout (vertical=bottom по умолчанию) —
+       своя обёртка не нужна: двойной fixed давал наложение. Пилюля:
+       скругление + боковые отступы, снизу — реальный инсет Телеграма
+       (env() в WebView равен 0). overflow-hidden чтобы фоны айтемов
+       не торчали из скруглённых углов. */
+    <Tabbar className={`${styles.fixed} ${styles.tapbar}`}>
+      {items.map(({ key, text, to, Icon }) => {
+        const selected = activeTab === key;
+        const showBadge = key === "notifications" && unreadCount > 0;
 
-          return (
-            <Tabbar.Item
-              key={key}
-              selected={selected}
-              text={text}
-              aria-label={
-                showBadge ? `${text}, непрочитанных: ${unreadCount}` : text
-              }
-              onClick={() => go(activeTab, key, to, onSelect)}
-            >
-              {/* relative-обёртка для позиционирования Badge поверх иконки */}
-              <span className={styles.iconWrap}>
-                <Icon size={28} strokeWidth={selected ? 2.2 : 1.8} />
-                {showBadge && (
-                  <Badge
-                    type="number"
-                    mode="critical"
-                    aria-hidden="true"
-                    className={styles.badge}
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </Badge>
-                )}
-              </span>
-            </Tabbar.Item>
-          );
-        })}
-      </Tabbar>
-    </FixedLayout>
+        return (
+          <Tabbar.Item
+            key={key}
+            selected={selected}
+            text={text}
+            aria-label={
+              showBadge ? `${text}, непрочитанных: ${unreadCount}` : text
+            }
+            onClick={() => go(activeTab, key, to, onSelect)}
+          >
+            {/* relative-обёртка для позиционирования Badge поверх иконки */}
+            <span className={styles.iconWrap}>
+              <Icon size={28} strokeWidth={selected ? 2.2 : 1.8} />
+              {showBadge && (
+                <Badge
+                  type="number"
+                  mode="critical"
+                  aria-hidden="true"
+                  className={styles.badge}
+                >
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Badge>
+              )}
+            </span>
+          </Tabbar.Item>
+        );
+      })}
+    </Tabbar>
   );
 }

@@ -61,10 +61,10 @@ export function splitBookingsByStatus(
 }
 
 /**
- * Заголовок секции confirmed-броней: единственное число для одной брони.
+ * Заголовок секции confirmed-броней: роль пассажира.
  */
-export function confirmedSectionHeader(count: number): string {
-  return count === 1 ? "Ваша поездка" : "Ваши поездки";
+export function confirmedSectionHeader(_count: number): string {
+  return "Вы пассажир";
 }
 
 /**

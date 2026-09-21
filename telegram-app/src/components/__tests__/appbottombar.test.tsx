@@ -1,6 +1,5 @@
-// SSR-тесты AppBottomBar: TabsVariant (5 табов в нативном Tabbar, бейдж),
-// ActionVariant (назад + «Опубликовать», loading/disabled) и Shell
-// (вариант по маршруту, семантика nav). Только renderToString, без jsdom.
+// SSR-тесты AppBottomBar: TabsVariant (6 табов в нативном Tabbar, бейдж)
+// и Shell (табы всегда, семантика nav). Только renderToString, без jsdom.
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
@@ -27,11 +26,7 @@ vi.mock("@telegram-apps/sdk-react", () => ({
   },
 }));
 
-import {
-  ActionVariant,
-  TabsVariant,
-  type AppTabId,
-} from "@/components/AppBottomBar";
+import { TabsVariant, type AppTabId } from "@/components/AppBottomBar";
 import { Shell } from "@/router/AppRouter";
 
 function renderBar(element: ReactNode): string {
@@ -44,18 +39,6 @@ function renderTabs(activeTab: AppTabId, unreadCount = 0): string {
       activeTab={activeTab}
       onSelect={() => {}}
       unreadCount={unreadCount}
-    />,
-  );
-}
-
-function renderAction(loading = false, disabled = false): string {
-  return renderBar(
-    <ActionVariant
-      label="Опубликовать"
-      onBack={() => {}}
-      onSubmit={() => {}}
-      loading={loading}
-      disabled={disabled}
     />,
   );
 }
@@ -86,13 +69,14 @@ function renderShell(url: string): string {
 }
 
 describe("TabsVariant", () => {
-  it("пять табов в нативной панели, без кастомного tablist", () => {
+  it("шесть табов в нативной панели, без кастомного tablist", () => {
     const html = renderTabs("home");
     expect(html).toContain("Главная");
     expect(html).toContain("Поездки");
     expect(html).toContain("Уведомления");
     expect(html).toContain("Профиль");
     expect(html).toContain("Поиск");
+    expect(html).toContain("Витрина");
     expect(html).not.toContain('role="tablist"');
   });
 
@@ -102,63 +86,26 @@ describe("TabsVariant", () => {
   });
 });
 
-describe("ActionVariant", () => {
-  it("кнопка назад и «Опубликовать», без tablist", () => {
-    const html = renderAction();
-    expect(html).toContain('aria-label="Назад"');
-    expect(html).toContain("Опубликовать");
-    expect(html).not.toContain('role="tablist"');
-  });
-
-  it("loading блокирует кнопку (disabled/aria-disabled или индикатор)", () => {
-    const html = renderAction(true);
-    expect(html).toContain("Опубликовать");
-    expect(html).toMatch(/disabled|aria-disabled|spinner|loading/i);
-  });
-
-  it("disabled блокирует кнопку, по умолчанию — активна", () => {
-    expect(renderAction(false, true)).toMatch(/disabled/i);
-    expect(renderAction()).not.toMatch(/disabled/i);
-  });
-});
-
-describe("Shell: выбор варианта по маршруту", () => {
+describe("Shell: табы на всех маршрутах", () => {
   it("корень показывает табы в nav «Основные разделы»", () => {
     const html = renderShell("/");
     expect(html).toContain("Основные разделы");
     expect(html).toContain("Главная");
     expect(html).toContain("Поиск");
-    expect(html).not.toContain("Опубликовать");
-    // Нативный selected-класс tgui ровно один раз, на кнопке «Главная».
-    expect(html.match(/tgui-e6658d0b8927f95e/g)?.length).toBe(1);
-    expect(html).toContain('aria-label="Главная"');
+    expect(html).toContain("<nav");
   });
 
   it("/trips показывает табы с выбранным поиском", () => {
     const html = renderShell("/trips");
     expect(html).toContain("Основные разделы");
     expect(html).toContain("Список поездок");
-    expect(html).not.toContain("Опубликовать");
-    expect(html.match(/tgui-e6658d0b8927f95e/g)?.length).toBe(1);
     expect(html).toContain('aria-label="Поиск"');
   });
 
-  it("/trips/my/new в SSR показывает табы: регистрация action живёт в useEffect страницы, который renderToString не выполняет; живое переключение покрыто юнит-тестами реестра (subtask 01)", () => {
+  it("/trips/my/new тоже показывает табы: CTA «Опубликовать» — инлайн в форме", () => {
     const html = renderShell("/trips/my/new");
     expect(html).toContain("Создание поездки");
+    expect(html).toContain("Основные разделы");
     expect(html).not.toContain('role="tablist"');
-    expect(html).not.toContain("Опубликовать");
-  });
-});
-
-describe("Семантика nav по варианту", () => {
-  it("tabs-режим Shell обёрнут в nav с доступным именем", () => {
-    const html = renderShell("/");
-    expect(html).toContain("<nav");
-    expect(html).toContain('aria-label="Основные разделы"');
-  });
-
-  it("action-вариант сам nav не рендерит", () => {
-    expect(renderAction()).not.toContain("<nav");
   });
 });

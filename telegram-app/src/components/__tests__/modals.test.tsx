@@ -49,7 +49,8 @@ vi.mock("@/queries/useAllCities", () => ({
 }));
 
 vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/queries/useTripsQuery")>();
+  const original =
+    await importOriginal<typeof import("@/queries/useTripsQuery")>();
   return {
     ...original,
     useCreateTripMutation: mockUseCreateTrip,
@@ -127,8 +128,8 @@ describe("CreateTripForm (страница /trips/my/new)", () => {
     expect(html).toContain("Куда едем");
     expect(html).toContain("Поездка");
     expect(html).toContain("Условия поездки");
-    // CTA «Опубликовать» живёт в нижнем баре (ActionVariant), не в форме.
-    expect(html).not.toContain("Опубликовать");
+    // CTA «Опубликовать» — инлайн в конце формы.
+    expect(html).toContain("Опубликовать");
   });
 
   it("справочник грузится — плейсхолдер вместо формы", () => {

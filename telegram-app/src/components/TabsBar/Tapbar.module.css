@@ -7,7 +7,7 @@
   z-index: 2;
 }
 
-.tapbar {
+.tapbar.tapbar {
   margin-left: 16px;
   margin-right: 16px;
   margin-bottom: max(
@@ -17,6 +17,18 @@
   border-radius: 28px;
   overflow: hidden;
   background: var(--tgui--secondary_bg_color);
+  /* Прозрачная пилюля, как таббар оригинального клиента: блюр + 78%
+     фона, контент под пилюлей заметно просвечивает. Двойной селектор
+     бьёт нативный фон surface_primary и его верхнюю hairline
+     (box-shadow 0 -1px 0) — она торчала прямой линией над скруглённой
+     пилюлей и давала наложение. */
+  background: color-mix(
+    in srgb,
+    var(--tgui--secondary_bg_color) 78%,
+    transparent
+  );
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
   box-shadow: 0 8px 28px rgb(0 0 0 / 0.16);
 }
 

@@ -51,6 +51,10 @@ interface SeedUser {
   deletedAtDaysAgo?: number;
   // Версия показанного онбординга (для проверки reset-флоу в админке).
   onboardingVersion?: string;
+  // Момент акцепта правовых документов (152-ФЗ): рантайм проставляет его
+  // вместе с показом онбординга — сид с onboardingVersion без consent
+  // неконсистентен. Сколько дней назад принят.
+  consentAcceptedAtDaysAgo?: number;
   // Демо согласия на TG-уведомления: /start фиксирует tgChatJoinedAt
   // (bot/index.ts). Диспетчер шлёт только при согласии — без него
   // seeded inbox вечно skipped/no_chat и bot-api-send нечем демоить.
@@ -71,6 +75,9 @@ interface SeedBooking {
   // Только для cancelled: кто отменил и почему (как пишет рантайм).
   cancelledByType?: "passenger" | "driver";
   cancellationReason?: string;
+  // Сколько дней назад создана бронь (по умолчанию — через день после
+  // создания поездки). Рантайм создаёт брони после поездки, а не «сейчас».
+  createdDaysAgo?: number;
 }
 
 interface SeedTrip {
@@ -81,6 +88,13 @@ interface SeedTrip {
   toCity: string;
   toAddress: string;
   daysFromNow: number; // отрицательное — в прошлом
+  // Час отправления по МСК (UTC+3, без DST). По умолчанию —
+  // детерминированный разброс 6..19 по индексу поездки: раньше все сид-
+  // поездки отправлялись в 00:00 UTC (03:00 МСК), что нереалистично.
+  departureHourMsk?: number;
+  // За сколько дней до отправления создана поездка (рантайм создаёт
+  // заранее, а не «сейчас»). По умолчанию 4.
+  createdDaysBefore?: number;
   // Целые часы (кратны 60) — как теперь вводит форма создания поездки.
   durationMinutes: number;
   distanceKm: number;
@@ -133,7 +147,8 @@ interface SeedReport {
   tripRef?: string;
   bookingRef?: { tripId: string; passengerId: string };
   targetUserId?: string;
-  category: "safety" | "fraud" | "harassment" | "spam" | "inaccurate_info" | "other";
+  category:
+    "safety" | "fraud" | "harassment" | "spam" | "inaccurate_info" | "other";
   description: string;
   status?: "pending" | "in_review" | "resolved" | "rejected";
   resolutionNote?: string;
@@ -220,7 +235,11 @@ async function seedCities(): Promise<void> {
  * контракты. Бросает ДО записи в БД — сид падает громко и понятно.
  */
 function assertUuid(value: string, what: string): void {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  ) {
     throw new Error(`[seed] ${what} — невалидный UUID: ${value}`);
   }
 }
@@ -406,6 +425,7 @@ const users: SeedUser[] = [
     reviewsCount: 4,
     tripsCount: 10,
     onboardingVersion: "1",
+    consentAcceptedAtDaysAgo: 30,
     isVerified: true,
     about: "Студент, езжу домой на выходные.",
   },
@@ -1339,9 +1359,7 @@ const trips: SeedTrip[] = [
     status: "active",
     tags: ["Можно с животными"],
     comment: "Забираю пассажиров от автовокзала.",
-    bookings: [
-      { passengerId: "u-dev", seat: 1, status: "confirmed" },
-    ],
+    bookings: [{ passengerId: "u-dev", seat: 1, status: "confirmed" }],
   },
   // Прошлые поездки u-dev — источник отзывов r-29/r-30 (валидация сидa
   // требует: автор отзыва — confirmed-пассажир этой поездки).
@@ -1838,6 +1856,11 @@ function validateSeedData(): void {
       throw new Error(`Non-positive numbers in seed trip ${trip.id}`);
     }
 
+    // Поездка создаётся заранее, а не в момент сида: createdDaysBefore
+    // обязан быть >= 1, иначе createdAt окажется позже departureAt.
+    if ((trip.createdDaysBefore ?? 4) < 1) {
+      throw new Error(`Non-positive createdDaysBefore in seed trip ${trip.id}`);
+    }
     // Активная поездка не может отправляться в прошлом: поиск скрывает
     // уехавшие (departureAt > now), а воркер автозавершения догоняет их
     // только через 24 часа. Отрицательный daysFromNow допустим лишь для
@@ -1880,7 +1903,8 @@ function validateSeedData(): void {
       }
     }
     const reservedSeats = trip.bookings.filter(
-      (booking) => booking.status === "pending" || booking.status === "confirmed",
+      (booking) =>
+        booking.status === "pending" || booking.status === "confirmed",
     ).length;
     if (reservedSeats > trip.seatsTotal) {
       throw new Error(`Too many active bookings in ${trip.id}`);
@@ -1935,7 +1959,10 @@ function validateSeedData(): void {
       referencedUsers.add(booking.passengerId);
       // TTL заявки имеет смысл только у pending (рантайм ставит его
       // при создании pending и не трогает у остальных статусов).
-      if (booking.status !== "pending" && booking.expiresAtInHours !== undefined) {
+      if (
+        booking.status !== "pending" &&
+        booking.expiresAtInHours !== undefined
+      ) {
         throw new Error(
           `expiresAtInHours у не-pending брони ${trip.id}/${booking.passengerId}`,
         );
@@ -1952,6 +1979,11 @@ function validateSeedData(): void {
       // Отменённая бронь обязана иметь причину (как пишет рантайм).
       if (booking.status === "cancelled" && !booking.cancellationReason) {
         throw new Error(`Cancelled seed booking in ${trip.id} без причины`);
+      }
+      if (booking.createdDaysAgo !== undefined && booking.createdDaysAgo < 0) {
+        throw new Error(
+          `Отрицательный createdDaysAgo брони ${trip.id}/${booking.passengerId}`,
+        );
       }
     }
   }
@@ -1994,7 +2026,10 @@ function validateSeedData(): void {
 
   const reportKeys = new Set<string>();
   for (const report of reports) {
-    if (!userIds.has(report.reporterId) || deletedUsers.has(report.reporterId)) {
+    if (
+      !userIds.has(report.reporterId) ||
+      deletedUsers.has(report.reporterId)
+    ) {
       throw new Error(`Invalid reporter in seed report ${report.id}`);
     }
     // id жалобы пересекает валидируемый контракт (reportSchema.id — uuid:
@@ -2016,7 +2051,10 @@ function validateSeedData(): void {
     } else if (report.targetType === "booking") {
       const ref = report.bookingRef;
       const trip = ref ? tripById.get(ref.tripId) : undefined;
-      if (!trip || !trip.bookings.some((b) => b.passengerId === ref!.passengerId)) {
+      if (
+        !trip ||
+        !trip.bookings.some((b) => b.passengerId === ref!.passengerId)
+      ) {
         throw new Error(`Unknown booking ref in seed report ${report.id}`);
       }
       targetKey = `${ref!.tripId}:${ref!.passengerId}`;
@@ -2085,7 +2123,10 @@ async function main() {
   await prisma.user.deleteMany();
 
   // Create Users (with cars for drivers)
-  for (const u of users) {
+  // createdAt — в прошлом с разбросом по индексу (рантайм регистрирует
+  // давно, а не в момент сида); verifiedAt (-60д) обязан быть позже.
+  for (const [index, u] of users.entries()) {
+    const userCreatedAt = new Date(seedNow.getTime() - (120 - index) * dayMs);
     await prisma.user.create({
       data: {
         id: u.id,
@@ -2097,7 +2138,9 @@ async function main() {
         tripsCount: u.tripsCount,
         isVerified: u.isVerified,
         notificationsEnabled: u.notificationsEnabled ?? true,
-        verifiedAt: u.isVerified ? new Date(seedNow.getTime() - 60 * dayMs) : null,
+        verifiedAt: u.isVerified
+          ? new Date(seedNow.getTime() - 60 * dayMs)
+          : null,
         about: u.about,
         bannedAt:
           u.bannedAtDaysAgo !== undefined
@@ -2109,6 +2152,12 @@ async function main() {
             ? new Date(seedNow.getTime() - u.deletedAtDaysAgo * dayMs)
             : null,
         onboardingVersion: u.onboardingVersion ?? null,
+        consentAcceptedAt:
+          u.consentAcceptedAtDaysAgo !== undefined
+            ? new Date(seedNow.getTime() - u.consentAcceptedAtDaysAgo * dayMs)
+            : null,
+        createdAt: userCreatedAt,
+        updatedAt: userCreatedAt,
         tgChatJoinedAt:
           u.tgChatJoinedAtDaysAgo !== undefined
             ? new Date(seedNow.getTime() - u.tgChatJoinedAtDaysAgo * dayMs)
@@ -2129,14 +2178,28 @@ async function main() {
   // fromCityId/toCityId (снимок fromCity/toCity остаётся источником
   // правды для UI, FK — для аналитики и автодополнения).
   await seedCities();
-  const cityRows = await prisma.city.findMany({ select: { id: true, nameNormalized: true } });
+  const cityRows = await prisma.city.findMany({
+    select: { id: true, nameNormalized: true },
+  });
   const cityIdByName = new Map(cityRows.map((c) => [c.nameNormalized, c.id]));
   const cityId = (name: string): string => {
     const id = cityIdByName.get(normalizeCityName(name));
-    if (!id) throw new Error(`[seed] город «${name}» отсутствует в справочнике City`);
+    if (!id)
+      throw new Error(`[seed] город «${name}» отсутствует в справочнике City`);
     return id;
   };
-  for (const t of trips) {
+  for (const [tripIndex, t] of trips.entries()) {
+    // Время отправления: час по МСК (UTC+3 круглый год, без DST).
+    // Дефолт — детерминированный разброс 6..19 по индексу.
+    const hourMsk = t.departureHourMsk ?? 6 + ((tripIndex * 7) % 14);
+    const departureAt = new Date(
+      seedNow.getTime() + t.daysFromNow * dayMs + (hourMsk - 3) * 3_600_000,
+    );
+    // Поездка создана заранее (рантайм — тоже), updatedAt = createdAt:
+    // сид никого не «обновляет» после создания.
+    const tripCreatedAt = new Date(
+      departureAt.getTime() - (t.createdDaysBefore ?? 4) * dayMs,
+    );
     await prisma.trip.create({
       data: {
         id: t.id,
@@ -2147,7 +2210,7 @@ async function main() {
         toAddress: t.toAddress,
         fromCityId: cityId(t.fromCity),
         toCityId: cityId(t.toCity),
-        departureAt: new Date(seedNow.getTime() + t.daysFromNow * dayMs),
+        departureAt,
         durationMinutes: t.durationMinutes,
         distanceKm: t.distanceKm,
         price: t.price,
@@ -2167,35 +2230,53 @@ async function main() {
           t.status === "cancelled" && t.cancelledAtDaysAgo !== undefined
             ? new Date(seedNow.getTime() - t.cancelledAtDaysAgo * dayMs)
             : null,
-        cancelledByType: t.status === "cancelled" ? (t.cancelledByType ?? "driver") : null,
+        cancelledByType:
+          t.status === "cancelled" ? (t.cancelledByType ?? "driver") : null,
         cancelledByUserId: t.status === "cancelled" ? t.driverId : null,
-        cancellationReason: t.status === "cancelled" ? (t.comment ?? null) : null,
+        cancellationReason:
+          t.status === "cancelled" ? (t.comment ?? null) : null,
+        createdAt: tripCreatedAt,
+        updatedAt: tripCreatedAt,
         bookings: {
-          create: t.bookings.map((b) => ({
-            id: bookingId(t.id, b.passengerId, b.seat),
-            passengerId: b.passengerId,
-            seat: b.seat,
-            status: b.status,
-            comment: b.comment,
-            // Как рантайм: pending живёт 24ч (TTL), остальные — null.
-            expiresAt:
-              b.status === "pending"
-                ? new Date(
-                    seedNow.getTime() +
-                      (b.expiresAtInHours ?? 24) * 60 * 60 * 1000,
-                  )
-                : null,
-            cancelledAt: b.status === "cancelled" ? seedNow : null,
-            cancelledByType:
-              b.status === "cancelled" ? (b.cancelledByType ?? "passenger") : null,
-            cancelledByUserId:
-              b.status === "cancelled"
-                ? b.cancelledByType === "driver"
-                  ? t.driverId
-                  : b.passengerId
-                : null,
-            cancellationReason: b.cancellationReason ?? null,
-          })),
+          create: t.bookings.map((b) => {
+            // Бронь создана после поездки (по умолчанию — через день),
+            // отмена — через день после создания (как в жизни).
+            const bookingCreatedAt =
+              b.createdDaysAgo !== undefined
+                ? new Date(seedNow.getTime() - b.createdDaysAgo * dayMs)
+                : new Date(tripCreatedAt.getTime() + dayMs);
+            return {
+              id: bookingId(t.id, b.passengerId, b.seat),
+              passengerId: b.passengerId,
+              seat: b.seat,
+              status: b.status,
+              comment: b.comment,
+              // Как рантайм: pending живёт 24ч (TTL), остальные — null.
+              expiresAt:
+                b.status === "pending"
+                  ? new Date(
+                      seedNow.getTime() +
+                        (b.expiresAtInHours ?? 24) * 60 * 60 * 1000,
+                    )
+                  : null,
+              cancelledAt:
+                b.status === "cancelled"
+                  ? new Date(bookingCreatedAt.getTime() + dayMs)
+                  : null,
+              cancelledByType:
+                b.status === "cancelled"
+                  ? (b.cancelledByType ?? "passenger")
+                  : null,
+              cancelledByUserId:
+                b.status === "cancelled"
+                  ? b.cancelledByType === "driver"
+                    ? t.driverId
+                    : b.passengerId
+                  : null,
+              cancellationReason: b.cancellationReason ?? null,
+              createdAt: bookingCreatedAt,
+            };
+          }),
         },
       },
     });
@@ -2214,11 +2295,30 @@ async function main() {
         (normalizeCityName(trip.toCity) === city.nameNormalized ? 1 : 0),
       0,
     );
-    await prisma.city.update({ where: { id: city.id }, data: { tripsCount: count } });
+    await prisma.city.update({
+      where: { id: city.id },
+      data: { tripsCount: count },
+    });
   }
 
   // Create Reviews
+  // Отзыв пишется после поездки (на следующий день), а не «сейчас».
+  const departureAtByTrip = new Map(
+    trips.map((trip, tripIndex) => {
+      const hourMsk = trip.departureHourMsk ?? 6 + ((tripIndex * 7) % 14);
+      return [
+        trip.id,
+        new Date(
+          seedNow.getTime() +
+            trip.daysFromNow * dayMs +
+            (hourMsk - 3) * 3_600_000,
+        ),
+      ];
+    }),
+  );
   for (const r of reviews) {
+    const tripDeparture = departureAtByTrip.get(r.tripId!);
+    if (!tripDeparture) throw new Error(`[seed] review ${r.id}: нет поездки`);
     await prisma.review.create({
       data: {
         id: r.id,
@@ -2230,6 +2330,7 @@ async function main() {
         tripRoute: r.tripRoute,
         tripId: r.tripId,
         status: r.status ?? "published",
+        createdAt: new Date(tripDeparture.getTime() + dayMs),
       },
     });
   }
@@ -2341,54 +2442,60 @@ async function main() {
     },
   ];
 
-// 6 новых типов уведомлений (старый booking_confirmed + 5 новых)
+  // 6 новых типов уведомлений (старый booking_confirmed + 5 новых)
   const newNotifications = [
     {
       userId: "u-18",
       type: "ride_request_match",
       title: "Новый попутчик",
-      body: 'Иван Иванов хочет присоединиться к вашей поездке Москва → Казань.',
+      body: "Иван Иванов хочет присоединиться к вашей поездке Москва → Казань.",
       isRead: false,
     },
     {
       userId: "u-18",
       type: "trip_details_changed",
       title: "Изменение деталей поездки",
-      body: 'Время отправления поездки Череповец → Вологда сдвинуто на 30 минут.',
+      body: "Время отправления поездки Череповец → Вологда сдвинуто на 30 минут.",
       isRead: false,
     },
     {
       userId: "u-18",
       type: "booking_status_changed",
       title: "Статус бронирования изменён",
-      body: 'Ваша заявка на поездку подтверждена.',
+      body: "Ваша заявка на поездку подтверждена.",
       isRead: false,
     },
     {
       userId: "u-18",
       type: "trip_status_changed",
       title: "Поездка отменена",
-      body: 'Ваша поездка отменена.',
+      body: "Ваша поездка отменена.",
       isRead: false,
     },
     {
       userId: "u-18",
       type: "feedback_replied",
       title: "Ответ на обращение в поддержку",
-      body: 'На ваш вопрос ответил администратор.',
+      body: "На ваш вопрос ответил администратор.",
       isRead: false,
     },
     {
       userId: "u-18",
       type: "review_rejected",
       title: "Отзыв отклонен",
-      body: 'Ваш отзыв о поездке отклонен администраей.',
+      body: "Ваш отзыв о поездке отклонен администраей.",
       isRead: false,
     },
   ];
   const allNotifications = [...notifications, ...newNotifications];
-  for (const n of allNotifications) {
-    await prisma.notification.create({ data: n });
+  // Уведомления приходили в прошлом (разброс по часам), а не все «сейчас».
+  for (const [index, n] of allNotifications.entries()) {
+    await prisma.notification.create({
+      data: {
+        ...n,
+        createdAt: new Date(seedNow.getTime() - (index + 1) * 3 * 3_600_000),
+      },
+    });
   }
 
   // Обращения в поддержку: с ответом админа / без / апелляция.
@@ -2402,7 +2509,8 @@ async function main() {
       userId: "u-14",
       subject: "Вопрос про оплату",
       text: "Оплата водителю наличными или переводом? В приложении кнопки оплаты не нашёл.",
-      reply: "Оплата происходит напрямую водителю при встрече — наличными или переводом по договорённости.",
+      reply:
+        "Оплата происходит напрямую водителю при встрече — наличными или переводом по договорённости.",
       repliedAt: new Date(seedNow.getTime() - 2 * dayMs),
     },
     {
@@ -2414,7 +2522,8 @@ async function main() {
       userId: "u-19",
       subject: "Апелляция: отклонённый отзыв",
       text: "Мой отзыв о поездке отклонили, но я не нарушала правила. Пересмотрите, пожалуйста.",
-      reply: "Проверили: в тексте был номер телефона. Уберите контакты и отправьте отзыв заново.",
+      reply:
+        "Проверили: в тексте был номер телефона. Уберите контакты и отправьте отзыв заново.",
       repliedAt: new Date(seedNow.getTime() - 5 * dayMs),
     },
     {
@@ -2423,23 +2532,35 @@ async function main() {
       text: "Было бы здорово добавить тёмную тему для ночных поездок.",
     },
   ];
-  for (const f of feedbacks) {
-    await prisma.feedback.create({ data: f });
+  for (const [index, f] of feedbacks.entries()) {
+    await prisma.feedback.create({
+      data: {
+        ...f,
+        createdAt: new Date(seedNow.getTime() - (index + 2) * dayMs),
+      },
+    });
   }
 
   // Create RideRequests
   for (const rr of rideRequests) {
+    const earliestAt = new Date(
+      seedNow.getTime() + rr.daysFromNowEarliest * dayMs,
+    );
     await prisma.rideRequest.create({
       data: {
         id: rr.id,
         userId: rr.userId,
         fromCityId: cityId(rr.fromCity),
         toCityId: cityId(rr.toCity),
-        earliestAt: new Date(seedNow.getTime() + rr.daysFromNowEarliest * dayMs),
+        earliestAt,
         latestAt: new Date(seedNow.getTime() + rr.daysFromNowLatest * dayMs),
         seats: rr.seats ?? 1,
         status: rr.status ?? "active",
-        expiresAt: new Date(seedNow.getTime() + (rr.expiresInDays ?? 7) * dayMs),
+        expiresAt: new Date(
+          seedNow.getTime() + (rr.expiresInDays ?? 7) * dayMs,
+        ),
+        // Заявка создана за 2 дня до начала окна поиска.
+        createdAt: new Date(earliestAt.getTime() - 2 * dayMs),
       },
     });
   }
@@ -2451,18 +2572,25 @@ async function main() {
       if (!r.tripRef) throw new Error(`[seed] report ${r.id}: нет tripRef`);
       targetId = r.tripRef;
     } else if (r.targetType === "booking") {
-      if (!r.bookingRef) throw new Error(`[seed] report ${r.id}: нет bookingRef`);
+      if (!r.bookingRef)
+        throw new Error(`[seed] report ${r.id}: нет bookingRef`);
       const booking = await prisma.booking.findFirst({
-        where: { tripId: r.bookingRef.tripId, passengerId: r.bookingRef.passengerId },
+        where: {
+          tripId: r.bookingRef.tripId,
+          passengerId: r.bookingRef.passengerId,
+        },
         select: { id: true },
       });
       if (!booking) throw new Error(`[seed] report ${r.id}: бронь не найдена`);
       targetId = booking.id;
     } else {
-      if (!r.targetUserId) throw new Error(`[seed] report ${r.id}: нет targetUserId`);
+      if (!r.targetUserId)
+        throw new Error(`[seed] report ${r.id}: нет targetUserId`);
       targetId = r.targetUserId;
     }
     const terminal = r.status === "resolved" || r.status === "rejected";
+    // Жалоба подана 3 дня назад, рассмотрена через день (а не «сейчас»).
+    const reportCreatedAt = new Date(seedNow.getTime() - 3 * dayMs);
     await prisma.report.create({
       data: {
         id: r.id,
@@ -2475,7 +2603,10 @@ async function main() {
         resolutionNote: r.resolutionNote ?? null,
         adminActorId: r.adminActorId ?? null,
         adminActorType: r.adminActorId ? "admin" : null,
-        resolvedAt: terminal ? seedNow : null,
+        createdAt: reportCreatedAt,
+        resolvedAt: terminal
+          ? new Date(reportCreatedAt.getTime() + dayMs)
+          : null,
       },
     });
   }
