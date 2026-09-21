@@ -1,7 +1,7 @@
 import { Badge, Tabbar } from "@telegram-apps/telegram-ui";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { Bell, Car, Home, LayoutGrid, Search, User } from "lucide-react";
-import styles from "./Tapbar.module.css";
+import styles from "./Tabbar.module.css";
 
 export type AppTabId =
   "home" | "trips" | "notifications" | "search" | "profile" | "showcase";
@@ -46,7 +46,7 @@ function go(
 /**
  * Нативный Tabbar из @telegram-apps/telegram-ui: все 5 разделов (включая
  * Поиск) в единой панели — как в официальном клиенте Telegram. Стили
- * пилюли — tapbar.module.css (без Tailwind), safe-area, цвета темы
+ * пилюли — Tabbar.module.css (без Tailwind), safe-area, цвета темы
  * и selected-состояние — нативные. Route-driven: активный таб
  * определяет роутер, компонент только рендерит и отдаёт выбор наружу.
  * Бейдж непрочитанных — пропом (счётчик считает роутер из кэша inbox).
@@ -66,7 +66,7 @@ export function TabsBar({
        скругление + боковые отступы, снизу — реальный инсет Телеграма
        (env() в WebView равен 0). overflow-hidden чтобы фоны айтемов
        не торчали из скруглённых углов. */
-    <Tabbar className={`${styles.fixed} ${styles.tapbar}`}>
+    <Tabbar className={`${styles.fixed} ${styles.tabbar}`}>
       {items.map(({ key, text, to, Icon }) => {
         const selected = activeTab === key;
         const showBadge = key === "notifications" && unreadCount > 0;
