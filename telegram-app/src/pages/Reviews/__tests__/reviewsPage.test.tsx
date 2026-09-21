@@ -63,7 +63,7 @@ vi.mock("@/store/useAuthStore", () => ({
   ),
 }));
 
-import { ReviewsPage, type ReviewsTab } from "@/pages/ReviewsPage";
+import { ReviewsPage, type ReviewsTab } from "@/pages/Reviews/ReviewsPage";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const ME = {

@@ -1,0 +1,179 @@
+/* Профиль (ProfilePage): раскладка без Tailwind (миграция
+ * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы
+ * — бока 16px, вертикаль 16px между блоками. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 16px 16px;
+}
+
+/* Тело Section-карточки: колонка с зазором 12px (было p-4). */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+/* Шапка профиля: аватар + имя/рейтинг (было gap-3.5). */
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Текстовая колонка, которая обязана ужиматься (было flex-1 min-w-0):
+ * без нулевой базы и min-width:0 длинное имя распирает шапку. */
+.flexText {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+/* Обрезка в одну строку (было block truncate): display:block нужен
+ * span/caption-вариантам tgui-типографики. */
+.truncate {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Строка рейтинга под именем (было gap-2 mt-1). */
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Подпись верификации Telegram. */
+.verified {
+  color: var(--app-success);
+}
+
+/* «О себе»: основной цвет текста + межстрочный 1.625 (leading-relaxed). */
+.about {
+  color: var(--tgui--text_color);
+  line-height: 1.625;
+}
+
+/* Статистика: три равные колонки над разделителем (было grid-cols-3). */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--tgui--outline);
+}
+
+/* Плитка статистики: поездки/отзывы/рейтинг. */
+.stat {
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--tgui--tertiary_bg_color);
+  text-align: center;
+}
+
+.statLabel {
+  color: var(--tgui--hint_color);
+}
+
+.statInfo {
+  color: var(--app-info);
+}
+
+.statRating {
+  color: var(--app-rating);
+}
+
+/* Список меню-секций внутри tgui List: снимаем паддинг кита (было
+ * Tailwind p-0!) и раскладываем секции колонкой. Удвоение селектора —
+ * канон вместо !important: неслойный module.css бьёт слой tgui. */
+.list.list {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Колонка строк внутри секции (было gap-2). */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Иконка строки меню/переключателя: не сжимается (было shrink-0). */
+.icon {
+  flex-shrink: 0;
+}
+
+/* Шеврон строки меню: подсказочный цвет, не сжимается. */
+.chevron {
+  color: var(--tgui--hint_color);
+  flex-shrink: 0;
+}
+
+/* Кликабельная строка-меню на всю ширину (Cell Component="button"). */
+.menuCell {
+  width: 100%;
+  text-align: left;
+}
+
+/* Строка-переключатель: поверхность секции + hairline кит-обводки. */
+.switchRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid var(--tgui--outline);
+}
+
+/* Опасная зона: рамка — 30% от --app-danger (было border-(--app-danger)/30),
+ * тень — рецепт shadow-xs из мигрированных карточек. */
+.dangerZone {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid color-mix(in srgb, var(--app-danger) 30%, transparent);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Ошибка деструктивного действия (кит-токен разрушающего цвета). */
+.errorText {
+  color: var(--tg-theme-destructive-text-color);
+}
+
+/* Вкладка «Отзывы»: вертикальная колонка. */
+.reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Плашка пре-модерации: подпись слева, кнопка справа, кегль 12px
+ * (было text-xs с line-height 16px). */
+.reviewNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid var(--tgui--outline);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.hint {
+  color: var(--tgui--hint_color);
+}

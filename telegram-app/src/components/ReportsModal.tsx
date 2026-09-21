@@ -16,7 +16,7 @@ import { MutationError } from "@/components/MutationError";
 import { FeedCard } from "@/components/FeedCard";
 import { StatusPill, type StatusTone } from "@/components/StatusPill";
 import { QueryState } from "@/components/QueryState";
-import { ProfilePage } from "@/pages/ProfilePage";
+import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { ApiError } from "@/api/client";

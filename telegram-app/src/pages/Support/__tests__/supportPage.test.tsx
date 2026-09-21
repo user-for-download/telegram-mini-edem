@@ -18,7 +18,7 @@ vi.mock("@/queries/useSupportQuery", () => ({
   useAppealFeedbackMutation: mockUseAppeal,
 }));
 
-import { SUPPORT_FAQ, SupportPage } from "@/pages/SupportPage";
+import { SUPPORT_FAQ, SupportPage } from "@/pages/Support/SupportPage";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {

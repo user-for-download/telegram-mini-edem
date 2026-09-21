@@ -25,7 +25,7 @@ import { VehicleRoute } from "@/components/VehicleModal";
 import { TripPage } from "@/pages/Trip/TripPage";
 import { RideRequestsRoute } from "@/components/RideRequestsModal";
 import { TripRequestsRoute } from "@/components/TripRequestsModal";
-import { ProfilePage } from "@/pages/ProfilePage";
+import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { EditProfileRoute } from "@/components/EditProfileModal";
 import { useNotificationsInboxQuery } from "@/queries/useNotificationsQuery";
 import { ReviewsRoute } from "@/components/ReviewsModal";

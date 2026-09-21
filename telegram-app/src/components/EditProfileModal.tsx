@@ -7,7 +7,7 @@ import {
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
-import { ProfilePage } from "@/pages/ProfilePage";
+import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";

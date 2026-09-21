@@ -50,7 +50,7 @@ vi.mock("@/queries/useReviewsQuery", async (importOriginal) => {
 });
 
 import { ApiError } from "@/api/client";
-import { ProfilePage } from "@/pages/ProfilePage";
+import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 

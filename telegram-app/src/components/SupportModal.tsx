@@ -22,11 +22,11 @@ import { AppealForm } from "@/components/AppealForm";
 import { StatusPill } from "@/components/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
-import { ProfilePage } from "@/pages/ProfilePage";
+import { ProfilePage } from "@/pages/Profile/ProfilePage";
 // SUPPORT_FAQ — единственный источник правды в SupportPage (формулировки
 // порта SupportPanel из mini-app); здесь только реэкспортный импорт,
 // PageHeader страницы в модалку не тянем.
-import { SUPPORT_FAQ } from "@/pages/SupportPage";
+import { SUPPORT_FAQ } from "@/pages/Support/SupportPage";
 import {
   useCreateFeedbackMutation,
   useMyFeedbacksQuery,

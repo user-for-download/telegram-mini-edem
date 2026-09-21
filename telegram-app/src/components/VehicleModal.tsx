@@ -13,7 +13,7 @@ import { ConfirmAction } from "@/components/ConfirmAction";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { haptic } from "@/utils/haptics";
 import { QueryState } from "@/components/QueryState";
-import { ProfilePage } from "@/pages/ProfilePage";
+import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import {
   useRemoveVehicleMutation,
   useUpsertVehicleMutation,

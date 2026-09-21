@@ -10,7 +10,7 @@ import { Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
-import { ProfilePage } from "@/pages/ProfilePage";
+import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import {
   useProfileNotificationSettingsMutation,
   useProfileQuery,

@@ -30,6 +30,7 @@ import {
   normalizeSupportForm,
   validateSupportForm,
 } from "@/pages/supportValidation";
+import styles from "./SupportPage.module.css";
 
 /**
  * FAQ поддержки (порт SupportPanel из mini-app): формулировки сохранены,
@@ -89,19 +90,19 @@ function FeedbackCard({
         {feedback.reply && <StatusPill tone="info">Есть ответ</StatusPill>}
       </Accordion.Summary>
       <Accordion.Content>
-        <div className="flex flex-col gap-1.5">
+        <div className={styles.cardBody}>
           <Caption Component="span">
             {new Date(feedback.createdAt).toLocaleDateString("ru-RU")}
           </Caption>
-          <Text Component="p" className="leading-relaxed">
+          <Text Component="p" className={styles.prose}>
             {feedback.text}
           </Text>
           {feedback.reply ? (
             <>
-              <Text weight="2" Component="span" className="pt-1">
+              <Text weight="2" Component="span" className={styles.replyTitle}>
                 Ответ поддержки
               </Text>
-              <Text Component="p" className="leading-relaxed">
+              <Text Component="p" className={styles.prose}>
                 {feedback.reply}
               </Text>
             </>
@@ -178,9 +179,9 @@ export function SupportPage() {
           header="Аккаунт заблокирован"
           description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
         />
-        <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+        <div className={styles.wrap}>
           <Section header="Обжалование блокировки">
-            <div className="flex flex-col gap-3 p-4">
+            <div className={styles.panel}>
               <AppealForm />
             </div>
           </Section>
@@ -193,9 +194,9 @@ export function SupportPage() {
     <>
       <PageHeader title="Поддержка" />
 
-      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+      <div className={styles.wrap}>
         <Section header="Частые вопросы">
-          <div className="flex flex-col gap-2 p-4">
+          <div className={styles.faqPanel}>
             {SUPPORT_FAQ.map((item) => {
               const isOpen = openedFaqId === item.id;
               return (
@@ -210,7 +211,7 @@ export function SupportPage() {
                     {item.question}
                   </Accordion.Summary>
                   <Accordion.Content>
-                    <Caption Component="p" className="leading-relaxed">
+                    <Caption Component="p" className={styles.prose}>
                       {item.answer}
                     </Caption>
                   </Accordion.Content>
@@ -221,7 +222,7 @@ export function SupportPage() {
         </Section>
 
         <Section header="Мои обращения">
-          <div className="flex flex-col gap-3 p-4">
+          <div className={styles.panel}>
             <QueryState
               loading={myFeedbacks.isLoading}
               error={myFeedbacks.error}
@@ -231,15 +232,15 @@ export function SupportPage() {
             >
               {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
                 <>
-                  <Text weight="2" Component="p" className="text-center">
+                  <Text weight="2" Component="p" className={styles.centerText}>
                     У вас пока нет обращений
                   </Text>
-                  <Caption Component="p" className="text-center">
+                  <Caption Component="p" className={styles.centerText}>
                     Здесь появятся ваши обращения и ответы поддержки
                   </Caption>
                 </>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className={styles.list}>
                   {myFeedbacks.data.map((feedback) => (
                     <FeedbackCard
                       key={feedback.id}
@@ -259,7 +260,7 @@ export function SupportPage() {
         </Section>
 
         <Section header="Связаться с нами" aria-label="Связаться с нами">
-          <div className="flex flex-col gap-3 p-4">
+          <div className={styles.panel}>
             <MutationError error={create.error} />
             <div>
               <label htmlFor="support-subject" className="sr-only">
@@ -271,7 +272,7 @@ export function SupportPage() {
                 before={
                   <MessageSquareText
                     size={16}
-                    className="text-(--tgui--hint_color)"
+                    className={styles.hintIcon}
                   />
                 }
                 placeholder="Например: не приходит уведомление"
@@ -306,7 +307,7 @@ export function SupportPage() {
               />
             </div>
             {text.length > 0 && (
-              <Caption Component="p" className="text-right" aria-live="polite">
+              <Caption Component="p" className={styles.counter} aria-live="polite">
                 {text.length}/{FEEDBACK_TEXT_MAX_LENGTH}
               </Caption>
             )}
@@ -314,7 +315,7 @@ export function SupportPage() {
               <Caption
                 Component="p"
                 role="alert"
-                className="text-(--tg-theme-destructive-text-color)"
+                className={styles.errorText}
               >
                 {formError}
               </Caption>
@@ -323,7 +324,7 @@ export function SupportPage() {
               <Text
                 Component="p"
                 role="status"
-                className="text-(--app-success)"
+                className={styles.successText}
               >
                 Обращение отправлено — мы ответим вам как можно скорее
               </Text>
@@ -343,7 +344,7 @@ export function SupportPage() {
         </Section>
 
         <Section header="Обжалование блокировки">
-          <div className="flex flex-col gap-3 p-4">
+          <div className={styles.panel}>
             <AppealForm />
           </div>
         </Section>

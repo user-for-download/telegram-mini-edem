@@ -32,6 +32,7 @@ import {
   validateReportForm,
   type ReportTargetType,
 } from "@/pages/reportValidation";
+import styles from "./ReportsPage.module.css";
 
 function formatDate(createdAt: string): string {
   const date = new Date(createdAt);
@@ -60,17 +61,17 @@ function reportStatusTone(status: Report["status"]): StatusTone {
 
 function ReportCard({ report }: { report: Report }) {
   return (
-    <FeedCard className="p-3.5 flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
+    <FeedCard className={styles.card}>
+      <div className={styles.cardHead}>
         <Text weight="2" Component="span">
           {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
         </Text>
-        <StatusPill tone={reportStatusTone(report.status)} className="shrink-0">
+        <StatusPill tone={reportStatusTone(report.status)} className={styles.pill}>
           {REPORT_STATUS_LABELS[report.status]}
         </StatusPill>
       </div>
       <Caption Component="span">{formatDate(report.createdAt)}</Caption>
-      <Text Component="div" className="leading-relaxed">
+      <Text Component="div" className={styles.prose}>
         {report.description}
       </Text>
     </FeedCard>
@@ -167,9 +168,9 @@ export function ReportsPage() {
     <>
       <PageHeader title="Жалобы" />
 
-      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+      <div className={styles.wrap}>
         <Section header="Сообщите о проблеме">
-          <div className="flex flex-col gap-3 p-4">
+          <div className={styles.panel}>
             <MutationError error={create.error} />
             <div>
               <label htmlFor="report-target-type" className="sr-only">
@@ -253,12 +254,12 @@ export function ReportsPage() {
               />
             </div>
             {description.length > 0 && (
-              <Caption Component="p" className="text-right" aria-live="polite">
+              <Caption Component="p" className={styles.counter} aria-live="polite">
                 {description.length}/{REPORT_DESCRIPTION_MAX_LENGTH}
               </Caption>
             )}
             {alreadyReported && (
-              <Caption Component="p" className="text-right" aria-live="polite">
+              <Caption Component="p" className={styles.counter} aria-live="polite">
                 Вы уже отправляли жалобу на этот объект. Повторная отправка
                 недоступна.
               </Caption>
@@ -267,7 +268,7 @@ export function ReportsPage() {
               <Caption
                 Component="p"
                 role="alert"
-                className="text-(--tg-theme-destructive-text-color)"
+                className={styles.errorText}
               >
                 {formError}
               </Caption>
@@ -276,7 +277,7 @@ export function ReportsPage() {
               <Text
                 Component="p"
                 role="status"
-                className="text-(--app-success)"
+                className={styles.successText}
               >
                 Жалоба отправлена
               </Text>
@@ -295,7 +296,7 @@ export function ReportsPage() {
         </Section>
 
         <Section header="Мои жалобы">
-          <div className="flex flex-col gap-3 p-4">
+          <div className={styles.panel}>
             <QueryState
               loading={myReports.isLoading}
               error={myReports.error}
@@ -309,7 +310,7 @@ export function ReportsPage() {
                   description="Жалобы на поездки доступны пассажирам с бронью. На свою поездку жаловаться нельзя."
                 />
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className={styles.list}>
                   {myReports.data.map((report) => (
                     <ReportCard key={report.id} report={report} />
                   ))}

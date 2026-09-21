@@ -48,13 +48,14 @@ import {
 } from "@/utils/appSettings";
 import { haptic } from "@/utils/haptics";
 import { useModalBack } from "@/utils/modalBack";
+import styles from "./ProfilePage.module.css";
 
 type ProfileSubtab = "settings" | "reviews";
 
 /**
  * Строка меню раздела — tgui Cell (учебниковый паттерн стори Playground:
  * before=иконка, children=title, subtitle, after=chevron). Cell идёт через
- * Tappable (ripple/press), Component="button" + w-full держат ширину.
+ * Tappable (ripple/press), Component="button" + styles.menuCell держат ширину.
  */
 function MenuRow({
   icon,
@@ -75,15 +76,15 @@ function MenuRow({
       type="button"
       aria-label={label}
       onClick={onClick}
-      before={<span className="shrink-0">{icon}</span>}
+      before={<span className={styles.icon}>{icon}</span>}
       after={
         <ChevronRight
           size={16}
-          className="text-(--tgui--hint_color) shrink-0"
+          className={styles.chevron}
         />
       }
       subtitle={subtitle}
-      className="w-full text-left"
+      className={styles.menuCell}
     >
       {title}
     </Cell>
@@ -110,13 +111,13 @@ function SwitchRow({
   label: string;
 }) {
   return (
-    <div className="w-full flex items-center gap-3 p-3 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline)">
-      <span className="shrink-0">{icon}</span>
-      <span className="flex-1 min-w-0">
-        <Text Component="span" className="block truncate">
+    <div className={styles.switchRow}>
+      <span className={styles.icon}>{icon}</span>
+      <span className={styles.flexText}>
+        <Text Component="span" className={styles.truncate}>
           {title}
         </Text>
-        <Caption Component="span" className="block truncate">
+        <Caption Component="span" className={styles.truncate}>
           {subtitle}
         </Caption>
       </span>
@@ -223,11 +224,11 @@ export function ProfilePage() {
         onRetry={() => void profile.refetch()}
       >
         {profile.data && (
-          <div className="flex flex-col gap-4 px-4 pt-1 pb-4">
+          <div className={styles.wrap}>
             {/* Шапка профиля: поверхность — Section без заголовка. */}
             <Section>
-              <div className="flex flex-col gap-3 p-4">
-                <div className="flex items-center gap-3.5">
+              <div className={styles.panel}>
+                <div className={styles.headerRow}>
                   <Avatar
                     size={48}
                     src={profile.data.avatar}
@@ -235,16 +236,16 @@ export function ProfilePage() {
                       .slice(0, 2)
                       .toUpperCase()}
                   />
-                  <div className="flex-1 min-w-0">
-                    <Headline weight="2" className="truncate">
+                  <div className={styles.flexText}>
+                    <Headline weight="2" className={styles.truncate}>
                       {profile.data.name}
                     </Headline>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className={styles.ratingRow}>
                       <Badge type="number" mode="secondary" large>
                         <Star size={11} />
                         <span>{`${profile.data.rating.toFixed(1)} (${profile.data.reviewsCount})`}</span>
                       </Badge>
-                      <Caption weight="2" className="text-(--app-success)">
+                      <Caption weight="2" className={styles.verified}>
                         Telegram верифицирован
                       </Caption>
                     </div>
@@ -254,50 +255,50 @@ export function ProfilePage() {
                 {profile.data.about && (
                   <Text
                     Component="p"
-                    className="text-(--tgui--text_color) leading-relaxed"
+                    className={styles.about}
                   >
                     {profile.data.about}
                   </Text>
                 )}
 
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-(--tgui--outline)">
-                  <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
+                <div className={styles.stats}>
+                  <div className={styles.stat}>
                     <Text weight="2" Component="div">
                       {profile.data.tripsCount}
                     </Text>
                     <Caption
                       Component="div"
-                      className="text-(--tgui--hint_color)"
+                      className={styles.statLabel}
                     >
                       Поездок
                     </Caption>
                   </div>
-                  <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
+                  <div className={styles.stat}>
                     <Text
                       weight="2"
                       Component="div"
-                      className="text-(--app-info)"
+                      className={styles.statInfo}
                     >
                       {profile.data.reviewsCount}
                     </Text>
                     <Caption
                       Component="div"
-                      className="text-(--tgui--hint_color)"
+                      className={styles.statLabel}
                     >
                       Отзывов
                     </Caption>
                   </div>
-                  <div className="p-2 rounded-xl bg-(--tgui--tertiary_bg_color) text-center">
+                  <div className={styles.stat}>
                     <Text
                       weight="2"
                       Component="div"
-                      className="text-(--app-rating)"
+                      className={styles.statRating}
                     >
                       {profile.data.rating.toFixed(1)}
                     </Text>
                     <Caption
                       Component="div"
-                      className="text-(--tgui--hint_color)"
+                      className={styles.statLabel}
                     >
                       Рейтинг
                     </Caption>
@@ -343,7 +344,7 @@ export function ProfilePage() {
             </div>
 
             {subtab === "settings" ? (
-              <List className="p-0! flex flex-col gap-3">
+              <List className={styles.list}>
                 <Section header="Мой автомобиль (для поездок)">
                   <MenuRow
                     label={
@@ -367,7 +368,7 @@ export function ProfilePage() {
                 </Section>
 
                 <Section header="Внешний вид">
-                  <div className="flex flex-col gap-2">
+                  <div className={styles.stack}>
                     <SwitchRow
                       label="Тёмная тема"
                       icon={
@@ -404,7 +405,7 @@ export function ProfilePage() {
                 </Section>
 
                 <Section header="Уведомления и звуки">
-                  <div className="flex flex-col gap-2">
+                  <div className={styles.stack}>
                     <SwitchRow
                       label="Уведомления"
                       icon={
@@ -436,7 +437,7 @@ export function ProfilePage() {
                 </Section>
 
                 <Section header="Сервис и помощь">
-                  <div className="flex flex-col gap-2">
+                  <div className={styles.stack}>
                     <MenuRow
                       label="Служба поддержки"
                       icon={
@@ -466,7 +467,7 @@ export function ProfilePage() {
                 </Section>
 
                 {/* Опасная зона */}
-                <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--app-danger)/30 shadow-xs flex flex-col gap-2">
+                <div className={styles.dangerZone}>
                   <Button
                     mode="bezeled"
                     stretched
@@ -482,7 +483,7 @@ export function ProfilePage() {
                     <Caption
                       Component="p"
                       role="alert"
-                      className="text-(--tg-theme-destructive-text-color)"
+                      className={styles.errorText}
                     >
                       {remove.error instanceof ApiError &&
                       remove.error.code === "ACCOUNT_HAS_ACTIVE_OBLIGATIONS"
@@ -505,9 +506,9 @@ export function ProfilePage() {
                 </div>
               </List>
             ) : (
-              <div className="flex flex-col gap-3">
-                <div className="p-3 rounded-xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) flex items-center justify-between gap-2 text-xs">
-                  <span className="text-(--tgui--hint_color)">
+              <div className={styles.reviews}>
+                <div className={styles.reviewNotice}>
+                  <span className={styles.hint}>
                     Все отзывы проходят пре-модерацию
                   </span>
                   <Button
@@ -526,7 +527,7 @@ export function ProfilePage() {
                   emptyText="После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь."
                   onRetry={() => void aboutReviews.refetch()}
                 >
-                  <div className="flex flex-col gap-3">
+                  <div className={styles.reviews}>
                     {aboutItems.map((review) => (
                       <ReviewCard key={review.id} review={review} />
                     ))}

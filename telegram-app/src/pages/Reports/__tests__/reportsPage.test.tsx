@@ -16,7 +16,7 @@ vi.mock("@/queries/useReportQuery", () => ({
   useCreateReportMutation: mockUseCreate,
 }));
 
-import { ReportsPage } from "@/pages/ReportsPage";
+import { ReportsPage } from "@/pages/Reports/ReportsPage";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {

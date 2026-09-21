@@ -17,7 +17,7 @@ import { haptic } from "@/utils/haptics";
 import { RatingInput } from "@/components/RatingInput";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { ReviewCard } from "@/components/ReviewCard";
-import { ProfilePage } from "@/pages/ProfilePage";
+import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { ApiError } from "@/api/client";
 import { REVIEW_TEXT_MAX_LENGTH, type Trip, type User } from "@edem/contracts";
 import { useAuthStore } from "@/store/useAuthStore";
