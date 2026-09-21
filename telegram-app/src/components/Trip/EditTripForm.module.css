@@ -1,0 +1,47 @@
+/* Форма редактирования поездки (EditTripForm): раскладка без Tailwind
+ * (миграция папка/компонент). Живёт в деталях поездки и в активном
+ * сегменте «Поездок» — отделена от карточки разделителем. Цвета только
+ * --tgui--* / --app-*.
+ * `.errorText`/`.iconHint`/`.grid2` продублированы с
+ * pages/CreateTrip/CreateTripPage.module.css: формы родственные, но листы
+ * держим по папкам (не тянем CSS из другого слоя). */
+
+/* Форма под разделителем: колонка полей с зазором 12px. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tgui--outline);
+}
+
+/* Иконочные токены полей: «откуда» — синий, «куда» — зелёный, прочие —
+ * приглушённые (было text-(--app-info)/--app-success/hint). */
+.iconInfo {
+  color: var(--app-info);
+}
+
+.iconSuccess {
+  color: var(--app-success);
+}
+
+.iconHint {
+  color: var(--tgui--hint_color);
+}
+
+/* Два поля в ряд. */
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Ряд кнопок «Сохранить/Отмена». */
+.btnRow {
+  display: flex;
+  gap: 8px;
+}
+
+.errorText {
+  color: var(--tg-theme-destructive-text-color);
+}

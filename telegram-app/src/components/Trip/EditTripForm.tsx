@@ -23,6 +23,7 @@ import {
 import { TRIP_TAGS } from "@/consts/tags";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { useUpdateTripMutation } from "@/queries/useTripsQuery";
+import styles from "./EditTripForm.module.css";
 
 function toDateTimeLocal(iso: string | undefined): string {
   if (!iso) return "";
@@ -96,7 +97,7 @@ export function EditTripForm({
 
   return (
     <>
-      <div className="flex flex-col gap-3 border-t border-(--tgui--outline) pt-3">
+      <div className={styles.form}>
         <p>Маршрут изменить нельзя — только адреса, время и условия.</p>
         <div>
           <label htmlFor="edit-from" className="sr-only">
@@ -105,7 +106,7 @@ export function EditTripForm({
           <Input
             id="edit-from"
             header="Адрес отправления"
-            before={<MapPin size={17} className="text-(--app-info)" />}
+            before={<MapPin size={17} className={styles.iconInfo} />}
             value={fromAddress}
             onChange={(event) => setFromAddress(event.target.value)}
             placeholder="Например: м. Тёплый Стан"
@@ -118,7 +119,7 @@ export function EditTripForm({
           <Input
             id="edit-to"
             header="Адрес назначения"
-            before={<MapPin size={17} className="text-(--app-success)" />}
+            before={<MapPin size={17} className={styles.iconSuccess} />}
             value={toAddress}
             onChange={(event) => setToAddress(event.target.value)}
             placeholder="Например: пр-т Ленина"
@@ -132,14 +133,14 @@ export function EditTripForm({
             id="edit-departure"
             header="Дата и время"
             before={
-              <Calendar size={16} className="text-(--tgui--hint_color)" />
+              <Calendar size={16} className={styles.iconHint} />
             }
             type="datetime-local"
             value={departure}
             onChange={(event) => setDeparture(event.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className={styles.grid2}>
           <div>
             <label htmlFor="edit-duration" className="sr-only">
               В пути, часов
@@ -147,7 +148,7 @@ export function EditTripForm({
             <Input
               id="edit-duration"
               header="В пути, часов"
-              before={<Clock size={16} className="text-(--tgui--hint_color)" />}
+              before={<Clock size={16} className={styles.iconHint} />}
               type="number"
               min="1"
               max="168"
@@ -170,7 +171,7 @@ export function EditTripForm({
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className={styles.grid2}>
           <div>
             <label htmlFor="edit-price" className="sr-only">
               Цена, ₽
@@ -179,7 +180,7 @@ export function EditTripForm({
               id="edit-price"
               header="Цена, ₽"
               before={
-                <RussianRuble size={16} className="text-(--tgui--hint_color)" />
+                <RussianRuble size={16} className={styles.iconHint} />
               }
               type="number"
               min="1"
@@ -195,7 +196,7 @@ export function EditTripForm({
             <Input
               id="edit-seats"
               header="Места"
-              before={<Users size={16} className="text-(--tgui--hint_color)" />}
+              before={<Users size={16} className={styles.iconHint} />}
               type="number"
               min="1"
               max={MAX_SEATS}
@@ -244,7 +245,7 @@ export function EditTripForm({
           <Caption
             Component="p"
             role="alert"
-            className="text-(--tg-theme-destructive-text-color)"
+            className={styles.errorText}
           >
             {validationError}
           </Caption>
@@ -253,12 +254,12 @@ export function EditTripForm({
           <Caption
             Component="p"
             role="alert"
-            className="text-(--tg-theme-destructive-text-color)"
+            className={styles.errorText}
           >
             {bookingErrorMessage(update.error)}
           </Caption>
         )}
-        <div className="flex gap-2">
+        <div className={styles.btnRow}>
           <Button
             mode="bezeled"
             stretched

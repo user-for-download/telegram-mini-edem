@@ -35,6 +35,7 @@ import { useCreateTripMutation } from "@/queries/useTripsQuery";
 import { useVehicleQuery } from "@/queries/vehicle";
 import { validateCreateTripDraft } from "@/helpers/createTripForm";
 import { MAX_SEATS, type TripTag } from "@edem/contracts";
+import styles from "./CreateTripPage.module.css";
 
 const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString();
 
@@ -51,7 +52,7 @@ function FieldError({
     <Caption
       Component="p"
       role="alert"
-      className="text-(--tg-theme-destructive-text-color)"
+      className={styles.errorText}
     >
       {children}
     </Caption>
@@ -229,10 +230,10 @@ export function CreateTripForm({
     return (
       <>
         <OfflineBanner />
-        <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+        <div className={styles.wrap}>
           <Section header="Нужен автомобиль">
-            <div className="flex flex-col gap-3 p-4">
-              <Caption Component="p" className="leading-relaxed">
+            <div className={styles.panel}>
+              <Caption Component="p" className={styles.prose}>
                 Чтобы публиковать поездки, сначала добавьте автомобиль в
                 профиле.
               </Caption>
@@ -257,10 +258,10 @@ export function CreateTripForm({
   return (
     <>
       <OfflineBanner />
-      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+      <div className={styles.wrap}>
         <Section header="Маршрут">
-          <div className="flex flex-col gap-3 p-4">
-            <div className="flex flex-col gap-1.5 relative">
+          <div className={styles.panel}>
+            <div className={styles.cityFields}>
               <CityPickerField
                 id="create-from"
                 label="Город отправления"
@@ -297,9 +298,9 @@ export function CreateTripForm({
                 mode="plain"
                 onClick={swapCities}
                 aria-label="Поменять направление"
-                className="absolute! right-2! top-1/2! -translate-y-1/2! bg-(--tgui--section_bg_color)! shadow-xs!"
+                className={styles.swap}
               >
-                <ArrowRightLeft size={14} className="text-(--app-info)" />
+                <ArrowRightLeft size={14} className={styles.iconInfo} />
               </IconButton>
             </div>
             <div>
@@ -310,7 +311,7 @@ export function CreateTripForm({
                 id="create-from-address"
                 header="Адрес отправления"
                 before={
-                  <Navigation size={16} className="text-(--tgui--hint_color)" />
+                  <Navigation size={16} className={styles.iconHint} />
                 }
                 value={fromAddress}
                 status={
@@ -334,7 +335,7 @@ export function CreateTripForm({
                 id="create-to-address"
                 header="Адрес назначения"
                 before={
-                  <Navigation size={16} className="text-(--tgui--hint_color)" />
+                  <Navigation size={16} className={styles.iconHint} />
                 }
                 value={toAddress}
                 status={
@@ -354,7 +355,7 @@ export function CreateTripForm({
         </Section>
 
         <Section header="Поездка">
-          <div className="flex flex-col gap-3 p-4">
+          <div className={styles.panel}>
             <div>
               <label htmlFor="create-date" className="sr-only">
                 Дата и время
@@ -363,7 +364,7 @@ export function CreateTripForm({
                 id="create-date"
                 header="Дата и время"
                 before={
-                  <Calendar size={16} className="text-(--tgui--hint_color)" />
+                  <Calendar size={16} className={styles.iconHint} />
                 }
                 type="datetime-local"
                 value={date}
@@ -377,7 +378,7 @@ export function CreateTripForm({
                 {validationError}
               </FieldError>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={styles.grid2}>
               <div>
                 <label htmlFor="create-price" className="sr-only">
                   Цена, ₽
@@ -388,7 +389,7 @@ export function CreateTripForm({
                   before={
                     <RussianRuble
                       size={16}
-                      className="text-(--tgui--hint_color)"
+                      className={styles.iconHint}
                     />
                   }
                   type="number"
@@ -411,7 +412,7 @@ export function CreateTripForm({
                   id="create-seats"
                   role="group"
                   aria-label={`Количество мест: ${seats} из ${MAX_SEATS}`}
-                  className="flex max-w-6/7 items-center gap-2"
+                  className={styles.stepper}
                 >
                   <IconButton
                     type="button"
@@ -428,7 +429,7 @@ export function CreateTripForm({
                     Component="output"
                     aria-live="polite"
                     aria-label="Выбрано мест"
-                    className="flex-1 text-center"
+                    className={styles.stepperValue}
                   >
                     {seats}
                   </Text>
@@ -448,7 +449,7 @@ export function CreateTripForm({
                 </FieldError>
               </fieldset>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={styles.grid2}>
               <div>
                 <label htmlFor="create-distance" className="sr-only">
                   Расстояние, км
@@ -457,7 +458,7 @@ export function CreateTripForm({
                   id="create-distance"
                   header="Расстояние, км"
                   before={
-                    <MapPin size={16} className="text-(--tgui--hint_color)" />
+                    <MapPin size={16} className={styles.iconHint} />
                   }
                   type="number"
                   min="1"
@@ -484,7 +485,7 @@ export function CreateTripForm({
                   id="create-duration"
                   header="В пути, часов"
                   before={
-                    <Clock size={16} className="text-(--tgui--hint_color)" />
+                    <Clock size={16} className={styles.iconHint} />
                   }
                   type="number"
                   min="1"
@@ -510,7 +511,7 @@ export function CreateTripForm({
           header="Условия поездки"
           footer={`до 6 · выбрано ${tags.length}`}
         >
-          <div className="flex flex-col gap-3 p-4">
+          <div className={styles.panel}>
             <div className="TagChips" role="group" aria-label="Условия поездки">
               {TRIP_TAGS.map((tag) => {
                 const checked = tags.includes(tag);
@@ -555,7 +556,7 @@ export function CreateTripForm({
             Component="p"
             role="alert"
             ref={errorRef}
-            className="text-(--tg-theme-destructive-text-color)"
+            className={styles.errorText}
           >
             {validationError}
           </Text>

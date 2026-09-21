@@ -1,0 +1,79 @@
+/* Создание поездки (CreateTripPage): раскладка без Tailwind (миграция
+ * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы —
+ * бока 16px, вертикаль 14px, низ 96px под таббар.
+ * `.errorText`/`.iconHint`/`.grid2` намеренно продублированы в
+ * Trip/EditTripForm.module.css: формы родственные, но листы держим
+ * по папкам (не тянем CSS из другого слоя). */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 16px 96px;
+}
+
+/* Тело Section формы (было p-4). */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+/* Подпись-хинт к секции: межстрочный 1.625 (leading-relaxed). */
+.prose {
+  line-height: 1.625;
+}
+
+/* Города «откуда/куда» + кнопка смены поверх зазора между инпутами. */
+.cityFields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+/* Кнопка смены городов: удвоенный селектор — канон вместо Tailwind-
+ * суффиксов ! (перебиваем кит Button без !important). */
+.swap.swap {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--tgui--section_bg_color);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Иконочные токены полей. */
+.iconInfo {
+  color: var(--app-info);
+}
+
+.iconHint {
+  color: var(--tgui--hint_color);
+}
+
+/* Два поля в ряд (цена/места, расстояние/время). */
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Степпер мест: узкая строка шириной 6/7 (было max-w-6/7). */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(6 / 7 * 100%);
+}
+
+/* Значение степпера по центру между кнопками (было flex-1 text-center). */
+.stepperValue {
+  flex: 1 1 0%;
+  text-align: center;
+}
+
+.errorText {
+  color: var(--tg-theme-destructive-text-color);
+}

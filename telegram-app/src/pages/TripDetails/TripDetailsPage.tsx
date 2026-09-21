@@ -14,7 +14,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { ConfirmAction } from "@/components/ConfirmAction";
-import { EditTripForm } from "@/components/EditTripForm";
+import { EditTripForm } from "@/components/Trip/EditTripForm";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { StatusPill } from "@/components/StatusPill";

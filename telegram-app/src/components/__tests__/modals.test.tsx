@@ -75,7 +75,7 @@ vi.mock("@/queries/vehicle", () => ({
   useVehicleQuery: mockUseVehicle,
 }));
 
-import { CreateTripForm } from "@/pages/CreateTripPage";
+import { CreateTripForm } from "@/pages/CreateTrip/CreateTripPage";
 import { FeedbackForm } from "@/components/Profile/FeedbackModal";
 import { SettingsBody } from "@/components/Profile/SettingsModal";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
