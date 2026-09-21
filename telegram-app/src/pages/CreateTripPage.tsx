@@ -26,7 +26,7 @@ import { MutationError } from "@/components/MutationError";
 import { CityPickerField } from "@/components/CityPickerField";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PageHeader } from "@/components/PageHeader";
-import { useToast } from "@/components/ToastProvider";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { TRIP_TAGS } from "@/consts/tags";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";

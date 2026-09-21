@@ -102,7 +102,7 @@ vi.mock("@/queries/useAllCities", () => ({
 import { SearchPage } from "@/pages/SearchPage";
 import { TripPage } from "@/pages/Trip/TripPage";
 import { RideRequestsPage } from "@/pages/RideRequestsPage";
-import { ToastProvider } from "@/components/ToastProvider";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {

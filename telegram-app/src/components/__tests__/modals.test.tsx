@@ -78,7 +78,7 @@ vi.mock("@/queries/vehicle", () => ({
 import { CreateTripForm } from "@/pages/CreateTripPage";
 import { FeedbackForm } from "@/components/FeedbackModal";
 import { SettingsBody } from "@/components/SettingsModal";
-import { ToastProvider } from "@/components/ToastProvider";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {

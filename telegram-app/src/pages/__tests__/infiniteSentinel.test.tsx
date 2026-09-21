@@ -68,7 +68,7 @@ vi.mock("@/queries/profile", () => ({
 import { SearchPage } from "@/pages/SearchPage";
 import { TripPage } from "@/pages/Trip/TripPage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
-import { ToastProvider } from "@/components/ToastProvider";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function baseQuery(overrides: Record<string, unknown> = {}) {
   return {

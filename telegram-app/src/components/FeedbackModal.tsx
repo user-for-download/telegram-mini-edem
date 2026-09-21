@@ -8,7 +8,7 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ToastProvider";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { useCreateFeedbackMutation } from "@/queries/useSupportQuery";
 import {
   normalizeSupportForm,

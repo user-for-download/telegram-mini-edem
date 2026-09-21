@@ -64,7 +64,7 @@ vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
 });
 
 import { TripPage } from "@/pages/Trip/TripPage";
-import { ToastProvider } from "@/components/ToastProvider";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {
@@ -268,11 +268,13 @@ describe("TripPage driver", () => {
 
   it("поездка водителя без заявок: «Вы водитель»", () => {
     mockUseInfiniteMyTrips.mockReturnValue(
-      infiniteState([makeTrip({ pendingRequestsCount: 0 })]),
+      infiniteState([
+        makeTrip({ pendingRequestsCount: 0, confirmedBookingsCount: 2 }),
+      ]),
     );
     const html = render(<TripPage />, "/bookings?segment=driver");
     expect(html).toContain("Вы водитель");
-    expect(html).toContain("Свободно 2 из 3");
+    expect(html).toContain("Пассажиры: 2");
   });
 
   it("завершённая поездка — без destructive-кнопок", () => {

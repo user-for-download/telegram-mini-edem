@@ -1,7 +1,21 @@
 // backend/prisma/seed-bezz-test.ts — точечный сид для теста.
 // Только пользователь Bezz (5756610948): поездки, брони, отзывы, уведомления.
 // Остальные данные НЕ трогает. Идемпотентен по фиксированным id.
-// Запуск: DATABASE_URL=<prod через relay> npx tsx prisma/seed-bezz-test.ts
+// Гард: юзер Bezz (id e9959223… + telegramUserId) обязан существовать,
+// иначе стоп с ошибкой — сид юзера НЕ создаёт.
+//
+// Куда лить: ПРОД (там живёт Bezz). Прод-стек крутится в compose на этом
+// хосте (telegram-mini-edem-db-1). Локальный dev не подойдёт — Bezz там нет.
+//
+// Запуск (repo root):
+//   docker compose exec -T -u root backend npx prisma generate
+//   docker compose exec -T -u root backend npx tsx prisma/seed-bezz-test.ts
+// Почему так: в имидже нет src/generated (только dist), а app-юзер
+// не может создать /app/src (EACCES) — поэтому generate + seed от root.
+// DATABASE_URL брать не надо: внутри backend-контейнера он уже смотрит
+// на прод-БД (@db:5432).
+// Локально (dev): DATABASE_URL из backend/.env — упадёт на гарде,
+// сначала нужен upsert юзера Bezz.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 

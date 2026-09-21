@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
-import { ToastProvider } from "@/components/ToastProvider";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 beforeEach(() => {
   vi.clearAllMocks();

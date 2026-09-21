@@ -61,7 +61,7 @@ vi.mock("@/store/useAuthStore", () => ({
 }));
 
 import { TripDetailsPage } from "@/pages/TripDetailsPage";
-import { ToastProvider } from "@/components/ToastProvider";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { ApiError } from "@/api/client";
 
 const DRIVER = {

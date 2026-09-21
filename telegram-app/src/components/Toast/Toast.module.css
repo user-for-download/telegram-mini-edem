@@ -1,0 +1,22 @@
+/* Глобальный toast-фидбек (tgui Snackbar): сверху по центру
+ * (низ перекрывался таббаром). Отступ сверху учитывает safe-area
+ * Телеграма. Удвоенный селектор против каскада кита, без !important.
+ *
+ * Нюанс: Snackbar рисуется через RootRenderer-портал со своим
+ * fixed-bottom (bottom/left/right вките) — обёртка его не двигает,
+ * поэтому класс вешаем прямо на Snackbar. Центрируем через
+ * left/right 0 + margin auto: transform кита (анимация translate3d
+ * появления/закрытия) не трогаем. */
+
+.snackbar.snackbar {
+  top: calc(var(--tg-safe-area-inset-top, 0px) + 12px);
+  bottom: auto;
+  left: 10px;
+  right: 10px;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 460px;
+  /* Выше sticky-шапки (z-2) и модальных оверлеев кита (overlay=3):
+     тост транзиентный (3.2с), фидбек обязан быть виден. */
+  z-index: 50;
+}

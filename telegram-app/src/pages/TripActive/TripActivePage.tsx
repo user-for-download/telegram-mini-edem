@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { TripCard } from "@/components/Trip/TripCard";
 import { QueryState } from "@/components/QueryState";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
-import { useToast } from "@/components/ToastProvider";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { shareTrip } from "@/helpers/tripShare";
 import { haptic } from "@/utils/haptics";

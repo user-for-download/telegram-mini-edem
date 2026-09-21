@@ -157,7 +157,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
       headerStatus={<StatusPill tone={status.tone}>{status.label}</StatusPill>}
       person={{
         name: "Вы водитель",
-        subtitle: `Свободно ${trip.seatsAvailable} из ${trip.seatsTotal}`,
+        subtitle: `Пассажиры: ${trip.confirmedBookingsCount ?? trip.seatsTotal - trip.seatsAvailable}`,
         rating: driverRating ?? null,
       }}
       // Есть активные заявки — вместо «Вы водитель» строки заявок с −/+.

@@ -8,7 +8,7 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
 import { ProfilePage } from "@/pages/ProfilePage";
-import { useToast } from "@/components/ToastProvider";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { useProfileQuery, useProfileUpdateMutation } from "@/queries/profile";

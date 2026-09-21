@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Snackbar } from "@telegram-apps/telegram-ui";
 import { CheckCircle2 } from "lucide-react";
+import styles from "./Toast.module.css";
 
 export interface Toast {
   text: string;
@@ -28,8 +29,10 @@ const TOAST_DURATION_MS = 3200;
 
 /**
  * Глобальный toast-фидбек на tgui Snackbar (язык примера): фиксирован
- * над таббаром, авто-закрытие, вне потока страницы. Провайдер вешается
- * в AppConfig внутри AppRoot (Snackbar требует контекст темы tgui).
+ * сверху по центру (низ перекрывался таббаром), авто-закрытие, вне
+ * потока страницы. Отступ сверху учитывает safe-area Телеграма
+ * (Toast.module.css). Провайдер вешается в AppConfig внутри AppRoot
+ * (Snackbar требует контекст темы tgui).
  */
 export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
   const [toast, setToast] = useState<Toast | null>(null);
@@ -52,20 +55,19 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
     <ToastContext.Provider value={value}>
       {children}
       {toast && (
-        <div className="fixed bottom-24 left-4 right-4 z-60 max-w-md mx-auto pointer-events-auto">
-          <Snackbar
-            onClose={close}
-            duration={TOAST_DURATION_MS}
-            before={
-              toast.before ?? (
-                <CheckCircle2 size={20} className="text-(--app-success) shrink-0" />
-              )
-            }
-            description={toast.description}
-          >
-            {toast.text}
-          </Snackbar>
-        </div>
+        <Snackbar
+          className={styles.snackbar}
+          onClose={close}
+          duration={TOAST_DURATION_MS}
+          before={
+            toast.before ?? (
+              <CheckCircle2 size={20} className="text-(--app-success) shrink-0" />
+            )
+          }
+          description={toast.description}
+        >
+          {toast.text}
+        </Snackbar>
       )}
     </ToastContext.Provider>
   );

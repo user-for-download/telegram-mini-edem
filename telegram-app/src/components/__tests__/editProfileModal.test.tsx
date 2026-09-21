@@ -36,7 +36,7 @@ vi.mock("@/pages/profileValidation", () => ({
   validateProfileForm: () => null,
 }));
 
-vi.mock("@/components/ToastProvider", () => ({
+vi.mock("@/components/Toast/ToastProvider", () => ({
   useToast: () => ({ show: vi.fn() }),
 }));
 
