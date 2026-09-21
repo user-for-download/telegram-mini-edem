@@ -14,11 +14,15 @@ const prisma = new PrismaClient({
 
 const BEZZ = "e9959223-e7ac-40b4-b510-d31659872f39";
 const dayMs = 24 * 60 * 60 * 1000;
+const hourMs = 3_600_000;
 const now = new Date();
 const anchor = new Date(
   Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
 );
-const days = (n: number): Date => new Date(anchor.getTime() + n * dayMs);
+// День + час МСК (UTC+3 круглый год): раньше все отправления были
+// в 00:00 UTC (03:00 МСК), createdAt — «момент сида».
+const days = (n: number, hourMsk = 9): Date =>
+  new Date(anchor.getTime() + n * dayMs + (hourMsk - 3) * hourMs);
 
 async function cityId(name: string): Promise<string> {
   const norm = name.trim().toLowerCase();
@@ -75,6 +79,12 @@ async function main(): Promise<void> {
   });
 
   // 1) Активная поездка водителя с заявками (approve-флоу).
+  // Создана за 3 дня до отправления; брони — через день после создания;
+  // pending живёт 24ч (TTL как рантайм — иначе фильтры «не истёкшая»
+  // заявку без expiresAt могут не видеть).
+  const bezz1Departure = days(2, 8);
+  const bezz1Created = new Date(bezz1Departure.getTime() - 3 * dayMs);
+  const bezz1BookingCreated = new Date(bezz1Created.getTime() + dayMs);
   await prisma.trip.create({
     data: {
       id: "t-bezz-1",
@@ -85,7 +95,7 @@ async function main(): Promise<void> {
       toAddress: "Октябрьский проспект",
       fromCityId: vologda,
       toCityId: cherepovets,
-      departureAt: days(2),
+      departureAt: bezz1Departure,
       durationMinutes: 110,
       distanceKm: 155,
       price: 450,
@@ -94,6 +104,8 @@ async function main(): Promise<void> {
       status: "active",
       tags: ["Есть багаж"],
       comment: "Bezz-тест: еду в Череповец, беру попутчиков.",
+      createdAt: bezz1Created,
+      updatedAt: bezz1Created,
       bookings: {
         create: [
           {
@@ -102,6 +114,7 @@ async function main(): Promise<void> {
             seat: 1,
             status: "confirmed",
             comment: "Буду с рюкзаком.",
+            createdAt: bezz1BookingCreated,
           },
           {
             id: "booking-t-bezz-1-u-15-2",
@@ -109,6 +122,8 @@ async function main(): Promise<void> {
             seat: 2,
             status: "pending",
             comment: "Возьмите, пожалуйста!",
+            expiresAt: new Date(now.getTime() + 24 * hourMs),
+            createdAt: bezz1BookingCreated,
           },
         ],
       },
@@ -116,6 +131,8 @@ async function main(): Promise<void> {
   });
 
   // 2) Активная поездка водителя без броней.
+  const bezz2Departure = days(6, 18);
+  const bezz2Created = new Date(bezz2Departure.getTime() - 3 * dayMs);
   await prisma.trip.create({
     data: {
       id: "t-bezz-2",
@@ -126,7 +143,7 @@ async function main(): Promise<void> {
       toAddress: "Ж/д вокзал",
       fromCityId: cherepovets,
       toCityId: vologda,
-      departureAt: days(6),
+      departureAt: bezz2Departure,
       durationMinutes: 110,
       distanceKm: 155,
       price: 500,
@@ -135,10 +152,17 @@ async function main(): Promise<void> {
       status: "active",
       tags: ["Тихая поездка"],
       comment: "Bezz-тест: обратная дорога.",
+      createdAt: bezz2Created,
+      updatedAt: bezz2Created,
     },
   });
 
   // 3) Завершённая поездка водителя + отзывы обе стороны.
+  // Отзывы — на следующий день после поездки, а не «сейчас».
+  const bezzPastDeparture = days(-4, 8);
+  const bezzPastCreated = new Date(bezzPastDeparture.getTime() - 3 * dayMs);
+  const bezzPastBookingCreated = new Date(bezzPastCreated.getTime() + dayMs);
+  const bezzPastReviewCreated = new Date(bezzPastDeparture.getTime() + dayMs);
   await prisma.trip.create({
     data: {
       id: "t-bezz-past-1",
@@ -149,7 +173,7 @@ async function main(): Promise<void> {
       toAddress: "Автовокзал",
       fromCityId: vologda,
       toCityId: cherepovets,
-      departureAt: days(-4),
+      departureAt: bezzPastDeparture,
       durationMinutes: 110,
       distanceKm: 155,
       price: 450,
@@ -158,6 +182,8 @@ async function main(): Promise<void> {
       status: "completed",
       tags: ["Есть багаж"],
       comment: "Bezz-тест: съездили отлично.",
+      createdAt: bezzPastCreated,
+      updatedAt: bezzPastCreated,
       bookings: {
         create: [
           {
@@ -166,6 +192,7 @@ async function main(): Promise<void> {
             seat: 1,
             status: "confirmed",
             comment: "Спасибо!",
+            createdAt: bezzPastBookingCreated,
           },
         ],
       },
@@ -183,6 +210,7 @@ async function main(): Promise<void> {
         text: "Bezz-тест: отличный водитель!",
         tripRoute: "Вологда → Череповец",
         tripId: "t-bezz-past-1",
+        createdAt: bezzPastReviewCreated,
       },
       {
         id: "r-bezz-2",
@@ -194,11 +222,14 @@ async function main(): Promise<void> {
         text: "Bezz-тест: приятный попутчик.",
         tripRoute: "Вологда → Череповец",
         tripId: "t-bezz-past-1",
+        createdAt: bezzPastReviewCreated,
       },
     ],
   });
 
   // 4) Брони пассажира: confirmed (t-1), pending (t-4), история (t-past-7).
+  // createdAt — недавно (день назад и менее), pending с TTL 24ч как рантайм.
+  const bezzBookingRecent = new Date(now.getTime() - 5 * hourMs);
   await prisma.booking.createMany({
     data: [
       {
@@ -208,6 +239,7 @@ async function main(): Promise<void> {
         seat: 3,
         status: "confirmed",
         comment: "Bezz-тест: буду вовремя.",
+        createdAt: bezzBookingRecent,
       },
       {
         id: "booking-t-4-bezz-3",
@@ -216,6 +248,8 @@ async function main(): Promise<void> {
         seat: 3,
         status: "pending",
         comment: "Bezz-тест: возьмите меня.",
+        expiresAt: new Date(now.getTime() + 24 * hourMs),
+        createdAt: bezzBookingRecent,
       },
       {
         id: "booking-t-past-7-bezz-3",
@@ -223,6 +257,7 @@ async function main(): Promise<void> {
         passengerId: BEZZ,
         seat: 3,
         status: "confirmed",
+        createdAt: new Date(days(-1).getTime()),
       },
     ],
   });
@@ -253,6 +288,7 @@ async function main(): Promise<void> {
         text: "Bezz-тест: хорошая поездка.",
         tripRoute: "Грязовец → Вологда",
         tripId: "t-past-7",
+        createdAt: new Date(days(0).getTime()),
       },
       {
         id: "r-bezz-4",
@@ -264,11 +300,12 @@ async function main(): Promise<void> {
         text: "Bezz-тест: пунктуальный пассажир.",
         tripRoute: "Грязовец → Вологда",
         tripId: "t-past-7",
+        createdAt: new Date(days(0).getTime()),
       },
     ],
   });
 
-  // 5) Уведомления водителю/пассажиру.
+  // 5) Уведомления водителю/пассажиру (не все «сейчас» — разброс по часам).
   await prisma.notification.createMany({
     data: [
       {
@@ -277,6 +314,7 @@ async function main(): Promise<void> {
         title: "Bezz-тест: новая заявка",
         body: "Елена Смирнова хочет присоединиться к вашей поездке Вологда → Череповец.",
         isRead: false,
+        createdAt: new Date(now.getTime() - 3 * hourMs),
       },
       {
         userId: BEZZ,
@@ -284,6 +322,7 @@ async function main(): Promise<void> {
         title: "Bezz-тест: бронирование подтверждено",
         body: "Илья Северов подтвердил вашу поездку Вологда → Череповец.",
         isRead: false,
+        createdAt: new Date(now.getTime() - 6 * hourMs),
       },
     ],
   });
