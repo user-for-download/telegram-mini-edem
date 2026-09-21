@@ -78,7 +78,8 @@ export function VehicleRoute() {
   );
 }
 
-/** Терминальный экран бана/удаления mid-session (зеркально VehiclePage). */
+/** Терминальный экран бана/удаления mid-session (паттерн ProfilePage:
+ * 403 от requireUser → Placeholder вместо общей ошибки). */
 function VehicleTerminal({ deleted }: { deleted: boolean }) {
   return (
     <Caption
