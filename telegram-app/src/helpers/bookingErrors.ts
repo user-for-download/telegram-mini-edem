@@ -47,8 +47,6 @@ export function bookingErrorMessage(error: unknown): string {
 export function isAuthorizationError(error: unknown): boolean {
   return (
     error instanceof ApiError &&
-    (error.status === 401 ||
-      error.status === 403 ||
-      error.code === "FORBIDDEN")
+    (error.status === 401 || error.status === 403 || error.code === "FORBIDDEN")
   );
 }

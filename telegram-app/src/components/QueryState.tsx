@@ -22,12 +22,25 @@ export function QueryState({
 }) {
   if (loading)
     return (
-      <>{skeleton ?? <Placeholder><span role="status" aria-label="Загрузка"><Spinner size="m" /></span></Placeholder>}</>
+      <>
+        {skeleton ?? (
+          <Placeholder>
+            <span role="status" aria-label="Загрузка">
+              <Spinner size="m" />
+            </span>
+          </Placeholder>
+        )}
+      </>
     );
   if (error) {
     return (
-      <Placeholder header="Не удалось загрузить данные" description="Проверьте соединение и повторите попытку.">
-        <Button mode="bezeled" size="m" onClick={onRetry}>Повторить</Button>
+      <Placeholder
+        header="Не удалось загрузить данные"
+        description="Проверьте соединение и повторите попытку."
+      >
+        <Button mode="bezeled" size="m" onClick={onRetry}>
+          Повторить
+        </Button>
       </Placeholder>
     );
   }

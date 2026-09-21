@@ -17,6 +17,8 @@ beforeEach(() => {
   mockUseCancelBooking.mockReturnValue(mutation());
   mockUseCancelTrip.mockReturnValue(mutation());
   mockUseCompleteTrip.mockReturnValue(mutation());
+  mockUseTripBookings.mockReturnValue(queryState({ data: { pages: [] } }));
+  mockUseUpdateBookingStatus.mockReturnValue(mutation());
 });
 
 const {
@@ -26,6 +28,8 @@ const {
   mockUseCancelBooking,
   mockUseCancelTrip,
   mockUseCompleteTrip,
+  mockUseTripBookings,
+  mockUseUpdateBookingStatus,
 } = vi.hoisted(() => ({
   mockUseMyBookings: vi.fn(),
   mockUseHistory: vi.fn(),
@@ -33,18 +37,21 @@ const {
   mockUseCancelBooking: vi.fn(),
   mockUseCancelTrip: vi.fn(),
   mockUseCompleteTrip: vi.fn(),
+  mockUseTripBookings: vi.fn(),
+  mockUseUpdateBookingStatus: vi.fn(),
 }));
 
 vi.mock("@/queries/useBookingsQuery", () => ({
   useMyBookingsQuery: mockUseMyBookings,
   usePassengerHistoryQuery: mockUseHistory,
   useCancelBookingMutation: mockUseCancelBooking,
-  useTripBookingsQuery: vi.fn(),
-  useUpdateBookingStatusMutation: vi.fn(),
+  useTripBookingsQuery: mockUseTripBookings,
+  useUpdateBookingStatusMutation: mockUseUpdateBookingStatus,
 }));
 
 vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/queries/useTripsQuery")>();
+  const original =
+    await importOriginal<typeof import("@/queries/useTripsQuery")>();
   return {
     ...original,
     useInfiniteMyTripsQuery: mockUseInfiniteMyTrips,
@@ -67,7 +74,10 @@ function queryState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function infiniteState(items: unknown[], overrides: Record<string, unknown> = {}) {
+function infiniteState(
+  items: unknown[],
+  overrides: Record<string, unknown> = {},
+) {
   return {
     ...queryState(),
     data: { pages: [{ items, pagination: { hasMore: false } }] },
@@ -156,18 +166,62 @@ describe("TripsPage history", () => {
 });
 
 describe("TripsPage driver", () => {
-  it("поездка водителя: бейдж, места, цена и guards", () => {
+  it("поездка водителя с заявками: строки с −/+ вместо «Вы водитель»", () => {
     mockUseInfiniteMyTrips.mockReturnValue(
       infiniteState([makeTrip({ pendingRequestsCount: 2 })]),
     );
+    mockUseTripBookings.mockReturnValue(
+      queryState({
+        data: {
+          pages: [
+            {
+              items: [
+                {
+                  id: "req-1",
+                  seat: 1,
+                  status: "pending",
+                  comment: "еду с рюкзаком",
+                  passenger: { name: "Пётр", rating: 4.8 },
+                },
+                {
+                  id: "req-2",
+                  seat: 2,
+                  status: "pending",
+                  passenger: { name: "Анна" },
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    const html = render(<TripsPage />, "/bookings?segment=driver");
+    expect(html).toContain("Заявки: 2");
+    expect(html).toContain("Пётр");
+    expect(html).toContain("Анна");
+    // Subline заявки: место; рейтинг — бейджем на аватаре.
+    expect(html).toContain("место №1");
+    expect(html).toContain("4.8");
+    expect(html).not.toContain("еду с рюкзаком");
+    expect(html).toContain("Отклонить заявку Пётр");
+    expect(html).toContain("Принять заявку Пётр");
+    expect(html).not.toContain("Вы водитель");
+    expect(html).not.toContain("Ожидают решения");
+    // Единый футер: Детали — поделиться — Отмена (без Управления/Завершить).
+    expect(html).toContain("Детали поездки");
+    expect(html).toContain("Отменить");
+    expect(html).not.toContain("Управление поездкой");
+    expect(html).not.toContain("Завершить");
+    expect(html).toContain("+ Создать поездку");
+  });
+
+  it("поездка водителя без заявок: «Вы водитель»", () => {
+    mockUseInfiniteMyTrips.mockReturnValue(
+      infiniteState([makeTrip({ pendingRequestsCount: 0 })]),
+    );
     const html = render(<TripsPage />, "/bookings?segment=driver");
     expect(html).toContain("Вы водитель");
-    expect(html).toContain("Заявки: 2");
-    expect(html).toContain("Ожидают решения: 2");
-    expect(html).toContain("Управление поездкой");
-    expect(html).toContain("Завершить");
-    expect(html).toContain("Отменить");
-    expect(html).toContain("+ Создать поездку");
+    expect(html).toContain("Свободно 2 из 3");
   });
 
   it("завершённая поездка — без destructive-кнопок", () => {

@@ -1,21 +1,15 @@
 import {
-  Avatar,
   Button,
   Caption,
-  IconButton,
-  IconContainer,
-  SegmentedControl,
+  TabsList,
   Tappable,
   Text,
 } from "@telegram-apps/telegram-ui";
-import { FeedCard, FEED_CARD_SURFACE } from "@/components/FeedCard";
-import { StatusPill, type StatusTone } from "@/components/StatusPill";
-import { Calendar, Car, Send, Share2 } from "lucide-react";
+import { ActiveBookingCard } from "@/components/Trip/ActiveBookingCard";
+import { DriverTripCard } from "@/components/Trip/DriverTripCard";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { OfflineBanner } from "@/components/OfflineBanner";
 import { QueryState } from "@/components/QueryState";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
-import { ConfirmAction } from "@/components/ConfirmAction";
 import { useToast } from "@/components/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { shareTrip } from "@/helpers/tripShare";
@@ -34,6 +28,7 @@ import {
 } from "@/queries/useTripsQuery";
 import type { Trip } from "@edem/contracts";
 import type { PassengerBooking } from "@edem/contracts";
+import styles from "./TripsPage.module.css";
 
 type Segment = "active" | "history";
 
@@ -67,333 +62,6 @@ function historyCategoryOf(
     return "cancelled";
   }
   return "other";
-}
-
-function bookingStatusLabel(status: string): {
-  label: string;
-  tone: StatusTone;
-} {
-  if (status === "confirmed") return { label: "Подтверждено", tone: "success" };
-  if (status === "cancelled") return { label: "Отменено", tone: "danger" };
-  if (status === "declined") return { label: "Отклонено", tone: "danger" };
-  return { label: "На рассмотрении", tone: "warning" };
-}
-
-function tripStatusLabel(trip: Trip): { label: string; tone: StatusTone } {
-  if (trip.status === "completed") return { label: "Завершена", tone: "info" };
-  if (trip.status === "cancelled") return { label: "Отменена", tone: "danger" };
-  const pending = trip.pendingRequestsCount ?? 0;
-  if (pending > 0) return { label: `Заявки: ${pending}`, tone: "warning" };
-  const confirmed = trip.confirmedBookingsCount ?? 0;
-  if (confirmed > 0)
-    return { label: `Забронировано: ${confirmed}`, tone: "success" };
-  return { label: `Свободно: ${trip.seatsAvailable}`, tone: "info" };
-}
-
-/** Маршрутная визуализация (язык примера): города + адреса вдоль линии. */
-function RouteLine({ trip }: { trip: Trip }) {
-  return (
-    <div className="flex flex-col gap-2 relative pl-4 border-l-2 border-(--app-info)/30 ml-2 py-0.5">
-      <div>
-        <Text weight="2" Component="div">
-          {trip.fromCity}
-        </Text>
-        {trip.fromAddress && (
-          <Caption className="truncate" Component="div">
-            {trip.fromAddress}
-          </Caption>
-        )}
-      </div>
-      <div className="pt-1">
-        <Text weight="2" Component="div">
-          {trip.toCity}
-        </Text>
-        {trip.toAddress && (
-          <Caption className="truncate" Component="div">
-            {trip.toAddress}
-          </Caption>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** Карточка активной брони пассажира. */
-function ActiveBookingCard({
-  booking,
-  onCancel,
-  pending,
-}: {
-  booking: PassengerBooking;
-  onCancel: (id: string) => void;
-  pending: boolean;
-}) {
-  const navigate = useNavigate();
-  const status = bookingStatusLabel(booking.status);
-  return (
-    <FeedCard className="p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <Caption className="flex items-center gap-1.5 min-w-0" Component="div">
-          <Calendar size={14} className="shrink-0" />
-          <span className="truncate">
-            {dayLabel(booking.trip.date)}, {booking.trip.time}
-          </span>
-        </Caption>
-        <StatusPill tone={status.tone} className="shrink-0">
-          {status.label}
-        </StatusPill>
-      </div>
-
-      <RouteLine trip={booking.trip} />
-
-      <div className="flex items-center justify-between p-2.5 rounded-xl bg-(--tgui--tertiary_bg_color)">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Avatar
-            size={40}
-            src={booking.trip.driver.avatar}
-            acronym={booking.trip.driver.name.slice(0, 1).toUpperCase()}
-          />
-          <div className="min-w-0">
-            <Text
-              weight="2"
-              Component="div"
-              className="text-(--tgui--text_color) truncate"
-            >
-              {booking.trip.driver.name}
-            </Text>
-            <Caption Component="div" className="text-(--tgui--hint_color)">
-              {`место №${booking.seat}`}
-            </Caption>
-          </div>
-        </div>
-        <div className="text-right shrink-0">
-          <Text weight="2" Component="div">
-            {booking.trip.price} ₽
-          </Text>
-          <Caption Component="div" className="text-(--tgui--hint_color)">
-            {`место №${booking.seat}`}
-          </Caption>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 pt-1 border-t border-(--tgui--outline)">
-        <Button
-          size="s"
-          mode="bezeled"
-          className="flex-1"
-          onClick={() => {
-            haptic.light();
-            navigate(`/trips/${booking.trip.id}`);
-          }}
-        >
-          Детали поездки
-        </Button>
-        <IconButton
-          size="s"
-          mode="bezeled"
-          aria-label="Поделиться поездкой"
-          title="Поделиться поездкой"
-          onClick={() => {
-            haptic.light();
-            void shareTrip(booking.trip.id);
-          }}
-        >
-          <Share2 size={15} />
-        </IconButton>
-        {(booking.status === "pending" || booking.status === "confirmed") && (
-          <ConfirmAction
-            label="Отменить"
-            confirmLabel="Отменить бронь"
-            description="Заявка будет отменена, а место снова станет доступно."
-            pending={pending}
-            onConfirm={() => onCancel(booking.id)}
-          />
-        )}
-      </div>
-    </FeedCard>
-  );
-}
-
-/** Карточка поездки водителя: полная (управление, заявки, действия)
- * для «Активных», компактная — для «Истории». */
-function DriverTripCard({
-  trip,
-  archived,
-  onRequests,
-  onManage,
-  onShare,
-  onComplete,
-  onCancel,
-  completePending,
-  cancelPending,
-}: {
-  trip: Trip;
-  archived: boolean;
-  onRequests: (id: string) => void;
-  onManage: (id: string) => void;
-  onShare: (id: string) => void;
-  onComplete: (id: string) => void;
-  onCancel: (id: string) => void;
-  completePending: boolean;
-  cancelPending: boolean;
-}) {
-  const status = tripStatusLabel(trip);
-  const pending = trip.pendingRequestsCount ?? 0;
-
-  if (archived) {
-    return (
-      <Tappable
-        Component="button"
-        type="button"
-        onClick={() => {
-          haptic.light();
-          onManage(trip.id);
-        }}
-        className={`${FEED_CARD_SURFACE} text-left p-3.5 opacity-90 hover:opacity-100 transition`}
-      >
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <Caption weight="2" caps className="text-(--app-info)">
-            Вы водитель
-          </Caption>
-          <StatusPill tone={status.tone} className="shrink-0">
-            {status.label}
-          </StatusPill>
-        </div>
-        <Text weight="2" Component="div">
-          {trip.fromCity} → {trip.toCity}
-        </Text>
-        <Caption
-          className="flex items-center justify-between mt-2"
-          Component="div"
-        >
-          <span className="truncate">
-            {dayLabel(trip.date)}, {trip.time}
-          </span>
-          <Text weight="2" Component="span" className="shrink-0">
-            {trip.price} ₽ / место
-          </Text>
-        </Caption>
-      </Tappable>
-    );
-  }
-
-  const finished = trip.status === "cancelled" || trip.status === "completed";
-  return (
-    <FeedCard className="p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <Caption weight="2" caps className="text-(--app-info)">
-          Вы водитель
-        </Caption>
-        <Caption Component="span" className="truncate">
-          {dayLabel(trip.date)}, {trip.time}
-        </Caption>
-      </div>
-
-      <div>
-        <Text weight="2" Component="div">
-          {trip.fromCity} → {trip.toCity}
-        </Text>
-        <StatusPill tone={status.tone}>{status.label}</StatusPill>
-      </div>
-
-      <Text
-        Component="div"
-        className="flex items-center justify-between p-2.5 rounded-xl bg-(--tgui--tertiary_bg_color)"
-      >
-        <div>
-          <span className="text-(--tgui--hint_color)">Свободно мест: </span>
-          <Text weight="2" Component="span" className="text-(--app-success)">
-            {trip.seatsAvailable} из {trip.seatsTotal}
-          </Text>
-        </div>
-        <Caption Component="span">
-          Цена:{" "}
-          <Text weight="2" Component="span">
-            {trip.price} ₽
-          </Text>
-        </Caption>
-      </Text>
-
-      {pending > 0 && (
-        <div className="p-3 rounded-xl border border-dashed border-(--tgui--outline) bg-(--tgui--bg_color)">
-          <Caption
-            className="flex items-center justify-between mb-2"
-            Component="div"
-          >
-            <span>Заявки от попутчиков</span>
-            <Text weight="2" Component="span" className="text-(--app-warning)">
-              Новые
-            </Text>
-          </Caption>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <IconContainer className="shrink-0">
-                <Send size={14} />
-              </IconContainer>
-              <div className="min-w-0">
-                <Text
-                  weight="2"
-                  Component="div"
-                  className="text-(--tgui--text_color) truncate"
-                >
-                  {`Ожидают решения: ${pending}`}
-                </Text>
-              </div>
-            </div>
-            <Button size="s" mode="bezeled" onClick={() => onRequests(trip.id)}>
-              Заявки
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-center gap-2">
-        <Button
-          size="m"
-          mode="bezeled"
-          className="flex-1"
-          onClick={() => {
-            haptic.light();
-            onManage(trip.id);
-          }}
-          before={<Car size={15} />}
-        >
-          Управление поездкой
-        </Button>
-        <IconButton
-          size="m"
-          mode="gray"
-          aria-label="Поделиться поездкой"
-          title="Поделиться поездкой"
-          onClick={() => {
-            haptic.light();
-            onShare(trip.id);
-          }}
-        >
-          <Share2 size={16} />
-        </IconButton>
-      </div>
-
-      {!finished && (
-        <div className="flex gap-2">
-          <ConfirmAction
-            label="Завершить"
-            confirmLabel="Завершить"
-            description="Поездка будет перенесена в архив, а пассажиры смогут оставить отзывы."
-            pending={completePending}
-            onConfirm={() => onComplete(trip.id)}
-          />
-          <ConfirmAction
-            label="Отменить"
-            confirmLabel="Отменить поездку"
-            description="Поездка станет недоступна, а пассажиры получат уведомление."
-            pending={cancelPending}
-            onConfirm={() => onCancel(trip.id)}
-          />
-        </div>
-      )}
-    </FeedCard>
-  );
 }
 
 /**
@@ -501,259 +169,234 @@ export function TripsPage() {
     cancelBooking.error ?? cancelTrip.error ?? completeTrip.error;
 
   return (
-    <>
-      <OfflineBanner />
-      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
-        <div role="tablist" aria-label="Мои поездки">
-          <SegmentedControl>
-            {SEGMENTS.map((option) => (
-              <SegmentedControl.Item
-                key={option.value}
-                role="tab"
-                selected={segment === option.value}
-                aria-selected={segment === option.value}
-                onClick={() => pickSegment(option.value)}
-              >
-                {option.label}
-              </SegmentedControl.Item>
-            ))}
-          </SegmentedControl>
-        </div>
-
-        {mutationError && (
-          <Caption
-            Component="p"
-            role="alert"
-            className="text-(--tg-theme-destructive-text-color)"
+    <div className={styles.page}>
+      <TabsList>
+        {SEGMENTS.map((option) => (
+          <TabsList.Item
+            key={option.value}
+            selected={segment === option.value}
+            onClick={() => pickSegment(option.value)}
           >
-            {bookingErrorMessage(mutationError)}
-          </Caption>
-        )}
+            {option.label}
+          </TabsList.Item>
+        ))}
+      </TabsList>
 
-        {segment === "active" && (
-          <QueryState
-            loading={bookings.isLoading || driverActive.isLoading}
-            error={bookings.error ?? driverActive.error}
-            empty={
-              activeBookings.length === 0 && activeDriverTrips.length === 0
-            }
-            emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
-            skeleton={<TripCardsSkeleton />}
-            onRetry={() => {
-              void bookings.refetch();
-              void driverActive.refetch();
-            }}
-          >
-            <div className="flex flex-col gap-3">
-              {activeBookings.map((booking) => (
-                <ActiveBookingCard
-                  key={booking.id}
-                  booking={booking}
-                  pending={cancelBooking.isPending}
-                  onCancel={(id) =>
-                    cancelBooking.mutate(id, {
-                      onSuccess: () => {
-                        haptic.success();
-                        toast.show({ text: "Бронь поездки отменена" });
-                      },
-                    })
-                  }
-                />
-              ))}
-              {activeDriverTrips.map((trip) => (
-                <DriverTripCard
-                  key={trip.id}
-                  trip={trip}
-                  archived={false}
-                  onRequests={(id) => navigate(`/trips/my/${id}/requests`)}
-                  onManage={(id) => {
-                    haptic.light();
-                    navigate(`/trips/${id}`);
-                  }}
-                  onShare={(id) => {
-                    haptic.light();
-                    void shareTrip(id);
-                  }}
-                  onComplete={(id) =>
-                    completeTrip.mutate(id, {
-                      onSuccess: () => {
-                        haptic.success();
-                        toast.show({ text: "Поездка завершена" });
-                      },
-                    })
-                  }
-                  onCancel={(id) =>
-                    cancelTrip.mutate(id, {
-                      onSuccess: () => {
-                        haptic.warning();
-                        toast.show({ text: "Поездка отменена" });
-                      },
-                    })
-                  }
-                  completePending={completeTrip.isPending}
-                  cancelPending={cancelTrip.isPending}
-                />
-              ))}
-              {driverActive.hasNextPage && (
-                <>
-                  <div
-                    ref={activeSentinelRef}
-                    aria-hidden="true"
-                    className="flex min-h-12 items-center justify-center"
-                    style={{ overflowAnchor: "none" }}
-                  />
-                  {driverActive.isFetchingNextPage && (
-                    <div
-                      role="status"
-                      aria-label="Загрузка ещё поездок"
-                      className="flex flex-col gap-3"
-                    >
-                      <TripCardSkeleton />
-                    </div>
-                  )}
-                  <Button
-                    stretched
-                    mode="bezeled"
-                    loading={driverActive.isFetchingNextPage}
-                    disabled={driverActive.isFetchingNextPage}
-                    onClick={() => void driverActive.fetchNextPage()}
-                  >
-                    Показать ещё
-                  </Button>
-                </>
-              )}
-              <Button
-                size="l"
-                mode="bezeled"
-                onClick={() => navigate("/trips")}
-              >
-                Найти поездку
-              </Button>
-              <Button
-                size="l"
-                mode="bezeled"
-                onClick={() => navigate("/trips/my/new")}
-              >
-                + Создать поездку
-              </Button>
-            </div>
-          </QueryState>
-        )}
+      {mutationError && (
+        <Caption Component="p" role="alert" className={styles.alert}>
+          {bookingErrorMessage(mutationError)}
+        </Caption>
+      )}
 
-        {segment === "history" && (
-          <QueryState
-            loading={history.isLoading || driverArchive.isLoading}
-            error={history.error ?? driverArchive.error}
-            empty={historyItems.length === 0}
-            emptyText="Здесь появятся завершённые и отменённые поездки."
-            skeleton={<TripCardsSkeleton />}
-            onRetry={() => {
-              void history.refetch();
-              void driverArchive.refetch();
-            }}
-          >
-            <div className="flex flex-col gap-3 mt-1">
-              {historyItems.map((item) => {
-                if (item.kind === "driving") {
-                  return (
-                    <DriverTripCard
-                      key={item.key}
-                      trip={item.trip}
-                      archived
-                      onRequests={() => {}}
-                      onManage={(id) => {
-                        haptic.light();
-                        navigate(`/trips/${id}`);
-                      }}
-                      onShare={() => {}}
-                      onComplete={() => {}}
-                      onCancel={() => {}}
-                      completePending={false}
-                      cancelPending={false}
-                    />
-                  );
+      {segment === "active" && (
+        <QueryState
+          loading={bookings.isLoading || driverActive.isLoading}
+          error={bookings.error ?? driverActive.error}
+          empty={activeBookings.length === 0 && activeDriverTrips.length === 0}
+          emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
+          skeleton={<TripCardsSkeleton />}
+          onRetry={() => {
+            void bookings.refetch();
+            void driverActive.refetch();
+          }}
+        >
+          <div className={styles.list}>
+            {activeBookings.map((booking) => (
+              <ActiveBookingCard
+                key={booking.id}
+                booking={booking}
+                pending={cancelBooking.isPending}
+                onCancel={(id) =>
+                  cancelBooking.mutate(id, {
+                    onSuccess: () => {
+                      haptic.success();
+                      toast.show({ text: "Бронь поездки отменена" });
+                    },
+                  })
                 }
-                const booking = item.booking;
-                const category = historyCategoryOf(item);
-                return (
-                  <Tappable
-                    Component="button"
-                    key={item.key}
-                    type="button"
-                    onClick={() => {
-                      haptic.light();
-                      navigate(`/trips/${booking.trip.id}`);
-                    }}
-                    className={`${FEED_CARD_SURFACE} text-left p-3.5 opacity-90 hover:opacity-100 transition`}
-                  >
-                    <Caption
-                      className="flex items-center justify-between mb-1.5"
-                      Component="div"
-                    >
-                      <span>{dayLabel(booking.trip.date)}</span>
-                      <Text
-                        weight="2"
-                        Component="span"
-                        className={
-                          category === "completed"
-                            ? "text-(--app-success)"
-                            : "text-(--app-danger)"
-                        }
-                      >
-                        {category === "completed"
-                          ? "Поездка завершена"
-                          : "Поездка отменена"}
-                      </Text>
-                    </Caption>
-                    <Text weight="2" Component="div">
-                      {booking.trip.fromCity} → {booking.trip.toCity}
-                    </Text>
-                    <Caption
-                      className="flex items-center justify-between mt-2"
-                      Component="div"
-                    >
-                      <span className="truncate">
-                        Водитель: {booking.trip.driver.name}
-                      </span>
-                      <Text weight="2" Component="span" className="shrink-0">
-                        {`взнос ~${booking.trip.price} ₽`}
-                      </Text>
-                    </Caption>
-                  </Tappable>
-                );
-              })}
-              {driverArchive.hasNextPage && (
-                <>
+              />
+            ))}
+            {activeDriverTrips.map((trip) => (
+              <DriverTripCard
+                key={trip.id}
+                trip={trip}
+                archived={false}
+                onRequests={(id) => navigate(`/trips/my/${id}/requests`)}
+                onManage={(id) => {
+                  haptic.light();
+                  navigate(`/trips/${id}`);
+                }}
+                onShare={(id) => {
+                  haptic.light();
+                  void shareTrip(id);
+                }}
+                onComplete={(id) =>
+                  completeTrip.mutate(id, {
+                    onSuccess: () => {
+                      haptic.success();
+                      toast.show({ text: "Поездка завершена" });
+                    },
+                  })
+                }
+                onCancel={(id) =>
+                  cancelTrip.mutate(id, {
+                    onSuccess: () => {
+                      haptic.warning();
+                      toast.show({ text: "Поездка отменена" });
+                    },
+                  })
+                }
+                completePending={completeTrip.isPending}
+                cancelPending={cancelTrip.isPending}
+              />
+            ))}
+            {driverActive.hasNextPage && (
+              <>
+                <div
+                  ref={activeSentinelRef}
+                  aria-hidden="true"
+                  className={styles.sentinel}
+                />
+                {driverActive.isFetchingNextPage && (
                   <div
-                    ref={archiveSentinelRef}
-                    aria-hidden="true"
-                    className="flex min-h-12 items-center justify-center"
-                    style={{ overflowAnchor: "none" }}
-                  />
-                  {driverArchive.isFetchingNextPage && (
-                    <div
-                      role="status"
-                      aria-label="Загрузка ещё поездок"
-                      className="flex flex-col gap-3"
-                    >
-                      <TripCardSkeleton />
-                    </div>
-                  )}
-                  <Button
-                    stretched
-                    mode="bezeled"
-                    loading={driverArchive.isFetchingNextPage}
-                    disabled={driverArchive.isFetchingNextPage}
-                    onClick={() => void driverArchive.fetchNextPage()}
+                    role="status"
+                    aria-label="Загрузка ещё поездок"
+                    className={styles.list}
                   >
-                    Показать ещё
-                  </Button>
-                </>
-              )}
-            </div>
-          </QueryState>
-        )}
-      </div>
-    </>
+                    <TripCardSkeleton />
+                  </div>
+                )}
+                <Button
+                  stretched
+                  mode="bezeled"
+                  loading={driverActive.isFetchingNextPage}
+                  disabled={driverActive.isFetchingNextPage}
+                  onClick={() => void driverActive.fetchNextPage()}
+                >
+                  Показать ещё
+                </Button>
+              </>
+            )}
+            <Button size="l" mode="bezeled" onClick={() => navigate("/trips")}>
+              Найти поездку
+            </Button>
+            <Button
+              size="l"
+              mode="bezeled"
+              onClick={() => navigate("/trips/my/new")}
+            >
+              + Создать поездку
+            </Button>
+          </div>
+        </QueryState>
+      )}
+
+      {segment === "history" && (
+        <QueryState
+          loading={history.isLoading || driverArchive.isLoading}
+          error={history.error ?? driverArchive.error}
+          empty={historyItems.length === 0}
+          emptyText="Здесь появятся завершённые и отменённые поездки."
+          skeleton={<TripCardsSkeleton />}
+          onRetry={() => {
+            void history.refetch();
+            void driverArchive.refetch();
+          }}
+        >
+          <div className={`${styles.list} ${styles.listSpaced}`}>
+            {historyItems.map((item) => {
+              if (item.kind === "driving") {
+                return (
+                  <DriverTripCard
+                    key={item.key}
+                    trip={item.trip}
+                    archived
+                    onRequests={() => {}}
+                    onManage={(id) => {
+                      haptic.light();
+                      navigate(`/trips/${id}`);
+                    }}
+                    onShare={() => {}}
+                    onComplete={() => {}}
+                    onCancel={() => {}}
+                    completePending={false}
+                    cancelPending={false}
+                  />
+                );
+              }
+              const booking = item.booking;
+              const category = historyCategoryOf(item);
+              return (
+                <Tappable
+                  Component="button"
+                  key={item.key}
+                  type="button"
+                  onClick={() => {
+                    haptic.light();
+                    navigate(`/trips/${booking.trip.id}`);
+                  }}
+                  className={styles.archived}
+                >
+                  <Caption className={styles.archivedHead} Component="div">
+                    <span>{dayLabel(booking.trip.date)}</span>
+                    <Text
+                      weight="2"
+                      Component="span"
+                      className={
+                        category === "completed"
+                          ? styles.success
+                          : styles.danger
+                      }
+                    >
+                      {category === "completed"
+                        ? "Поездка завершена"
+                        : "Поездка отменена"}
+                    </Text>
+                  </Caption>
+                  <Text weight="2" Component="div">
+                    {booking.trip.fromCity} → {booking.trip.toCity}
+                  </Text>
+                  <Caption className={styles.archivedRow} Component="div">
+                    <span className={styles.truncate}>
+                      Водитель: {booking.trip.driver.name}
+                    </span>
+                    <Text weight="2" Component="span" className={styles.shrink}>
+                      {`взнос ~${booking.trip.price} ₽`}
+                    </Text>
+                  </Caption>
+                </Tappable>
+              );
+            })}
+            {driverArchive.hasNextPage && (
+              <>
+                <div
+                  ref={archiveSentinelRef}
+                  aria-hidden="true"
+                  className={styles.sentinel}
+                />
+                {driverArchive.isFetchingNextPage && (
+                  <div
+                    role="status"
+                    aria-label="Загрузка ещё поездок"
+                    className={styles.list}
+                  >
+                    <TripCardSkeleton />
+                  </div>
+                )}
+                <Button
+                  stretched
+                  mode="bezeled"
+                  loading={driverArchive.isFetchingNextPage}
+                  disabled={driverArchive.isFetchingNextPage}
+                  onClick={() => void driverArchive.fetchNextPage()}
+                >
+                  Показать ещё
+                </Button>
+              </>
+            )}
+          </div>
+        </QueryState>
+      )}
+    </div>
   );
 }

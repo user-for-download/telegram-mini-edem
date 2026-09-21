@@ -1,0 +1,16 @@
+/* Активные поездки: лента с боками 8 (карточки без внешних боковых),
+ * вертикаль — gap. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 8px;
+}
+
+.sentinel {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  overflow-anchor: none;
+}

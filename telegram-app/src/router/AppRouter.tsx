@@ -23,6 +23,7 @@ import { CreateTripPage } from "@/pages/CreateTripPage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
 import { VehicleRoute } from "@/components/VehicleModal";
 import { TripsPage } from "@/pages/TripsPage";
+import { TripPage } from "@/pages/Trip/TripPage";
 import { RideRequestsRoute } from "@/components/RideRequestsModal";
 import { TripRequestsRoute } from "@/components/TripRequestsModal";
 import { ProfilePage } from "@/pages/ProfilePage";
@@ -163,7 +164,9 @@ export function AppRouter() {
             element={<TripRequestsRoute />}
           />
           <Route path="/trips/my/new" element={<CreateTripPage />} />
-          <Route path="/bookings" element={<TripsPage />} />
+          <Route path="/bookings" element={<TripPage />} />
+          {/* Легаси: старая страница вкладки (миграция идёт постепенно). */}
+          <Route path="/bookings/legacy" element={<TripsPage />} />
           <Route
             path="/bookings/history"
             element={<Navigate to="/bookings?segment=history" replace />}

@@ -117,10 +117,11 @@ describe("HomePage", () => {
     // Популярные направления (вертикальный список).
     expect(html).toContain("Популярные направления");
     expect(html).toContain("Кириллов");
-    // Без данных кнопок сводки нет.
-    expect(html).not.toContain("Поездки");
-    expect(html).not.toContain("Брони");
-    expect(html).not.toContain("Заявки");
+    // Без данных — все три плашки с нулями.
+    expect(html).toContain("Поездки");
+    expect(html).toContain("Брони");
+    expect(html).toContain("Заявки");
+    expect(html).toContain("активных: 0");
   });
 
   it("сводка: активные поездки за рулём — кнопка «Поездки»", () => {
@@ -143,8 +144,9 @@ describe("HomePage", () => {
     const html = render(<HomePage />);
     expect(html).toContain("Поездки");
     expect(html).toContain("активных: 1");
-    expect(html).not.toContain("Брони");
-    expect(html).not.toContain("Заявки");
+    // Остальные плашки на месте с нулями.
+    expect(html).toContain("Брони");
+    expect(html).toContain("Заявки");
   });
 
   it("сводка: брони — кнопка с разбивкой в aria-label", () => {
@@ -165,18 +167,18 @@ describe("HomePage", () => {
     // Есть заявка — кнопка «Ожидают», разбивка в aria-label.
     expect(html).toContain("Ожидают");
     expect(html).toContain("подтверждено: 1, ожидает: 1");
-    expect(html).not.toContain("Поездки");
+    expect(html).toContain("активных: 0");
   });
 
-  it("сводка: заявки пассажиров — кнопка при count > 0", () => {
+  it("сводка: заявки пассажиров — кнопка всегда, бейдж по count", () => {
     mockUseDriverRequests.mockReturnValue(
       queryState({ data: [makeDriverRequest()] }),
     );
     const html = render(<HomePage />);
     expect(html).toContain("Заявки");
     expect(html).toContain("новых: 1");
-    expect(html).not.toContain("Поездки");
-    expect(html).not.toContain("Брони");
+    expect(html).toContain("Поездки");
+    expect(html).toContain("Брони");
   });
 
   it("сводка скрыта при загрузке (без мигания)", () => {

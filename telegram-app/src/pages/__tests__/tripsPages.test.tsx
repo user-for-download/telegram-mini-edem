@@ -24,6 +24,8 @@ beforeEach(() => {
   mockUseUpdateRideRequest.mockReturnValue(mutation());
   mockUseRideRequestStatus.mockReturnValue(mutation());
   mockUseCancelRideRequest.mockReturnValue(mutation());
+  mockUseTripBookings.mockReturnValue(queryState({ data: { pages: [] } }));
+  mockUseUpdateBookingStatus.mockReturnValue(mutation());
 });
 
 const {
@@ -40,6 +42,8 @@ const {
   mockUseUpdateRideRequest,
   mockUseRideRequestStatus,
   mockUseCancelRideRequest,
+  mockUseTripBookings,
+  mockUseUpdateBookingStatus,
 } = vi.hoisted(() => ({
   mockUseInfiniteTrips: vi.fn(),
   mockUseInfiniteMyTrips: vi.fn(),
@@ -54,10 +58,13 @@ const {
   mockUseUpdateRideRequest: vi.fn(),
   mockUseRideRequestStatus: vi.fn(),
   mockUseCancelRideRequest: vi.fn(),
+  mockUseTripBookings: vi.fn(),
+  mockUseUpdateBookingStatus: vi.fn(),
 }));
 
 vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/queries/useTripsQuery")>();
+  const original =
+    await importOriginal<typeof import("@/queries/useTripsQuery")>();
   return {
     ...original,
     useInfiniteTripsQuery: mockUseInfiniteTrips,
@@ -71,6 +78,8 @@ vi.mock("@/queries/useBookingsQuery", () => ({
   useMyBookingsQuery: mockUseMyBookings,
   usePassengerHistoryQuery: mockUseHistory,
   useCancelBookingMutation: mockUseCancelBooking,
+  useTripBookingsQuery: mockUseTripBookings,
+  useUpdateBookingStatusMutation: mockUseUpdateBookingStatus,
 }));
 
 vi.mock("@/queries/useRideRequestsQuery", () => ({
@@ -101,7 +110,10 @@ function queryState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function infiniteState(items: unknown[], overrides: Record<string, unknown> = {}) {
+function infiniteState(
+  items: unknown[],
+  overrides: Record<string, unknown> = {},
+) {
   return {
     ...queryState(),
     data: { pages: [{ items, pagination: { hasMore: false } }] },
@@ -139,7 +151,13 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
     price: 500,
     seatsTotal: 3,
     seatsAvailable: 2,
-    driver: { id: "u-me", name: "Я", rating: 5, reviewsCount: 1, avatar: "https://t.me/a.png" },
+    driver: {
+      id: "u-me",
+      name: "Я",
+      rating: 5,
+      reviewsCount: 1,
+      avatar: "https://t.me/a.png",
+    },
     tags: [],
     status: "active",
     pendingRequestsCount: 2,
@@ -183,19 +201,42 @@ describe("TripsPage parity", () => {
     expect(html).toContain("место №2");
   });
 
-  it("renders driver trips with request counters and guarded actions on active", () => {
+  it("renders driver trips with request rows and guarded actions on active", () => {
     mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
     mockUseHistory.mockReturnValue(queryState({ data: [] }));
     mockUseInfiniteMyTrips.mockReturnValue(infiniteState([makeTrip()]));
     mockUseCancelTrip.mockReturnValue(mutation());
     mockUseCompleteTrip.mockReturnValue(mutation());
+    mockUseTripBookings.mockReturnValue(
+      queryState({
+        data: {
+          pages: [
+            {
+              items: [
+                {
+                  id: "req-1",
+                  seat: 1,
+                  status: "pending",
+                  passenger: { name: "Пётр" },
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
     // Легаси ?segment=driver ведёт в «Активные».
     const html = render(<TripsPage />, "/bookings?segment=driver");
-    expect(html).toContain("Вы водитель");
     expect(html).toContain("Заявки: 2");
-    expect(html).toContain("Управление поездкой");
-    expect(html).toContain("Завершить");
+    // Заявки — строки с −/+ вместо «Вы водитель».
+    expect(html).toContain("Пётр");
+    expect(html).toContain("Принять заявку Пётр");
+    expect(html).not.toContain("Вы водитель");
+    // Единый футер без Управления/Завершить.
+    expect(html).toContain("Детали поездки");
     expect(html).toContain("Отменить");
+    expect(html).not.toContain("Управление поездкой");
+    expect(html).not.toContain("Завершить");
   });
 
   it("renders history entries with status labels", () => {
@@ -232,7 +273,11 @@ describe("TripsPage parity", () => {
               time: "10:00",
               departureAt: "2030-06-02T10:00:00.000Z",
               price: 400,
-              driver: { id: "u-d2", name: "Пётр", avatar: "https://t.me/b.png" },
+              driver: {
+                id: "u-d2",
+                name: "Пётр",
+                avatar: "https://t.me/b.png",
+              },
             },
           },
         ],
@@ -279,7 +324,10 @@ describe("SearchPage parity", () => {
 
   it("applies a city preset from the URL", () => {
     mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
-    const html = render(<SearchPage />, "/trips?from=Вологда&to=Череповец&segment=today");
+    const html = render(
+      <SearchPage />,
+      "/trips?from=Вологда&to=Череповец&segment=today",
+    );
     expect(html).toContain("Вологда");
     expect(html).toContain("Череповец");
   });

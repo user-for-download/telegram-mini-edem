@@ -1,4 +1,9 @@
-import { Cell, IconContainer, Section } from "@telegram-apps/telegram-ui";
+import {
+  Badge,
+  Cell,
+  IconContainer,
+  Section,
+} from "@telegram-apps/telegram-ui";
 import { Route } from "lucide-react";
 import { POPULAR_ROUTES } from "@/consts/popularRoutes";
 
@@ -19,6 +24,13 @@ export function PopularRoutesSection({ onSelect }: PopularRoutesSectionProps) {
             <IconContainer>
               <Route size={22} />
             </IconContainer>
+          }
+          // Заглушка счётчика поездок по направлению (0 — потом будем
+          // считать реальные активные поездки).
+          after={
+            <Badge type="number" mode="gray">
+              0
+            </Badge>
           }
         >
           {route.from} → {route.to}

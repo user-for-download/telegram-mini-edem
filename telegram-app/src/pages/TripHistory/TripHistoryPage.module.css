@@ -1,0 +1,22 @@
+/* История: строки Cell, отступы как везде (бока 8, вертикаль 12). */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.sentinel {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  overflow-anchor: none;
+}
+
+/* Цена в after строки: серый текст как бейдж (Badge принимает только number). */
+.price {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tgui--hint_color, inherit);
+}

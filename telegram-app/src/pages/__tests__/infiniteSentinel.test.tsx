@@ -3,7 +3,7 @@
 // Среда node: IntersectionObserver отсутствует — рендер обязан не падать,
 // контент виден сразу, работает fallback-кнопка «Показать ещё».
 // Happy/edge: есть ещё страницы / конец списка / догрузка / ошибка.
-// a11y: сентинел aria-hidden (маркер min-h-12), скелетоны role=status
+// a11y: сентинел aria-hidden (маркер _sentinel_), скелетоны role=status
 // с aria-label.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -36,7 +36,8 @@ const {
 }));
 
 vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/queries/useTripsQuery")>();
+  const original =
+    await importOriginal<typeof import("@/queries/useTripsQuery")>();
   return {
     ...original,
     useInfiniteTripsQuery: mockUseInfiniteTrips,
@@ -76,7 +77,10 @@ function baseQuery(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function tripsInfinite(items: unknown[], overrides: Record<string, unknown> = {}) {
+function tripsInfinite(
+  items: unknown[],
+  overrides: Record<string, unknown> = {},
+) {
   return {
     ...baseQuery(),
     data: { pages: [{ items, pagination: { hasMore: false } }] },
@@ -87,7 +91,10 @@ function tripsInfinite(items: unknown[], overrides: Record<string, unknown> = {}
   };
 }
 
-function inboxInfinite(items: unknown[], overrides: Record<string, unknown> = {}) {
+function inboxInfinite(
+  items: unknown[],
+  overrides: Record<string, unknown> = {},
+) {
   return {
     ...baseQuery(),
     data: { pages: [{ items, nextCursor: null, unreadCount: items.length }] },
@@ -229,7 +236,7 @@ describe("TripsPage (driver): сентинел (SSR, без IntersectionObserver
     const html = render(<TripsPage />, "/bookings?segment=driver");
     expect(html).toContain("Вы водитель");
     expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain("min-h-12");
+    expect(html).toContain("_sentinel_");
     expect(html).toContain("Показать ещё");
   });
 
@@ -239,7 +246,7 @@ describe("TripsPage (driver): сентинел (SSR, без IntersectionObserver
     );
     const html = render(<TripsPage />, "/bookings?segment=driver");
     expect(html).toContain("Вы водитель");
-    expect(html).not.toContain("min-h-12");
+    expect(html).not.toContain("_sentinel_");
     expect(html).not.toContain("Показать ещё");
   });
 
