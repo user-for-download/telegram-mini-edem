@@ -442,7 +442,8 @@ bookingsRouter.get("/driver", async (c) => {
 
 /**
  * Заявки на поездку для водителя (cursor-based пагинация).
- * Этот эндпоинт нужен экрану TripRequestsPage (заявки на мою поездку).
+ * Этот эндпоинт нужен экрану заявок на мою поездку
+ * (telegram-app: TripRequestsModal/TripRequestsBody).
  *
  * Параметры:
  * - limit: 1–50 (по умолчанию 50), значения вне диапазона клампаются;
