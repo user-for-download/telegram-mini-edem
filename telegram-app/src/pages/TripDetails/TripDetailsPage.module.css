@@ -1,0 +1,212 @@
+/* Детали поездки (TripDetailsPage): раскладка без Tailwind (миграция
+ * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы —
+ * колонка с зазором 16px, карточки — поверхность section/tertiary. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Плашка «Вы записались попутчиком»: успешный фон + рамка 20% токена
+ * (было border-(--app-success)/20; смешение с transparent в любом
+ * пространстве даёт тот же результат — альфа 0.2). */
+.successBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--app-success-bg);
+  border: 1px solid color-mix(in srgb, var(--app-success) 20%, transparent);
+}
+
+.success {
+  color: var(--app-success);
+}
+
+/* Подпись места/цены: тот же токен на 80% (было text-(--app-success)/80). */
+.successMuted {
+  color: color-mix(in srgb, var(--app-success) 80%, transparent);
+}
+
+/* Карточка маршрута: приглушённая поверхность tertiary. */
+.routeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--tgui--tertiary_bg_color);
+}
+
+/* Строка «дата — в пути» / «профиль — действия». */
+.rowBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Карточка водителя: поверхность секции + hairline кит-обводки. */
+.driverCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid var(--tgui--outline);
+}
+
+/* Строка «аватар + имя»: обязана ужиматься. */
+.driverRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Блок имени/подписи: нулевая min-width даёт работать ellipsis. */
+.grow {
+  min-width: 0;
+}
+
+/* Имя водителя + значок верификации. */
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Обрезка в одну строку (было truncate). */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Значок верификации: синий штрих + заливка фона, не сжимается. */
+.verified {
+  color: var(--app-info);
+  fill: var(--app-info-bg);
+  flex-shrink: 0;
+}
+
+/* Строка рейтинга под именем. */
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Звезда рейтинга: штрих и заливка одним токеном. */
+.star {
+  color: var(--app-rating);
+  fill: var(--app-rating);
+}
+
+/* Кнопки действий водителя (поделиться/телефон). */
+.driverActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Статус шаринга: подтягиваем к кнопке (было -mt-2). */
+.pullUp {
+  margin-top: -8px;
+}
+
+/* Строка автомобиля: приглушённая поверхность, кегль 12px. */
+.carRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--tgui--tertiary_bg_color);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* Теги-чипы с переносом. */
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Комментарий водителя: поверхность секции + hairline; кегль 12px и
+ * межстрочный 1.625 (в Tailwind leading-relaxed перебивает line-height
+ * от text-xs). */
+.noteCard {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid var(--tgui--outline);
+  font-size: 12px;
+  line-height: 1.625;
+  color: var(--tgui--text_color);
+}
+
+/* Заголовок внутри плашки комментария (было block mb-0.5). */
+.noteTitle {
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* Секция под разделителем: плотный список (зазор 8px). */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--tgui--outline);
+}
+
+/* То же, но с зазором 12px (блок бронирования места). */
+.sectionLoose {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--tgui--outline);
+}
+
+/* Подзаголовок «Место» над сеткой мест (было mb-2). */
+.subtitle {
+  margin-bottom: 8px;
+}
+
+/* Сетка кнопок выбора места. */
+.seatGrid {
+  display: grid;
+  gap: 8px;
+}
+
+/* Строка «цена — оплата водителю» (было py-1). */
+.priceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+/* Правая подпись строки цены (было text-right). */
+.counter {
+  text-align: right;
+}
+
+.errorText {
+  color: var(--tg-theme-destructive-text-color);
+}
+
+/* Подсказка под деструктивной кнопкой: кегль 12px + приглушённый цвет. */
+.hintXs {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--tgui--hint_color);
+}

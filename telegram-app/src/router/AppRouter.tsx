@@ -18,7 +18,7 @@ import { handleModalBack } from "@/utils/modalBack";
 import { HomePage } from "@/pages/HomePage";
 import { ShowcasePage } from "@/pages/ShowcasePage";
 import { SearchPage } from "@/pages/Search/SearchPage";
-import { TripDetailsRoute } from "@/components/TripDetailsModal";
+import { TripDetailsRoute } from "@/components/Trip/TripDetailsModal";
 import { CreateTripPage } from "@/pages/CreateTripPage";
 import { NotificationsPage } from "@/pages/Notifications/NotificationsPage";
 import { VehicleRoute } from "@/components/Profile/VehicleModal";

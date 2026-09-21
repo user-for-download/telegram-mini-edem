@@ -125,7 +125,7 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
 
 /**
  * Заявки пассажиров — route-backed шторка поверх «Поездок»; роут /trips/my/:tripId/requests остаётся источником правды,
- * точки входа TripActivePage + TripDetailsPage:347 — тот же navigate —
+ * точки входа TripActivePage + TripDetailsPage (DriverSection) — тот же navigate —
  * не меняются).
  *
  * a11y: telegram-ui Modal даёт role=dialog и Esc-закрытие (onOpenChange),
@@ -160,7 +160,7 @@ export function TripRequestsModal({
 
 /**
  * Роут /trips/my/:tripId/requests: фон — «Поездки» (активный сегмент;
- * вход TripDetailsPage:347 — тот же путь),
+ * вход TripDetailsPage (DriverSection) — тот же путь),
  * поверх — шторка заявок. Закрытие — назад по истории (native Back/Shell
  * backButton через handleModalBack), иначе fallback на
  * /bookings. Путь не меняется.

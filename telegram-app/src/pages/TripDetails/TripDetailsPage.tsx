@@ -34,6 +34,7 @@ import {
   useCompleteTripMutation,
 } from "@/queries/useTripsQuery";
 import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
+import styles from "./TripDetailsPage.module.css";
 
 function formatDurationLocal(minutes: number): string {
   return formatDuration(minutes);
@@ -157,16 +158,16 @@ export function TripDetailsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={styles.stack}>
       <OfflineBanner />
 
       {hasActiveBooking && item.myBooking && (
-        <div className="p-3 rounded-xl bg-(--app-success-bg) border border-(--app-success)/20 flex items-center justify-between gap-2">
+        <div className={styles.successBanner}>
           <div>
-            <Text weight="2" Component="div" className="text-(--app-success)">
+            <Text weight="2" Component="div" className={styles.success}>
               Вы записались попутчиком
             </Text>
-            <Caption Component="div" className="text-(--app-success)/80">
+            <Caption Component="div" className={styles.successMuted}>
               Место №{item.myBooking.seat} · {item.price}{" "}
               ₽
             </Caption>
@@ -181,8 +182,8 @@ export function TripDetailsPage() {
         </div>
       )}
 
-      <div className="p-3.5 rounded-2xl bg-(--tgui--tertiary_bg_color) flex flex-col gap-3">
-        <Caption className="flex items-center justify-between" Component="div">
+      <div className={styles.routeCard}>
+        <Caption className={styles.rowBetween} Component="div">
           <span>{dayLabel(item.date)}</span>
           <span>
             В пути ~ {formatDurationLocal(item.durationMinutes)} ·{" "}
@@ -200,32 +201,32 @@ export function TripDetailsPage() {
         />
       </div>
 
-      <div className="p-3.5 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className={styles.driverCard}>
+        <div className={styles.driverRow}>
           <LazyAvatar
             size={40}
             src={item.driver.avatar}
             acronym={item.driver.name.slice(0, 1).toUpperCase()}
             alt={item.driver.name}
           />
-          <div className="min-w-0">
+          <div className={styles.grow}>
             <Text
               weight="2"
               Component="div"
-              className="flex items-center gap-1.5"
+              className={styles.nameRow}
             >
-              <span className="truncate">{item.driver.name}</span>
+              <span className={styles.truncate}>{item.driver.name}</span>
               {item.driver.isVerified && (
                 <ShieldCheck
                   size={15}
-                  className="text-(--app-info) fill-(--app-info-bg) shrink-0"
+                  className={styles.verified}
                 />
               )}
             </Text>
-            <Caption Component="div" className="flex items-center gap-1">
+            <Caption Component="div" className={styles.ratingRow}>
               <Star
                 size={12}
-                className="fill-(--app-rating) text-(--app-rating)"
+                className={styles.star}
               />
               <span>{item.driver.rating.toFixed(1)}</span>
               <span>({item.driver.reviewsCount} отзывов)</span>
@@ -233,7 +234,7 @@ export function TripDetailsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className={styles.driverActions}>
           <IconButton
             size="m"
             mode="gray"
@@ -267,13 +268,13 @@ export function TripDetailsPage() {
         Поделиться поездкой с попутчиком в Telegram
       </Button>
       {shareStatus && (
-        <Caption Component="p" role="status" className="-mt-2">
+        <Caption Component="p" role="status" className={styles.pullUp}>
           {shareStatus}
         </Caption>
       )}
 
       {item.driver.car && (
-        <div className="p-3 rounded-xl bg-(--tgui--tertiary_bg_color) flex items-center justify-between text-xs">
+        <div className={styles.carRow}>
           <Text weight="2" Component="span">
             {item.driver.car.model} · {item.driver.car.color}
           </Text>
@@ -284,7 +285,7 @@ export function TripDetailsPage() {
       )}
 
       {item.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className={styles.tagRow}>
           {item.tags.map((tag) => (
             <Chip key={tag} mode="mono">
               {tag}
@@ -294,8 +295,8 @@ export function TripDetailsPage() {
       )}
 
       {item.comment && (
-        <div className="p-3 rounded-xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) text-xs text-(--tgui--text_color) leading-relaxed">
-          <Caption weight="2" Component="span" className="block mb-0.5">
+        <div className={styles.noteCard}>
+          <Caption weight="2" Component="span" className={styles.noteTitle}>
             Комментарий водителя:
           </Caption>
           {item.comment}
@@ -303,7 +304,7 @@ export function TripDetailsPage() {
       )}
 
       {item.myBooking && (
-        <div className="flex flex-col gap-2 pt-2 border-t border-(--tgui--outline)">
+        <div className={styles.section}>
           {(item.myBooking.status === "pending" ||
             item.myBooking.status === "confirmed") && (
             <ConfirmAction
@@ -323,7 +324,7 @@ export function TripDetailsPage() {
             <Caption
               Component="p"
               role="alert"
-              className="text-(--tg-theme-destructive-text-color)"
+              className={styles.errorText}
             >
               {bookingErrorMessage(cancelBooking.error)}
             </Caption>
@@ -332,12 +333,12 @@ export function TripDetailsPage() {
       )}
 
       {canBook && (
-        <div className="flex flex-col gap-3 pt-2 border-t border-(--tgui--outline)">
+        <div className={styles.sectionLoose}>
           <div role="group" aria-label="Выбор места">
-            <Text weight="2" Component="p" className="mb-2">
+            <Text weight="2" Component="p" className={styles.subtitle}>
               Место
             </Text>
-            <div className="grid gap-2">
+            <div className={styles.seatGrid}>
               {Array.from(
                 { length: item.seatsTotal },
                 (_, index) => index + 1,
@@ -391,14 +392,14 @@ export function TripDetailsPage() {
               onChange={(event) => setComment(event.target.value)}
             />
           </div>
-          <div className="flex items-center justify-between py-1">
+          <div className={styles.priceRow}>
             <div>
               <Caption Component="div">Цена за место</Caption>
               <Text weight="2" Component="div">
                 {item.price} ₽
               </Text>
             </div>
-            <Caption Component="div" className="text-right">
+            <Caption Component="div" className={styles.counter}>
               Оплата водителю
               <br />
               при посадке
@@ -445,7 +446,7 @@ export function TripDetailsPage() {
             <Caption
               Component="p"
               role="alert"
-              className="text-(--tg-theme-destructive-text-color)"
+              className={styles.errorText}
             >
               {bookingErrorMessage(createBooking.error)}
             </Caption>
@@ -518,7 +519,7 @@ function DriverBlock({
       .filter((booking) => booking.status === "pending").length ?? 0;
 
   return (
-    <div className="flex flex-col gap-2 pt-2 border-t border-(--tgui--outline)">
+    <div className={styles.section}>
       <Text weight="2" Component="div">
         Управление поездкой
       </Text>
@@ -545,7 +546,7 @@ function DriverBlock({
             <Caption
               Component="p"
               role="alert"
-              className="text-(--tg-theme-destructive-text-color)"
+              className={styles.errorText}
             >
               {bookingErrorMessage(bookings.error)}{" "}
               <Button
@@ -572,7 +573,7 @@ function DriverBlock({
             onConfirm={() => completeTrip.mutate(tripId)}
           />
           {!canCompleteTrip && (
-            <p className="text-xs text-(--tgui--hint_color)">
+            <p className={styles.hintXs}>
               Завершение станет доступно после времени отправления.
             </p>
           )}
@@ -587,7 +588,7 @@ function DriverBlock({
             <Caption
               Component="p"
               role="alert"
-              className="text-(--tg-theme-destructive-text-color)"
+              className={styles.errorText}
             >
               {bookingErrorMessage(cancelTrip.error ?? completeTrip.error)}
             </Caption>

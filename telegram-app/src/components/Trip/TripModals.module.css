@@ -136,6 +136,14 @@
   color: var(--tg-theme-destructive-text-color);
 }
 
+/* Тело sheet без снятия фокус-рамки скролл-контейнера (детали поездки;
+ * было px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto). */
+.sheetBodyPlain {
+  padding: 8px 16px 40px;
+  max-height: 82dvh;
+  overflow-y: auto;
+}
+
 /* Иконочные токены: адрес отправления — синий, прибытия — зелёный,
  * даты/места — приглушённые (было text-(--app-info)/--app-success/hint). */
 .iconInfo {

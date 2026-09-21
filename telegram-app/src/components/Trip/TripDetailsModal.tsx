@@ -1,7 +1,8 @@
 import { Modal } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
 import { SearchPage } from "@/pages/Search/SearchPage";
-import { TripDetailsPage } from "@/pages/TripDetailsPage";
+import { TripDetailsPage } from "@/pages/TripDetails/TripDetailsPage";
+import styles from "./TripModals.module.css";
 
 /**
  * Детали поездки — route-backed шторка поверх «Поиска»;
@@ -22,7 +23,7 @@ export function TripDetailsModal({
       }}
       header={<Modal.Header>Детали поездки</Modal.Header>}
     >
-      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto">
+      <div className={styles.sheetBodyPlain}>
         <TripDetailsPage />
       </div>
     </Modal>
