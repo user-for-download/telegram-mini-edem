@@ -16,6 +16,7 @@ import {
   normalizeProfileForm,
   validateProfileForm,
 } from "@/pages/profileValidation";
+import styles from "./ProfileModals.module.css";
 
 /**
  * Редактирование профиля — модальная шторка поверх «Профиля»
@@ -37,7 +38,7 @@ export function EditProfileModal({
       }}
       header={<Modal.Header>Редактировать профиль</Modal.Header>}
     >
-      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto">
+      <div className={styles.sheetBody}>
         <EditProfileBody onDone={onClose} />
       </div>
     </Modal>
@@ -114,7 +115,7 @@ export const EditProfileBody = memo(function EditProfileBody({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className={styles.form}>
       <div>
         <label htmlFor="profile-name" className="sr-only">
           Имя
@@ -151,7 +152,7 @@ export const EditProfileBody = memo(function EditProfileBody({
         <Caption
           Component="p"
           role="alert"
-          className="text-(--tg-theme-destructive-text-color)"
+          className={styles.errorText}
         >
           {formError ??
             (update.error instanceof Error
@@ -159,7 +160,7 @@ export const EditProfileBody = memo(function EditProfileBody({
               : "Не удалось сохранить")}
         </Caption>
       )}
-      <div className="flex flex-col gap-2">
+      <div className={styles.actions}>
         <Button
           mode="bezeled"
           stretched

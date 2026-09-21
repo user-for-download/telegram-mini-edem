@@ -33,6 +33,7 @@ import {
   normalizeReviewText,
   validateReviewForm,
 } from "@/pages/reviewValidation";
+import styles from "./ProfileModals.module.css";
 
 export type ReviewsTab = "mine" | "new" | "about";
 
@@ -78,7 +79,7 @@ export function ReviewsModal({
       }}
       header={<Modal.Header>Отзывы</Modal.Header>}
     >
-      <div className="pt-2 pb-10 max-h-[82dvh] overflow-y-auto outline-none">
+      <div className={styles.sheetBodyEdge}>
         <ReviewsBody initialTab={initialTab} />
       </div>
     </Modal>
@@ -273,7 +274,7 @@ export const ReviewsBody = memo(function ReviewsBody({
   };
 
   return (
-    <div className="flex flex-col gap-3.5 px-4 pt-1 pb-6">
+    <div className={styles.stackPadded}>
       <div role="tablist" aria-label="Разделы отзывов">
         <SegmentedControl>
           {TABS.map((option) => (
@@ -313,7 +314,7 @@ export const ReviewsBody = memo(function ReviewsBody({
               </Button>
             </Placeholder>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className={styles.list}>
               {my.data.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))}
@@ -336,7 +337,7 @@ export const ReviewsBody = memo(function ReviewsBody({
               description="Когда вы совершите поездку, она появится здесь"
             />
           ) : (
-            <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+            <div className={styles.card}>
               <div>
                 <label htmlFor="review-trip" className="sr-only">
                   Поездка
@@ -410,7 +411,7 @@ export const ReviewsBody = memo(function ReviewsBody({
               {text.length > 0 && (
                 <Caption
                   Component="p"
-                  className="text-right"
+                  className={styles.counter}
                   aria-live="polite"
                 >
                   {text.length}/{REVIEW_TEXT_MAX_LENGTH}
@@ -421,7 +422,7 @@ export const ReviewsBody = memo(function ReviewsBody({
                 <Caption
                   Component="p"
                   role="alert"
-                  className="text-(--tg-theme-destructive-text-color)"
+                  className={styles.errorText}
                 >
                   {formError}
                 </Caption>
@@ -430,7 +431,7 @@ export const ReviewsBody = memo(function ReviewsBody({
                 <Text
                   Component="p"
                   role="status"
-                  className="text-(--app-success)"
+                  className={styles.successText}
                 >
                   Отзыв отправлен на модерацию — он появится в профиле после
                   одобрения
@@ -464,11 +465,11 @@ export const ReviewsBody = memo(function ReviewsBody({
           }}
         >
           {profile.data && (
-            <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs text-center">
+            <div className={styles.emptyCard}>
               <Text weight="2" Component="p">
                 {`Рейтинг ${profile.data.rating.toFixed(1)} · ${profile.data.reviewsCount} отзывов`}
               </Text>
-              <Caption Component="p" className="mt-1">
+              <Caption Component="p" className={styles.emptyNote}>
                 Рейтинг учитывает только опубликованные отзывы
               </Caption>
             </div>
@@ -479,7 +480,7 @@ export const ReviewsBody = memo(function ReviewsBody({
               description="После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь"
             />
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className={styles.list}>
               {aboutItems.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))}

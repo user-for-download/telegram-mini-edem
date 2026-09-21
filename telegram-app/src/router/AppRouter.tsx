@@ -26,12 +26,12 @@ import { TripPage } from "@/pages/Trip/TripPage";
 import { RideRequestsRoute } from "@/components/RideRequestsModal";
 import { TripRequestsRoute } from "@/components/TripRequestsModal";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
-import { EditProfileRoute } from "@/components/EditProfileModal";
+import { EditProfileRoute } from "@/components/Profile/EditProfileModal";
 import { useNotificationsInboxQuery } from "@/queries/useNotificationsQuery";
-import { ReviewsRoute } from "@/components/ReviewsModal";
-import { SettingsRoute } from "@/components/SettingsModal";
-import { SupportRoute } from "@/components/SupportModal";
-import { ReportsRoute } from "@/components/ReportsModal";
+import { ReviewsRoute } from "@/components/Profile/ReviewsModal";
+import { SettingsRoute } from "@/components/Profile/SettingsModal";
+import { SupportRoute } from "@/components/Profile/SupportModal";
+import { ReportsRoute } from "@/components/Profile/ReportsModal";
 import {
   parseTripStartParam,
   resolveStartParamRoute,

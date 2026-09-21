@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
-import { ReviewsBody, type ReviewsTab } from "@/components/ReviewsModal";
+import { ReviewsBody, type ReviewsTab } from "@/components/Profile/ReviewsModal";
 
 export type { ReviewsTab };
 

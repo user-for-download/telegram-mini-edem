@@ -1,0 +1,219 @@
+/* Модалки профиля (components/Profile/*): общий лист раскладки шести
+ * модалок — route-backed тел (EditProfile/Reviews/Settings/Support/
+ * Reports) и state-модалки Feedback. Стили объединены намеренно: у всех
+ * один язык поверхности (карточка tgui-секции) и одинаковые тела-sheet,
+ * дублировать их по шести модулям было бы хуже. Прецедент — TripCards.
+ * Цвета только --tgui--* / --app-*; в TSX остаются лишь одноразовые
+ * утилиты Tailwind: min-h-11 (его проверяют тесты) и sr-only. */
+
+/* Тело sheet: скролл с ограничением высоты 82dvh, низ 40px под жест. */
+.sheetBody {
+  padding: 8px 16px 40px;
+  max-height: 82dvh;
+  overflow-y: auto;
+}
+
+/* Тело без скролла: короткая форма обратной связи. */
+.sheetBodyStatic {
+  padding: 8px 16px 40px;
+}
+
+/* Тело без боковых отступов: контент сам держит px-4 (отзывы),
+ * outline снят — фокус ставится на сам скролл-контейнер. */
+.sheetBodyEdge {
+  padding: 8px 0 40px;
+  max-height: 82dvh;
+  overflow-y: auto;
+  outline: none;
+}
+
+/* Колонка секций модалки: зазор 14px, верхний отступ 4px. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+/* То же + бока 16px и низ 24px (отзывы: тело без боковых отступов). */
+.stackPadded {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 16px 24px;
+}
+
+/* То же + низ 24px (жалобы). */
+.stackBottom {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 24px;
+}
+
+/* То же + низ 16px (настройки). */
+.stackSettings {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 16px;
+}
+
+/* Форма: колонка полей с зазором 12px. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Ряд кнопок формы (зазор 8px). */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Карточка: поверхность tgui-секции + тень shadow-xs (рецепт
+ * мигрированных страниц), колонка с зазором 12px. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid var(--tgui--outline);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Компактная карточка: зазор 8px (карточка статуса в поддержке). */
+.cardTight {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid var(--tgui--outline);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Заголовок карточки: основной цвет текста поверх поверхности. */
+.cardTitle {
+  color: var(--tgui--text_color);
+}
+
+/* Абзац карточки: основной цвет + межстрочный 1.625. */
+.proseText {
+  color: var(--tgui--text_color);
+  line-height: 1.625;
+}
+
+/* Подпись-подсказка: приглушённый цвет, межстрочный 1.625. */
+.hintProse {
+  color: var(--tgui--hint_color);
+  line-height: 1.625;
+}
+
+/* Ссылка (кит-токен ссылочного цвета). */
+.link {
+  color: var(--tgui--link_color);
+}
+
+/* Строка «иконка + текст» внутри карточки настроек. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Тело карточки обращения: дата, текст, ответ (зазор 6px). */
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Подпись-подсказка. */
+.hint {
+  color: var(--tgui--hint_color);
+}
+
+/* Заголовок «Ответ поддержки»: основной цвет + отступ сверху 4px. */
+.replyTitle {
+  color: var(--tgui--text_color);
+  padding-top: 4px;
+}
+
+/* Пустое состояние списка: центрированные строки. */
+.centerText {
+  text-align: center;
+}
+
+/* Список карточек/аккордеонов: колонка с зазором 12px. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Плотный список: зазор 8px. */
+.listTight {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Счётчик символов и хинт лимита (было text-right). */
+.counter {
+  text-align: right;
+}
+
+.errorText {
+  color: var(--tg-theme-destructive-text-color);
+}
+
+.successText {
+  color: var(--app-success);
+}
+
+/* Пустая карточка-заглушка (нет отзывов) — поверхность + центрирование. */
+.emptyCard {
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid var(--tgui--outline);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  text-align: center;
+}
+
+/* Подпись под заголовком заглушки (было mt-1). */
+.emptyNote {
+  margin-top: 4px;
+}
+
+/* Карточка жалобы в списке: тело FeedCard (было p-3.5). */
+.reportCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+}
+
+/* Шапка карточки жалобы: категория слева, статус справа. */
+.reportHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Пилюля статуса не сжимается. */
+.pill {
+  flex-shrink: 0;
+}
+
+/* Межстрочный 1.625 одиночным абзацам без своего цвета. */
+.prose {
+  line-height: 1.625;
+}

@@ -18,7 +18,7 @@ vi.mock("@/queries/useReportQuery", () => ({
   useCreateReportMutation: mockUseCreate,
 }));
 
-import { ReportsBody } from "@/components/ReportsModal";
+import { ReportsBody } from "@/components/Profile/ReportsModal";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {

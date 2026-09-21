@@ -35,6 +35,7 @@ import {
   validateReportForm,
   type ReportTargetType,
 } from "@/pages/reportValidation";
+import styles from "./ProfileModals.module.css";
 
 function formatDate(createdAt: string): string {
   const date = new Date(createdAt);
@@ -63,17 +64,17 @@ function reportStatusTone(status: Report["status"]): StatusTone {
 
 const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
   return (
-    <FeedCard className="p-3.5 flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
+    <FeedCard className={styles.reportCard}>
+      <div className={styles.reportHead}>
         <Text weight="2" Component="span">
           {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
         </Text>
-        <StatusPill tone={reportStatusTone(report.status)} className="shrink-0">
+        <StatusPill tone={reportStatusTone(report.status)} className={styles.pill}>
           {REPORT_STATUS_LABELS[report.status]}
         </StatusPill>
       </div>
       <Caption Component="span">{formatDate(report.createdAt)}</Caption>
-      <Text Component="div" className="leading-relaxed">
+      <Text Component="div" className={styles.prose}>
         {report.description}
       </Text>
     </FeedCard>
@@ -103,7 +104,7 @@ export function ReportsModal({
       }}
       header={<Modal.Header>Жалобы</Modal.Header>}
     >
-      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto">
+      <div className={styles.sheetBody}>
         <ReportsBody />
       </div>
     </Modal>
@@ -223,8 +224,8 @@ export const ReportsBody = memo(function ReportsBody() {
   }
 
   return (
-    <div className="flex flex-col gap-3.5 pt-1 pb-6">
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+    <div className={styles.stackBottom}>
+      <div className={styles.card}>
         <Text weight="2" Component="span">
           Сообщите о проблеме
         </Text>
@@ -311,12 +312,12 @@ export const ReportsBody = memo(function ReportsBody() {
           />
         </div>
         {description.length > 0 && (
-          <Caption Component="p" className="text-right" aria-live="polite">
+          <Caption Component="p" className={styles.counter} aria-live="polite">
             {description.length}/{REPORT_DESCRIPTION_MAX_LENGTH}
           </Caption>
         )}
         {alreadyReported && (
-          <Caption Component="p" className="text-right" aria-live="polite">
+          <Caption Component="p" className={styles.counter} aria-live="polite">
             Вы уже отправляли жалобу на этот объект. Повторная отправка
             недоступна.
           </Caption>
@@ -325,13 +326,13 @@ export const ReportsBody = memo(function ReportsBody() {
           <Caption
             Component="p"
             role="alert"
-            className="text-(--tg-theme-destructive-text-color)"
+            className={styles.errorText}
           >
             {formError}
           </Caption>
         )}
         {success && (
-          <Text Component="p" role="status" className="text-(--app-success)">
+          <Text Component="p" role="status" className={styles.successText}>
             Жалоба отправлена
           </Text>
         )}
@@ -348,7 +349,7 @@ export const ReportsBody = memo(function ReportsBody() {
         </Button>
       </div>
 
-      <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+      <div className={styles.card}>
         <Text weight="2" Component="span">
           Мои жалобы
         </Text>
@@ -365,7 +366,7 @@ export const ReportsBody = memo(function ReportsBody() {
               description="Жалобы на поездки доступны пассажирам с бронью. На свою поездку жаловаться нельзя."
             />
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className={styles.list}>
               {myReports.data.map((report) => (
                 <ReportCard key={report.id} report={report} />
               ))}

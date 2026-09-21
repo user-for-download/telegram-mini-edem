@@ -36,6 +36,7 @@ import {
   normalizeSupportForm,
   validateSupportForm,
 } from "@/pages/supportValidation";
+import styles from "./ProfileModals.module.css";
 
 const FeedbackCard = memo(function FeedbackCard({
   feedback,
@@ -53,13 +54,13 @@ const FeedbackCard = memo(function FeedbackCard({
         {feedback.reply && <StatusPill tone="info">Есть ответ</StatusPill>}
       </Accordion.Summary>
       <Accordion.Content>
-        <div className="flex flex-col gap-1.5">
-          <Caption className="text-(--tgui--hint_color)">
+        <div className={styles.cardBody}>
+          <Caption className={styles.hint}>
             {new Date(feedback.createdAt).toLocaleDateString("ru-RU")}
           </Caption>
           <Text
             Component="p"
-            className="text-(--tgui--text_color) leading-relaxed"
+            className={styles.proseText}
           >
             {feedback.text}
           </Text>
@@ -68,13 +69,13 @@ const FeedbackCard = memo(function FeedbackCard({
               <Subheadline
                 weight="2"
                 Component="span"
-                className="text-(--tgui--text_color) pt-1"
+                className={styles.replyTitle}
               >
                 Ответ поддержки
               </Subheadline>
               <Text
                 Component="p"
-                className="text-(--tgui--text_color) leading-relaxed"
+                className={styles.proseText}
               >
                 {feedback.reply}
               </Text>
@@ -116,7 +117,7 @@ export function SupportModal({
       }}
       header={<Modal.Header>Поддержка</Modal.Header>}
     >
-      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto">
+      <div className={styles.sheetBody}>
         <SupportBody />
       </div>
     </Modal>
@@ -210,12 +211,12 @@ export const SupportBody = memo(function SupportBody() {
           header="Аккаунт заблокирован"
           description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
         />
-        <div className="flex flex-col gap-3.5 pt-1">
-          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+        <div className={styles.stack}>
+          <div className={styles.card}>
             <Subheadline
               weight="2"
               Component="span"
-              className="text-(--tgui--text_color)"
+              className={styles.cardTitle}
             >
               Обжалование блокировки
             </Subheadline>
@@ -227,15 +228,15 @@ export const SupportBody = memo(function SupportBody() {
   }
 
   return (
-    <div className="flex flex-col gap-3.5 pt-1">
+    <div className={styles.stack}>
       <section
         aria-label="Частые вопросы"
-        className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-2"
+        className={styles.cardTight}
       >
         <Subheadline
           weight="2"
           Component="span"
-          className="text-(--tgui--text_color)"
+          className={styles.cardTitle}
         >
           Частые вопросы
         </Subheadline>
@@ -253,7 +254,7 @@ export const SupportBody = memo(function SupportBody() {
               <Accordion.Content>
                 <Text
                   Component="p"
-                  className="text-(--tgui--hint_color) leading-relaxed"
+                  className={styles.hintProse}
                 >
                   {item.answer}
                 </Text>
@@ -265,12 +266,12 @@ export const SupportBody = memo(function SupportBody() {
 
       <section
         aria-label="Мои обращения"
-        className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
+        className={styles.card}
       >
         <Subheadline
           weight="2"
           Component="span"
-          className="text-(--tgui--text_color)"
+          className={styles.cardTitle}
         >
           Мои обращения
         </Subheadline>
@@ -283,16 +284,16 @@ export const SupportBody = memo(function SupportBody() {
         >
           {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
             <>
-              <Text weight="2" Component="p" className="text-center">
+              <Text weight="2" Component="p" className={styles.centerText}>
                 У вас пока нет обращений
               </Text>
-              <Caption Component="p" className="text-center">
+              <Caption Component="p" className={styles.centerText}>
                 Здесь появятся ваши обращения и ответы поддержки
               </Caption>
             </>
           ) : (
             <div
-              className="flex flex-col gap-2"
+              className={styles.listTight}
               aria-live="polite"
               aria-label="Список обращений"
             >
@@ -315,12 +316,12 @@ export const SupportBody = memo(function SupportBody() {
 
       <section
         aria-label="Связаться с нами"
-        className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
+        className={styles.card}
       >
         <Subheadline
           weight="2"
           Component="span"
-          className="text-(--tgui--text_color)"
+          className={styles.cardTitle}
         >
           Связаться с нами
         </Subheadline>
@@ -335,7 +336,7 @@ export const SupportBody = memo(function SupportBody() {
             before={
               <MessageSquareText
                 size={16}
-                className="text-(--tgui--hint_color)"
+                className={styles.hint}
               />
             }
             placeholder="Например: не приходит уведомление"
@@ -370,7 +371,7 @@ export const SupportBody = memo(function SupportBody() {
           />
         </div>
         {text.length > 0 && (
-          <Caption Component="p" className="text-right" aria-live="polite">
+          <Caption Component="p" className={styles.counter} aria-live="polite">
             {text.length}/{FEEDBACK_TEXT_MAX_LENGTH}
           </Caption>
         )}
@@ -378,13 +379,13 @@ export const SupportBody = memo(function SupportBody() {
           <Caption
             Component="p"
             role="alert"
-            className="text-(--tg-theme-destructive-text-color)"
+            className={styles.errorText}
           >
             {formError}
           </Caption>
         )}
         {success && (
-          <Text Component="p" role="status" className="text-(--app-success)">
+          <Text Component="p" role="status" className={styles.successText}>
             Обращение отправлено — мы ответим вам как можно скорее
           </Text>
         )}
@@ -404,12 +405,12 @@ export const SupportBody = memo(function SupportBody() {
 
       <section
         aria-label="Обжалование блокировки"
-        className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
+        className={styles.card}
       >
         <Subheadline
           weight="2"
           Component="span"
-          className="text-(--tgui--text_color)"
+          className={styles.cardTitle}
         >
           Обжалование блокировки
         </Subheadline>

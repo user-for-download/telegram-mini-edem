@@ -21,7 +21,7 @@ vi.mock("@/queries/useSupportQuery", () => ({
   useAppealFeedbackMutation: mockUseAppeal,
 }));
 
-import { SupportBody } from "@/components/SupportModal";
+import { SupportBody } from "@/components/Profile/SupportModal";
 
 function makeFeedback(overrides: Record<string, unknown> = {}) {
   return {

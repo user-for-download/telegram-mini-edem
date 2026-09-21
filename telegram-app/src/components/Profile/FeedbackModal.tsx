@@ -17,6 +17,7 @@ import {
 import { FEEDBACK_TEXT_MAX_LENGTH } from "@edem/contracts";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import styles from "./ProfileModals.module.css";
 
 const TOPICS = [
   "Вопрос по поездке",
@@ -47,7 +48,7 @@ export function FeedbackModal({
       }}
       header={<Modal.Header>Служба поддержки</Modal.Header>}
     >
-      <div className="px-4 pt-2 pb-10">
+      <div className={styles.sheetBodyStatic}>
         <FeedbackForm onClose={onClose} />
       </div>
     </Modal>
@@ -95,7 +96,7 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
+    <form onSubmit={submit} className={styles.form}>
       <Caption Component="div">
         Если у вас возникли сложности с бронированием или поездкой, опишите
         ситуацию. Наша команда поддержки оперативно поможет вам.
@@ -141,7 +142,7 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
         <Caption
           Component="p"
           role="alert"
-          className="text-(--tg-theme-destructive-text-color)"
+          className={styles.errorText}
         >
           {formError}
         </Caption>

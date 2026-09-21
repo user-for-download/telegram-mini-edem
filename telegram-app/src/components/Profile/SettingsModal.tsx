@@ -15,6 +15,7 @@ import {
   useProfileNotificationSettingsMutation,
   useProfileQuery,
 } from "@/queries/profile";
+import styles from "./ProfileModals.module.css";
 
 /**
  * Настройки уведомлений — route-backed шторка поверх «Профиля»; роут
@@ -40,7 +41,7 @@ export function SettingsModal({
       }}
       header={<Modal.Header>Настройки</Modal.Header>}
     >
-      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto">
+      <div className={styles.sheetBody}>
         <SettingsBody />
       </div>
     </Modal>
@@ -114,9 +115,9 @@ export function SettingsBody() {
         emptyText="Не удалось загрузить настройки."
         onRetry={() => void profile.refetch()}
       >
-        <div className="flex flex-col gap-3.5 pt-1 pb-4">
-          <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-            <div className="flex items-center gap-2.5">
+        <div className={styles.stackSettings}>
+          <div className={styles.card}>
+            <div className={styles.row}>
               <IconContainer>
                 {enabled ? <BellRing size={18} /> : <Bell size={18} />}
               </IconContainer>
@@ -140,13 +141,13 @@ export function SettingsBody() {
             {showSaved && (
               <Text
                 Component="p"
-                className="text-(--tgui--link_color)"
+                className={styles.link}
                 role="status"
               >
                 Настройки сохранены
               </Text>
             )}
-            <Caption Component="p" className="leading-relaxed">
+            <Caption Component="p" className={styles.prose}>
               Настройка синхронизируется с аккаунтом. Отдельные настройки звука
               и типов уведомлений пока не поддерживаются.
             </Caption>

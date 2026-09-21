@@ -40,7 +40,7 @@ vi.mock("@/components/Toast/ToastProvider", () => ({
   useToast: () => ({ show: vi.fn() }),
 }));
 
-import { EditProfileBody } from "@/components/EditProfileModal";
+import { EditProfileBody } from "@/components/Profile/EditProfileModal";
 
 function render(): string {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

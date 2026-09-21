@@ -56,7 +56,7 @@ vi.mock("@/store/useAuthStore", () => ({
   ),
 }));
 
-import { ReviewsBody, type ReviewsTab } from "@/components/ReviewsModal";
+import { ReviewsBody, type ReviewsTab } from "@/components/Profile/ReviewsModal";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const ME = {
