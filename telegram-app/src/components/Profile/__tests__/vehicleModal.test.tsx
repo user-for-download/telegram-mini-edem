@@ -33,7 +33,7 @@ vi.mock("@/queries/vehicle", () => ({
   useRemoveVehicleMutation: mockUseRemove,
 }));
 
-import { VehicleBody } from "@/components/VehicleModal";
+import { VehicleBody } from "@/components/Profile/VehicleModal";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {

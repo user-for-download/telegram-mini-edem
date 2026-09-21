@@ -27,6 +27,7 @@ import {
   useTripBookingsQuery,
   useUpdateBookingStatusMutation,
 } from "@/queries/useBookingsQuery";
+import styles from "./TripModals.module.css";
 
 type TripBooking = NonNullable<
   ReturnType<typeof useTripBookingsQuery>["data"]
@@ -45,17 +46,17 @@ const PendingBookingCard = memo(function PendingBookingCard({
   onDecline: (id: string) => void;
 }) {
   return (
-    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+    <div className={styles.card}>
+      <div className={styles.cardHead}>
+        <div className={styles.rowInfo}>
           <LazyAvatar
             size={40}
             src={booking.passenger.avatar}
             acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
             alt={booking.passenger.name}
           />
-          <div className="min-w-0">
-            <Text Component="div" className="truncate">
+          <div className={styles.grow}>
+            <Text Component="div" className={styles.truncate}>
               {booking.passenger.name}
             </Text>
             <Caption Component="div">
@@ -63,11 +64,11 @@ const PendingBookingCard = memo(function PendingBookingCard({
             </Caption>
           </div>
         </div>
-        <StatusPill tone="warning" className="shrink-0">
+        <StatusPill tone="warning" className={styles.shrink}>
           Ожидает решения
         </StatusPill>
       </div>
-      <div className="flex gap-2">
+      <div className={styles.btnRow}>
         <Button
           mode="bezeled"
           stretched
@@ -100,22 +101,22 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
   booking: TripBooking;
 }) {
   return (
-    <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex items-center justify-between gap-2">
-      <div className="flex items-center gap-2 min-w-0">
+    <div className={styles.cardRow}>
+      <div className={styles.rowInfo}>
         <LazyAvatar
           size={40}
           src={booking.passenger.avatar}
           acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
           alt={booking.passenger.name}
         />
-        <div className="min-w-0">
-          <Text Component="div" className="truncate">
+        <div className={styles.grow}>
+          <Text Component="div" className={styles.truncate}>
             {booking.passenger.name}
           </Text>
           <Caption Component="div">{`место ${booking.seat}`}</Caption>
         </div>
       </div>
-      <StatusPill tone="success" className="shrink-0">
+      <StatusPill tone="success" className={styles.shrink}>
         Подтверждён
       </StatusPill>
     </div>
@@ -150,7 +151,7 @@ export function TripRequestsModal({
       }}
       header={<Modal.Header>Заявки пассажиров</Modal.Header>}
     >
-      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto outline-none">
+      <div className={styles.sheetBody}>
         <TripRequestsBody tripId={tripId} />
       </div>
     </Modal>
@@ -267,12 +268,12 @@ export const TripRequestsBody = memo(function TripRequestsBody({
   return (
     <section aria-label="Заявки пассажиров">
       <OfflineBanner />
-      <div className="flex flex-col gap-3.5 pt-1">
+      <div className={styles.stack}>
         {update.error && (
           <Caption
             Component="p"
             role="alert"
-            className="text-(--tg-theme-destructive-text-color)"
+            className={styles.errorText}
           >
             {bookingErrorMessage(update.error)}
           </Caption>
@@ -280,11 +281,11 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         {!items.length && <Placeholder header="Заявок нет" />}
         {pending.length > 0 && (
           <div
-            className="flex flex-col gap-3"
+            className={styles.list}
             aria-live="polite"
             aria-label="Ожидают решения"
           >
-            <Caption weight="2" Component="span" className="px-1">
+            <Caption weight="2" Component="span" className={styles.groupLabel}>
               {`Ожидают решения (${pending.length})`}
             </Caption>
             {pending.map((booking) => (
@@ -305,8 +306,8 @@ export const TripRequestsBody = memo(function TripRequestsBody({
           </div>
         )}
         {confirmed.length > 0 && (
-          <div className="flex flex-col gap-3" aria-label="Подтверждены">
-            <Caption weight="2" Component="span" className="px-1">
+          <div className={styles.list} aria-label="Подтверждены">
+            <Caption weight="2" Component="span" className={styles.groupLabel}>
               {`Подтверждены (${confirmed.length})`}
             </Caption>
             {confirmed.map((booking) => (

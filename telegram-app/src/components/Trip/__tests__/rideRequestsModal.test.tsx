@@ -35,7 +35,7 @@ vi.mock("@/queries/useAllCities", () => ({
   useAllCitiesQuery: mockUseCities,
 }));
 
-import { RideRequestsBody } from "@/components/RideRequestsModal";
+import { RideRequestsBody } from "@/components/Trip/RideRequestsModal";
 
 function makeRequest(overrides: Record<string, unknown> = {}) {
   return {

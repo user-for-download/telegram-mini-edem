@@ -22,7 +22,7 @@ vi.mock("@/queries/useBookingsQuery", () => ({
 import { LazyAvatar, type LazyAvatarProps } from "@/components/LazyAvatar";
 import { TripFeedCard } from "@/components/Trip/TripFeedCard";
 import { ReviewCard } from "@/components/ReviewCard";
-import { TripRequestsBody } from "@/components/TripRequestsModal";
+import { TripRequestsBody } from "@/components/Trip/TripRequestsModal";
 
 const AVATAR_SRC = "https://t.me/i/userpic/320/avatar.svg";
 

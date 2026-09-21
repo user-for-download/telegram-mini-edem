@@ -1,0 +1,151 @@
+/* Trip-модалки (components/Trip/*): общий лист раскладки route-backed
+ * тел «Заявки пассажиров» и «Запросы попутчиков». Стили объединены
+ * намеренно: одинаковая поверхность карточек, sheet-тела и списки;
+ * прецедент — TripCards.module.css. Цвета только --tgui--* / --app-*;
+ * в TSX остаются одноразовые утилиты Tailwind: min-h-11 (его проверяют
+ * тесты) и sr-only. */
+
+/* Тело sheet: скролл с ограничением 82dvh; outline снят, фокус ставится
+ * на сам скролл-контейнер (как в отзывах). */
+.sheetBody {
+  padding: 8px 16px 40px;
+  max-height: 82dvh;
+  overflow-y: auto;
+  outline: none;
+}
+
+/* Колонка секций модалки (зазор 14px, верхний отступ 4px). */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+/* То же + низ 24px (запросы попутчиков: список последний, отбиваем низ). */
+.stackBottom {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 24px;
+}
+
+/* Список карточек/групп (зазор 12px). */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Заголовок группы заявок («Ожидают решения (N)»): кегль с бока 4px. */
+.groupLabel {
+  padding: 0 4px;
+}
+
+/* Карточка: поверхность tgui-секции + тень shadow-xs (рецепт мигрированных
+ * страниц), колонка с зазором 12px. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid var(--tgui--outline);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Карточка-строка: та же поверхность, но шапка и статус в одну линию
+ * (подтверждённая бронь). */
+.cardRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--tgui--section_bg_color);
+  border: 1px solid var(--tgui--outline);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Шапка карточки: заголовок слева, статус справа. */
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Строка «аватар + имя»: ужимается, текст не распирает карточку. */
+.rowInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Блок имени/подписи: нулевая min-width даёт работать ellipsis. */
+.grow {
+  min-width: 0;
+}
+
+/* Обрезка в одну строку (было truncate). */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Статус/аватар не сжимаются. */
+.shrink {
+  flex-shrink: 0;
+}
+
+/* Ряд кнопок действия (зазор 8px). */
+.btnRow {
+  display: flex;
+  gap: 8px;
+}
+
+/* Ряд кнопок с переносом (до 4 действий в карточке запроса). */
+.btnRowWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Два поля в ряд (даты «с» и «по»). */
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Обёртка ConfirmAction: сама не участвует в раскладке (было contents),
+ * но её кнопка обязана держать ту же высоту, что соседние (min-h-11). */
+.contentsBtn {
+  display: contents;
+}
+
+.contentsBtn button {
+  min-height: 44px;
+}
+
+.errorText {
+  color: var(--tg-theme-destructive-text-color);
+}
+
+/* Иконочные токены: адрес отправления — синий, прибытия — зелёный,
+ * даты/места — приглушённые (было text-(--app-info)/--app-success/hint). */
+.iconInfo {
+  color: var(--app-info);
+}
+
+.iconSuccess {
+  color: var(--app-success);
+}
+
+.iconHint {
+  color: var(--tgui--hint_color);
+}

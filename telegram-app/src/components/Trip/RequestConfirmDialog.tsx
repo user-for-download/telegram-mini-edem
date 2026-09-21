@@ -50,7 +50,7 @@ export function RequestConfirmDialog({
         </Modal.Header>
       }
     >
-      <div className="px-4 pt-2 pb-10">
+      <div className={styles.body}>
         <RequestConfirmBody
           booking={booking}
           action={action}
@@ -79,7 +79,7 @@ export function RequestConfirmBody({
 }) {
   const comment = booking.comment?.trim() ? booking.comment : "Без комментария";
   return (
-    <div className="flex flex-col gap-3">
+    <div className={styles.form}>
       <Cell
         className={styles.person}
         before={

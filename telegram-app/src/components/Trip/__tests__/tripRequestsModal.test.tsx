@@ -20,7 +20,7 @@ vi.mock("@/queries/useBookingsQuery", () => ({
   useUpdateBookingStatusMutation: mockUseUpdateBooking,
 }));
 
-import { TripRequestsBody } from "@/components/TripRequestsModal";
+import { TripRequestsBody } from "@/components/Trip/TripRequestsModal";
 
 function makeBooking(overrides: Record<string, unknown> = {}) {
   return {

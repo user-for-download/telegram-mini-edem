@@ -26,6 +26,7 @@ import {
   vehicleRemoveErrorMessage,
   vehicleServerErrorMessage,
 } from "@/pages/vehicleValidation";
+import styles from "./ProfileModals.module.css";
 
 type Vehicle = NonNullable<ReturnType<typeof useVehicleQuery>["vehicle"]>;
 
@@ -48,7 +49,7 @@ export function VehicleModal({
       }}
       header={<Modal.Header>Автомобиль</Modal.Header>}
     >
-      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto">
+      <div className={styles.sheetBody}>
         <VehicleBody onDone={onClose} />
       </div>
     </Modal>
@@ -82,7 +83,7 @@ function VehicleTerminal({ deleted }: { deleted: boolean }) {
   return (
     <Caption
       Component="p"
-      className="px-4 pt-4 text-(--tg-theme-destructive-text-color)"
+      className={styles.errorScreen}
       role="alert"
     >
       {deleted
@@ -120,9 +121,9 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
       onRetry={() => void vehicleQuery.refetch()}
     >
       {vehicleQuery.data && (
-        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+        <div className={styles.card}>
           {!vehicle && (
-            <Caption Component="p" className="leading-relaxed">
+            <Caption Component="p" className={styles.prose}>
               Чтобы публиковать поездки, добавьте автомобиль.
             </Caption>
           )}
@@ -145,7 +146,7 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
                 <Caption
                   Component="p"
                   role="alert"
-                  className="text-(--tg-theme-destructive-text-color)"
+                  className={styles.errorText}
                 >
                   {vehicleRemoveErrorMessage(remove.error)}
                 </Caption>
@@ -206,7 +207,7 @@ function VehicleForm({
         <Input
           id="vehicle-model"
           header="Модель"
-          before={<Car size={17} className="text-(--app-info)" />}
+          before={<Car size={17} className={styles.info} />}
           value={model}
           maxLength={VEHICLE_LIMITS.model}
           placeholder="Skoda Octavia"
@@ -223,7 +224,7 @@ function VehicleForm({
         <Input
           id="vehicle-color"
           header="Цвет"
-          before={<Palette size={16} className="text-(--tgui--hint_color)" />}
+          before={<Palette size={16} className={styles.hint} />}
           value={color}
           maxLength={VEHICLE_LIMITS.color}
           placeholder="белый"
@@ -240,7 +241,7 @@ function VehicleForm({
         <Input
           id="vehicle-plate"
           header="Номер (необязательно)"
-          before={<Hash size={16} className="text-(--tgui--hint_color)" />}
+          before={<Hash size={16} className={styles.hint} />}
           value={plate}
           maxLength={VEHICLE_LIMITS.plate}
           placeholder="Например: 583"
@@ -252,7 +253,7 @@ function VehicleForm({
           }}
         />
       </div>
-      <Caption Component="p" className="leading-relaxed">
+      <Caption Component="p" className={styles.prose}>
         Номер — примета для узнавания, видна только вам. Чтобы убрать номер,
         очистите поле и сохраните.
       </Caption>
@@ -260,7 +261,7 @@ function VehicleForm({
         <Caption
           Component="p"
           role="alert"
-          className="text-(--tg-theme-destructive-text-color)"
+          className={styles.errorText}
         >
           {formError ?? vehicleServerErrorMessage(upsert.error)}
         </Caption>

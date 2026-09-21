@@ -6,7 +6,7 @@ import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import type { Booking, Review } from "@edem/contracts";
-import { PassengerRequestModalBody } from "@/components/PassengerRequestModal";
+import { PassengerRequestModalBody } from "@/components/Trip/PassengerRequestModal";
 
 function makeBooking(overrides: Record<string, unknown> = {}): Booking {
   return {

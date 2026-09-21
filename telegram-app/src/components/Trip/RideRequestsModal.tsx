@@ -29,6 +29,7 @@ import {
   updateRideRequestDtoSchema,
   type RideRequest,
 } from "@edem/contracts";
+import styles from "./TripModals.module.css";
 
 function toDateTimeLocal(iso: string): string {
   const date = new Date(iso);
@@ -67,7 +68,7 @@ export function RideRequestsModal({
       }}
       header={<Modal.Header>Ищу попутку</Modal.Header>}
     >
-      <div className="px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto outline-none">
+      <div className={styles.sheetBody}>
         <RideRequestsBody />
       </div>
     </Modal>
@@ -218,8 +219,8 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
   return (
     <section aria-label="Ищу попутку">
       <OfflineBanner />
-      <div className="flex flex-col gap-3.5 pt-1 pb-6">
-        <div className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3">
+      <div className={styles.stackBottom}>
+        <div className={styles.card}>
           <Text weight="2" Component="span">
             Новый запрос
           </Text>
@@ -230,7 +231,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             <Input
               id="ride-from"
               header="Откуда"
-              before={<MapPin size={17} className="text-(--app-info)" />}
+              before={<MapPin size={17} className={styles.iconInfo} />}
               list="request-cities"
               value={from}
               onChange={(event) => setFrom(event.target.value)}
@@ -244,7 +245,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             <Input
               id="ride-to"
               header="Куда"
-              before={<MapPin size={17} className="text-(--app-success)" />}
+              before={<MapPin size={17} className={styles.iconSuccess} />}
               list="request-cities"
               value={to}
               onChange={(event) => setTo(event.target.value)}
@@ -256,7 +257,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
               <option key={city.id} value={city.name} />
             ))}
           </datalist>
-          <div className="grid grid-cols-2 gap-3">
+          <div className={styles.grid2}>
             <div>
               <label htmlFor="ride-earliest" className="sr-only">
                 Не раньше
@@ -265,7 +266,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                 id="ride-earliest"
                 header="Не раньше"
                 before={
-                  <Calendar size={16} className="text-(--tgui--hint_color)" />
+                  <Calendar size={16} className={styles.iconHint} />
                 }
                 type="datetime-local"
                 value={earliest}
@@ -280,7 +281,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                 id="ride-latest"
                 header="Не позже"
                 before={
-                  <Calendar size={16} className="text-(--tgui--hint_color)" />
+                  <Calendar size={16} className={styles.iconHint} />
                 }
                 type="datetime-local"
                 value={latest}
@@ -295,7 +296,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             <Input
               id="ride-seats"
               header="Места"
-              before={<Users size={16} className="text-(--tgui--hint_color)" />}
+              before={<Users size={16} className={styles.iconHint} />}
               type="number"
               min="1"
               max="3"
@@ -307,7 +308,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             <Caption
               Component="p"
               role="alert"
-              className="text-(--tg-theme-destructive-text-color)"
+              className={styles.errorText}
             >
               {validationError}
             </Caption>
@@ -316,7 +317,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             <Caption
               Component="p"
               role="alert"
-              className="text-(--tg-theme-destructive-text-color)"
+              className={styles.errorText}
             >
               {bookingErrorMessage(create.error)}
             </Caption>
@@ -336,7 +337,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
           <Caption
             Component="p"
             role="alert"
-            className="text-(--tg-theme-destructive-text-color)"
+            className={styles.errorText}
           >
             {bookingErrorMessage(status.error ?? cancel.error ?? update.error)}
           </Caption>
@@ -348,14 +349,14 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
           emptyText="Активных запросов нет."
           onRetry={() => void requests.refetch()}
         >
-          <div className="flex flex-col gap-3">
+          <div className={styles.list}>
             {requests.data?.map((request) => (
               <div
                 key={request.id}
-                className="p-4 rounded-2xl bg-(--tgui--section_bg_color) border border-(--tgui--outline) shadow-xs flex flex-col gap-3"
+                className={styles.card}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <Text weight="2" Component="span" className="truncate">
+                <div className={styles.cardHead}>
+                  <Text weight="2" Component="span" className={styles.truncate}>
                     {`${request.fromCity.name} → ${request.toCity.name}`}
                   </Text>
                   <StatusPill
@@ -437,12 +438,12 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       <Caption
                         Component="p"
                         role="alert"
-                        className="text-(--tg-theme-destructive-text-color)"
+                        className={styles.errorText}
                       >
                         {editError}
                       </Caption>
                     )}
-                    <div className="flex gap-2">
+                    <div className={styles.btnRow}>
                       <Button
                         mode="bezeled"
                         stretched
@@ -466,7 +467,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
+                  <div className={styles.btnRowWrap}>
                     {request.status === "active" && (
                       <Button
                         mode="bezeled"
@@ -516,7 +517,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                         >
                           Редактировать
                         </Button>
-                        <span className="[&_button]:min-h-11 contents">
+                        <span className={styles.contentsBtn}>
                           <ConfirmAction
                             label="Отменить запрос"
                             confirmLabel="Отменить запрос"
