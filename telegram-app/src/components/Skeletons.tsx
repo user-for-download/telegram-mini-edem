@@ -11,7 +11,7 @@ import { Skeleton } from "@telegram-apps/telegram-ui";
  * сами болванки aria-hidden — скринридер слышит одно объявление.
  */
 
-/** Болванка карточки поездки — зеркало раскладки TripCard:
+/** Болванка карточки ленты поиска — зеркало раскладки TripFeedCard:
  * время/маршрут/цена, адреса, водитель с аватаром и пилюля мест. */
 export function TripCardSkeleton() {
   return (

@@ -11,11 +11,11 @@ import {
 import type { Trip, TripTag } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
 import { Caption, Tappable, Text } from "@telegram-apps/telegram-ui";
-import { FEED_CARD_SURFACE } from "@/components/FeedCard";
 import { StatusPill } from "@/components/StatusPill";
 import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
 import { haptic } from "@/utils/haptics";
 import { LazyAvatar } from "@/components/LazyAvatar";
+import styles from "./TripFeedCard.module.css";
 
 /** Иконки для очевидных тегов (язык примера); остальные теги не
  *  иконизируем — их видно в деталях поездки. */
@@ -29,13 +29,15 @@ const TAG_ICONS: Partial<Record<TripTag, { Icon: typeof Luggage }>> = {
 };
 
 /**
- * Карточка поездки в ленте поиска — язык SearchTab эталона
- * (/tmp/edem---telegram-mini-app): вся карточка кликабельна
- * (нативный button, без отдельной кнопки «Подробнее»),
- * время → прибытие, маршрут + цена, адреса, водитель,
+ * Карточка поездки в ленте поиска (переименована из TripCard: имя
+ * занято единой карточкой вкладки «Поездки»). Язык SearchTab эталона:
+ * вся карточка кликабельна (нативный button, без отдельной кнопки
+ * «Подробнее»), время → прибытие, маршрут + цена, адреса, водитель,
  * компактная цветная пилюля мест и иконки тегов.
+ * Поверхность — рецепт FeedCard, но в module.css (миграция
+ * папка/компонент); раскладка внутри — tgui-типографика.
  */
-export function TripCard({ trip }: { trip: Trip }) {
+export function TripFeedCard({ trip }: { trip: Trip }) {
   const navigate = useNavigate();
   const fewSeats = trip.seatsAvailable <= 1;
   const duration = formatDuration(trip.durationMinutes);
@@ -49,80 +51,68 @@ export function TripCard({ trip }: { trip: Trip }) {
         haptic.light();
         navigate(`/trips/${trip.id}`);
       }}
-      className={`${FEED_CARD_SURFACE} text-left p-4 hover:border-(--app-info) cursor-pointer transition flex flex-col gap-3 group`}
+      className={styles.card}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
+      <div className={styles.topRow}>
+        <div className={styles.routeCol}>
+          <div className={styles.when}>
             <Text weight="2" Component="span">
               {trip.time}
             </Text>
             {duration && <Caption Component="span">({duration})</Caption>}
             {arrival && <Caption Component="span">→ {arrival}</Caption>}
           </div>
-          <Text weight="2" Component="div" className="mt-0.5 truncate">
+          <Text weight="2" Component="div" className={styles.cities}>
             {trip.fromCity} → {trip.toCity}
           </Text>
           <Caption Component="div">{dayLabel(trip.date)}</Caption>
         </div>
-        <div className="text-right shrink-0">
+        <div className={styles.priceCol}>
           <Text weight="2" Component="div">
             {trip.price} ₽
           </Text>
-          <Caption className="text-(--tgui--hint_color)">за место</Caption>
+          <Caption className={styles.hint}>за место</Caption>
         </div>
       </div>
 
       {(trip.fromAddress || trip.toAddress) && (
-        <Caption
-          Component="div"
-          className="flex flex-col gap-0.5 border-l-2 border-(--tgui--outline) pl-2.5"
-        >
+        <Caption Component="div" className={styles.addresses}>
           {trip.fromAddress && (
-            <div className="truncate">Посадка: {trip.fromAddress}</div>
+            <div className={styles.truncate}>Посадка: {trip.fromAddress}</div>
           )}
           {trip.toAddress && (
-            <div className="truncate">Высадка: {trip.toAddress}</div>
+            <div className={styles.truncate}>Высадка: {trip.toAddress}</div>
           )}
         </Caption>
       )}
 
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-(--tgui--outline)">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className={styles.footer}>
+        <div className={styles.driver}>
           <LazyAvatar
             size={40}
             src={trip.driver.avatar}
             acronym={trip.driver.name.slice(0, 1).toUpperCase()}
             alt={trip.driver.name}
           />
-          <div className="min-w-0">
+          <div className={styles.driverBody}>
             <Text
               weight="2"
               Component="div"
-              className="flex items-center gap-1 text-(--tgui--text_color)"
+              className={styles.driverName}
             >
-              <span className="truncate">{trip.driver.name}</span>
+              <span className={styles.truncate}>{trip.driver.name}</span>
               {trip.driver.isVerified && (
-                <ShieldCheck
-                  size={14}
-                  className="text-(--app-info) fill-(--app-info-bg) shrink-0"
-                />
+                <ShieldCheck className={styles.verified} aria-hidden />
               )}
             </Text>
-            <Caption
-              Component="div"
-              className="flex items-center gap-1 text-(--tgui--hint_color)"
-            >
-              <Star
-                size={11}
-                className="fill-(--app-rating) text-(--app-rating)"
-              />
+            <Caption Component="div" className={styles.rating}>
+              <Star className={styles.star} aria-hidden />
               <span>{trip.driver.rating.toFixed(1)}</span>
             </Caption>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-1 shrink-0">
+        <div className={styles.side}>
           <StatusPill
             tone={
               trip.seatsAvailable === 0
@@ -131,14 +121,13 @@ export function TripCard({ trip }: { trip: Trip }) {
                   ? "warning"
                   : "success"
             }
-            className="shrink-0"
           >
             {trip.seatsAvailable === 0
               ? "Мест нет"
               : `Осталось мест: ${trip.seatsAvailable}`}
           </StatusPill>
           {trip.tags.length > 0 && (
-            <div className="flex items-center gap-1.5 text-(--tgui--hint_color)">
+            <div className={styles.tags}>
               {trip.tags.flatMap((tag) => {
                 const entry = TAG_ICONS[tag];
                 return entry ? [<entry.Icon key={tag} size={13} />] : [];

@@ -1,0 +1,136 @@
+/* Карточка в ленте поиска (TripFeedCard): поверхность — рецепт FeedCard
+ * (rounded-2xl, рамка, фон секции, xs-тень) в module.css, hover — синяя
+ * рамка (было Tailwind). Цвета только --tgui--* / --app-*; раскладка
+ * внутри — tgui-типографика (Text/Caption), сетка: бока/вертикаль 12px. */
+
+.card.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  border-radius: 16px;
+  border: var(--tgui--border--width, 1px) solid var(--tgui--outline);
+  background: var(--tgui--section_bg_color);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.card.card:hover {
+  border-color: var(--app-info);
+}
+
+.topRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.routeCol {
+  min-width: 0;
+}
+
+.when {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cities {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.priceCol {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.hint {
+  color: var(--tgui--hint_color);
+}
+
+/* Адреса посадки/высадки: вертикальная линия слева (было border-l + pl). */
+.addresses {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 2px solid var(--tgui--outline);
+  padding-left: 10px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--tgui--outline);
+}
+
+.driver {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.driverBody {
+  min-width: 0;
+}
+
+.driverName {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tgui--text_color);
+}
+
+.driverName svg {
+  /* Верификация: 14px, синий на голубой подложке. */
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--app-info);
+  fill: var(--app-info-bg);
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tgui--hint_color);
+}
+
+.star {
+  width: 11px;
+  height: 11px;
+  color: var(--app-rating);
+  fill: var(--app-rating);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tgui--hint_color);
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

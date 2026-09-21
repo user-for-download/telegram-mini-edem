@@ -1,0 +1,120 @@
+/* Поиск (SearchPage): раскладка фильтров без Tailwind (миграция
+ * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы
+ * — бока 16px, вертикаль 14px между блоками. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 16px 96px;
+}
+
+/* Строка «Найдено / Цены без комиссии» — тонкая колонка с бока 4px. */
+.resultsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+/* Тело Section фильтров: колонка с отступом 16px (как было p-4). */
+.filtersBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+/* Чипы-действия («Ищу попутку», «Фильтры»). */
+.chipRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Города + кнопка swap поверх зазора между инпутами. */
+.cityFields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.swap {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--tgui--section_bg_color);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Панель открытых фильтров: цена + теги. */
+.filtersPanel {
+  padding-top: 8px;
+  border-top: 1px solid var(--tgui--outline);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.priceHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tagsHead {
+  color: var(--tgui--text_color);
+}
+
+/* Лента результатов: вертикальный список карточек. */
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tagsCol {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Обёртка догрузки: вертикальная колонка болванок. */
+.fetchMore {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Чипы-действия: компактный кегль 12px. Неслойный module.css бьёт
+ * tgui-слой без Tailwind-суффиксов ! (удвоение на случай кита).
+ * selected/mono-состояния — нативные режимы Chip. */
+.chip.chip {
+  font-size: 12px;
+}
+.loadingMore {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--tgui--outline);
+  background: var(--tgui--section_bg_color);
+}
+
+.skeletonLine {
+  height: 14px;
+  border-radius: 8px;
+  background: var(--tgui--secondary_bg_color);
+}
+
+/* Якорь автодогрузки: скрыт от скринридера, фиксированная высота
+ * (48px) держит скролл от прыжков. */
+.sentinel {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+}

@@ -14,7 +14,7 @@ import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { SearchPage } from "@/pages/SearchPage";
+import { SearchPage } from "@/pages/Search/SearchPage";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import {

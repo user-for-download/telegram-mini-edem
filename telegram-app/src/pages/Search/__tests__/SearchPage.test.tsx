@@ -26,7 +26,7 @@ vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
   };
 });
 
-import { SearchPage } from "@/pages/SearchPage";
+import { SearchPage } from "@/pages/Search/SearchPage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function queryState(overrides: Record<string, unknown> = {}) {

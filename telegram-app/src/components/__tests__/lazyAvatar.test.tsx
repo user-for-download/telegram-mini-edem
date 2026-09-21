@@ -1,4 +1,4 @@
-// SSR-тесты P1 LazyAvatar + внедрение в TripCard/ReviewCard/заявки.
+// SSR-тесты P1 LazyAvatar + внедрение в TripFeedCard/ReviewCard/заявки.
 // Паттерн tripRequestsModal.test.tsx: renderToString, моки хуков через
 // vi.hoisted, без testing-library. Эффекты в renderToString не выполняются,
 // поэтому: без IntersectionObserver LazyAvatar сразу показывает контент
@@ -20,7 +20,7 @@ vi.mock("@/queries/useBookingsQuery", () => ({
 }));
 
 import { LazyAvatar, type LazyAvatarProps } from "@/components/LazyAvatar";
-import { TripCard } from "@/components/TripCard";
+import { TripFeedCard } from "@/components/Trip/TripFeedCard";
 import { ReviewCard } from "@/components/ReviewCard";
 import { TripRequestsBody } from "@/components/TripRequestsModal";
 
@@ -203,13 +203,13 @@ describe("LazyAvatar SSR: happy/edge", () => {
 });
 
 describe("LazyAvatar в карточках SSR", () => {
-  it("TripCard: имя водителя, src аватара и контракт карточки не сломаны", () => {
+  it("TripFeedCard: имя водителя, src аватара и контракт карточки не сломаны", () => {
     withoutObserver();
 
     const html = renderToString(
       <AppRoot platform="base">
         <MemoryRouter initialEntries={["/"]}>
-          <TripCard trip={makeTrip()} />
+          <TripFeedCard trip={makeTrip()} />
         </MemoryRouter>
       </AppRoot>,
     );
@@ -225,14 +225,14 @@ describe("LazyAvatar в карточках SSR", () => {
     expect(html).toContain("Осталось мест:");
   });
 
-  it("TripCard: пилюля мест — StatusPill с тоном по остатку (0=danger, 1=warning, 2+=success)", () => {
+  it("TripFeedCard: пилюля мест — StatusPill с тоном по остатку (0=danger, 1=warning, 2+=success)", () => {
     withoutObserver();
 
     const renderTripCard = (seatsAvailable: number): string =>
       renderToString(
         <AppRoot platform="base">
           <MemoryRouter initialEntries={["/"]}>
-            <TripCard trip={{ ...makeTrip(), seatsAvailable }} />
+            <TripFeedCard trip={{ ...makeTrip(), seatsAvailable }} />
           </MemoryRouter>
         </AppRoot>,
       );

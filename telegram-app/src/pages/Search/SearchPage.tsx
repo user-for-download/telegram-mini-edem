@@ -20,8 +20,8 @@ import {
 import { useSearchParams } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { QueryState } from "@/components/QueryState";
-import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
-import { TripCard } from "@/components/TripCard";
+import { TripCardsSkeleton } from "@/components/Skeletons";
+import { TripFeedCard } from "@/components/Trip/TripFeedCard";
 import { TRIP_TAGS } from "@/consts/tags";
 import {
   DATE_SEGMENTS,
@@ -38,6 +38,7 @@ import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { useInfiniteTripsQuery } from "@/queries/useTripsQuery";
 import type { TripTag } from "@edem/contracts";
+import styles from "./SearchPage.module.css";
 
 /** Пресет из URL (?from&to&segment) — с главной/popular-routes. */
 function presetFromParams(params: URLSearchParams): SearchFormState {
@@ -53,6 +54,8 @@ function presetFromParams(params: URLSearchParams): SearchFormState {
  * Поиск поездок (язык SearchTab примера): города + swap,
  * сегменты дат, сворачиваемый drawer фильтров (цена + теги). Пустые
  * фильтры — общая лента (бэкенд скрывает уехавшие: departureAt > now).
+ * Стиль фильтров — SearchPage.module.css (миграция папка/компонент),
+ * лента — TripFeedCard (поверхность FeedCard в module.css).
  */
 export function SearchPage() {
   const [searchParams] = useSearchParams();
@@ -118,18 +121,18 @@ export function SearchPage() {
   return (
     <>
       <OfflineBanner />
-      <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+      <div className={styles.wrap}>
         {/* Фильтр: поверхность — Section, заголовок — нативный.
             Чипы-действия — первой строкой тела (рядом с заголовком
             им не место: header принимает только текст). */}
         <Section header="Поиск попутных поездок">
-          <div className="flex flex-col gap-3 p-4">
-            <div className="flex items-center gap-1.5">
+          <div className={styles.filtersBody}>
+            <div className={styles.chipRow}>
               <Chip
                 mode="mono"
                 Component="a"
                 href="#/ride-requests"
-                className="text-xs!"
+                className={styles.chip}
               >
                 Ищу попутку
               </Chip>
@@ -141,14 +144,14 @@ export function SearchPage() {
                   setShowFilters(!showFilters);
                 }}
                 before={<Filter size={13} />}
-                className="text-xs!"
+                className={styles.chip}
                 aria-pressed={showFilters}
               >
                 Фильтры
               </Chip>
             </div>
 
-            <div className="flex flex-col gap-1.5 relative">
+            <div className={styles.cityFields}>
               <Input
                 id="search-from"
                 before={<MapPin size={17} className="text-(--app-info)" />}
@@ -195,7 +198,7 @@ export function SearchPage() {
                 mode="plain"
                 onClick={swapCities}
                 aria-label="Поменять направление"
-                className="absolute! right-2! top-1/2! -translate-y-1/2! bg-(--tgui--section_bg_color)! shadow-xs!"
+                className={`${styles.swap} absolute! right-2! top-1/2! -translate-y-1/2!`}
               >
                 <ArrowRightLeft size={14} className="text-(--app-info)" />
               </IconButton>
@@ -221,9 +224,9 @@ export function SearchPage() {
             </div>
 
             {showFilters && (
-              <div className="pt-2 border-t border-(--tgui--outline) flex flex-col gap-3">
+              <div className={styles.filtersPanel}>
                 <div>
-                  <div className="flex items-center justify-between">
+                  <div className={styles.priceHead}>
                     <span id="search-max-price-label">Цена не выше</span>
                     <Caption Component="span" aria-hidden="true">
                       {formatMaxPriceLabel(form.maxPrice)}
@@ -245,11 +248,11 @@ export function SearchPage() {
                     }
                   />
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className={styles.tagsCol}>
                   <Caption
                     weight="2"
                     Component="span"
-                    className="text-(--tgui--text_color)"
+                    className={styles.tagsHead}
                   >
                     Условия поездки
                   </Caption>
@@ -286,7 +289,7 @@ export function SearchPage() {
           </div>
         </Section>
 
-        <div className="flex items-center justify-between px-1">
+        <div className={styles.resultsBar}>
           <Caption weight="2">Найдено поездок: {items.length}</Caption>
           <Caption Component="span">Цены без комиссии</Caption>
         </div>
@@ -314,28 +317,36 @@ export function SearchPage() {
               </Button>
             </Placeholder>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className={styles.feed}>
               {items.map((trip) => (
-                <TripCard key={trip.id} trip={trip} />
+                <TripFeedCard key={trip.id} trip={trip} />
               ))}
               {trips.hasNextPage && (
                 <>
                   {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
-                      высота (min-h-12) держит скролл от прыжков. */}
+                      высота (48px) держит скролл от прыжков. */}
                   <div
                     ref={sentinelRef}
                     aria-hidden="true"
-                    className="flex min-h-12 items-center justify-center"
+                    className={styles.sentinel}
                     style={{ overflowAnchor: "none" }}
                   />
                   {trips.isFetchingNextPage && (
                     <div
                       role="status"
                       aria-label="Загрузка ещё поездок"
-                      className="flex flex-col gap-3"
+                      className={styles.fetchMore}
                     >
-                      <TripCardSkeleton />
-                      <TripCardSkeleton />
+                      <div className={styles.loadingMore}>
+                        <div
+                          className={styles.skeletonLine}
+                          style={{ width: "45%" }}
+                        />
+                        <div
+                          className={styles.skeletonLine}
+                          style={{ width: "30%" }}
+                        />
+                      </div>
                     </div>
                   )}
                   <Button

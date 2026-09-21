@@ -65,7 +65,7 @@ vi.mock("@/queries/profile", () => ({
   useProfileQuery: () => ({ data: { rating: 5 } }),
 }));
 
-import { SearchPage } from "@/pages/SearchPage";
+import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripPage } from "@/pages/Trip/TripPage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
@@ -189,7 +189,7 @@ describe("SearchPage: сентинел (SSR, без IntersectionObserver)", () =
     expect(html).toContain("Череповец");
     // Сентинел-якорь: aria-hidden, фиксированная высота.
     expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain("min-h-12");
+    expect(html).toContain("_sentinel_");
     // Fallback-кнопка для SSR/без observer и клавиатуры.
     expect(html).toContain("Показать ещё");
   });
@@ -200,7 +200,7 @@ describe("SearchPage: сентинел (SSR, без IntersectionObserver)", () =
     );
     const html = render(<SearchPage />);
     expect(html).toContain("Вологда");
-    expect(html).not.toContain("min-h-12");
+    expect(html).not.toContain("_sentinel_");
     expect(html).not.toContain("Показать ещё");
   });
 
@@ -227,7 +227,7 @@ describe("SearchPage: сентинел (SSR, без IntersectionObserver)", () =
     );
     const html = render(<SearchPage />);
     expect(html).toContain("Не удалось загрузить данные");
-    expect(html).not.toContain("min-h-12");
+    expect(html).not.toContain("_sentinel_");
     expect(html).not.toContain("Показать ещё");
   });
 });

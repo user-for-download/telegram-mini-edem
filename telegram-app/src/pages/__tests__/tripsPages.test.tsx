@@ -99,7 +99,7 @@ vi.mock("@/queries/useAllCities", () => ({
   useAllCitiesQuery: mockUseAllCities,
 }));
 
-import { SearchPage } from "@/pages/SearchPage";
+import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripPage } from "@/pages/Trip/TripPage";
 import { RideRequestsPage } from "@/pages/RideRequestsPage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";

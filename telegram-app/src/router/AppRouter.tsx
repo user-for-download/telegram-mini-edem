@@ -17,7 +17,7 @@ import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
 import { HomePage } from "@/pages/HomePage";
 import { ShowcasePage } from "@/pages/ShowcasePage";
-import { SearchPage } from "@/pages/SearchPage";
+import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripDetailsRoute } from "@/components/TripDetailsModal";
 import { CreateTripPage } from "@/pages/CreateTripPage";
 import { NotificationsPage } from "@/pages/NotificationsPage";

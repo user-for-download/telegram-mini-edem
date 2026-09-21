@@ -1,6 +1,6 @@
 import { Modal } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
-import { SearchPage } from "@/pages/SearchPage";
+import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripDetailsPage } from "@/pages/TripDetailsPage";
 
 /**
