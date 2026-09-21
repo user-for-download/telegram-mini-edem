@@ -1,6 +1,6 @@
 // Рендер-тесты страниц поездок/броней: сегменты прод-TripPage
 // (TripActivePage/TripHistoryPage), счётчики заявок водителя,
-// confirm-guards, фильтры поиска, edit ride-request. Паттерн
+// confirm-guards, фильтры поиска. Паттерн
 // reviewsPage.test.tsx (SSR, без testing-library).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -16,15 +16,10 @@ beforeEach(() => {
   mockUseInfiniteMyTrips.mockReturnValue(infiniteState([]));
   mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
   mockUseHistory.mockReturnValue(queryState({ data: [] }));
-  mockUseRideRequests.mockReturnValue(queryState({ data: [] }));
   mockUseAllCities.mockReturnValue(queryState({ data: [] }));
   mockUseCancelTrip.mockReturnValue(mutation());
   mockUseCompleteTrip.mockReturnValue(mutation());
   mockUseCancelBooking.mockReturnValue(mutation());
-  mockUseCreateRideRequest.mockReturnValue(mutation());
-  mockUseUpdateRideRequest.mockReturnValue(mutation());
-  mockUseRideRequestStatus.mockReturnValue(mutation());
-  mockUseCancelRideRequest.mockReturnValue(mutation());
   mockUseDriverRequests.mockReturnValue(queryState({ data: [] }));
   mockUseUpdateBookingStatus.mockReturnValue(mutation());
 });
@@ -37,12 +32,7 @@ const {
   mockUseMyBookings,
   mockUseHistory,
   mockUseCancelBooking,
-  mockUseRideRequests,
   mockUseAllCities,
-  mockUseCreateRideRequest,
-  mockUseUpdateRideRequest,
-  mockUseRideRequestStatus,
-  mockUseCancelRideRequest,
   mockUseDriverRequests,
   mockUseUpdateBookingStatus,
 } = vi.hoisted(() => ({
@@ -53,12 +43,7 @@ const {
   mockUseMyBookings: vi.fn(),
   mockUseHistory: vi.fn(),
   mockUseCancelBooking: vi.fn(),
-  mockUseRideRequests: vi.fn(),
   mockUseAllCities: vi.fn(),
-  mockUseCreateRideRequest: vi.fn(),
-  mockUseUpdateRideRequest: vi.fn(),
-  mockUseRideRequestStatus: vi.fn(),
-  mockUseCancelRideRequest: vi.fn(),
   mockUseDriverRequests: vi.fn(),
   mockUseUpdateBookingStatus: vi.fn(),
 }));
@@ -83,14 +68,6 @@ vi.mock("@/queries/useBookingsQuery", () => ({
   useUpdateBookingStatusMutation: mockUseUpdateBookingStatus,
 }));
 
-vi.mock("@/queries/useRideRequestsQuery", () => ({
-  useRideRequestsQuery: mockUseRideRequests,
-  useCreateRideRequestMutation: mockUseCreateRideRequest,
-  useUpdateRideRequestMutation: mockUseUpdateRideRequest,
-  useRideRequestStatusMutation: mockUseRideRequestStatus,
-  useCancelRideRequestMutation: mockUseCancelRideRequest,
-}));
-
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: () => ({ data: { rating: 5 } }),
 }));
@@ -101,7 +78,6 @@ vi.mock("@/queries/useAllCities", () => ({
 
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripPage } from "@/pages/Trip/TripPage";
-import { RideRequestsPage } from "@/pages/RideRequestsPage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function queryState(overrides: Record<string, unknown> = {}) {
@@ -330,35 +306,5 @@ describe("SearchPage parity", () => {
     );
     expect(html).toContain("Вологда");
     expect(html).toContain("Череповец");
-  });
-});
-
-describe("RideRequestsPage parity", () => {
-  it("exposes edit and guarded cancel for mutable requests", () => {
-    mockUseRideRequests.mockReturnValue(
-      queryState({
-        data: [
-          {
-            id: "r-1",
-            fromCity: { id: "c-1", name: "Москва" },
-            toCity: { id: "c-2", name: "Тула" },
-            earliestAt: "2030-06-01T09:00:00.000Z",
-            latestAt: "2030-06-01T12:00:00.000Z",
-            expiresAt: "2030-05-30T00:00:00.000Z",
-            seats: 1,
-            status: "active",
-          },
-        ],
-      }),
-    );
-    mockUseAllCities.mockReturnValue(queryState({ data: [] }));
-    mockUseCreateRideRequest.mockReturnValue(mutation());
-    mockUseUpdateRideRequest.mockReturnValue(mutation());
-    mockUseRideRequestStatus.mockReturnValue(mutation());
-    mockUseCancelRideRequest.mockReturnValue(mutation());
-    const html = render(<RideRequestsPage />);
-    expect(html).toContain("Редактировать");
-    expect(html).toContain("Отменить запрос");
-    expect(html).toContain("Поставить на паузу");
   });
 });
