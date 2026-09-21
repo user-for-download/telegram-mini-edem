@@ -28,7 +28,7 @@ import {
   NotificationsPage,
   isCriticalNotification,
   notificationRoute,
-} from "@/pages/NotificationsPage";
+} from "@/pages/Notifications/NotificationsPage";
 
 function makeNotification(overrides: Record<string, unknown> = {}) {
   return {

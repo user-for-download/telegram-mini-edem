@@ -67,7 +67,7 @@ vi.mock("@/queries/profile", () => ({
 
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripPage } from "@/pages/Trip/TripPage";
-import { NotificationsPage } from "@/pages/NotificationsPage";
+import { NotificationsPage } from "@/pages/Notifications/NotificationsPage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function baseQuery(overrides: Record<string, unknown> = {}) {
@@ -274,7 +274,7 @@ describe("NotificationsPage: сентинел (SSR, без IntersectionObserver)
     const html = render(<NotificationsPage />);
     expect(html).toContain("Бронь подтверждена");
     expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain("min-h-12");
+    expect(html).toContain("_sentinel_");
     expect(html).toContain("Показать ещё");
   });
 
@@ -284,7 +284,7 @@ describe("NotificationsPage: сентинел (SSR, без IntersectionObserver)
     );
     const html = render(<NotificationsPage />);
     expect(html).toContain("Бронь подтверждена");
-    expect(html).not.toContain("min-h-12");
+    expect(html).not.toContain("_sentinel_");
     expect(html).not.toContain("Показать ещё");
   });
 
@@ -310,7 +310,7 @@ describe("NotificationsPage: сентинел (SSR, без IntersectionObserver)
     );
     const html = render(<NotificationsPage />);
     expect(html).toContain("Не удалось загрузить данные");
-    expect(html).not.toContain("min-h-12");
+    expect(html).not.toContain("_sentinel_");
     expect(html).not.toContain("Показать ещё");
   });
 });

@@ -1,0 +1,110 @@
+/* Уведомления (NotificationsPage): раскладка без Tailwind (миграция
+ * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы
+ * — бока 16px, вертикаль 14px; лента — карточки FeedCard. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 16px 96px;
+}
+
+/* Инфо-панель и лента: тело Section (как было p-4). */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+/* Строка «Непрочитанных: N» + иконка. */
+.unreadRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Иконка колокольчика: синяя, не сжимается (было shrink-0). */
+.bell {
+  color: var(--app-info);
+  flex-shrink: 0;
+}
+
+/* Подпись про критичные статусы: межстрочный 1.625 (leading-relaxed). */
+.note {
+  line-height: 1.625;
+}
+
+/* Две bezel-кнопки в ряд: настройки + прочитать все. */
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Кнопка-ссылка на настройки растёт (было flex-1). */
+.settingsBtn {
+  flex-grow: 1;
+}
+
+/* Лента карточек: вертикальный список. */
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Пустое состояние: центрированные тексты на поверхности Section. */
+.emptyText {
+  text-align: center;
+}
+
+/* Карточка уведомления (тело FeedCard): колонка с зазором 8px. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+/* Шапка карточки: заголовок + пилюля (Новое/Важное). */
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Пилюля в шапке не сжимается. */
+.pill {
+  flex-shrink: 0;
+}
+
+/* Тело уведомления: межстрочный 1.625 + перенос длинных слов. */
+.body {
+  line-height: 1.625;
+  overflow-wrap: anywhere;
+}
+
+/* Подвал карточки: Открыть/Отметить над разделителем (pt-1). */
+.cardFoot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--tgui--outline);
+}
+
+/* Якорь автодогрузки: скрыт от скринридера, высота 48px держит скролл. */
+.sentinel {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Обёртка догрузки: вертикальная колонка болванок. */
+.fetchMore {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

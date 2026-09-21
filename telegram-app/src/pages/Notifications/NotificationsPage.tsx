@@ -20,6 +20,7 @@ import {
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { ApiError } from "@/api/client";
 import type { Notification } from "@edem/contracts";
+import styles from "./NotificationsPage.module.css";
 import {
   useMarkAllNotificationsReadMutation,
   useMarkNotificationReadMutation,
@@ -90,26 +91,26 @@ function NotificationCard({
   const route = notificationRoute(notification.type);
   const critical = isCriticalNotification(notification.type);
   return (
-    <FeedCard className="p-4 flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
+    <FeedCard className={styles.card}>
+      <div className={styles.cardHead}>
         <Text weight="2" Component="span">
           {notification.title}
         </Text>
         {critical ? (
-          <StatusPill tone="danger" className="shrink-0">
+          <StatusPill tone="danger" className={styles.pill}>
             Важное
           </StatusPill>
         ) : !notification.isRead ? (
-          <StatusPill tone="info" className="shrink-0">
+          <StatusPill tone="info" className={styles.pill}>
             Новое
           </StatusPill>
         ) : null}
       </div>
-      <Text Component="p" className="leading-relaxed wrap-anywhere">
+      <Text Component="p" className={styles.body}>
         {notification.body}
       </Text>
       <Caption Component="span">{formatDate(notification.createdAt)}</Caption>
-      <div className="flex items-center gap-3 pt-1 border-t border-(--tgui--outline)">
+      <div className={styles.cardFoot}>
         {route && <Link href={`#${route}`}>Открыть</Link>}
         {!notification.isRead && (
           <Button
@@ -186,23 +187,23 @@ export function NotificationsPage() {
         skeleton={<NotificationCardsSkeleton />}
         onRetry={() => void inbox.refetch()}
       >
-        <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+        <div className={styles.wrap}>
           {/* Инфо-панель: поверхность — Section без заголовка. */}
           <Section>
-            <div className="flex flex-col gap-3 p-4">
-              <div className="flex items-center gap-2">
-                <BellRing size={16} className="text-(--app-info) shrink-0" />
+            <div className={styles.panel}>
+              <div className={styles.unreadRow}>
+                <BellRing size={16} className={styles.bell} />
                 <Text Component="p" aria-live="polite">
                   {unreadCount > 0
                     ? `Непрочитанных: ${unreadCount}.`
                     : "Все уведомления прочитаны."}
                 </Text>
               </div>
-              <Caption Component="p" className="leading-relaxed">
+              <Caption Component="p" className={styles.note}>
                 Важные статусы поездки и брони сохраняются всегда, даже если
                 некритичные уведомления выключены.
               </Caption>
-              <div className="flex gap-2">
+              <div className={styles.actions}>
                 {/* Кнопка-ссылка: официальный паттерн tgui (стори Blocks/Button → Link):
                   Button с Component="a" вместо самописного <a> со стилями. */}
                 <Button
@@ -211,7 +212,7 @@ export function NotificationsPage() {
                   mode="bezeled"
                   size="s"
                   before={<Settings2 size={15} />}
-                  className="flex-1"
+                  className={styles.settingsBtn}
                 >
                   Настройки уведомлений
                 </Button>
@@ -234,13 +235,13 @@ export function NotificationsPage() {
             TripRequests, популярные). Пустое состояние — тексты прямо
             на поверхности, карточки хранят свой хром (фаза 2). */}
           <Section>
-            <div className="flex flex-col gap-3 p-4">
+            <div className={styles.panel}>
               {items.length === 0 ? (
                 <>
-                  <Text weight="2" Component="p" className="text-center">
+                  <Text weight="2" Component="p" className={styles.emptyText}>
                     Пока нет уведомлений
                   </Text>
-                  <Caption Component="p" className="text-center">
+                  <Caption Component="p" className={styles.emptyText}>
                     Подтверждения брони, отмены и завершение поездок появятся
                     здесь
                   </Caption>
@@ -258,18 +259,18 @@ export function NotificationsPage() {
                   {inbox.hasNextPage && (
                     <>
                       {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
-                        высота (min-h-12) держит скролл от прыжков. */}
+                        высота (48px) держит скролл от прыжков. */}
                       <div
                         ref={sentinelRef}
                         aria-hidden="true"
-                        className="flex min-h-12 items-center justify-center"
+                        className={styles.sentinel}
                         style={{ overflowAnchor: "none" }}
                       />
                       {inbox.isFetchingNextPage && (
                         <div
                           role="status"
                           aria-label="Загрузка ещё уведомлений"
-                          className="flex flex-col gap-3"
+                          className={styles.fetchMore}
                         >
                           <NotificationCardSkeleton />
                         </div>

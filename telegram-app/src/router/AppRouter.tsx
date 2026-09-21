@@ -20,7 +20,7 @@ import { ShowcasePage } from "@/pages/ShowcasePage";
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripDetailsRoute } from "@/components/TripDetailsModal";
 import { CreateTripPage } from "@/pages/CreateTripPage";
-import { NotificationsPage } from "@/pages/NotificationsPage";
+import { NotificationsPage } from "@/pages/Notifications/NotificationsPage";
 import { VehicleRoute } from "@/components/VehicleModal";
 import { TripPage } from "@/pages/Trip/TripPage";
 import { RideRequestsRoute } from "@/components/RideRequestsModal";
