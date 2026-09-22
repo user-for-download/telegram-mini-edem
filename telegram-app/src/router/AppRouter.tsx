@@ -9,7 +9,6 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { backButton, useLaunchParams } from "@telegram-apps/sdk-react";
-import { AppHeader } from "@/components/AppHeader/AppHeader";
 import {
   AppBottomBar,
   type AppTabId,
@@ -33,8 +32,8 @@ import { EditProfileRoute } from "@/components/Profile/EditProfileModal";
 import { useNotificationsInboxQuery } from "@/queries/useNotificationsQuery";
 import { ReviewsRoute } from "@/components/Profile/ReviewsModal";
 import { SettingsRoute } from "@/components/Profile/SettingsModal";
-import { SupportRoute } from "@/components/Profile/SupportModal";
-import { ReportsRoute } from "@/components/Profile/ReportsModal";
+import { SupportPage } from "@/pages/Support/SupportPage";
+import { ReportsPage } from "@/pages/Reports/ReportsPage";
 import {
   parseTripStartParam,
   resolveStartParamRoute,
@@ -126,7 +125,6 @@ export function Shell() {
 
   return (
     <AppShell
-      header={isRoot ? <AppHeader /> : undefined}
       footer={
         <AppBottomBar
           activeTab={activeTab}
@@ -175,8 +173,8 @@ export function AppRouter() {
           <Route path="/reviews" element={<ReviewsRoute />} />
           <Route path="/settings" element={<SettingsRoute />} />
           <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/profile/support" element={<SupportRoute />} />
-          <Route path="/profile/reports" element={<ReportsRoute />} />
+          <Route path="/profile/support" element={<SupportPage />} />
+          <Route path="/profile/reports" element={<ReportsPage />} />
           <Route path="/vehicle" element={<VehicleRoute />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

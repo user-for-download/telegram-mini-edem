@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import {
   Button,
   Caption,
@@ -11,12 +11,13 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
 import { REPORT_DESCRIPTION_MAX_LENGTH } from "@edem/contracts";
-import { PageHeader } from "@/components/PageHeader";
 import { FeedCard } from "@/components/FeedCard/FeedCard";
 import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { ApiError } from "@/api/client";
+import { haptic } from "@/utils/haptics";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import {
   useCreateReportMutation,
   useMyReportsQuery,
@@ -59,7 +60,7 @@ function reportStatusTone(status: Report["status"]): StatusTone {
   }
 }
 
-function ReportCard({ report }: { report: Report }) {
+const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
   return (
     <FeedCard className={styles.card}>
       <div className={styles.cardHead}>
@@ -76,14 +77,24 @@ function ReportCard({ report }: { report: Report }) {
       </Text>
     </FeedCard>
   );
-}
+});
 
 /**
- * Жалобы Telegram-приложения (отдельный раздел + список своих жалоб):
+ * Жалобы — отдельная страница /profile/reports (без Modal/портала):
+ * тело — полноэкранная страница без смены контракта.
+ *
  * - создание: тип объекта + идентификатор + категория + описание (≤ 2000);
  * - клиентский хинт лимита «1 жалоба навсегда» (hasExistingReport),
  *   сервер — источник правды (409);
  * - список своих жалоб со статусами модерации.
+ *
+ * Dirty-guard: useClosingConfirmation держит нативное подтверждение
+ * закрытия миника при черновике (targetId/description) — на странице это
+ * уход со страницы/закрытие приложения, а не закрытие модалки. Хук
+ * сам снимает флаг в cleanup при размонтировании страницы.
+ *
+ * a11y: интерактив — таргеты ≥44px (min-h-11), счётчик и хинт лимита —
+ * aria-live, ошибки — role=alert, успех — role=status.
  */
 export function ReportsPage() {
   const [targetType, setTargetType] = useState<ReportTargetType>("trip");
@@ -93,6 +104,9 @@ export function ReportsPage() {
   const [description, setDescription] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Черновик формы — dirty для нативного подтверждения ухода со страницы
+  // (enableClosingConfirmation, пока targetId/description не пусты).
+  useClosingConfirmation(targetId !== "" || description !== "");
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
   // второй клик до ре-рендера не отправит второй запрос (защита от двойного сабмита).
   const submitGuard = useRef(false);
@@ -134,11 +148,15 @@ export function ReportsPage() {
           submitGuard.current = false;
         },
         onSuccess: () => {
+          haptic.success();
           setTargetId("");
           setDescription("");
           setSuccess(true);
         },
-        onError: (error) => setFormError(reportErrorMessage(error)),
+        onError: (error) => {
+          haptic.error();
+          setFormError(reportErrorMessage(error));
+        },
       },
     );
   };
@@ -154,7 +172,6 @@ export function ReportsPage() {
   if (myReports.error instanceof ApiError && myReports.error.status === 403) {
     return (
       <>
-        <PageHeader title="Жалобы" />
         <Placeholder
           header="Аккаунт заблокирован"
           description="Действие недоступно: аккаунт заблокирован."
@@ -165,8 +182,6 @@ export function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Жалобы" />
-
       <div className={styles.wrap}>
         <Section header="Сообщите о проблеме">
           <div className={styles.panel}>
@@ -285,6 +300,7 @@ export function ReportsPage() {
               mode="bezeled"
               stretched
               size="l"
+              className="min-h-11"
               loading={create.isPending}
               disabled={!canSubmit}
               onClick={submit}

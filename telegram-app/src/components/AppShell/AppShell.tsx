@@ -5,7 +5,7 @@ import styles from "./AppShell.module.css";
 export const ROUTE_FADE_CLASS = styles["route-fade"];
 
 export interface AppShellProps {
-  /** Шапка корневых разделов (AppHeader) — только на табах. */
+  /** Опциональная шапка (сейчас не используется — хром рисует клиент Telegram). */
   header?: ReactNode;
   /** Контент маршрута (Outlet в route-fade обёртке у роутера). */
   children: ReactNode;

@@ -69,9 +69,10 @@ afterEach(() => {
 });
 
 describe("ReportsPage: форма (порт ReportModal)", () => {
-  it("селекты типа/категории с русскими подписями", () => {
+  it("селекты типа/категории с русскими подписями и кнопка ≥44px", () => {
     const html = renderPage();
 
+    expect(html).toContain("Жалобы");
     expect(html).toContain("Сообщите о проблеме");
     expect(html).toContain("Пользователь");
     expect(html).toContain("Поездка");
@@ -80,6 +81,7 @@ describe("ReportsPage: форма (порт ReportModal)", () => {
     expect(html).toContain("Мошенничество");
     expect(html).toContain("Недостоверная информация");
     expect(html).toContain("Отправить жалобу");
+    expect(html).toContain("min-h-11");
   });
 
   it("описание с браузерным maxLength 2000 из контракта", () => {

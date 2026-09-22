@@ -2,7 +2,8 @@
 // react-dom/server renderToString (среда node, DOM не нужен) + моки хуков:
 // 1) Хуки данных мокаются через vi.hoisted + фабрики vi.mock;
 //    useAuthStore — настоящий (состояние выставляется через setState).
-// 2) PageHeader использует useNavigate — рендерим внутри MemoryRouter.
+// 2) react-router-контекст (ReviewsBody использует useNavigate/useLocation)
+//    — рендерим внутри MemoryRouter.
 // 3) Взаимодействие не симулируется: начальная вкладка задаётся пропом
 //    initialTab, переключение и сабмит покрыты на уровне query-мутаций
 //    и чистой валидации (reviewValidation.test.ts).
@@ -200,12 +201,11 @@ afterEach(() => {
 });
 
 describe("ReviewsPage: структура", () => {
-  it("заголовок «Отзывы» и три вкладки (Мои/Новая/Обо мне)", () => {
+  it("три вкладки (Мои/Новая/Обо мне); заголовок экрана — нативная шапка Telegram", () => {
     setQueries({ my: { data: [makeReview({ status: REVIEW_STATUS.PENDING })] } });
 
     const html = renderPage();
 
-    expect(html).toContain("Отзывы");
     expect(html).toContain("Мои");
     expect(html).toContain("Новая");
     expect(html).toContain("Обо мне");

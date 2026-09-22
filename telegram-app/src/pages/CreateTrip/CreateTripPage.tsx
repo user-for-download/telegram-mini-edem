@@ -25,7 +25,6 @@ import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
 import { CityPickerField } from "@/components/CityPicker/CityPickerField";
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { PageHeader } from "@/components/PageHeader";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { TRIP_TAGS } from "@/consts/tags";
 import { haptic } from "@/utils/haptics";
@@ -76,12 +75,9 @@ function FieldError({
 export function CreateTripPage() {
   const navigate = useNavigate();
   return (
-    <>
-      <PageHeader title="Создать поездку" />
-      <CreateTripForm
-        onCreated={(tripId) => navigate(`/trips/${tripId}`, { replace: true })}
-      />
-    </>
+    <CreateTripForm
+      onCreated={(tripId) => navigate(`/trips/${tripId}`, { replace: true })}
+    />
   );
 }
 

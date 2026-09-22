@@ -15,7 +15,6 @@ import {
   FEEDBACK_TEXT_MAX_LENGTH,
   type UserFeedbackDto,
 } from "@edem/contracts";
-import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
@@ -173,7 +172,6 @@ export function SupportPage() {
   ) {
     return (
       <>
-        <PageHeader title="Поддержка" />
         <Placeholder
           header="Аккаунт заблокирован"
           description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
@@ -191,8 +189,6 @@ export function SupportPage() {
 
   return (
     <>
-      <PageHeader title="Поддержка" />
-
       <div className={styles.wrap}>
         <Section header="Частые вопросы">
           <div className={styles.faqPanel}>
