@@ -68,7 +68,7 @@ afterEach(() => {
 });
 
 describe("SupportPage: FAQ (порт SupportPanel)", () => {
-  it("пять вопросов из VK-референса", () => {
+  it("пять вопросов FAQ", () => {
     expect(SUPPORT_FAQ).toHaveLength(5);
 
     const html = renderPage();

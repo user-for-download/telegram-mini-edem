@@ -1,5 +1,5 @@
 // telegram-app/src/helpers/tripShare.ts
-// Шаринг поездки в Telegram (паритет VK TripDetailsPanel → shareTrip):
+// Шаринг поездки в Telegram:
 // ссылка в формате, который принимает AppRouter.parseTripStartParam
 // (`trip_<uuid>`), плюс hash-ссылка на детали для веба.
 //
@@ -7,7 +7,7 @@
 // 1. внутри Telegram-клиента — shareURL SDK (нативный диалог t.me/share);
 // 2. Web Share API (браузеры);
 // 3. буфер обмена.
-// VK-мост здесь неприменим.
+
 
 import { getRawInitData, shareViaTelegram } from "@/utils/telegram-adapter";
 

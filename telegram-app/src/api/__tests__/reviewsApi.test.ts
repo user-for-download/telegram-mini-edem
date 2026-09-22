@@ -43,7 +43,7 @@ const review = {
   tripRoute: "Вологда → Череповец",
 };
 
-describe("reviewsApi (Telegram, паритет VK reviews.api)", () => {
+describe("reviewsApi (Telegram)", () => {
   beforeEach(() => {
     requestMock.mockReset();
   });

@@ -30,8 +30,7 @@ import {
 /**
  * Telegram WebSocket client (ws.v1).
  *
- * Порт замороженного VK `WsProvider` под контракт
- * `docs/migration/telegram-realtime-contract.md`:
+ * Реализация контракта `docs/migration/telegram-realtime-contract.md`:
  *
  * - сокет открывается только при `status === "authenticated"` и шлёт JWT
  *   ПЕРВЫМ сообщением `{"type":"auth","token"}` — никогда в URL/query;
@@ -426,8 +425,7 @@ function notifyHaptic(kind: "success" | "error"): void {
 
 /**
  * Слушатель realtime-событий: инвалидация запросов по контракту ws.v1
- * (семантическое покрытие замороженного VK GlobalWsListener — без
- * уменьшения) + дедуплицированные уведомления (telegram-ui Snackbar).
+ * + дедуплицированные уведомления (telegram-ui Snackbar).
  *
  * Эффекты идемпотентны: повторная доставка того же события (reconnect,
  * resync) гасится seen-множеством и dedupeKey уведомлений.

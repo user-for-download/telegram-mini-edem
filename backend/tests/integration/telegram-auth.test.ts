@@ -19,7 +19,7 @@ const { db } = await import("../../src/db.js");
  * профиля, P2002-гонка конкурентных запусков.
  *
  * Паттерны репо: app.request(), уникальные telegramUserId (BigInt-счётчик
- * 9_900_000+ — не пересекается с VK-диапазонами 9_100_000/9_700_000/
+ * 9_900_000+ — не пересекается с диапазонами 9_100_000/9_700_000/
  * 9_800_000 других тестов), удаление созданных юзеров в afterEach.
  */
 const JSON_HEADERS = { "Content-Type": "application/json" };
@@ -249,7 +249,7 @@ describe("POST /auth/telegram: отказы", () => {
   });
 });
 
-describe("POST /auth/telegram: P2002-гонка (зеркало VK-фикса)", () => {
+describe("POST /auth/telegram: P2002-гонка", () => {
   it("10 конкурентных раундов: оба 200, ровно один пользователь", async () => {
     for (let i = 0; i < 10; i++) {
       const tgId = nextTgId();

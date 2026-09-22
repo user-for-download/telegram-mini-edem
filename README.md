@@ -136,12 +136,14 @@ npm run db:seed --workspace=backend
 npm run typecheck        # tsc --noEmit во всех воркспейсах
 npm run test             # Юнит-тесты (Vitest): contracts + backend + telegram-app
 npm run lint             # typecheck всех воркспейсов
+npm run lint:eslint      # ESLint всего репо (TS + react-hooks + jsx-a11y)
+npm run lint:eslint:backend  # только backend (аналогично :tg-app, :webapp, :contracts)
 npm run format:check     # базовая проверка текстовых файлов и JSON без перезаписи
 npm run build            # contracts → backend → telegram-app → webapp
 node e2e/telegram-parity.mjs  # E2E parity (нужны backend :3011, TG-front :3012, dev-БД)
 ```
 
-Тесты backend запускаются на отдельной БД `edem_test` (см. `backend/.env.test`), поэтому рабочая БД не затрагивается. При локальном Compose создайте её через `docker exec vk-mini-edem-db-dev psql -U edem -c "CREATE DATABASE edem_test;"`, затем выполните `npm run db:test:push --workspace=backend`. GitHub Actions поднимает PostgreSQL 16 с готовой `edem_test` автоматически и выполняет те же lint, format, build и test-проверки на Node 22.
+Тесты backend запускаются на отдельной БД `edem_test` (см. `backend/.env.test`), поэтому рабочая БД не затрагивается. При локальном Compose создайте её через `docker exec edem-db-dev psql -U edem -c "CREATE DATABASE edem_test;"`, затем выполните `npm run db:test:push --workspace=backend`. GitHub Actions поднимает PostgreSQL 16 с готовой `edem_test` автоматически и выполняет те же lint, format, build и test-проверки на Node 22.
 
 ## ⚙️ Настройка окружения
 
@@ -283,7 +285,7 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 - **Frontend**: React 19, telegram-ui, Zustand, TanStack Query, react-router, Vite 8, Sentry
 - **Админ-панель**: React 19, Vite 8, Tailwind CSS 4, shadcn/ui, TanStack Router + Query, lucide-react, sonner
 - **Backend**: Hono, Node.js 22, Prisma ORM, PostgreSQL, jose (JWT), Zod, pino, @sentry/node, isomorphic-dompurify
-- **Монорепозиторий**: npm workspaces, TypeScript, Vitest
+- **Монорепозиторий**: npm workspaces, TypeScript, Vitest, ESLint (конфиг `eslint.config.mjs`)
 - **E2E**: Playwright + Chromium (`e2e/telegram-parity.mjs`)
 - **CI**: GitHub Actions (checkout/setup-node v5, Node 22, PostgreSQL 16 как сервис)
 
@@ -317,6 +319,7 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 npm run typecheck    # все workspace: успешно
 npm run test         # все workspace: успешно
 npm run lint         # typecheck всех воркспейсов: успешно
+npm run lint:eslint  # ESLint (TS + react-hooks + jsx-a11y): 0 ошибок
 npm run format:check # успешно
 npm run bundle:check # gzip-бюджет: успешно
 npm run build        # contracts → backend → telegram-app → webapp: успешно

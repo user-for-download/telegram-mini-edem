@@ -2,8 +2,7 @@ import { z } from "zod";
 import { userSchema } from "../schemas/user.schema.js";
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
-// (VK searchParams-вариант удалён вместе с VK-auth, tg-migration-26.
-// Остался только Telegram-вариант ниже.)
+// (Только Telegram-вариант ниже.)
 
 export const authResponseSchema = z.object({
   accessToken: z.string(),
@@ -26,8 +25,8 @@ export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
  * строка) РОВНО как её отдал Telegram — ключи/порядок не пересортированы,
  * иначе серверная валидация HMAC не сойдётся. Подпись Telegram покрывает
  * ВСЮ строку (user/auth_date/hash), отдельные поля в контракт не входят —
- * реконструкция по частям невозможна (зеркально политике VK searchParams).
- * Длина: реальная initData ~1-2 КБ; cap 4096 как у VK searchParams.
+ * реконструкция по частям невозможна.
+ * Длина: реальная initData ~1-2 КБ; cap 4096 с запасом.
  */
 export const telegramAuthRequestSchema = z.object({
   initData: z.string().min(1).max(4096),

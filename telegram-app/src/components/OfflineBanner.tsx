@@ -3,9 +3,8 @@ import { WifiOff } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 /**
- * Паритет VK OfflineBanner: предупреждение о stale-данных и
- * подтверждение восстановления соединения (role=status, aria-live).
- * Нативный Banner type="inline".
+ * Предупреждение о stale-данных и подтверждение восстановления
+ * соединения (role=status, aria-live). Нативный Banner type="inline".
  */
 export function OfflineBanner() {
   const { isOnline, wasOffline } = useOnlineStatus();

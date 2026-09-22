@@ -17,7 +17,7 @@ export const TG_URL = process.env.E2E_TG_URL || "http://localhost:3012";
 export const API_URL =
   process.env.E2E_API_URL || "http://localhost:3011/api/v1";
 export const DB_CONTAINER =
-  process.env.E2E_DB_CONTAINER || "vk-mini-edem-db-dev";
+  process.env.E2E_DB_CONTAINER || "edem-db-dev";
 export const VERBOSE = process.env.E2E_VERBOSE === "1";
 export const SHOTS = path.join(__dirname, "shots-tg");
 export const RESULTS_JSON = path.join(__dirname, "results-tg.json");

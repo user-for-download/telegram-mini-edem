@@ -513,7 +513,7 @@ function DriverBlock({
   const cancelTrip = useCancelTripMutation();
   const completeTrip = useCompleteTripMutation();
   // Заявки видны только водителю: остальным бэкенд вернёт 403,
-  // поэтому запрос делаем только здесь (паттерн VK TripDetailsPanel).
+  // поэтому запрос делаем только здесь.
   const bookings = useTripBookingsQuery(tripId, { enabled: isActive });
   const pendingCount =
     bookings.data?.pages

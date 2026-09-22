@@ -1,7 +1,7 @@
 // backend/tests/fixtures/telegram.ts
 //
-// Общие фикстуры Telegram-parity сьюта (tg-migration-16): сиды TG/VK
-// пользователей, городов, авторизация (dev-initData login через реальный
+// Общие фикстуры Telegram-parity сьюта (tg-migration-16): сиды
+// TG-пользователей, городов, авторизация (dev-initData login через реальный
 // /auth/telegram + mock-токены для остального), админ-кука, уникальные IP
 // под TRUST_PROXY и идемпотентная чистка изолированных данных.
 //

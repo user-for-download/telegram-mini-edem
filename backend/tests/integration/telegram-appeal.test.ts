@@ -285,7 +285,7 @@ describe("feedback/appeal TG-ветка: подпись и валидация", 
 });
 
 describe("feedback/appeal TG-ветка: rate limit (5 запросов в час с одного IP)", () => {
-  it("6-й запрос с одного IP → 429 RATE_LIMITED (общий bucket с VK-веткой)", async () => {
+  it("6-й запрос с одного IP → 429 RATE_LIMITED", async () => {
     // Arrange — dev-bypass без replay-кэша: одно тело можно слать повторно.
     const { id: userId, tgId } = await seedTelegramUser({ bannedAt: new Date() });
     const ip = uniqueIp();

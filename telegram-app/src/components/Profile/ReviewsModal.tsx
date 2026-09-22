@@ -121,7 +121,7 @@ export function ReviewsRoute() {
  * renderToString не попадает). Мемоизировано (тяжёлые списки отзывов).
  * Без PageHeader — закрытие через header модалки.
  *
- * Вкладки (порт VK ReviewsPanel + CreateReviewModal):
+ * Вкладки отзывов:
  * - «Мои» — все мои отзывы (GET /reviews/my, все статусы: pending /
  *   published / rejected с подписями);
  * - «Новая» — доступные поездки (GET /reviews/available-trips) + форма
@@ -163,7 +163,7 @@ export const ReviewsBody = memo(function ReviewsBody({
       rating !== 5,
   );
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
-  // второй клик до ре-рендера не отправит второй запрос (паттерн VK).
+  // второй клик до ре-рендера не отправит второй запрос (защита от двойного сабмита).
   const submitGuard = useRef(false);
 
   const trips = useMemo(() => available.data ?? [], [available.data]);
@@ -175,7 +175,7 @@ export const ReviewsBody = memo(function ReviewsBody({
   );
 
   // Водитель отзывается о пассажирах: цели — подтверждённые брони поездки
-  // (useTripBookingsQuery — infinite, сплющиваем страницы; зеркально VK).
+  // (useTripBookingsQuery — infinite, сплющиваем страницы).
   const tripBookings = useTripBookingsQuery(selectedTrip?.id ?? "", {
     enabled: Boolean(selectedTrip) && isDriverTrip,
   });
@@ -193,7 +193,7 @@ export const ReviewsBody = memo(function ReviewsBody({
   }, [isDriverTrip, tripBookings.data]);
 
   // Цель отзыва: пассажир всегда пишет водителю; водитель выбирает
-  // пассажира (явный выбор > первый в списке — паттерн VK).
+  // пассажира (явный выбор > первый в списке).
   const targetUser: User | null = isDriverTrip
     ? (passengers.find((p) => p.id === selectedPassengerId) ??
       passengers[0] ??

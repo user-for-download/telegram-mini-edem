@@ -18,14 +18,14 @@ import {
 import styles from "./SettingsPage.module.css";
 
 /**
- * Настройки уведомлений Telegram-приложения (порт VK NotificationsPanel,
- * без VK-специфики: push VK и сообщения сообщества отсутствуют —
- * уведомления доставляются внутри приложения; сообщения Telegram-бота —
+ * Настройки уведомлений Telegram-приложения (без push и сообщений
+ * сообщества — уведомления доставляются внутри приложения;
+ * сообщения Telegram-бота —
  * отдельный будущий этап, не этот экран).
  *
  * Тумблер синхронизируется с backend (PATCH /users/me/notification-settings,
  * requireUser + sanitize + profileUpdateLimiter); при ошибке — откат
- * к предыдущему значению, зеркально VK-панели.
+ * к предыдущему значению.
  */
 export function SettingsPage() {
   const navigate = useNavigate();

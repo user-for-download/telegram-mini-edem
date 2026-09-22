@@ -33,7 +33,7 @@ function toDateTimeLocal(iso: string | undefined): string {
 }
 
 /**
- * Inline-редактирование поездки водителем (паритет VK EditTripModal).
+ * Inline-редактирование поездки водителем.
  * Маршрут заблокирован сервером (strict-схема отвергает fromCity/toCity) —
  * UI его не показывает, отправляет только разрешённые поля.
  */

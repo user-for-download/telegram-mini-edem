@@ -42,7 +42,7 @@ function notification(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("notificationsApi (Telegram, паритет VK notifications.api)", () => {
+describe("notificationsApi (Telegram)", () => {
   beforeEach(() => {
     requestMock.mockReset();
   });
@@ -118,7 +118,7 @@ describe("notificationsApi (Telegram, паритет VK notifications.api)", () 
   });
 });
 
-describe("supportApi (Telegram, паритет VK feedback.api без appeal)", () => {
+describe("supportApi (Telegram, без appeal)", () => {
   beforeEach(() => {
     requestMock.mockReset();
   });
@@ -176,7 +176,7 @@ describe("supportApi (Telegram, паритет VK feedback.api без appeal)", 
   });
 });
 
-describe("reportsApi (Telegram, паритет VK reports.api)", () => {
+describe("reportsApi (Telegram)", () => {
   beforeEach(() => {
     requestMock.mockReset();
   });

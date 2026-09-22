@@ -237,7 +237,7 @@ app.route("/api/v1/admin", adminRouter);
 app.get("/api/v1/ws", createWsHandler(upgradeWebSocket));
 
 if (env.isProduction) {
-  // Telegram-only SPA-раздача (tg-migration-25: VK mini-app удалён).
+  // Telegram-only SPA-раздача.
   // Host-гейт оставлен: TELEGRAM_HOSTS ограничивает, какие хосты получают
   // приложение; остальные — 404, а не чужой фронт.
   const tgDistPath = path.resolve(process.cwd(), "telegram-app/dist");

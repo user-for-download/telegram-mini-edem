@@ -14,8 +14,7 @@ import type { VehicleFormDto } from "@/api/vehicle";
 export const VEHICLE_LIMITS = { model: 50, color: 30, plate: 15 } as const;
 
 /**
- * Валидация формы. Номер опционален — обязательны только модель и цвет
- * (isFormValid в CarFormModal). Сообщения совпадают с VK-текстами.
+ * Валидация формы: номер опционален, обязательны только модель и цвет.
  */
 export function validateVehicleForm(
   model: string,
@@ -60,8 +59,7 @@ export function normalizeVehicleForm(
 }
 
 /**
- * Дружелюбный текст серверной ошибки мутации (VK CarFormModal маппил
- * ApiError через getErrorMessage; в telegram-app маппинг локальный):
+ * Дружелюбный текст серверной ошибки мутации (маппинг ApiError локальный):
  * 401 — сессия, 429 — profileUpdateLimiter, 400 — валидация backend,
  * INVALID_RESPONSE — fail-closed валидация ответа клиентом.
  */

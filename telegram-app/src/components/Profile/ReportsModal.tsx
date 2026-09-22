@@ -161,7 +161,7 @@ export const ReportsBody = memo(function ReportsBody() {
   const [success, setSuccess] = useState(false);
   useClosingConfirmation(targetId !== "" || description !== "");
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
-  // второй клик до ре-рендера не отправит второй запрос (паттерн VK).
+  // второй клик до ре-рендера не отправит второй запрос (защита от двойного сабмита).
   const submitGuard = useRef(false);
 
   const myReports = useMyReportsQuery();

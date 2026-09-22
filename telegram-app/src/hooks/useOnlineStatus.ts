@@ -1,5 +1,5 @@
 // telegram-app/src/hooks/useOnlineStatus.ts
-// Паритет VK OfflineBanner: единый источник онлайн-статуса для TG.
+// Единый источник онлайн-статуса для TG.
 // wasOffline нужен, чтобы кратко показать «Соединение восстановлено».
 import { useSyncExternalStore, useState } from "react";
 

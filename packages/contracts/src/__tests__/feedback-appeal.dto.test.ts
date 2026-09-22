@@ -6,7 +6,7 @@ import {
 } from "../index.js";
 
 /**
- * Appeal-контракты (tg-migration-26: VK-вариант удалён) —
+ * Appeal-контракты —
  * POST /feedback/appeal принимает только TG-вариант ({ initData }).
  * Лимиты subject/text едины (100/2000), cap подписи — 4096.
  */

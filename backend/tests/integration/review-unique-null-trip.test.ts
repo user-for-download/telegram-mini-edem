@@ -232,7 +232,7 @@ describe("Review unique NULL-safety (F14)", () => {
     // F14-cleanup: отзыв победителя трекаем для afterEach — иначе он
     // остаётся в БД (trip уже удалён → tripId SetNull) и deleteMany users
     // падает по FK Review_targetUserId_fkey, оставляя stray-строки
-    // (ломают auth-concurrent-launch с тем же vk-диапазоном).
+    // (ломают auth-concurrent-launch с тем же диапазоном id).
     const winner = r1.status === 201 ? r1 : r2;
     const winnerBody = (await winner.json()) as { id: string };
     createdReviewIds.push(winnerBody.id);

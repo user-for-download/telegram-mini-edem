@@ -76,7 +76,6 @@ feedbackRouter.post("/", requireUser, mutationLimiter, async (c) => {
  * подтверждается подписью Telegram initData (verifyTelegramInitData —
  * та же проверка, что в /auth/telegram: HMAC/TTL, dev-bypass только
  * вне production без токена бота), токены не выдаются.
- * VK-ветка удалена вместе с VK-auth (tg-migration-26).
  *
  * Без доверия к display-полям: из подписанных данных используется ТОЛЬКО
  * проверенный telegramUserId для поиска userId; имя/аватар из initData

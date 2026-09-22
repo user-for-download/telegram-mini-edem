@@ -1,6 +1,5 @@
 // Рендер-тесты ReviewsPage без @testing-library/react (не установлен):
-// используем react-dom/server renderToString (среда node, DOM не нужен) —
-// паттерн VK ReviewsPanel.test.tsx / CreateReviewModal.test.tsx:
+// react-dom/server renderToString (среда node, DOM не нужен) + моки хуков:
 // 1) Хуки данных мокаются через vi.hoisted + фабрики vi.mock;
 //    useAuthStore — настоящий (состояние выставляется через setState).
 // 2) PageHeader использует useNavigate — рендерим внутри MemoryRouter.

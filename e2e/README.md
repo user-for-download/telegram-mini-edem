@@ -1,14 +1,13 @@
 # E2E Tests
 
-Telegram Mini App parity E2E (tg-migration-17, VK flows removed in
-tg-migration-25): Playwright + Chromium journey plus realtime check.
+Telegram Mini App parity E2E (tg-migration-17): Playwright + Chromium journey plus realtime check.
 
 ## Prerequisites
 
 - Telegram frontend on `E2E_TG_URL` (default `http://localhost:3012`,
   `telegram-app` vite dev server)
 - Backend running on `http://localhost:3011`
-- Dev DB running (docker container `E2E_DB_CONTAINER`, default `vk-mini-edem-db-dev`)
+- Dev DB running (docker container `E2E_DB_CONTAINER`, default `edem-db-dev`)
 - `ALLOW_DEV_AUTH=true` in backend `.env`
 - Admin token in `E2E_ADMIN_TOKEN` (default `dev-admin-token-12345`, must match
   backend `ADMIN_TOKEN`) for review approve + feedback reply steps
@@ -28,7 +27,7 @@ node e2e/telegram-realtime.mjs
 | Var | Default | Purpose |
 | --- | --- | --- |
 | `E2E_TG_URL` | `http://localhost:3012` | Telegram frontend base URL |
-| `E2E_DB_CONTAINER` | `vk-mini-edem-db-dev` | Docker container for time-travel (`departureAt`) + cleanup |
+| `E2E_DB_CONTAINER` | `edem-db-dev` | Docker container for time-travel (`departureAt`) + cleanup |
 | `E2E_VERBOSE` | unset (`1` = verbose) | Log screenshot-helper failures instead of failing the step |
 | `E2E_API_URL` | `http://localhost:3011/api/v1` | Backend API base |
 | `E2E_ADMIN_TOKEN` | `dev-admin-token-12345` | Admin API (must match backend `ADMIN_TOKEN`) |

@@ -25,7 +25,7 @@ export type CreateFeedbackDto = z.infer<typeof createFeedbackDtoSchema>;
 /**
  * TG-апелляция забаненного пользователя (публичный эндпоинт, без токена).
  * Личность подтверждается подписью Telegram initData (verifyTelegramInitData,
- * та же что в /auth/telegram). VK-вариант удалён (tg-migration-26).
+ * та же что в /auth/telegram).
  *
  * Безопасность (backend POST /feedback/appeal):
  * - используется ТОЛЬКО проверенный telegramUserId из подписи; display-поля
@@ -47,10 +47,9 @@ export type FeedbackTelegramAppealDto = z.infer<
   typeof feedbackTelegramAppealDtoSchema
 >;
 
-// ─── FeedbackAppealRequest (Telegram-only, tg-migration-26) ───────────────
+// ─── FeedbackAppealRequest (Telegram-only) ──────────────────────────────────
 /**
  * Тело POST /feedback/appeal: только TG-вариант (initData).
- * VK-вариант (searchParams) удалён вместе с VK-auth.
  */
 export const feedbackAppealRequestSchema = feedbackTelegramAppealDtoSchema;
 

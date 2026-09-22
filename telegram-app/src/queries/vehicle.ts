@@ -18,7 +18,7 @@ export const VEHICLE_KEYS = {
  * Просмотр автомобиля: переиспользует profile-запрос под тем же ключом
  * (отдельного GET /users/me/car у backend нет) и селектит car.
  * Возвращает vehicle=null, когда авто не добавлено, — это штатный
- * empty-state (VK: «Чтобы публиковать поездки, добавьте автомобиль»),
+ * empty-state («Чтобы публиковать поездки, добавьте автомобиль»),
  * а не ошибка.
  */
 export function useVehicleQuery(options?: {

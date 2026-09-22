@@ -105,8 +105,8 @@ export function RideRequestsRoute() {
 }
 
 /**
- * Тело «Ищу попутку» без PageHeader (паритет VK RideRequestsPanel:
- * создание, inline-редактирование PATCH, пауза/возобновление, отмена
+ * Тело «Ищу попутку» без PageHeader (создание, inline-редактирование
+ * PATCH, пауза/возобновление, отмена
  * через confirm-guard, retry/offline). Экспортировано для SSR-тестов:
  * Modal — портал, в renderToString не попадает. Мемоизировано.
  */

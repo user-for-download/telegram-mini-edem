@@ -4,7 +4,7 @@ import { telegramAuthRequestSchema } from "../index.js";
 /**
  * Telegram auth контракт: RAW initData строка как пришла от Telegram
  * (никакой пересортировки ключей — иначе HMAC валидация на сервере
- * не сойдётся). Границы длины зеркальны VK searchParams.
+ * не сойдётся). Границы длины — под реальную initData (~1-2 КБ, cap 4096).
  */
 describe("Telegram auth contracts", () => {
   it("accepts raw init data string", () => {

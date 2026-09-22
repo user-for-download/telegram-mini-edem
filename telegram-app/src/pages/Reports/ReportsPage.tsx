@@ -79,8 +79,7 @@ function ReportCard({ report }: { report: Report }) {
 }
 
 /**
- * Жалобы Telegram-приложения (порт VK ReportModal как отдельный раздел +
- * список своих жалоб):
+ * Жалобы Telegram-приложения (отдельный раздел + список своих жалоб):
  * - создание: тип объекта + идентификатор + категория + описание (≤ 2000);
  * - клиентский хинт лимита «1 жалоба навсегда» (hasExistingReport),
  *   сервер — источник правды (409);
@@ -95,7 +94,7 @@ export function ReportsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
-  // второй клик до ре-рендера не отправит второй запрос (паттерн VK).
+  // второй клик до ре-рендера не отправит второй запрос (защита от двойного сабмита).
   const submitGuard = useRef(false);
 
   const myReports = useMyReportsQuery();

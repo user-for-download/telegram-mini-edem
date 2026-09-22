@@ -33,9 +33,8 @@ import {
 import styles from "./SupportPage.module.css";
 
 /**
- * FAQ поддержки (порт SupportPanel из mini-app): формулировки сохранены,
- * пункт про подтверждение личности адаптирован — вместо данных профиля
- * ВКонтакте используется профиль Telegram.
+ * FAQ поддержки: формулировки сохранены, личность подтверждается
+ * профилем Telegram.
  */
 export const SUPPORT_FAQ: ReadonlyArray<{
   id: string;
@@ -119,7 +118,7 @@ function FeedbackCard({
 }
 
 /**
- * Помощь и поддержка Telegram-приложения (порт VK SupportPanel):
+ * Помощь и поддержка Telegram-приложения:
  * - реальный FAQ;
  * - форма обратной связи (POST /feedback, лимиты 100/2000 из контракта);
  * - «Мои обращения» со статусом ответа (GET /feedback);
@@ -134,7 +133,7 @@ export function SupportPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
-  // второй клик до ре-рендера не отправит второй запрос (паттерн VK).
+  // второй клик до ре-рендера не отправит второй запрос (защита от двойного сабмита).
   const submitGuard = useRef(false);
 
   const myFeedbacks = useMyFeedbacksQuery();

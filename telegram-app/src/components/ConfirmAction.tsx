@@ -3,7 +3,7 @@ import type { MouseEvent } from "react";
 import { Button, Text } from "@telegram-apps/telegram-ui";
 
 /**
- * Confirm-guard для деструктивных действий (паритет VK ConfirmProvider):
+ * Confirm-guard для деструктивных действий:
  * первый клик «вооружает» кнопку, второй — выполняет. Отмена снимает
  * armed-состояние. Двойной сабмит блокируется через pending.
  *

@@ -1,5 +1,5 @@
 // telegram-app/src/router/deepLinks.ts
-// Канонические Telegram deep-links (паритет VK helpers/deepLink.ts +
+// Канонические Telegram deep-links (см.
 // docs/migration/notification-parity-contract.md, раздел «Telegram deep-link format»).
 //
 // Источники переходов:
@@ -9,7 +9,7 @@
 //   NotificationsPage (единственный источник правды для tap-destinations,
 //   покрыт notificationsPage.test.tsx; здесь не дублируется);
 // - share поездки — buildTripStartParam/buildTripDeepLink из helpers/tripShare
-//   (токен `trip_<uuid>`, паритет VK TripDetailsPanel → shareTrip).
+//   (токен `trip_<uuid>`).
 //
 // Per-entity ссылки без идентификаторов (заявки на поездку, конкретная бронь,
 // авто, репорты, модалка водителя) намеренно не поддерживаются: в startapp

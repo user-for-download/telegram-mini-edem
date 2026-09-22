@@ -2,7 +2,7 @@
 services:
   db-dev:
     image: postgres:16-alpine
-    container_name: vk-mini-edem-db-dev
+    container_name: edem-db-dev
     restart: unless-stopped
     environment:
       POSTGRES_USER: edem

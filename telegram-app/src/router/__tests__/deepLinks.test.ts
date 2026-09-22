@@ -51,7 +51,7 @@ describe("parseTripStartParam", () => {
   });
 });
 
-describe("START_PARAM_ROUTES (паритет разделов VK + контракт)", () => {
+describe("START_PARAM_ROUTES (контракт)", () => {
   it("ведёт на существующие маршруты AppRouter", () => {
     expect(START_PARAM_ROUTES["bookings"]).toBe("/bookings");
     expect(START_PARAM_ROUTES["history"]).toBe("/bookings?segment=history");

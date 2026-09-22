@@ -16,7 +16,7 @@ const { signAccessToken, signRefreshToken } = await import("../../src/auth/token
  * Профиль Telegram-пользователя: GET/PATCH /users/me,
  * PATCH /users/me/notification-settings, DELETE /users/me, POST /auth/logout.
  *
- * Backend-контроли общие для VK и TG (requireUser, getSanitizedBody,
+ * Backend-контроли общие (requireUser, getSanitizedBody,
  * profileUpdateLimiter/mutationLimiter, serializeUser): здесь проверяем их
  * на пользователях с telegramUserId — success, validation, banned, deleted
  * и active-obligation failure paths приёмки задачи 06.
