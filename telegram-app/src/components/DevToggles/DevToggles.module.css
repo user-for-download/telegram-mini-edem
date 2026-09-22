@@ -13,16 +13,17 @@
   pointer-events: none;
 }
 
-/* Сами кнопки кликабельны; тапы ≥32px, у dev-инструмента достаточно. */
+/* Сами кнопки кликабельны; тапы ≥32px, у dev-инструмента достаточно.
+ * Бордер — акцентный button_color: пилюля должна быть хорошо видна
+ * поверх любого контента (иначе dev-инструмент теряется на фоне). */
 .devButton {
   pointer-events: auto;
   padding: 5px 12px;
-  border: 1px solid var(--tgui--secondary_bg_color);
+  border: 2px solid var(--tgui--button_color);
   border-radius: 999px;
   background: var(--tgui--bg_color);
-  color: var(--tgui--hint_color);
+  color: var(--tgui--text_color);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
-  opacity: 0.85;
 }
