@@ -323,7 +323,12 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
     };
   }, []);
 
-  const disconnect = useCallback(() => {
+  // Разбор сокета БЕЗ setState: состояние isConnected ведут сокет-колбэки
+  // (onopen/onclose) и render-фаза ниже. setState здесь запрещён
+  // react-hooks/set-state-in-effect — disconnect() вызывался из эффектов.
+  // NB: onclose перед close() зануляем, поэтому колбэк не выстрелит —
+  // сброс isConnected делает render-фаза (сессия потеряна).
+  const teardownSocket = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       window.clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
@@ -337,8 +342,13 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
       ws.onclose = null;
       ws.close(1000, "Provider disconnected");
     }
-    setIsConnected(false);
   }, []);
+
+  // Сессия потеряна (logout/бан/протухший токен): живой сокет уже разобран
+  // teardown'ом в эффекте, флаг соединения сбрасываем здесь же фазой
+  // рендера — иначе UI врёт «подключено» (onclose занулен, колбэк молчит).
+  const sessionLost = !authenticated || !accessToken;
+  if (sessionLost && isConnected) setIsConnected(false);
 
   useEffect(() => {
     disposedRef.current = false;
@@ -353,7 +363,7 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
     } else {
       hasAuthedRef.current = false;
       reconnectAttemptRef.current = 0;
-      disconnect();
+      teardownSocket();
     }
 
     const resume = () => {
@@ -384,10 +394,10 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
       // живой сокет при повторном монтировании.
       const session = useAuthStore.getState();
       if (session.status !== "authenticated" || !session.session?.accessToken) {
-        disconnect();
+        teardownSocket();
       }
     };
-  }, [authenticated, accessToken, connect, disconnect]);
+  }, [authenticated, accessToken, connect, teardownSocket]);
 
   const value = useMemo(
     () => ({ isConnected, lastMessage, resyncSeq }),

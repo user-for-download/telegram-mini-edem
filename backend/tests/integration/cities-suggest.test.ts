@@ -7,8 +7,6 @@ import { db } from "../../src/db.js";
  * IP-лимитом 30 req/min. Возвращает top-N (limit, default 10) городов,
  * отфильтрованных case-insensitive по подстроке `q`.
  */
-const JSON_HEADERS = { "Content-Type": "application/json" };
-
 async function ensureCity(name: string): Promise<string> {
   const nameNormalized = name.trim().toLowerCase();
   const existing = await db.city.findFirst({ where: { nameNormalized } });

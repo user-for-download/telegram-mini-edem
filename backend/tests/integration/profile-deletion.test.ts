@@ -66,7 +66,7 @@ describe("DELETE /api/v1/users/me", () => {
 
   it("allows deletion with bookings only on completed trips (history)", async () => {
     await db.trip.update({ where: { id: tripId }, data: { status: "completed" } });
-    const booking = await db.booking.create({ data: { tripId, passengerId: userId, seat: 1, status: "confirmed" } });
+    await db.booking.create({ data: { tripId, passengerId: userId, seat: 1, status: "confirmed" } });
     try {
       const response = await app.request("/api/v1/users/me", { method: "DELETE", headers: { Authorization: `Bearer ${devMockAccessToken(userId)}` } });
       expect(response.status).toBe(200);

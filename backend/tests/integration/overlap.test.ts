@@ -61,7 +61,7 @@ describe("Overlap protection", () => {
     departureAt: string,
     durationMinutes: number,
     authId: string = driverId
-  ): Promise<{ status: number; body: any }> {
+  ): Promise<{ status: number; body: unknown }> {
     const res = await app.request("/api/v1/trips", {
       method: "POST",
       headers: {
@@ -89,7 +89,7 @@ describe("Overlap protection", () => {
   async function updateTripDeparture(
     tripId: string,
     departureAt: string
-  ): Promise<{ status: number; body: any }> {
+  ): Promise<{ status: number; body: unknown }> {
     const res = await app.request(`/api/v1/trips/${tripId}`, {
       method: "PATCH",
       headers: {
@@ -104,7 +104,7 @@ describe("Overlap protection", () => {
   async function book(
     tripId: string,
     authId: string = passengerId
-  ): Promise<{ status: number; body: any }> {
+  ): Promise<{ status: number; body: unknown }> {
     const res = await app.request("/api/v1/bookings", {
       method: "POST",
       headers: {

@@ -418,13 +418,16 @@ function BanDialog({
   const [reason, setReason] = useState("");
   const [touched, setTouched] = useState(false);
 
-  // Сбрасываем состояние при смене целевого пользователя или закрытии.
-  useEffect(() => {
+  // Сбрасываем состояние при закрытии — фазой рендера (setState в эффекте
+  // запрещён react-hooks/set-state-in-effect). Условие 1:1 с эффектом.
+  const [prevUser, setPrevUser] = useState(user);
+  if (user !== prevUser) {
+    setPrevUser(user);
     if (user === null) {
       setReason("");
       setTouched(false);
     }
-  }, [user]);
+  }
 
   const trimmed = reason.trim();
   const error = useMemo(() => validateBanReason(reason), [reason]);

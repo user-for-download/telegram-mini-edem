@@ -9,15 +9,12 @@
 // - pageerror/unhandledrejection валят прогон;
 // - BASE/API/DB/ADMIN — через env; time-travel departure через docker psql.
 import { chromium } from "playwright";
-import fs from "node:fs";
 import {
   API_URL,
-  DB_CONTAINER,
   DEV_TG_ID,
   PEER_TG_ID,
   PRICE,
   PRICE_LABEL,
-  RESULTS_JSON,
   RUN_ID,
   SHOTS,
   TG_URL,
@@ -25,7 +22,6 @@ import {
   checkPrereqs,
   cleanupRun,
   createHarness,
-  devInitData,
   ensureShotsDir,
   psql,
   tgApiLogin,

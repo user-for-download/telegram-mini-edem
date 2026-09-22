@@ -96,11 +96,13 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
 
   if (query.isLoading && pending.length === 0) {
     return (
+      // Скелетон без действий: всплытие безвредно (тап открывает детали
+      // поездки — тот же результат, что и тап по карточке), поэтому
+      // stopPropagation-обёртка убрана (запрещена jsx-a11y).
       <div
         role="status"
         aria-label="Загрузка заявок"
         className={styles.requestsList}
-        onClick={(event) => event.stopPropagation()}
       >
         {[0, 1].map((index) => (
           <Skeleton key={index} visible aria-hidden="true">
@@ -119,17 +121,20 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
 
   if (query.error && pending.length === 0) {
     return (
-      <div
-        className={styles.requestsList}
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div className={styles.requestsList}>
         <Caption Component="p" role="alert" className={styles.requestError}>
           {bookingErrorMessage(query.error)}
         </Caption>
         <Button
           size="s"
           mode="bezeled"
-          onClick={() => void query.refetch()}
+          onClick={(event) => {
+            // «Повторить» не должен открывать детали поездки (карточка
+            // кликабельна) — гасим всплытие в самой кнопке, а не обёрткой
+            // (обёртки с onClick запрещены jsx-a11y).
+            event.stopPropagation();
+            void query.refetch();
+          }}
         >
           Повторить
         </Button>
@@ -139,17 +144,18 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
 
   if (pending.length === 0) return null;
 
+  // Кнопки −/+ гасят всплытие сами; диалог подтверждения — портал вне
+  // обёртки (иначе его клики всплывали бы в карточку). Обёртка с onClick
+  // запрещена jsx-a11y (см. ConfirmAction.stop).
   return (
-    <div
-      className={styles.requestsList}
-      onClick={(event) => event.stopPropagation()}
-    >
-      {updateStatus.error && (
-        <Caption Component="p" role="alert" className={styles.requestError}>
-          {bookingErrorMessage(updateStatus.error)}
-        </Caption>
-      )}
-      {pending.map((booking) => (
+    <>
+      <div className={styles.requestsList}>
+        {updateStatus.error && (
+          <Caption Component="p" role="alert" className={styles.requestError}>
+            {bookingErrorMessage(updateStatus.error)}
+          </Caption>
+        )}
+        {pending.map((booking) => (
         <Cell
           key={booking.id}
           className={styles.requestCell}
@@ -211,6 +217,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
           </Subheadline>
         </Cell>
       ))}
+      </div>
       {confirm && (
         <RequestConfirmDialog
           booking={confirm.booking}
@@ -221,6 +228,6 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
           onConfirm={confirmAction}
         />
       )}
-    </div>
+    </>
   );
 }

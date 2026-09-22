@@ -110,7 +110,7 @@ describe("WebSocketManager", () => {
 
   it("closes an unauthenticated connection after the auth timeout (4401)", () => {
     const ws = makeFakeWs();
-    const connId = wsManager.register(ws);
+    wsManager.register(ws);
 
     vi.advanceTimersByTime(5_000);
 

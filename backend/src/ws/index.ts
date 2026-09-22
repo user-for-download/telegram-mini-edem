@@ -1,4 +1,6 @@
 import { getConnInfo } from "@hono/node-server/conninfo";
+import type { Context } from "hono";
+import type { UpgradeWebSocket, WSContext } from "hono/ws";
 import { verifyAccessTokenClaims } from "../auth/tokens.js";
 import { db } from "../db.js";
 import { env } from "../env.js";
@@ -7,13 +9,28 @@ import { logger } from "../logger.js";
 import { wsClientMessageSchema } from "@edem/contracts";
 
 /**
+ * connId, привязанный к сокету в onOpen. WSContext — чужой интерфейс без
+ * нашего поля, поэтому читаем/пишем через узкий каст вместо any.
+ * Неизвестный сокет (onOpen не отработал) — undefined, вызывающий решает.
+ */
+function getConnId(ws: WSContext): string | undefined {
+  return (ws as unknown as { __connId?: unknown }).__connId as
+    | string
+    | undefined;
+}
+
+function setConnId(ws: WSContext, connId: string): void {
+  (ws as unknown as { __connId?: unknown }).__connId = connId;
+}
+
+/**
  * IP клиента для WS-лимитов (per-IP cap + auth throttle).
  * Та же политика, что в middleware/rateLimit.ts resolveClientIp:
  * за доверенным прокси — из перезаписанных прокси заголовков,
  * при прямом подключении — из TCP-сокета (неподделываемый).
  * Заголовкам без доверенного прокси не верим → "unknown".
  */
-function resolveWsClientIp(c: any): string {
+function resolveWsClientIp(c: Context): string {
   if (env.TRUST_PROXY) {
     const realIp =
       c.req.header("x-real-ip") ||
@@ -30,18 +47,27 @@ function resolveWsClientIp(c: any): string {
   return "unknown";
 }
 
-export function createWsHandler(upgradeWebSocket: any) {
-  return upgradeWebSocket((c: any) => {
+export function createWsHandler(upgradeWebSocket: UpgradeWebSocket) {
+  return upgradeWebSocket((c: Context) => {
     // IP фиксируем на upgrade: дальше соединение живёт вне HTTP-контекста.
     const clientIp = resolveWsClientIp(c);
+    // Параметры хендлеров типизируются контекстно из UpgradeWebSocket
+    // (в backend-tsconfig нет DOM-библиотеки — Event/MessageEvent вслух
+    // не называем; ws — WSContext<unknown>).
     return {
-      onOpen(_evt: any, ws: any) {
-        const connId = wsManager.register(ws, clientIp);
-        (ws as any).__connId = connId;
+      onOpen(_evt, ws) {
+        // @hono/node-ws всегда кладёт ws-сокет — приводим раз, в одном
+        // месте, вместо any на каждом вызове.
+        const connId = wsManager.register(
+          ws as WSContext<WebSocket>,
+          clientIp,
+        );
+        setConnId(ws, connId);
       },
 
-      async onMessage(evt: MessageEvent, ws: any) {
-        const connId = (ws as any).__connId as string;
+      async onMessage(evt, ws) {
+        const connId = getConnId(ws);
+        if (!connId) return;
 
         // Per-connection message rate cap — ДО JSON.parse: флуд мусором
         // тоже считается. Throttled → закрываем кодом 1013.
@@ -131,14 +157,14 @@ export function createWsHandler(upgradeWebSocket: any) {
         }
       },
 
-      onClose(_evt: any, ws: any) {
-        const connId = (ws as any).__connId as string;
+      onClose(_evt, ws) {
+        const connId = getConnId(ws);
         if (connId) wsManager.close(connId);
       },
 
-      onError(err: Error, ws: any) {
-        const connId = (ws as any).__connId as string;
-        logger.error({ connId, err }, "ws_error");
+      onError(evt, ws) {
+        const connId = getConnId(ws);
+        logger.error({ connId, evt }, "ws_error");
         if (connId) wsManager.close(connId, 1011, "Error");
       },
     };

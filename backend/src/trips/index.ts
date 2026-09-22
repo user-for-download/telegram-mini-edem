@@ -6,7 +6,6 @@ import { Prisma } from "../generated/prisma/client.js";
 import {
   createTripDtoSchema,
   updateTripDtoSchema,
-  TRIP_STATUS,
   ACTIVE_BOOKING_STATUSES,
 } from "@edem/contracts";
 import { db } from "../db.js";

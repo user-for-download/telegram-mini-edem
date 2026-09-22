@@ -60,6 +60,11 @@ export function TripDetailsPage() {
   const [comment, setComment] = useState("");
   const [editing, setEditing] = useState(false);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
+  // Снимок «сейчас» на момент монтирования (lazy-инициализатор — Date.now()
+  // напрямую в рендере запрещён react-hooks/purity). Дрейф за время viewing
+  // безвреден: бэкенд всё равно режет точку невозврата (TRIP_IN_PAST).
+  // NB: хук обязан стоять до ранних return (rules-of-hooks).
+  const [now] = useState(() => Date.now());
 
   if (trip.isLoading) {
     return (
@@ -109,7 +114,7 @@ export function TripDetailsPage() {
   const departureTime = item.departureAt
     ? new Date(item.departureAt).getTime()
     : null;
-  const departed = departureTime !== null && departureTime <= Date.now();
+  const departed = departureTime !== null && departureTime <= now;
   const isActive = !item.status || item.status === "active";
   const hasActiveBooking =
     !!item.myBooking &&
@@ -121,7 +126,7 @@ export function TripDetailsPage() {
     item.seatsAvailable > 0 &&
     !hasActiveBooking &&
     departureTime !== null &&
-    departureTime > Date.now();
+    departureTime > now;
 
   const takenSeats = item.bookedSeats ?? [];
   const availableSeats = Array.from(
@@ -134,10 +139,7 @@ export function TripDetailsPage() {
       : (availableSeats[0] ?? null);
 
   const canCompleteTrip =
-    isDriver &&
-    isActive &&
-    departureTime !== null &&
-    departureTime <= Date.now();
+    isDriver && isActive && departureTime !== null && departureTime <= now;
   const arrival = formatArrivalTime(item.time, item.durationMinutes);
 
   const handleShare = () => {

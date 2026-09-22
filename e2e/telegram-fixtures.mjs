@@ -40,7 +40,6 @@ export function createHarness() {
   const results = [];
   const pageErrors = [];
   const unhandledRejections = [];
-  let stepNo = 0;
 
   function record(name, ok, detail = "") {
     results.push({ name, ok, detail });
@@ -50,7 +49,6 @@ export function createHarness() {
   }
 
   async function runStep(name, fn) {
-    stepNo++;
     try {
       const detail = await fn();
       record(name, true, detail ?? "");
@@ -152,7 +150,7 @@ export function checkPrereqs() {
   try {
     const out = psql("SELECT 1");
     if (out !== "1") throw new Error("unexpected output");
-  } catch (e) {
+  } catch {
     console.error(
       `⛔ Prerequisite failed: docker exec ${DB_CONTAINER} psql недоступен.\n` +
         `   Запустите dev-БД (docker compose) либо задайте E2E_DB_CONTAINER. ` +

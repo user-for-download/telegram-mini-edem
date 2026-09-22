@@ -66,7 +66,7 @@ vi.mock("@/api/auth.api", () => ({
   authApi: { loginWithTelegram: vi.fn(), refreshToken: vi.fn() },
 }));
 
-import { act } from "react";
+import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -148,11 +148,16 @@ let probeState = { isConnected: false, resyncSeq: 0, lastType: null as string | 
 
 function Probe() {
   const value = useWs();
-  probeState = {
-    isConnected: value.isConnected,
-    resyncSeq: value.resyncSeq,
-    lastType: value.lastMessage?.type ?? null,
-  };
+  // Запись в module-state — только из эффекта (react-hooks/globals
+  // запрещает запись глобалов фазой рендера). Тесты читают probeState
+  // после await act(...), эффекты к тому моменту сброшены.
+  useEffect(() => {
+    probeState = {
+      isConnected: value.isConnected,
+      resyncSeq: value.resyncSeq,
+      lastType: value.lastMessage?.type ?? null,
+    };
+  });
   return null;
 }
 

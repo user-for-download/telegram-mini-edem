@@ -69,7 +69,7 @@ describe("User-based rate limits (create trip)", () => {
     createdTripIds.length = 0;
   });
 
-  async function createTrip(index: number): Promise<{ status: number; body: any }> {
+  async function createTrip(index: number): Promise<{ status: number; body: unknown }> {
     const res = await app.request("/api/v1/trips", {
       method: "POST",
       headers: {

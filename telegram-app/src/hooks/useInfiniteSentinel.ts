@@ -12,7 +12,7 @@
 // - якорь скролла: сентинел фиксированной высоты (min-h) не даёт
 //   вьюпорту прыгать при схлопывании скелетона; страховка — возврат
 //   scrollTop при микро-сдвиге, осознанный скролл пользователя не трогаем.
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import type { RefObject } from "react";
 
 export interface InfiniteSentinelOptions {
@@ -55,9 +55,6 @@ export function useInfiniteSentinel(
   } = options;
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  // Свежие значения для колбэка observer без пересоздания подписки.
-  const stateRef = useRef({ hasNextPage, isFetchingNextPage, fetchNextPage });
-  stateRef.current = { hasNextPage, isFetchingNextPage, fetchNextPage };
   // Guard двойного срабатывания: observer может выстрелить несколько
   // раз до того, как react-query поднимет isFetchingNextPage.
   const inFlightRef = useRef(false);
@@ -93,6 +90,28 @@ export function useInfiniteSentinel(
     }
   }, [isFetchingNextPage]);
 
+  // Свежие значения для колбэка observer без пересоздания подписки
+  // (useEffectEvent всегда видит последний рендер).
+  const onIntersect = useEffectEvent(
+    (entries: IntersectionObserverEntry[]) => {
+      if (!hasNextPage || isFetchingNextPage) return;
+      if (inFlightRef.current) return;
+      const visible = entries.some((entry) => entry.isIntersecting);
+      if (!visible) return;
+      inFlightRef.current = true;
+      anchorTopRef.current = readScrollTop();
+      try {
+        const result = fetchNextPage();
+        // fetchNextPage void | Promise: promise-ветку не ждём здесь —
+        // сброс in-flight идёт по isFetchingNextPage (эффект выше).
+        void result;
+      } catch {
+        inFlightRef.current = false;
+        anchorTopRef.current = null;
+      }
+    },
+  );
+
   useEffect(() => {
     if (disabled) return;
     // SSR / renderToString: observer отсутствует — выходим тихо,
@@ -101,31 +120,13 @@ export function useInfiniteSentinel(
     const element = sentinelRef.current;
     if (!element) return;
 
-    const observer = new IntersectionObserver(
-      (entries: IntersectionObserverEntry[]) => {
-        const state = stateRef.current;
-        if (!state.hasNextPage || state.isFetchingNextPage) return;
-        if (inFlightRef.current) return;
-        const visible = entries.some((entry) => entry.isIntersecting);
-        if (!visible) return;
-        inFlightRef.current = true;
-        anchorTopRef.current = readScrollTop();
-        try {
-          const result = state.fetchNextPage();
-          // fetchNextPage void | Promise: promise-ветку не ждём здесь —
-          // сброс in-flight идёт по isFetchingNextPage (эффект выше).
-          void result;
-        } catch {
-          inFlightRef.current = false;
-          anchorTopRef.current = null;
-        }
-      },
-      { rootMargin },
-    );
+    const observer = new IntersectionObserver(onIntersect, { rootMargin });
     observer.observe(element);
     return () => {
       observer.disconnect();
     };
+  // onIntersect в deps НЕ кладём (useEffectEvent стабилен по дизайну —
+  // exhaustive-deps требует его убрать).
   }, [disabled, rootMargin]);
 
   return sentinelRef;

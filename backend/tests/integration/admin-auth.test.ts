@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // ADMIN_TOKEN и лимиты логина читаются из env при старте/импорте.
 // Задаём до импорта app; лимит завышаем, чтобы тест не упёрся в 429.

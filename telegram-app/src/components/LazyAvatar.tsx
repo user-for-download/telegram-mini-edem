@@ -40,19 +40,21 @@ export function LazyAvatar({
   const label =
     alt ?? (acronym !== "?" && acronym !== "" ? `Аватар ${acronym}` : "Аватар пользователя");
   const cleanSrc = typeof src === "string" && src.length > 0 ? src : undefined;
+  // Смена src сбрасывает ошибку загрузки (render-фаза вместо эффекта —
+  // setState в эффекте запрещён react-hooks/set-state-in-effect).
+  const [prevSrc, setPrevSrc] = useState(cleanSrc);
+  if (cleanSrc !== prevSrc) {
+    setPrevSrc(cleanSrc);
+    setFailed(false);
+  }
   const showImage = inView && cleanSrc !== undefined && !failed;
 
   useEffect(() => {
-    if (inView) return;
-    if (!isObserverAvailable()) {
-      setInView(true);
-      return;
-    }
+    if (inView || !isObserverAvailable()) return;
     const node = boxRef.current;
-    if (!node) {
-      setInView(true);
-      return;
-    }
+    // ref привязывается до эффектов; null — только в крайнем случае
+    // (плейсхолдер остаётся до появления ноды, без размонтирования).
+    if (!node) return;
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -67,10 +69,6 @@ export function LazyAvatar({
     observer.observe(node);
     return () => observer.disconnect();
   }, [inView]);
-
-  useEffect(() => {
-    setFailed(false);
-  }, [cleanSrc]);
 
   if (!showImage) {
     const loading = cleanSrc !== undefined && !failed;

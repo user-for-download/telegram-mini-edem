@@ -19,7 +19,6 @@ vi.hoisted(() => {
   process.env.TELEGRAM_WEBAPP_URL = "https://t.me/edem_bot/app";
 });
 
-const { app } = await import("../../src/app.js");
 const { db } = await import("../../src/db.js");
 const { env } = await import("../../src/env.js");
 const { createNotification } = await import(
@@ -29,10 +28,8 @@ const { pollOnce } = await import(
   "../../src/workers/notificationDispatcher.js"
 );
 
-const SECRET = "send-e2e-secret-123";
 const TOKEN = "send-e2e-token";
 const SEND_URL = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
-const JSON_HEADERS = { "Content-Type": "application/json" };
 
 const createdUserIds: string[] = [];
 let tgSeq = 9_970_000n;

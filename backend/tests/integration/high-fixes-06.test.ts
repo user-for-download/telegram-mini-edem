@@ -205,7 +205,7 @@ describe("high-fixes-06: concurrent review writes → 409, never 5xx", () => {
     await db.user.deleteMany({ where: { id: { in: [driverId, passengerId] } } });
   });
 
-  function postReview(): Promise<{ status: number; body: any }> {
+  function postReview(): Promise<{ status: number; body: unknown }> {
     return app
       .request("/api/v1/reviews", {
         method: "POST",

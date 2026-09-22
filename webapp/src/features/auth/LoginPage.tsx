@@ -66,7 +66,6 @@ export function LoginPage() {
                 id="admin-token"
                 type="password"
                 autoComplete="current-password"
-                autoFocus
                 value={token}
                 onChange={(event) => setToken(event.target.value)}
                 placeholder="Токен доступа"

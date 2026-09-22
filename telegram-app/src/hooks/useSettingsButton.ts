@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { settingsButton } from "@telegram-apps/sdk-react";
 
 /**
@@ -7,15 +7,15 @@ import { settingsButton } from "@telegram-apps/sdk-react";
  * Mount выполняется один раз в init.ts рядом с backButton.
  */
 export function useSettingsButton(onOpenSettings: () => void, enabled = true): void {
-  const handler = useRef(onOpenSettings);
-  handler.current = onOpenSettings;
+  // Всегда свежий колбэк для SDK-подписки без пересоздания эффекта.
+  const onOpenSettingsEvent = useEffectEvent(onOpenSettings);
 
   useEffect(() => {
     if (!enabled) {
       settingsButton.hide.ifAvailable();
       return;
     }
-    const listener = () => handler.current();
+    const listener = () => onOpenSettingsEvent();
     settingsButton.show.ifAvailable();
     settingsButton.onClick.ifAvailable(listener);
     return () => {

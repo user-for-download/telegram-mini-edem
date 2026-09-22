@@ -3,7 +3,7 @@ import { db } from "../db.js";
 import { createNotification } from "../services/notification.service.js";
 
 type TripForMatching = Pick<
-  Prisma.TripGetPayload<{}>,
+  Prisma.TripGetPayload<Prisma.TripDefaultArgs>,
   | "id"
   | "driverId"
   | "fromCityId"

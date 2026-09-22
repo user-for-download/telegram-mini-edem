@@ -120,18 +120,15 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
             </IconButton>
             {(booking.status === "pending" ||
               booking.status === "confirmed") && (
-              // Карточка — role=button: гасим всплытие, иначе отмена откроет детали.
-              <span onClick={(event) => event.stopPropagation()}>
-                <ConfirmAction
-                  label="Отменить"
-                  confirmLabel="Отменить бронь"
-                  description="Заявка будет отменена, а место снова станет доступно."
-                  pending={cancelPending}
-                  mode="plain"
-                  destructive
-                  onConfirm={() => onCancel(booking.id)}
-                />
-              </span>
+              <ConfirmAction
+                label="Отменить"
+                confirmLabel="Отменить бронь"
+                description="Заявка будет отменена, а место снова станет доступно."
+                pending={cancelPending}
+                mode="plain"
+                destructive
+                onConfirm={() => onCancel(booking.id)}
+              />
             )}
           </>
         }
@@ -168,10 +165,9 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
         navigate(`/trips/${id}`);
       }}
       footer={
-        <div
-          className={styles.actions}
-          onClick={(event) => event.stopPropagation()}
-        >
+        // Всплытие гасят сами кнопки (Button/IconButton/ConfirmAction) —
+        // обёртка с onClick запрещена jsx-a11y (см. ConfirmAction.stop).
+        <div className={styles.actions}>
           <div className={styles.btnRow}>
             <Button
               size="s"
@@ -198,17 +194,15 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
             >
               <Share2 size={15} />
             </IconButton>
-            <span onClick={(event) => event.stopPropagation()}>
-              <ConfirmAction
-                label="Отменить"
-                confirmLabel="Отменить поездку"
-                description="Поездка станет недоступна, а пассажиры получат уведомление."
-                pending={cancelPending}
-                mode="plain"
-                destructive
-                onConfirm={() => onCancel(trip.id)}
-              />
-            </span>
+            <ConfirmAction
+              label="Отменить"
+              confirmLabel="Отменить поездку"
+              description="Поездка станет недоступна, а пассажиры получат уведомление."
+              pending={cancelPending}
+              mode="plain"
+              destructive
+              onConfirm={() => onCancel(trip.id)}
+            />
           </div>
         </div>
       }

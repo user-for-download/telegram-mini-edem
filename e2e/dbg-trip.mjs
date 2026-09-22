@@ -2,7 +2,6 @@ import { chromium } from "playwright";
 import { psql } from "./telegram-fixtures.mjs";
 
 const TG_URL = "http://localhost:3012";
-const API_URL = "http://localhost:3011";
 const RUN_ID = `dbg${Date.now().toString(36)}`;
 const CITY_FROM = `Е2Е-Москва-${RUN_ID}`;
 const CITY_TO = `Е2Е-Тула-${RUN_ID}`;
@@ -19,7 +18,9 @@ try {
   const pre = page.getByRole("button", { name: "Принять и продолжить" });
   await pre.waitFor({ state: "visible", timeout: 8000 });
   await pre.click();
-} catch {}
+} catch {
+  // Онбординг может не показаться (уже принят) — идём дальше.
+}
 // Прайминг кэша как в e2e: /trips и /profile ДО сида городов.
 await page.goto(`${TG_URL}/#/trips`, { waitUntil: "commit" });
 await page.getByText("Поиск попутных поездок").first().waitFor({ timeout: 30000 });

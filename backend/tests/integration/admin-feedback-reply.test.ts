@@ -111,11 +111,6 @@ describe("Admin feedback reply — close the loop", () => {
       body: JSON.stringify(body),
     });
 
-  const listUserFeedback = (cookie: string) =>
-    app.request("/api/v1/feedback", {
-      headers: { Cookie: `access_token=${cookie}` },
-    });
-
   it("GET /admin/feedback/:id возвращает полную карточку с null reply", async () => {
     const id = await seedFeedback("Не приходит уведомление");
 

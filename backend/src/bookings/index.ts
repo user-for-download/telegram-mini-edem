@@ -7,8 +7,6 @@ import {
   createBookingDtoSchema,
   updateBookingStatusDtoSchema,
   paginatedBookingsResponseSchema,
-  TRIP_STATUS,
-  BOOKING_STATUS,
   ACTIVE_BOOKING_STATUSES,
   isActiveBookingStatus,
 } from "@edem/contracts";

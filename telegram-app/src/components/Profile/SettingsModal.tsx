@@ -85,18 +85,17 @@ export function SettingsBody() {
   const save = useProfileNotificationSettingsMutation();
 
   // Ленивый инициализатор читает кэш синхронно — тело SSR-тестабельно
-  // (useEffect в renderToString не выполняется); эффект ниже докручивает
-  // значение на клиенте, когда профиль приехал позже первого рендера.
+  // (useEffect в renderToString не выполняется); докрутка значения, когда
+  // профиль приехал позже первого рендера — фазой рендера, а не эффектом
+  // (setState в эффекте запрещён react-hooks/set-state-in-effect).
   const [enabled, setEnabled] = useState<boolean | null>(
     () => profile.data?.notificationsEnabled ?? null,
   );
   const [showSaved, setShowSaved] = useState(false);
 
-  useEffect(() => {
-    if (profile.data && enabled === null) {
-      setEnabled(profile.data.notificationsEnabled ?? true);
-    }
-  }, [profile.data, enabled]);
+  if (profile.data && enabled === null) {
+    setEnabled(profile.data.notificationsEnabled ?? true);
+  }
 
   useEffect(() => {
     if (!showSaved) return;

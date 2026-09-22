@@ -32,6 +32,7 @@
     "test": "npm run test --workspaces --if-present",
     "clean": "rm -rf backend/dist telegram-app/dist webapp/dist packages/contracts/dist",
     "lint": "npm run typecheck",
+    "lint:eslint": "eslint .",
     "format:check": "node scripts/format-check.mjs",
     "bundle:check": "node scripts/check-bundle.mjs",
     "load:test": "node scripts/load-test.mjs"
@@ -54,10 +55,14 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "concurrently": "^10.0.4",
+    "eslint": "^9.39.5",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "playwright": "^1.62.1",
     "prettier": "^3.9.7",
     "tsx": "^4.23.13",
     "typescript": "~5.8.2",
+    "typescript-eslint": "^8.70.1",
     "vite": "^8.2.2"
   }
 }

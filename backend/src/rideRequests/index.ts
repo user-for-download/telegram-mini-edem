@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { Prisma } from "../generated/prisma/client.js";
-import type { Context } from "hono";
 import { z } from "zod";
 import {
   createRideRequestDtoSchema,
@@ -31,13 +30,6 @@ export const rideRequestsRouter = new Hono<AuthEnv>();
 rideRequestsRouter.use("*", requireUser);
 
 const includeCities = { fromCity: true, toCity: true } as const;
-
-function invalidPayload(c: Context) {
-  return c.json(
-    { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid payload" },
-    400,
-  );
-}
 
 async function getOwnedRequest(id: string, userId: string) {
   return db.rideRequest.findFirst({

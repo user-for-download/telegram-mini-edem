@@ -106,7 +106,9 @@ function attachFakeWsServer(context) {
           setTimeout(() => {
             try {
               route.send(JSON.stringify({ type: "ping" }));
-            } catch {}
+            } catch {
+              // Соединение могли закрыть раньше ping — не валим прогон.
+            }
           }, 300);
         }
       }

@@ -17,7 +17,9 @@ try {
   const pre = page.getByRole("button", { name: "Принять и продолжить" });
   await pre.waitFor({ state: "visible", timeout: 8000 });
   await pre.click();
-} catch {}
+} catch {
+  // Онбординг может не показаться (уже принят) — идём дальше.
+}
 await page.goto(`${TG_URL}/#/profile`, { waitUntil: "commit" });
 await page.getByText("Dev Telegram").first().waitFor({ timeout: 60000 });
 const devRow = psql(`SELECT "id" FROM "User" WHERE "telegramUserId" = 9800001`);

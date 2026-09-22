@@ -334,7 +334,7 @@ async function processDelivery(delivery: ClaimedDelivery, now: Date): Promise<vo
       return;
     }
     await sendDelivery(delivery, user?.telegramUserId ?? null, now);
-  } catch (err) {
+  } catch {
     // 5) Непредвиденная ошибка: ретраи с бэкоффом, потом failed.
     const nextAttempt = RETRY_BACKOFF_MS[delivery.attempts] ?? null;
     if (nextAttempt === null || delivery.attempts + 1 >= env.TG_NOTIFICATION_MAX_RETRIES) {

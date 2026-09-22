@@ -269,11 +269,16 @@ function CreateCityDialog({
   // MutationObserver — стабильная ссылка, безопасна для deps.
   const resetCreate = create.reset;
 
+  // Сброс формы при открытии — фазой рендера (setState в эффекте запрещён
+  // react-hooks/set-state-in-effect). Сброс мутации — эффектом: это внешний
+  // стор, а не React state, семантически это подписка на open.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) setForm(EMPTY_FORM);
+  }
   useEffect(() => {
-    if (open) {
-      setForm(EMPTY_FORM);
-      resetCreate();
-    }
+    if (open) resetCreate();
   }, [open, resetCreate]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -306,7 +311,6 @@ function CreateCityDialog({
             <Label htmlFor="create-city-name">Название</Label>
             <Input
               id="create-city-name"
-              autoFocus
               maxLength={CITY_NAME_MAX_LENGTH}
               value={form.name}
               onChange={(e) =>
@@ -364,8 +368,14 @@ function EditCityDialog({
   // См. CreateCityDialog: объект мутации нестабилен, используем стабильный reset.
   const resetUpdate = update.reset;
 
-  useEffect(() => {
+  // Сброс формы при смене цели — фазой рендера (см. CreateCityDialog);
+  // сброс мутации — эффектом с исходными deps (тайминг 1:1).
+  const [prevId, setPrevId] = useState(state.id);
+  if (state.id !== prevId) {
+    setPrevId(state.id);
     setForm({ name: state.name, fieldError: state.fieldError });
+  }
+  useEffect(() => {
     resetUpdate();
   }, [state.id, state.name, state.fieldError, resetUpdate]);
 
@@ -399,7 +409,6 @@ function EditCityDialog({
             <Label htmlFor="edit-city-name">Название</Label>
             <Input
               id="edit-city-name"
-              autoFocus
               maxLength={CITY_NAME_MAX_LENGTH}
               value={form.name}
               onChange={(e) =>

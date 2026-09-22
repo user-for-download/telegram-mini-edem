@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import type { MouseEvent } from "react";
 import { Button, Text } from "@telegram-apps/telegram-ui";
 
 /**
@@ -47,6 +48,11 @@ export function ConfirmAction({
     }
   }, [armed]);
 
+  // Клики гасим на месте: ConfirmAction часто живёт внутри кликабельных
+  // карточек (TripCard, DriverTripRequests) — всплытие открыло бы детали
+  // поверх деструктива. Отдельные stopPropagation-обёртки вокруг компонента
+  // запрещены jsx-a11y (интерактив оборачивать нельзя — чиним здесь).
+  const stop = (event: MouseEvent) => event.stopPropagation();
   return (
     <div>
       <Button
@@ -62,7 +68,10 @@ export function ConfirmAction({
             ? { color: "var(--tgui--destructive_text_color)" }
             : undefined
         }
-        onClick={() => setArmed(true)}
+        onClick={(event) => {
+          stop(event);
+          setArmed(true);
+        }}
       >
         {label}
       </Button>
@@ -80,7 +89,8 @@ export function ConfirmAction({
             stretched
             loading={pending}
             disabled={pending}
-            onClick={() => {
+            onClick={(event) => {
+              stop(event);
               onConfirm();
               setArmed(false);
             }}
@@ -92,7 +102,10 @@ export function ConfirmAction({
             size="s"
             stretched
             disabled={pending}
-            onClick={() => setArmed(false)}
+            onClick={(event) => {
+              stop(event);
+              setArmed(false);
+            }}
           >
             Назад
           </Button>

@@ -157,7 +157,7 @@ export function createUserRateLimiter(options: RateLimiterOptions) {
   // поэтому у handler'ов после лимитера сохраняется типизация param().
   return async function userRateLimiter<
     E extends Env & { Variables: { user?: AuthUser } },
-    P extends string = any,
+    P extends string = string,
   >(c: Context<E, P>, next: Next): Promise<Response | void> {
     const user = c.get("user");
     if (!user) {

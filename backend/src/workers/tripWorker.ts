@@ -7,7 +7,8 @@ import { createNotification } from "../services/notification.service.js";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const TRIP_WORKER_BATCH_SIZE = 100;
-const PENDING_BOOKING_TTL_MS = 24 * 60 * 60 * 1000;
+// NB: PENDING_BOOKING_TTL_MS живёт в bookings/index.ts (там используется);
+// дубликат здесь был мёртвым.
 
 interface ExpiredTrip {
   id: string;

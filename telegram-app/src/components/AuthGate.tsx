@@ -28,23 +28,24 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
 
   // При 429 запускаем cooldown, чтобы пользователь не продлевал блокировку
   // повторными нажатиями: каждое нажатие = новый запрос в тот же bucket.
-  useEffect(() => {
-    if (!isRateLimited) {
-      setCooldownLeft(0);
-      return;
+  // Взвод/сброс — фазой рендера (новая ошибка = новый отсчёт), тиканье —
+  // интервалом в эффекте (там только подписка, без синхронного setState).
+  const [rateLimitEpoch, setRateLimitEpoch] = useState<unknown>(null);
+  if (isRateLimited) {
+    if (rateLimitEpoch !== lastAuthError) {
+      setRateLimitEpoch(lastAuthError);
+      setCooldownLeft(RATE_LIMIT_COOLDOWN_S);
     }
-    setCooldownLeft(RATE_LIMIT_COOLDOWN_S);
+  } else if (cooldownLeft !== 0) {
+    setCooldownLeft(0);
+  }
+  useEffect(() => {
+    if (!isRateLimited) return;
     const timer = setInterval(() => {
-      setCooldownLeft((left) => {
-        if (left <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return left - 1;
-      });
+      setCooldownLeft((left) => (left <= 0 ? 0 : left - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [isRateLimited, status]);
+  }, [isRateLimited, rateLimitEpoch]);
 
   useEffect(() => {
     if (status === "idle") {
