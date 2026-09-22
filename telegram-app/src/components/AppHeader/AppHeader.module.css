@@ -1,0 +1,41 @@
+/* Заголовок раздела в верхней зоне фуллскрина: место между плавающими
+ * контролами Telegram (Закрыть/•••) и контентом уже занято под safe-area
+ * (padding-top колонки = --tg-safe-area-top, см. .shell) — заполняем его
+ * именем вкладки/страницы. position:absolute (shell position:relative):
+ * контент уже отодвинут паддингом, absolute не влияет на скролл и
+ * route-fade. Крупная строка прижата к низу зоны, отступ до контента —
+ * 6px. Цвета/типографика — нативные tgui-токены (secondary — приглушённый
+ * цвет подписи, как у нативных заголовков Telegram). */
+.header {
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: var(--tg-safe-area-top, 0px);
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 6px;
+  pointer-events: none;
+}
+
+.title {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--tgui--secondary-hint, var(--tgui--secondary_color));
+}
+
+/* В нормальном (не-фуллскрин) режиме зона схлопывается (--tg-safe-area-top
+ * = 0) — заголовок в неё не помещается, прячем: у клиента своя шапка.
+ * height с 0px-переменной jsdom не интерпретирует, поэтому и класс на
+ * всякий случай. */
+@media (max-height: 1px), (max-width: 1px) {
+  .header {
+    display: none;
+  }
+}

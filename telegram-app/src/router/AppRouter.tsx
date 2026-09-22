@@ -14,6 +14,7 @@ import {
   type AppTabId,
 } from "@/components/AppBottomBar/AppBottomBar";
 import { AppShell } from "@/components/AppShell/AppShell";
+import { AppHeader } from "@/components/AppHeader/AppHeader";
 import { useSettingsButton } from "@/hooks/useSettingsButton";
 import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
@@ -123,8 +124,37 @@ export function Shell() {
     navigate(to);
   };
 
+  // Заголовок раздела в верхней зоне фуллскрина (пустое место между
+  // плавающими контролами Telegram и контентом, занимаемое safe-area):
+  // имя вкладки/страницы. Имена корневых вкладок — те же, что в TabsBar
+  // (по одной строке на раздел); для контекстных маршрутов — своё имя.
+  // Скрытие в не-фуллскрине — через CSS (AppHeader.module.css).
+  const headerTitle: string | undefined =
+    location.pathname === "/"
+      ? "Главная"
+      : location.pathname.startsWith("/trips/my")
+        ? "Мои поездки"
+        : location.pathname.startsWith("/bookings")
+          ? "Поездки"
+          : location.pathname.startsWith("/trips/")
+            ? "Поездка"
+            : location.pathname.startsWith("/trips")
+              ? "Поиск"
+              : location.pathname.startsWith("/notifications")
+                ? "Уведомления"
+                : location.pathname.startsWith("/profile/edit")
+                  ? "Редактирование профиля"
+                  : location.pathname.startsWith("/profile/support")
+                    ? "Поддержка"
+                    : location.pathname.startsWith("/profile/reports")
+                      ? "Мои обращения"
+                      : location.pathname.startsWith("/profile")
+                        ? "Профиль"
+                        : undefined;
+
   return (
     <AppShell
+      header={<AppHeader title={headerTitle} />}
       footer={
         <AppBottomBar
           activeTab={activeTab}

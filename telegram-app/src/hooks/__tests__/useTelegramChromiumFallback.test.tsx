@@ -91,7 +91,7 @@ describe("useTelegramChromiumFallback", () => {
   });
 
   it("честная врезка >= порога: floor не ставится, пингов нет", () => {
-    mockContentTop = 56;
+    mockContentTop = 84;
     renderHost();
 
     expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe("");
@@ -106,7 +106,7 @@ describe("useTelegramChromiumFallback", () => {
     ).toBe("var(--tg-telegram-chromium-height)");
 
     // Ответ клиента на пинок: сигналы обновились → хук снял floor.
-    mockContentTop = 59;
+    mockContentTop = 84;
     renderHost();
 
     expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe("");
