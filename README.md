@@ -34,7 +34,7 @@
 ├── backend/                     # Backend: Hono + Prisma ORM + PostgreSQL
 │   ├── prisma/
 │   │   ├── schema.prisma        # Модели: User, RefreshToken, Notification, Car, Trip, City, RideRequest, Booking, Review, Report, Feedback
-│   │   ├── migrations/          # Prisma-миграции
+│   │   ├── migrations/          # Prisma-миграции (одна squashed init: полный слепок схемы + CHECK/partial-индексы raw SQL)
 │   │   └── seed.ts              # Наполнение тестовыми данными (TG-пользователи, поездки, заявки, жалобы)
 │   ├── src/
 │   │   ├── auth/                # Telegram-авторизация (подпись initData HMAC+TTL), JWT + refresh-токены (ротация, хэш в БД), admin JWT
@@ -49,7 +49,6 @@
 │   │   ├── workers/             # Фон: авто-завершение просроченных поездок
 │   │   ├── serializers/         # Сериализация ответов
 │   │   ├── services/            # Бизнес-сервисы (TG-доставка уведомлений, wsManager с reaper-очисткой)
-│   │   ├── migrations/          # Инвентаризация/аудит миграции аккаунтов (dry-run)
 │   │   ├── utils/               # Sentry-хелперы (initSentry с PII-стриппингом, captureWarning/Exception), timingSafeEqual
 │   │   ├── app.ts               # Hono-приложение (роуты /api/v1, security-заголовки, Telegram-only static)
 │   │   └── index.ts             # Серверный entry point (initSentry, graceful shutdown)
