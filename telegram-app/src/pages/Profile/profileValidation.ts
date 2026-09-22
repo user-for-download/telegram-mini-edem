@@ -18,17 +18,17 @@ export function validateProfileForm(name: string, about: string): string | null 
 }
 
 /**
- * Нормализация перед PATCH /users/me: пустое «О себе» не отправляем
- * (JSON.stringify дропает undefined, backend хранит прежнее значение) —
- * зеркально EditProfileModal mini-app.
+ * Нормализация перед PATCH /users/me: пустое «О себе» отправляем явным
+ * null (бэкенд: undefined = оставить прежнее, null = очистить; схема
+ * nullable().optional()). Омиссия поля не давала стереть описание.
  */
 export function normalizeProfileForm(
   name: string,
   about: string,
-): { name: string; about?: string } {
+): { name: string; about: string | null } {
   const trimmedAbout = about.trim();
   return {
     name: name.trim(),
-    ...(trimmedAbout ? { about: trimmedAbout } : {}),
+    about: trimmedAbout || null,
   };
 }

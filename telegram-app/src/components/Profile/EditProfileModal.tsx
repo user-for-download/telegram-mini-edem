@@ -37,6 +37,12 @@ export function EditProfileModal({
   // Имя диалога для скринридера + видимый заголовок на base-платформе
   // (tgui Modal.Header рисует текст только на iOS).
   const titleId = useSheetTitleId();
+  // Тело держит name/about в useState с инициализацией от profile.data:
+  // при прямом входе на /profile/edit (пустой кэш) данные приезжают ПОСЛЕ
+  // маунта и форма осталась бы пустой. key по id пользователя перемонтирует
+  // тело по arrival данных (react-query dedupe — второго запроса нет);
+  // правки после загрузки не сбрасываются (id стабилен).
+  const profile = useProfileQuery();
   return (
     <Modal
       open={open}
@@ -48,7 +54,7 @@ export function EditProfileModal({
     >
       <div className={styles.sheetBody}>
         <SheetTitle titleId={titleId}>Редактировать профиль</SheetTitle>
-        <EditProfileBody onDone={onClose} />
+        <EditProfileBody key={profile.data?.id ?? "loading"} onDone={onClose} />
       </div>
     </Modal>
   );

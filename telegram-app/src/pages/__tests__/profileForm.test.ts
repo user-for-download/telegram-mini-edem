@@ -27,7 +27,7 @@ describe("normalizeProfileForm", () => {
     expect(normalizeProfileForm("  Анна  ", "  текст  ")).toEqual({ name: "Анна", about: "текст" });
   });
 
-  it("пустое «О себе» не отправляет (backend хранит прежнее)", () => {
-    expect(normalizeProfileForm("Анна", "   ")).toEqual({ name: "Анна" });
+  it("пустое «О себе» — явный null (backend очищает поле)", () => {
+    expect(normalizeProfileForm("Анна", "   ")).toEqual({ name: "Анна", about: null });
   });
 });

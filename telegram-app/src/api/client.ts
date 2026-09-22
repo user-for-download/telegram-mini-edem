@@ -58,6 +58,15 @@ export type RefreshResult = "success" | "permanent-rejection" | "transient-failu
 
 type TokenUpdateListener = (tokens: TokenUpdate) => void;
 type BannedListener = (banReason: string | null) => void;
+type DeletedListener = () => void;
+
+/**
+ * 403 удалённого аккаунта (тот же код FORBIDDEN, что у бана — бэкенд
+ * различает только текстом; та же конвенция, что isDeletedError в сторе
+ * и bookingErrorMessage). Проверять ДО бана, иначе удалённый аккаунт
+ * уйдёт на плашку бана.
+ */
+const ACCOUNT_DELETED_MESSAGE = "Account is deleted";
 
 export class ApiClient {
   private token: string | null = null;
@@ -67,6 +76,7 @@ export class ApiClient {
   private tokenListeners: Set<TokenUpdateListener> = new Set();
   private sessionExpiredListeners: Set<() => void> = new Set();
   private bannedListeners: Set<BannedListener> = new Set();
+  private deletedListeners: Set<DeletedListener> = new Set();
   private refreshStartListeners: Set<() => void> = new Set();
   private refreshEndListeners: Set<(result: RefreshResult) => void> = new Set();
 
@@ -138,6 +148,29 @@ export class ApiClient {
         listener(banReason);
       } catch (err) {
         console.error("[ApiClient] banned listener error:", err);
+      }
+    });
+  }
+
+  /**
+   * Подписка на обнаружение УДАЛЁННОГО аккаунта при refresh (403 +
+   * FORBIDDEN + "Account is deleted" от /auth/refresh — тот же ответ, что
+   * isDeletedError в bootstrap). Без этого удалённый аккаунт уходил на
+   * плашку бана через emitBanned ниже.
+   */
+  onDeleted(listener: DeletedListener): () => void {
+    this.deletedListeners.add(listener);
+    return () => {
+      this.deletedListeners.delete(listener);
+    };
+  }
+
+  private emitDeleted() {
+    this.deletedListeners.forEach((listener) => {
+      try {
+        listener();
+      } catch (err) {
+        console.error("[ApiClient] deleted listener error:", err);
       }
     });
   }
@@ -361,7 +394,12 @@ export class ApiClient {
             if (response.status === 403) {
               const errorBody = await response.json().catch(() => ({}));
               if (errorBody && errorBody.code === "FORBIDDEN") {
-                this.emitBanned(readBanReason(errorBody));
+                // Удалённый аккаунт проверяем раньше бана: code совпадает.
+                if (errorBody.message === ACCOUNT_DELETED_MESSAGE) {
+                  this.emitDeleted();
+                } else {
+                  this.emitBanned(readBanReason(errorBody));
+                }
                 this.emitSessionExpired();
                 return "permanent-rejection";
               }

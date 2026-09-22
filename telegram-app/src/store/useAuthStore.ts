@@ -260,7 +260,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (refreshResult === "permanent-rejection") {
             // Бан (403 FORBIDDEN) идёт тем же путём: onBanned уже выставил
             // status="banned" — не затираем плашку бана логаутом.
-            if (get().status === "banned") {
+            // Удалённый аккаунт — аналогично: onDeleted уже выставил
+            // status="deleted" (экран «Профиль удалён»).
+            if (get().status === "banned" || get().status === "deleted") {
               return;
             }
             await get().clearSession("Refresh failed");

@@ -116,6 +116,18 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
     });
   }, []);
 
+  /**
+   * Удалённый аккаунт обнаружен во время активной сессии (403 FORBIDDEN +
+   * "Account is deleted" от /auth/refresh — emitDeleted идёт ДО
+   * emitSessionExpired, поэтому guard ниже видит уже status="deleted"
+   * и не затирает экран логаутом). Зеркалит isDeletedError из bootstrap.
+   */
+  useEffect(() => {
+    return apiClient.onDeleted(() => {
+      useAuthStore.getState().markAccountDeleted();
+    });
+  }, []);
+
   useEffect(() => {
     const handleVisibility = () => {
       useAuthStore
