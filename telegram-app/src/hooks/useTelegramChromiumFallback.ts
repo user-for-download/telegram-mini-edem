@@ -43,8 +43,9 @@ import {
 const OVERRIDE_TOKEN = "--tg-safe-area-top-min";
 /** Порог хрома Telegram (index.css): читается на каждом применении. */
 const THRESHOLD_VAR = "--tg-telegram-chromium-height";
-/** Fallback порога, если CSS ещё не догрузился (jsdom, SSR). */
-const DEFAULT_THRESHOLD_PX = 56;
+/** Fallback порога, если CSS ещё не догрузился (jsdom, SSR).
+ * Синхронизирован с --tg-telegram-chromium-height в index.css. */
+const DEFAULT_THRESHOLD_PX = 112;
 
 /** Числовой порог из CSS-переменной (значение — simple length). */
 function readThresholdPx(): number {

@@ -43,10 +43,13 @@
   --tg-viewport-content-safe-area-inset-left: 0px;
   --tg-viewport-content-safe-area-inset-right: 0px;
   /* Высота плавающего хрома Telegram во фуллскрине на iOS (пилюля
-     «Закрыть»/⌄/•••): клиент может отчитать content-safe-area нулём или
-     с задержкой (tma.js #695/#704), поэтому useTelegramChromiumFallback
-     поднимает контент этим минимумом — см. токен --tg-safe-area-top-min. */
-  --tg-telegram-chromium-height: 56px;
+     «Закрыть»/⌄/••• + статус-бар): клиент может отчитать content-safe-area
+     нулём или с задержкой (tma.js #695/#704), поэтому
+     useTelegramChromiumFallback поднимает контент этим минимумом — см.
+     токен --tg-safe-area-top-min. 112px = 56px × 2, подобрано по скриншоту
+     реального устройства (iPhone 11, Telegram 12.9.4: 56px перекрывалось
+     частично). Менять здесь — JS-фолбэк хука держим синхронным. */
+  --tg-telegram-chromium-height: 112px;
   /* Прокидка в именованные токены: SDK-переменные уже определены выше. */
   --tg-content-safe-area-inset-top: var(
     --tg-viewport-content-safe-area-inset-top
