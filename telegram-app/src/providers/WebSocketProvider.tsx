@@ -119,6 +119,7 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
   const terminalTokenRef = useRef<string | null>(null);
 
   const authenticated = useAuthStore((state) => state.status === "authenticated");
+  const status = useAuthStore((state) => state.status);
   const accessToken = useAuthStore((state) => state.session?.accessToken ?? null);
 
   const connectRef = useRef<() => void>(() => {});
@@ -147,6 +148,10 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
   const connect = useCallback(() => {
     if (disposedRef.current) return;
     if (terminalTokenRef.current) return;
+    // NB: переподключение после успешного refresh триггерится из трёх мест
+    // (onTokenUpdate, auth-refresh ветка onclose, onRefreshEnd) — это
+    // намеренная идемпотентная конвергенция: guard ниже делает повторные
+    // вызовы no-op. Не убирать guard без сведения триггеров к одному.
     if (
       wsRef.current?.readyState === WebSocket.OPEN ||
       wsRef.current?.readyState === WebSocket.CONNECTING
@@ -267,7 +272,10 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
     };
 
     ws.onerror = () => {
-      // Детали — у браузера; сразу после onerror придёт onclose.
+      // Намеренно тихо: деталей у браузера нет (только сам факт ошибки),
+      // сразу следом придёт onclose с кодом — причину восстанавливаем по
+      // нему. Во фронте нет sink'а для логов (Sentry не заведён, console.*
+      // в src не используем по конвенции), breadcrumb слать некуда.
     };
   }, []);
 
@@ -353,7 +361,12 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
     disposedRef.current = false;
     if (authenticated && accessToken) {
       // Новая сессия после терминального 4403 снимает запрет reconnect.
-      if (terminalTokenRef.current && terminalTokenRef.current !== accessToken) {
+      // Дополнительно: бан могли снять без ротации JWT (админ-действие) —
+      // тогда токен тот же, но status уже не "banned": терминал тоже снят.
+      if (
+        terminalTokenRef.current &&
+        (terminalTokenRef.current !== accessToken || status !== "banned")
+      ) {
         terminalTokenRef.current = null;
         reconnectAttemptRef.current = 0;
         hasAuthedRef.current = false;
@@ -375,6 +388,13 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
         !terminalTokenRef.current
       ) {
         reconnectAttemptRef.current = 0;
+        // Гасим pending backoff-таймер перед немедленным connect — иначе
+        // старый таймер выстрелит вторым connect (guard спасёт, но
+        // дисциплина файла: таймер всегда чистят перед connect).
+        if (reconnectTimeoutRef.current) {
+          window.clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
         connectRef.current();
       }
     };
@@ -396,7 +416,7 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
         teardownSocket();
       }
     };
-  }, [authenticated, accessToken, connect, teardownSocket]);
+  }, [authenticated, accessToken, status, connect, teardownSocket]);
 
   const value = useMemo(
     () => ({ isConnected, lastMessage, resyncSeq }),
@@ -430,10 +450,20 @@ function notifyHaptic(kind: "success" | "error"): void {
  * Эффекты идемпотентны: повторная доставка того же события (reconnect,
  * resync) гасится seen-множеством и dedupeKey уведомлений.
  */
+/**
+ * Дедуп realtime-событий — на уровне модуля, а не инстанса компонента.
+ * Слушатель обязан быть синглтоном (AppConfig монтирует один), но второй
+ * маунт возможен (вложенный layout, HMR, будущий рефактор): общее множество
+ * гасит повторные haptics/тосты/инвалидации от второго инстанса. Локальный
+ * seenRef здесь не годится — у каждого маунта был бы свой.
+ * NB для тестов: множество живёт между тестами одного файла — ключи событий
+ * в тестах обязаны быть уникальными (см. WebSocketProvider.test.tsx).
+ */
+let realtimeSeenEvents: ReadonlySet<string> = new Set();
+
 export const TelegramRealtimeListener: FC = () => {
   const queryClient = useQueryClient();
   const { resyncSeq } = useWs();
-  const seenRef = useRef<Set<string>>(new Set());
   const [notices, setNotices] = useState<RealtimeNotice[]>([]);
 
   const enqueueNotice = useCallback((notice: RealtimeNotice) => {
@@ -449,10 +479,10 @@ export const TelegramRealtimeListener: FC = () => {
 
   const isDuplicate = useCallback((type: string, payload: unknown): boolean => {
     const { seen, duplicate } = markSeenEvent(
-      seenRef.current,
+      realtimeSeenEvents,
       buildWsEventKey(type, payload),
     );
-    seenRef.current = seen;
+    realtimeSeenEvents = seen;
     return duplicate;
   }, []);
 
