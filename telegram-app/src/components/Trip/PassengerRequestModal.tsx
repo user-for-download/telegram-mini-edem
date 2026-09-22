@@ -6,7 +6,6 @@ import {
   Modal,
   Section,
   Skeleton,
-  Text,
   Placeholder,
   Cell,
   Blockquote,
@@ -19,6 +18,10 @@ import {
 import { CarFront, X } from "lucide-react";
 import type { Booking, DriverBookingAction, Review } from "@edem/contracts";
 import { formatSeatNumber } from "@/utils/bookingSplit";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 
 /**
  * Досье пассажира в нижней модалке (vaul): аватар с бейджем рейтинга,
@@ -48,12 +51,19 @@ export function PassengerRequestModal({
   reviews,
   reviewsLoading,
 }: PassengerRequestModalProps) {
+  // Динамический заголовок (маршрут заявки): titleId — в aria-labelledby,
+  // тот же текст — скрытым h2 и видимым на base через SheetTitle.
+  const titleId = useSheetTitleId();
+  const title = booking
+    ? `Заявка · ${booking.trip.fromCity} → ${booking.trip.toCity}`
+    : "Заявка";
   return (
     <Modal
       open={open && booking !== null}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
+      aria-labelledby={titleId}
     >
       {booking && (
         <>
@@ -64,8 +74,9 @@ export function PassengerRequestModal({
               </Modal.Close>
             }
           >
-            Заявка · {`${booking.trip.fromCity} → ${booking.trip.toCity}`}
+            {title}
           </Modal.Header>
+          <SheetTitle titleId={titleId}>{title}</SheetTitle>
           <PassengerRequestModalBody
             booking={booking}
             onDecide={onDecide}

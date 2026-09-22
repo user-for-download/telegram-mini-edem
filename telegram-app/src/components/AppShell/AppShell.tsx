@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
 import styles from "./AppShell.module.css";
 
+/** Класс route-fade живёт в CSS-модуле AppShell (хэшируется сборкой). */
+export const ROUTE_FADE_CLASS = styles["route-fade"];
+
 export interface AppShellProps {
   /** Шапка корневых разделов (AppHeader) — только на табах. */
   header?: ReactNode;
-  /** Контент маршрута (Outlet в motion-обёртке у роутера). */
+  /** Контент маршрута (Outlet в route-fade обёртке у роутера). */
   children: ReactNode;
   /** Нижний бар (AppBottomBar: nav-landmark + нативный Tabbar). */
   footer?: ReactNode;

@@ -53,6 +53,10 @@ export function TripCell({
 
   return (
     <Cell
+      // Кликабельная ячейка обязана быть настоящей кнопкой: tgui Cell
+      // по умолчанию рендерит div, type="button" на div не даёт
+      // клавиатурной доступности (a11y: кликабельный div без роли).
+      Component={onOpen ? "button" : undefined}
       type={onOpen ? "button" : undefined}
       onClick={onOpen}
       aria-label={ariaLabel}

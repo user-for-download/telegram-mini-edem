@@ -20,14 +20,22 @@ const CODE_MESSAGES: Record<string, string> = {
   REQUEST_TIMEOUT: "Превышено время ожидания — проверьте соединение",
 };
 
+// 403 удалённого аккаунта (тот же код FORBIDDEN, что у бана —
+// useAuthStore.isDeletedError различает так же, по message).
+const ACCOUNT_DELETED_MESSAGE = "Account is deleted";
+
 export function bookingErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.code && CODE_MESSAGES[error.code]) {
+    if (error.status === 403 && error.message === ACCOUNT_DELETED_MESSAGE) {
+      return "Профиль удалён — действие недоступно";
+    }
+    if (error.code && CODE_MESSAGES[error.code] !== undefined) {
       if (error.code === "RATE_LIMITED" && error.retryAfterMs) {
         const seconds = Math.ceil(error.retryAfterMs / 1000);
         return `Слишком много попыток — повторите через ${seconds} с`;
       }
-      return CODE_MESSAGES[error.code];
+      const message = CODE_MESSAGES[error.code];
+      if (message !== undefined) return message;
     }
     if (error.status === 401) {
       return "Сессия истекла — перезапустите приложение";

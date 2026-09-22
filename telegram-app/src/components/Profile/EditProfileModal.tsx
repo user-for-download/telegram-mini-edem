@@ -16,6 +16,10 @@ import {
   normalizeProfileForm,
   validateProfileForm,
 } from "@/pages/Profile/profileValidation";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import styles from "./ProfileModals.module.css";
 
 /**
@@ -30,6 +34,9 @@ export function EditProfileModal({
   open: boolean;
   onClose: () => void;
 }) {
+  // Имя диалога для скринридера + видимый заголовок на base-платформе
+  // (tgui Modal.Header рисует текст только на iOS).
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -37,8 +44,10 @@ export function EditProfileModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Редактировать профиль</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBody}>
+        <SheetTitle titleId={titleId}>Редактировать профиль</SheetTitle>
         <EditProfileBody onDone={onClose} />
       </div>
     </Modal>

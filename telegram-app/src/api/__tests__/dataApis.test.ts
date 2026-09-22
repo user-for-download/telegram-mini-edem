@@ -33,7 +33,9 @@ describe("Telegram data API adapters", () => {
     );
 
     expect(requestMock).toHaveBeenCalledTimes(1);
-    const [endpoint, options, schema] = requestMock.mock.calls[0];
+    const firstCall = requestMock.mock.calls[0];
+    if (!firstCall) throw new Error("request was not called");
+    const [endpoint, options, schema] = firstCall;
     const url = new URL(endpoint, "https://example.test");
     expect(url.pathname).toBe("/trips");
     expect(Object.fromEntries(url.searchParams)).toEqual({

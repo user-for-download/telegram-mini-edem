@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@telegram-apps/sdk-react", () => ({
   retrieveRawInitData: vi.fn(),
   miniApp: { ready: { ifAvailable: vi.fn() } },
-  shareURL: { ifAvailable: vi.fn() },
-  openTelegramLink: { ifAvailable: vi.fn() },
+  shareURL: { ifAvailable: vi.fn(), isAvailable: () => true },
+  openTelegramLink: { ifAvailable: vi.fn(), isAvailable: () => true },
 }));
 
 import {
@@ -90,6 +90,12 @@ describe("shareViaTelegram", () => {
     });
     expect(shareViaTelegram("https://example.com/", "text")).toBe(false);
   });
+
+  it("метод недоступен (старый клиент) → false без вызова SDK", () => {
+    vi.spyOn(shareURL, "isAvailable").mockReturnValueOnce(false);
+    expect(shareViaTelegram("https://example.com/", "text")).toBe(false);
+    expect(mockedShare).not.toHaveBeenCalled();
+  });
 });
 
 describe("buildTelegramChatUrl", () => {
@@ -120,5 +126,11 @@ describe("openTelegramUrl", () => {
       throw new Error("invalid URL");
     });
     expect(openTelegramUrl("https://evil.example/phish")).toBe(false);
+  });
+
+  it("метод недоступен (старый клиент) → false без вызова SDK", () => {
+    vi.spyOn(openTelegramLink, "isAvailable").mockReturnValueOnce(false);
+    expect(openTelegramUrl("https://t.me/driver_1")).toBe(false);
+    expect(mockedOpen).not.toHaveBeenCalled();
   });
 });

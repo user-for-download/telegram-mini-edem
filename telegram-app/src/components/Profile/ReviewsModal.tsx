@@ -33,6 +33,10 @@ import {
   normalizeReviewText,
   validateReviewForm,
 } from "@/pages/Reviews/reviewValidation";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import styles from "./ProfileModals.module.css";
 
 export type ReviewsTab = "mine" | "new" | "about";
@@ -71,6 +75,9 @@ export function ReviewsModal({
 }) {
   // Фокус, Esc и Tab-trap — нативные (Radix FocusScope + onOpenChange);
   // свой role=dialog не добавляем — vaul уже рендерит dialog (двойной анонс).
+  // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
+  // текст только на iOS.
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -78,8 +85,10 @@ export function ReviewsModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Отзывы</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBodyEdge}>
+        <SheetTitle titleId={titleId}>Отзывы</SheetTitle>
         <ReviewsBody initialTab={initialTab} />
       </div>
     </Modal>

@@ -13,6 +13,7 @@ export function ProfileSection() {
   return (
     <Skeleton visible={profile.isLoading} withoutAnimation>
       <Cell
+        Component="button"
         type="button"
         onClick={() => {
           haptic.light();

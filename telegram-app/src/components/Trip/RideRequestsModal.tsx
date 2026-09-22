@@ -12,6 +12,10 @@ import { Calendar, MapPin, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SearchPage } from "@/pages/Search/SearchPage";
@@ -60,6 +64,9 @@ export function RideRequestsModal({
 }) {
   // Фокус, Esc и Tab-trap — нативные (Radix FocusScope + onOpenChange);
   // свой role=dialog не добавляем — vaul уже рендерит dialog (двойной анонс).
+  // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
+  // текст только на iOS.
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -67,8 +74,10 @@ export function RideRequestsModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Ищу попутку</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBody}>
+        <SheetTitle titleId={titleId}>Ищу попутку</SheetTitle>
         <RideRequestsBody />
       </div>
     </Modal>

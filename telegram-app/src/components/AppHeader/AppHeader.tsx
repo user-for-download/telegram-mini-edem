@@ -1,5 +1,4 @@
 import { Caption, Title } from "@telegram-apps/telegram-ui";
-import { CarFront } from "lucide-react";
 import { setThemeOverride, useAppSettings } from "@/utils/appSettings";
 import {
   PLATFORM_OPTIONS,

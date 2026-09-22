@@ -45,10 +45,10 @@ function starInputs(scope: HTMLElement): HTMLInputElement[] {
   );
 }
 
-/** Сколько звёзд визуально выбрано (overlay IconContainer width:100%). */
+/** Сколько звёзд активно (data-active=true — CSS заливает их --app-rating). */
 function pickedCount(scope: HTMLElement): number {
   return [...scope.querySelectorAll("svg")].filter(
-    (svg) => svg.style.width === "100%",
+    (svg) => svg.getAttribute("data-active") === "true",
   ).length;
 }
 
@@ -67,7 +67,7 @@ describe("RatingInput", () => {
     const onChange = vi.fn();
     const scope = renderInput(5, onChange);
 
-    const third = starInputs(scope).find((input) => input.value === "3.0");
+        const third = starInputs(scope).find((input) => input.value === "3");
     expect(third).toBeDefined();
     act(() => {
       third?.click();
@@ -106,7 +106,7 @@ describe("RatingInput", () => {
       root?.render(<Harness />);
     });
     const scope = container;
-    const second = starInputs(scope).find((input) => input.value === "2.0");
+        const second = starInputs(scope).find((input) => input.value === "2");
     act(() => {
       second?.click();
     });

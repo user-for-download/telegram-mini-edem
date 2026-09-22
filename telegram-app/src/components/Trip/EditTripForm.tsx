@@ -10,7 +10,6 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Navigation,
   RussianRuble,
   Users,
 } from "lucide-react";

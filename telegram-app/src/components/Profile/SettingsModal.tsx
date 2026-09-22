@@ -15,6 +15,10 @@ import {
   useProfileNotificationSettingsMutation,
   useProfileQuery,
 } from "@/queries/profile";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import styles from "./ProfileModals.module.css";
 
 /**
@@ -33,6 +37,9 @@ export function SettingsModal({
   open: boolean;
   onClose: () => void;
 }) {
+  // Имя диалога для скринридера + видимый заголовок на base-платформе
+  // (tgui Modal.Header рисует текст только на iOS).
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -40,8 +47,10 @@ export function SettingsModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Настройки</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBody}>
+        <SheetTitle titleId={titleId}>Настройки</SheetTitle>
         <SettingsBody />
       </div>
     </Modal>

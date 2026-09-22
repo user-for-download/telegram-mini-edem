@@ -4,7 +4,6 @@ import {
   Caption,
   Input,
   Modal,
-  Text,
 } from "@telegram-apps/telegram-ui";
 import { Car, Hash, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +25,10 @@ import {
   vehicleRemoveErrorMessage,
   vehicleServerErrorMessage,
 } from "./vehicleValidation";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import styles from "./ProfileModals.module.css";
 
 type Vehicle = NonNullable<ReturnType<typeof useVehicleQuery>["vehicle"]>;
@@ -41,6 +44,9 @@ export function VehicleModal({
   open: boolean;
   onClose: () => void;
 }) {
+  // Имя диалога для скринридера + видимый заголовок на base-платформе
+  // (tgui Modal.Header рисует текст только на iOS).
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -48,8 +54,10 @@ export function VehicleModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Автомобиль</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBody}>
+        <SheetTitle titleId={titleId}>Автомобиль</SheetTitle>
         <VehicleBody onDone={onClose} />
       </div>
     </Modal>

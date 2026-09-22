@@ -29,6 +29,25 @@ export function getRawInitData(): string | undefined {
   }
 }
 
+/**
+ * Пурж SDK-кэша launch params с сырой initData
+ * (sessionStorage["tapps/launchParams"] — пишет bridge при инициализации,
+ * сам не чистит; «материал сессии» иначе переживает logout в табе).
+ * Ключ проверен по исходникам: toolkit `w()`/`T()` — sessionStorage +
+ * префикс `tapps/`, bridge `R = "launchParams"`. Best-effort, SSR-safe:
+ * ошибки игнорируем, сессия уже очищена вызывающим. Вызывается из
+ * markAccountDeleted и clearSession стора.
+ */
+export function purgeLaunchParamsCache(): void {
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem("tapps/launchParams");
+    }
+  } catch {
+    // ignore: кэш — best-effort
+  }
+}
+
 /** Сигнал WebView: контент готов к показу (убирает loading-скелетон Telegram). */
 export function signalAppReady(): void {
   miniApp.ready.ifAvailable();
@@ -50,9 +69,12 @@ export function buildTelegramShareLink(appUrl: string, text: string): string {
  * window.location внутри SDK при старом клиенте).
  * Возвращает false, если клиент не поддерживает метод или бросил
  * исключение — вызывающий откатывается на Web Share API / буфер обмена.
+ * NB: ifAvailable — no-op (не исключение) на неподдерживаемом методе,
+ * поэтому доступность проверяем явно через isAvailable().
  */
 export function shareViaTelegram(appUrl: string, text: string): boolean {
   try {
+    if (!shareURL.isAvailable()) return false;
     shareURL.ifAvailable(appUrl, text);
     return true;
   } catch {
@@ -76,9 +98,11 @@ export function buildTelegramChatUrl(username: string | undefined): string | nul
  * Открыть t.me-ссылку нативно (чат участника, инвайт).
  * Не-t.me URL SDK отклоняет исключением — тоже false.
  * Возвращает false — вызывающий откатывается на window.open.
+ * NB: см. shareViaTelegram — ifAvailable молчит на старых клиентах.
  */
 export function openTelegramUrl(url: string): boolean {
   try {
+    if (!openTelegramLink.isAvailable()) return false;
     openTelegramLink.ifAvailable(url);
     return true;
   } catch {

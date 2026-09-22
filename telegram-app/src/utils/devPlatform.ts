@@ -89,11 +89,13 @@ export function nextChoice<T extends string>(
   options: ReadonlyArray<{ value: T; label: string }>,
   current: T | null,
 ): T {
+  const first = options[0];
+  if (!first) throw new Error("nextChoice: options must not be empty");
   const index =
     current === null
       ? -1
       : options.findIndex((option) => option.value === current);
-  return options[(index + 1) % options.length]?.value ?? options[0].value;
+  return options[(index + 1) % options.length]?.value ?? first.value;
 }
 
 /** Круг платформы с возвратом в «Авто»: null → ios → android → null. */

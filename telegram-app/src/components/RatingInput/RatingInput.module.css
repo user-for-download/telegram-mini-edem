@@ -1,15 +1,47 @@
-/* Оценка 1–5 (нативный tgui Rating): центрирование как у старого
- * .ReviewStars, звёзды 44px ради тач-таргетов ≥44px (a11y).
- * Неслойный модуль бьёт слой tgui без !important и удвоения: пилюля
- * обёртки ни с чем не конкурирует, а svg-правило нужно, потому что
- * кит задаёт звёздам свой размер (40px). */
+/* Оценка 1–5 (собственные нативные radio + SVG-звёзды): центрирование
+ * как у старого .ReviewStars, звёзды 44px ради тач-таргетов ≥44px (a11y).
+ * Неслойный модуль бьёт слой tgui без !important и удвоения.
+ * input скрыт визуально, но остаётся в a11y-дереве и фокусе
+ * (display:none убрал бы radio из Tab-порядка).
+ * Активная звезда — золотая (--app-rating), неактивная — приглушённая;
+ * фокус виден кольцом (keyboard-only пользователи). */
 .field {
   display: flex;
   justify-content: center;
   padding: 4px 0;
 }
 
-.field svg {
+.star {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 44px;
   height: 44px;
+  cursor: pointer;
+}
+
+.input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.icon {
+  width: 44px;
+  height: 44px;
+  color: var(--tgui--secondary_text_color, #999);
+  pointer-events: none;
+}
+
+.icon[data-active="true"] {
+  color: var(--app-rating);
+}
+
+.star:has(.input:focus-visible) .icon {
+  outline: 2px solid var(--tgui--link_color, #2481cc);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

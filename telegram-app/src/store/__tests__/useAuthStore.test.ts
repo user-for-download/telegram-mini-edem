@@ -98,7 +98,9 @@ describe("useAuthStore.bootstrap (Telegram)", () => {
     await useAuthStore.getState().bootstrap();
 
     expect(mockedLoginWithTelegram).toHaveBeenCalledTimes(1);
-    expect(mockedLoginWithTelegram.mock.calls[0][0]).toEqual({
+    const loginCall = mockedLoginWithTelegram.mock.calls[0];
+    if (!loginCall) throw new Error("loginWithTelegram was not called");
+    expect(loginCall[0]).toEqual({
       initData: RAW_INIT_DATA,
     });
   });

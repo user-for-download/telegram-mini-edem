@@ -76,7 +76,10 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
         },
         onError: (error) => {
           haptic.error();
-          toast.show({ text: bookingErrorMessage(error) });
+          toast.show({
+            text: bookingErrorMessage(error),
+            assertive: true,
+          });
         },
       },
     );

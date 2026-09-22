@@ -1,6 +1,6 @@
-// SSR-тесты AppBottomBar: нижний бар (nav + 6 табов в нативном Tabbar,
+// SSR-тесты AppBottomBar: нижний бар (nav + 5 табов в нативном Tabbar,
 // бейдж) и Shell (табы всегда, семантика nav). Только renderToString,
-// без jsdom.
+// без jsdom. Dev-витрина удалена полностью.
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
@@ -70,14 +70,14 @@ function renderShell(url: string): string {
 }
 
 describe("AppBottomBar", () => {
-  it("шесть табов в нативной панели, без кастомного tablist", () => {
+  it("пять прод-табов в нативной панели, без кастомного tablist", () => {
     const html = renderTabs("home");
     expect(html).toContain("Главная");
     expect(html).toContain("Поездки");
     expect(html).toContain("Уведомления");
     expect(html).toContain("Профиль");
     expect(html).toContain("Поиск");
-    expect(html).toContain("Витрина");
+    expect(html).not.toContain("Витрина");
     expect(html).not.toContain('role="tablist"');
   });
 

@@ -35,12 +35,12 @@
      Класс `dark` на documentElement тогглит AppConfig из темы Telegram
      (miniApp.isDark) — tgui вешает свой хэшированный dark-класс, на который
      извне опереться нельзя. */
-  --app-success: #1fa855;
-  --app-success-bg: rgba(31, 168, 85, 0.12);
-  --app-warning: #b8770a;
-  --app-warning-bg: rgba(184, 119, 10, 0.12);
-  --app-danger: #d33636;
-  --app-danger-bg: rgba(211, 54, 54, 0.1);
+  --app-success: #167a3f;
+  --app-success-bg: rgba(22, 122, 63, 0.12);
+  --app-warning: #8a5c06;
+  --app-warning-bg: rgba(138, 92, 6, 0.14);
+  --app-danger: #b32626;
+  --app-danger-bg: rgba(179, 38, 38, 0.12);
   --app-info: var(--tgui--link_color);
   --app-info-bg: var(--tgui--secondary_fill);
   --app-purple: #7c5cd6;

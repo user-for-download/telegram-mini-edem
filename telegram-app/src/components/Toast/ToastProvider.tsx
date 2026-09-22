@@ -17,6 +17,8 @@ export interface Toast {
   text: string;
   description?: string;
   before?: ReactNode;
+  /** Ошибка/важное предупреждение — role=alert (немедленный анонс). */
+  assertive?: boolean;
 }
 
 interface ToastContextValue {
@@ -55,24 +57,32 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
     <ToastContext.Provider value={value}>
       {children}
       {toast && (
-        <Snackbar
-          className={styles.snackbar}
-          onClose={close}
-          duration={TOAST_DURATION_MS}
-          before={
-            toast.before ?? (
-              <CheckCircle2 size={20} className="text-(--app-success) shrink-0" />
-            )
-          }
-          description={toast.description}
-        >
-          {toast.text}
-        </Snackbar>
+        // a11y: tgui Snackbar — голый div без live-семантики; обёртка
+        // объявляет тост скринридеру: role=status (успех/инфо, вежливо),
+        // role=alert (ошибки через assertive:true, немедленно).
+        <div role={toast.assertive ? "alert" : "status"}>
+          <Snackbar
+            className={styles.snackbar}
+            onClose={close}
+            duration={TOAST_DURATION_MS}
+            before={
+              toast.before ?? (
+                <CheckCircle2 size={20} className="text-(--app-success) shrink-0" />
+              )
+            }
+            description={toast.description}
+          >
+            {toast.text}
+          </Snackbar>
+        </div>
       )}
     </ToastContext.Provider>
   );
 };
 
+/**
+ * Хук доступа к тостам (вне провайдера — исключение, fail-fast).
+ */
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
   if (!context) {

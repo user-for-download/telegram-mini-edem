@@ -57,7 +57,9 @@ describe("Telegram trips/bookings API parity", () => {
     void tripsApi.getMyTrips({ status: "archive", limit: 20 });
 
     expect(requestMock).toHaveBeenCalledTimes(1);
-    const [endpoint] = requestMock.mock.calls[0];
+    const archiveCall = requestMock.mock.calls[0];
+    if (!archiveCall) throw new Error("request was not called");
+    const [endpoint] = archiveCall;
     const url = new URL(String(endpoint), "https://example.test");
     expect(url.pathname).toBe("/trips/my");
     expect(url.searchParams.get("status")).toBe("archive");
@@ -95,7 +97,9 @@ describe("Telegram trips/bookings API parity", () => {
       tags: ["Не курить"],
     });
 
-    const [endpoint] = requestMock.mock.calls[0];
+    const filterCall = requestMock.mock.calls[0];
+    if (!filterCall) throw new Error("request was not called");
+    const [endpoint] = filterCall;
     const url = new URL(String(endpoint), "https://example.test");
     expect(Object.fromEntries(url.searchParams)).toEqual({
       q: "центр",

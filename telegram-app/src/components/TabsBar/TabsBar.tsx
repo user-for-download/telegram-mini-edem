@@ -1,10 +1,10 @@
 import { Badge, Tabbar } from "@telegram-apps/telegram-ui";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
-import { Bell, Car, Home, LayoutGrid, Search, User } from "lucide-react";
+import { Bell, Car, Home, Search, User } from "lucide-react";
 import styles from "./Tabbar.module.css";
 
 export type AppTabId =
-  "home" | "trips" | "notifications" | "search" | "profile" | "showcase";
+  "home" | "trips" | "notifications" | "search" | "profile";
 
 export interface TabsBarProps {
   activeTab: AppTabId;
@@ -22,7 +22,6 @@ const TABS = [
     Icon: Bell,
   },
   { key: "profile", text: "Профиль", to: "/profile", Icon: User },
-  { key: "showcase", text: "Витрина", to: "/showcase", Icon: LayoutGrid },
 ] as const;
 
 const SEARCH_TAB = {

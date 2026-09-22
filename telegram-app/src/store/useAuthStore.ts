@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getRawInitData } from "@/utils/telegram-adapter";
+import { getRawInitData, purgeLaunchParamsCache } from "@/utils/telegram-adapter";
 import type { User } from "@/types";
 import { authApi } from "@/api/auth.api";
 import { ApiError, apiClient } from "@/api/client";
@@ -325,6 +325,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     apiClient.invalidatePendingRefresh();
     apiClient.setSession(null);
 
+    // SDK-кэш launch params с сырой initData переживает logout
+    // (bridge пишет sessionStorage["tapps/launchParams"], сам не чистит) —
+    // пуржим, иначе «материал сессии» остаётся в табе.
+    purgeLaunchParamsCache();
+
     set({
       status: "unauthenticated",
       user: null,
@@ -337,6 +342,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   markAccountDeleted: () => {
     apiClient.invalidatePendingRefresh();
+    purgeLaunchParamsCache();
     applyDeleted(set);
   },
 }));

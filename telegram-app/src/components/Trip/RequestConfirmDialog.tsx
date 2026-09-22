@@ -9,6 +9,10 @@ import {
 } from "@telegram-apps/telegram-ui";
 import type { Booking, DriverBookingAction } from "@edem/contracts";
 import { RatingPill } from "@/components/RatingPill";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import styles from "./RequestConfirmDialog.module.css";
 
 export type { DriverBookingAction };
@@ -36,21 +40,22 @@ export function RequestConfirmDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  // Динамический заголовок (подтвердить/отклонить): одно имя диалога —
+  // тот же titleId в aria-labelledby, текст — по action.
+  const titleId = useSheetTitleId();
+  const title =
+    action === "confirmed" ? "Подтвердить пассажира?" : "Отклонить заявку?";
   return (
     <Modal
       open={open}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      header={
-        <Modal.Header>
-          {action === "confirmed"
-            ? "Подтвердить пассажира?"
-            : "Отклонить заявку?"}
-        </Modal.Header>
-      }
+      header={<Modal.Header>{title}</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.body}>
+        <SheetTitle titleId={titleId}>{title}</SheetTitle>
         <RequestConfirmBody
           booking={booking}
           action={action}

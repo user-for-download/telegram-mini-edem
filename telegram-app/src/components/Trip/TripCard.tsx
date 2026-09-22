@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { Button, IconButton } from "@telegram-apps/telegram-ui";
 import { Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -140,7 +139,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
     );
   }
 
-  const { trip, driverRating, onShare, onCancel, cancelPending } = variant;
+  const { trip, driverRating, onCancel, cancelPending } = variant;
   const status = tripStatusLabel(trip);
   const pending = trip.pendingRequestsCount ?? 0;
   // Футер одинаковый для обеих ролей: Детали — поделиться — Отмена.

@@ -1,10 +1,15 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button, Text } from "@telegram-apps/telegram-ui";
 
 /**
  * Confirm-guard для деструктивных действий (паритет VK ConfirmProvider):
  * первый клик «вооружает» кнопку, второй — выполняет. Отмена снимает
  * armed-состояние. Двойной сабмит блокируется через pending.
+ *
+ * a11y: триггер НЕ размонтируется при armed (иначе фокус падает на body
+ * и клавиатурный пользователь теряет место). Armed-панель — описанная
+ * через aria-describedby область с переносом фокуса на кнопку
+ * подтверждения и возвратом фокуса на триггер при «Назад».
  */
 export function ConfirmAction({
   label,
@@ -27,13 +32,31 @@ export function ConfirmAction({
 }) {
   const descId = useId();
   const [armed, setArmed] = useState(false);
-  if (!armed) {
-    return (
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const confirmRef = useRef<HTMLButtonElement | null>(null);
+  // Фокус был уведён внутрь панели — при разоружении вернуть на триггер.
+  const movedFocusRef = useRef(false);
+
+  useEffect(() => {
+    if (armed) {
+      movedFocusRef.current = true;
+      confirmRef.current?.focus();
+    } else if (movedFocusRef.current) {
+      movedFocusRef.current = false;
+      triggerRef.current?.focus();
+    }
+  }, [armed]);
+
+  return (
+    <div>
       <Button
+        ref={triggerRef}
         mode={mode}
         size="s"
         stretched
         disabled={disabled || pending}
+        aria-expanded={armed}
+        aria-describedby={armed ? descId : undefined}
         style={
           destructive
             ? { color: "var(--tgui--destructive_text_color)" }
@@ -43,43 +66,38 @@ export function ConfirmAction({
       >
         {label}
       </Button>
-    );
-  }
-  return (
-    <div
-      role="alertdialog"
-      aria-label={label}
-      aria-describedby={descId}
-    >
-      <Text Component="p" id={descId}>
-        {description}
-      </Text>
-      <div className="flex flex-col gap-2 mt-2">
-        {/* Подтверждение деструктива — всегда filled: иначе неотличимо
-            от «Назад» (исключение из правила «всё bezeled»). */}
-        <Button
-          mode="filled"
-          size="s"
-          stretched
-          loading={pending}
-          disabled={pending}
-          onClick={() => {
-            onConfirm();
-            setArmed(false);
-          }}
-        >
-          {confirmLabel}
-        </Button>
-        <Button
-          mode="bezeled"
-          size="s"
-          stretched
-          disabled={pending}
-          onClick={() => setArmed(false)}
-        >
-          Назад
-        </Button>
-      </div>
+      {armed && (
+        <div className="flex flex-col gap-2 mt-2">
+          <Text Component="p" id={descId}>
+            {description}
+          </Text>
+          {/* Подтверждение деструктива — всегда filled: иначе неотличимо
+              от «Назад» (исключение из правила «всё bezeled»). */}
+          <Button
+            ref={confirmRef}
+            mode="filled"
+            size="s"
+            stretched
+            loading={pending}
+            disabled={pending}
+            onClick={() => {
+              onConfirm();
+              setArmed(false);
+            }}
+          >
+            {confirmLabel}
+          </Button>
+          <Button
+            mode="bezeled"
+            size="s"
+            stretched
+            disabled={pending}
+            onClick={() => setArmed(false)}
+          >
+            Назад
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

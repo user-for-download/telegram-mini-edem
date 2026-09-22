@@ -18,6 +18,7 @@ export function PopularRoutesSection({ onSelect }: PopularRoutesSectionProps) {
       {POPULAR_ROUTES.map((route) => (
         <Cell
           key={`${route.from}-${route.to}`}
+          Component="button"
           type="button"
           onClick={() => onSelect(route.from, route.to)}
           before={

@@ -126,6 +126,7 @@ export function TripHistoryPage() {
             return (
               <Cell
                 key={item.key}
+                Component="button"
                 type="button"
                 before={
                   <IconContainer>

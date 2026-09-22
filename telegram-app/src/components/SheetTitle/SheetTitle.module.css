@@ -1,0 +1,7 @@
+/* Видимый заголовок шторки для base-платформы (Android/desktop/web):
+ * tgui Modal.Header рендерит текст только на iOS. На iOS SheetTitle
+ * не рендерится вовсе (см. компонент), дублирования нет. */
+.title {
+  padding: 12px 16px 4px;
+  text-align: center;
+}

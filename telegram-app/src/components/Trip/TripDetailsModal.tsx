@@ -2,6 +2,10 @@ import { Modal } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripDetailsPage } from "@/pages/TripDetails/TripDetailsPage";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import styles from "./TripModals.module.css";
 
 /**
@@ -15,6 +19,9 @@ export function TripDetailsModal({
   open: boolean;
   onClose: () => void;
 }) {
+  // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
+  // текст только на iOS.
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -22,8 +29,10 @@ export function TripDetailsModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Детали поездки</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBodyPlain}>
+        <SheetTitle titleId={titleId}>Детали поездки</SheetTitle>
         <TripDetailsPage />
       </div>
     </Modal>

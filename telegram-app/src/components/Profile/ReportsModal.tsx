@@ -18,6 +18,10 @@ import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill"
 import { QueryState } from "@/components/QueryState";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { haptic } from "@/utils/haptics";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { ApiError } from "@/api/client";
 import {
@@ -96,6 +100,9 @@ export function ReportsModal({
   open: boolean;
   onClose: () => void;
 }) {
+  // Имя диалога для скринридера + видимый заголовок на base-платформе
+  // (tgui Modal.Header рисует текст только на iOS).
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -103,8 +110,10 @@ export function ReportsModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Жалобы</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBody}>
+        <SheetTitle titleId={titleId}>Жалобы</SheetTitle>
         <ReportsBody />
       </div>
     </Modal>

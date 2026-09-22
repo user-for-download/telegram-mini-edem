@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from "react";
-import { motion } from "motion/react";
 import {
   HashRouter,
   Navigate,
@@ -19,8 +18,8 @@ import { AppShell } from "@/components/AppShell/AppShell";
 import { useSettingsButton } from "@/hooks/useSettingsButton";
 import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
+import { ROUTE_FADE_CLASS } from "@/components/AppShell/AppShell";
 import { HomePage } from "@/pages/HomePage/HomePage";
-import { ShowcasePage } from "@/pages/ShowcasePage/ShowcasePage";
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripDetailsRoute } from "@/components/Trip/TripDetailsModal";
 import { CreateTripPage } from "@/pages/CreateTrip/CreateTripPage";
@@ -114,10 +113,8 @@ export function Shell() {
       ? "home"
       : location.pathname.startsWith("/bookings")
         ? "trips"
-        : location.pathname.startsWith("/notifications")
-          ? "notifications"
-          : location.pathname.startsWith("/showcase")
-            ? "showcase"
+          : location.pathname.startsWith("/notifications")
+            ? "notifications"
             : location.pathname.startsWith("/trips")
               ? "search"
               : "profile";
@@ -137,14 +134,14 @@ export function Shell() {
         />
       }
     >
-      <motion.div
-        key={location.pathname + location.search}
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.15 }}
-      >
+      {/* Route-fade без motion: CSS-анимация вместо motion/react (−39 KiB
+          gzip из initial-бандла). Ключ — только pathname: смена query-string
+          (?segment=…) не должна перемонтировать страницу (скелетоны, потеря
+          скролла). Уважение reduced-motion — класс route-fade
+          (AppShell.module.css). */}
+      <div key={location.pathname} className={ROUTE_FADE_CLASS}>
         <Outlet />
-      </motion.div>
+      </div>
     </AppShell>
   );
 }
@@ -180,7 +177,6 @@ export function AppRouter() {
           <Route path="/profile/support" element={<SupportRoute />} />
           <Route path="/profile/reports" element={<ReportsRoute />} />
           <Route path="/vehicle" element={<VehicleRoute />} />
-          <Route path="/showcase" element={<ShowcasePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

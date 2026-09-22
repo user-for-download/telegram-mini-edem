@@ -65,7 +65,8 @@ export function normalizeVehicleForm(
  * 401 — сессия, 429 — profileUpdateLimiter, 400 — валидация backend,
  * INVALID_RESPONSE — fail-closed валидация ответа клиентом.
  */
-export function vehicleServerErrorMessage(error: unknown): string {  if (error instanceof ApiError) {
+export function vehicleServerErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
     if (error.status === 401) {
       return "Сессия истекла. Войдите заново и повторите.";
     }

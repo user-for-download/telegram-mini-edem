@@ -12,6 +12,10 @@ import { LazyAvatar } from "@/components/LazyAvatar";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { haptic } from "@/utils/haptics";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import { useModalBack } from "@/utils/modalBack";
 import { TripPage } from "@/pages/Trip/TripPage";
 import {
@@ -143,6 +147,9 @@ export function TripRequestsModal({
   tripId: string;
 }) {
   // Фокус, Esc и Tab-trap — нативные (Radix FocusScope + onOpenChange).
+  // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
+  // текст только на iOS.
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -150,8 +157,10 @@ export function TripRequestsModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Заявки пассажиров</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBody}>
+        <SheetTitle titleId={titleId}>Заявки пассажиров</SheetTitle>
         <TripRequestsBody tripId={tripId} />
       </div>
     </Modal>

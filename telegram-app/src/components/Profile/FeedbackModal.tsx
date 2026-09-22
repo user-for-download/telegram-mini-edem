@@ -11,6 +11,10 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { useCreateFeedbackMutation } from "@/queries/useSupportQuery";
 import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
+import {
   normalizeSupportForm,
   validateSupportForm,
 } from "@/pages/Support/supportValidation";
@@ -40,6 +44,9 @@ export function FeedbackModal({
   open: boolean;
   onClose: () => void;
 }) {
+  // Имя диалога для скринридера + видимый заголовок на base-платформе
+  // (tgui Modal.Header рисует текст только на iOS).
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -47,8 +54,10 @@ export function FeedbackModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Служба поддержки</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBodyStatic}>
+        <SheetTitle titleId={titleId}>Служба поддержки</SheetTitle>
         <FeedbackForm onClose={onClose} />
       </div>
     </Modal>

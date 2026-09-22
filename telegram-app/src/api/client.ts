@@ -187,7 +187,7 @@ export class ApiClient {
     this.refreshGeneration++;
   }
 
-  async request<T>(endpoint: string, options: RequestInit = {}, schema?: ZodType<T>): Promise<T> {
+  async request<T>(endpoint: string, options: RequestInit = {}, schema: ZodType<T>): Promise<T> {
     const response = await this.doFetch(endpoint, options);
 
     // Если 401 и это НЕ сам auth-эндпоинт — пробуем refresh
@@ -230,19 +230,15 @@ export class ApiClient {
     return this.parseResponse(response, schema);
   }
 
-  private async parseResponse<T>(response: Response, schema?: ZodType<T>): Promise<T> {
+  private async parseResponse<T>(response: Response, schema: ZodType<T>): Promise<T> {
     const data = await response.json();
 
-    if (schema) {
-      const parsed = schema.safeParse(data);
-      if (!parsed.success) {
-        console.error("[ApiClient] Zod validation failed:", parsed.error);
-        throw new ApiError("Invalid server response", "INVALID_RESPONSE", 502);
-      }
-      return parsed.data;
+    const parsed = schema.safeParse(data);
+    if (!parsed.success) {
+      console.error("[ApiClient] Zod validation failed:", parsed.error);
+      throw new ApiError("Invalid server response", "INVALID_RESPONSE", 502);
     }
-
-    return data as T;
+    return parsed.data;
   }
 
   private async doFetch(endpoint: string, options: RequestInit): Promise<Response> {

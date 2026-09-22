@@ -10,7 +10,7 @@ import {
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
-import { MessageSquareText, Send, X } from "lucide-react";
+import { MessageSquareText, Send } from "lucide-react";
 import {
   FEEDBACK_SUBJECT_MAX_LENGTH,
   FEEDBACK_TEXT_MAX_LENGTH,
@@ -36,6 +36,10 @@ import {
   normalizeSupportForm,
   validateSupportForm,
 } from "@/pages/Support/supportValidation";
+import {
+  SheetTitle,
+  useSheetTitleId,
+} from "@/components/SheetTitle/SheetTitle";
 import styles from "./ProfileModals.module.css";
 
 const FeedbackCard = memo(function FeedbackCard({
@@ -109,6 +113,9 @@ export function SupportModal({
   open: boolean;
   onClose: () => void;
 }) {
+  // Имя диалога для скринридера + видимый заголовок на base-платформе
+  // (tgui Modal.Header рисует текст только на iOS).
+  const titleId = useSheetTitleId();
   return (
     <Modal
       open={open}
@@ -116,8 +123,10 @@ export function SupportModal({
         if (!next) onClose();
       }}
       header={<Modal.Header>Поддержка</Modal.Header>}
+      aria-labelledby={titleId}
     >
       <div className={styles.sheetBody}>
+        <SheetTitle titleId={titleId}>Поддержка</SheetTitle>
         <SupportBody />
       </div>
     </Modal>
