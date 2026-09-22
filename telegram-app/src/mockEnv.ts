@@ -51,6 +51,17 @@ if (import.meta.env.DEV) {
         if (method === "web_app_request_safe_area") {
           return emitEvent("safe_area_changed", noInsets);
         }
+        // Фуллскрин (Bot API 8.0): в dev-стенде клиент «подтверждает»
+        // фуллскрин (в реальном Telegram приложение заходит уже в
+        // фуллскрине), выход — соответственно сбрасывает.
+        if (
+          method === "web_app_request_fullscreen" ||
+          method === "web_app_request_exit_fullscreen"
+        ) {
+          return emitEvent("fullscreen_changed", {
+            is_fullscreen: method === "web_app_request_fullscreen",
+          });
+        }
       },
       launchParams: new URLSearchParams([
         ["tgWebAppThemeParams", JSON.stringify(themeParams)],

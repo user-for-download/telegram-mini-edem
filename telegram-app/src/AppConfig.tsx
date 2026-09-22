@@ -6,6 +6,7 @@ import {
   themeParams,
   useLaunchParams,
   useSignal,
+  viewport,
 } from "@telegram-apps/sdk-react";
 import {
   setMiniAppBackgroundColor,
@@ -199,9 +200,53 @@ function useTelegramAppearance(): "dark" | "light" {
   return isDark ? "dark" : "light";
 }
 
+/**
+ * Фуллскрин (Bot API 8.0). Приложение рассчитано на полный экран без
+ * собственного хрома, поэтому запрашиваем фуллскрин сами — на старте и при
+ * возврате из других вкладок/приложений (remount AppConfig при
+ * isActive=false→true), где клиент мог его сбросить.
+ *
+ * ВАЖНО (SDK 3.3.x): метод синхронный (возвращает void, моментальный
+ * snapshot) — первый запрос может уйти раньше, чем смонтируется viewport
+ * (init await-ит mount параллельно с рендером React), поэтому дублируем
+ * через короткий таймаут: если фуллскрин уже активен (isFullscreen()),
+ * повторный запрос клиент игнорирует.
+ */
+function useFullscreenSubscription(): void {
+  useEffect(() => {
+    const { requestFullscreen, isFullscreen } = viewport;
+    if (!requestFullscreen.isAvailable()) return;
+
+    // Повторный запрос, пока предыдущий в полёте, бросает ConcurrentCallError
+    // (StrictMode-дабл-маунт, быстрый remount), отказ клиента — отдельная
+    // ошибка промиса. Оба некритичны: первый запрос либо применён, либо
+    // клиент фуллскрин не поддержал — приложение живёт и без него
+    // (safe-area-паддинги рассчитаны на оба режима). Глушим полностью.
+    const request = () => {
+      try {
+        void Promise.resolve(requestFullscreen()).catch(() => {
+          /* concurrent / fullscreen_failed — некритично */
+        });
+      } catch {
+        /* синхронный concurrent — пропускаем */
+      }
+    };
+
+    // 1) Моментальный запрос на mount.
+    request();
+    // 2) Повтор после монтирования viewport/ответа клиента: если первый
+    //    уже применился — isFullscreen() true и повтор не отправляется.
+    const timer = window.setTimeout(() => {
+      if (!isFullscreen()) request();
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, []);
+}
+
 export const AppConfig: FC<PropsWithChildren> = ({ children }) => {
   const platform = useTguiPlatform();
   const appearance = useTelegramAppearance();
+  useFullscreenSubscription();
 
   return (
     <QueryClientProvider client={queryClient}>

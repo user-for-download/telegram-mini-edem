@@ -15,8 +15,8 @@
 :root {
   color-scheme: light dark;
   /* Safe-area из SDK (viewport.bindCssVars даёт --tg-viewport-*,
-     обновляется по safeAreaChanged), fallback — системный env()
-     для браузера вне Telegram. */
+     обновляется по safeAreaChanged/contentSafeAreaChanged), fallback —
+     системный env() для браузера вне Telegram. */
   --tg-safe-area-inset-top: var(
     --tg-viewport-safe-area-inset-top,
     env(safe-area-inset-top, 0px)
@@ -24,6 +24,31 @@
   --tg-safe-area-inset-bottom: var(
     --tg-viewport-safe-area-inset-bottom,
     env(safe-area-inset-bottom, 0px)
+  );
+  /* Врезки оверлеев Telegram (дока Bot API 8.0 «ContentSafeAreaInset:
+     safe area for displaying content within the app, free from overlapping
+     Telegram UI elements»): в нормальном режиме — 0 (вебвью целиком ниже
+     нативной шапки), во фуллскрине — высота статус-бара и/или плавающих
+     кнопок/панели клиента. Прокинуто из SDK-переменных (bindCssVars), вне
+     Telegram SDK-переменных нет — 0. */
+  --tg-content-safe-area-inset-top: var(
+    --tg-viewport-content-safe-area-inset-top,
+    0px
+  );
+  --tg-content-safe-area-inset-bottom: var(
+    --tg-viewport-content-safe-area-inset-bottom,
+    0px
+  );
+  /* Итоговые отступы для контента: max(системная врезка, врезка UI
+     Telegram) — max() дедуплицирует пересечение (notch бывает учтён в
+     обеих). Consumers: AppShell (top), Tabbar (bottom), Toast (top). */
+  --tg-safe-area-top: max(
+    var(--tg-safe-area-inset-top),
+    var(--tg-content-safe-area-inset-top)
+  );
+  --tg-safe-area-bottom: max(
+    var(--tg-safe-area-inset-bottom),
+    var(--tg-content-safe-area-inset-bottom)
   );
   --tg-viewport-height: 100dvh;
   --tg-viewport-stable-height: 100dvh;

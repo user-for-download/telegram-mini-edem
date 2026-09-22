@@ -60,6 +60,23 @@ export async function init(options: {
           });
         }
 
+        // macOS не отвечает на фуллскрин-методы (известные пропуски клиента,
+        // как с safe_area): подтверждаем текущее состояние без отказа —
+        // иначе watchFullscreen засчитает fullscreen_failed.
+        if (
+          method === "web_app_request_fullscreen" ||
+          method === "web_app_request_exit_fullscreen"
+        ) {
+          const webApp = (
+            window as unknown as {
+              Telegram?: { WebApp?: { isFullscreen?: boolean } };
+            }
+          ).Telegram?.WebApp;
+          return emitEvent("fullscreen_changed", {
+            is_fullscreen: Boolean(webApp?.isFullscreen),
+          });
+        }
+
         next();
       },
     });

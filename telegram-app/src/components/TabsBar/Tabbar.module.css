@@ -10,9 +10,11 @@
 .tabbar.tabbar {
   margin-left: 16px;
   margin-right: 16px;
+  /* Фуллскрин: пилюля не должна налипать на системную навигационную
+   * полосу/жест — max(системная врезка, врезка UI Telegram). */
   margin-bottom: max(
     env(safe-area-inset-bottom, 0px),
-    var(--tg-safe-area-inset-bottom, 0px)
+    var(--tg-safe-area-bottom, 0px)
   );
   border-radius: 28px;
   overflow: hidden;
