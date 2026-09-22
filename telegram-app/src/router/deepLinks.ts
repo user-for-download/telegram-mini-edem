@@ -74,5 +74,10 @@ export function resolveStartParamRoute(value: unknown): string | null {
   // typeof-гарда достаточно и против прототипных ключей (`__proto__` —
   // объект, не строка, и уйдёт в fallback).
   if (typeof route === "string" && route.length > 0) return route;
+  // Неизвестный токен: поведение — безопасный fallback (по дизайну), в dev
+  // подсвечиваем битую ссылку для диагностики (в проде тихо).
+  if (import.meta.env.DEV) {
+    console.warn(`[DeepLinks] Unknown startapp token: ${value}`);
+  }
   return FALLBACK_ROUTE;
 }

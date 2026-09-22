@@ -19,7 +19,6 @@ import {
   Car,
   ChevronRight,
   Flag,
-  LogOut,
   Moon,
   Star,
   TriangleAlert,
@@ -181,14 +180,9 @@ export function ProfilePage() {
     [aboutReviews.data],
   );
 
-  const handleLogout = () => {
-    if (window.confirm("Выйти из аккаунта на этом устройстве?")) {
-      logout.mutate();
-    }
-  };
-
-  // Удаление — через ConfirmAction (вооружение в UI); двойной
-  // window.confirm здесь больше не нужен.
+  // Выход — через ConfirmAction (вооружение в UI): нативный
+  // window.confirm ненадёжен в Telegram WebView. Удаление — тоже через
+  // ConfirmAction (двойной window.confirm здесь больше не нужен).
 
   if (profile.error instanceof ApiError && profile.error.status === 403) {
     if (profile.error.message === "Account is deleted") {
@@ -468,17 +462,14 @@ export function ProfilePage() {
 
                 {/* Опасная зона */}
                 <div className={styles.dangerZone}>
-                  <Button
-                    mode="bezeled"
-                    stretched
-                    size="s"
-                    before={<LogOut size={16} />}
-                    loading={logout.isPending}
+                  <ConfirmAction
+                    label="Выйти"
+                    confirmLabel="Выйти из аккаунта"
+                    description="Вы сможете войти снова через Telegram."
+                    pending={logout.isPending}
                     disabled={logout.isPending}
-                    onClick={handleLogout}
-                  >
-                    Выйти
-                  </Button>
+                    onConfirm={() => logout.mutate()}
+                  />
                   {remove.error && (
                     <Caption
                       Component="p"

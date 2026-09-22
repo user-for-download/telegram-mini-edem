@@ -89,7 +89,9 @@ export function TripActivePage() {
                     toast.show({ text: "Бронь поездки отменена" });
                   },
                 }),
-              cancelPending: cancelBooking.isPending,
+              cancelPending:
+                cancelBooking.isPending &&
+                cancelBooking.variables === booking.id,
             }}
           />
         ))}

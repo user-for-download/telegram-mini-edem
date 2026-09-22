@@ -34,6 +34,7 @@ import {
   parseDateSegmentParam,
   type SearchFormState,
 } from "@/helpers/searchFilters";
+import { useModalBack } from "@/utils/modalBack";
 import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { useInfiniteTripsQuery } from "@/queries/useTripsQuery";
@@ -66,6 +67,10 @@ export function SearchPage() {
     presetFromParams(searchParams),
   );
   const [showFilters, setShowFilters] = useState(false);
+
+  // Панель фильтров — state-drawer: нативный Back закрывает её, а не
+  // уводит со страницы (тот же стек modalBack, что у state-модалок).
+  useModalBack(() => setShowFilters(false), showFilters);
 
   const trips = useInfiniteTripsQuery(buildSearchFilters(submitted));
   const items = trips.data?.pages.flatMap((page) => page.items) ?? [];

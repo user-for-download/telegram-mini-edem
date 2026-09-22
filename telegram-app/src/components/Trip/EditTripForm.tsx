@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import {
   Button,
   Caption,
@@ -57,6 +58,22 @@ export function EditTripForm({
   const [tags, setTags] = useState<TripTag[]>([...(trip.tags ?? [])]);
   const [comment, setComment] = useState(trip.comment ?? "");
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Несохранённые правки — Telegram спросит подтверждение закрытия.
+  // Сравнение с начальными значениями (см. useState выше): теги —
+  // JSON-сравнением (порядок toggle не меняет, дубли запрещены).
+  useClosingConfirmation(
+    fromAddress !== (trip.fromAddress ?? "") ||
+      toAddress !== (trip.toAddress ?? "") ||
+      departure !== toDateTimeLocal(trip.departureAt) ||
+      durationHours !==
+        String(Math.max(1, Math.round(trip.durationMinutes / 60))) ||
+      distanceKm !== String(trip.distanceKm) ||
+      price !== String(trip.price) ||
+      seats !== String(trip.seatsTotal) ||
+      JSON.stringify(tags) !== JSON.stringify(trip.tags ?? []) ||
+      comment !== (trip.comment ?? ""),
+  );
 
   const toggleTag = (tag: TripTag) => {
     setTags((prev) =>

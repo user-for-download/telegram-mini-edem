@@ -124,12 +124,18 @@ export function CreateTripForm({
   };
 
   // Несохранённый черновик — Telegram спросит подтверждение закрытия.
+  // Сравниваем с начальными значениями (см. useState выше): любое
+  // отклонение — черновик.
   useClosingConfirmation(
     from !== "" ||
       to !== "" ||
       fromAddress !== "" ||
       toAddress !== "" ||
+      date !== tomorrow().slice(0, 16) ||
+      durationHours !== "1" ||
       distanceKm !== "" ||
+      price !== "500" ||
+      seats !== "1" ||
       comment !== "" ||
       tags.length > 0,
   );

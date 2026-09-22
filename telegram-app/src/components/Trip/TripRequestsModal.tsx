@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import {
   Button,
   Caption,
@@ -210,7 +210,9 @@ export const TripRequestsBody = memo(function TripRequestsBody({
     action: DriverBookingAction;
   } | null>(null);
   // Нативный Back закрывает окно подтверждения, а не страницу.
-  useModalBack(() => setConfirm(null), confirm !== null);
+  // Колбэк стабилен (иначе стек modalBack пересобирался бы каждый рендер).
+  const closeConfirm = useCallback(() => setConfirm(null), []);
+  useModalBack(closeConfirm, confirm !== null);
 
   const items = useMemo(
     () => requests.data?.pages.flatMap((page) => page.items) ?? [],

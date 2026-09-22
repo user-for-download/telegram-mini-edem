@@ -14,8 +14,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { ConfirmAction } from "@/components/ConfirmAction";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { EditTripForm } from "@/components/Trip/EditTripForm";
 import { LazyAvatar } from "@/components/LazyAvatar";
+import { ApiError } from "@/api/client";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
@@ -56,6 +58,7 @@ export function TripDetailsPage() {
   const cancelBooking = useCancelBookingMutation();
   const user = useAuthStore((state) => state.user);
   const { isOnline } = useOnlineStatus();
+  const toast = useToast();
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [editing, setEditing] = useState(false);
@@ -74,25 +77,33 @@ export function TripDetailsPage() {
     );
   }
   if (trip.isError || !trip.data) {
+    // Мёртвый deep link (trip_<uuid> удалённой поездки): ретрай бессмыслен —
+    // прячем «Повторить», даём понятный текст и путь к поиску.
+    const isNotFound =
+      trip.error instanceof ApiError && trip.error.status === 404;
     return (
       <>
         <OfflineBanner />
         <Placeholder
           header="Поездка не найдена"
           description={
-            trip.error
-              ? bookingErrorMessage(trip.error)
-              : "Вернитесь к поиску и выберите другую поездку."
+            isNotFound
+              ? "Возможно, поездка была удалена или ссылка устарела."
+              : trip.error
+                ? bookingErrorMessage(trip.error)
+                : "Вернитесь к поиску и выберите другую поездку."
           }
           action={
             <>
-              <Button
-                mode="bezeled"
-                stretched
-                onClick={() => void trip.refetch()}
-              >
-                Повторить
-              </Button>
+              {!isNotFound && (
+                <Button
+                  mode="bezeled"
+                  stretched
+                  onClick={() => void trip.refetch()}
+                >
+                  Повторить
+                </Button>
+              )}
               <Button
                 mode="outline"
                 stretched
@@ -425,14 +436,14 @@ export function TripDetailsPage() {
                   onSuccess: () => {
                     hapticFeedback.notificationOccurred.ifAvailable("success");
                     setComment("");
+                    toast.show({
+                      text: "Место успешно забронировано",
+                      description: "Ожидайте подтверждения от водителя",
+                    });
                   },
                   onError: (error) => {
                     // Гонка за место: обновляем схему мест с сервера.
-                    if (
-                      error instanceof Error &&
-                      "code" in error &&
-                      (error as { code?: string }).code === "SEAT_TAKEN"
-                    ) {
+                    if (error instanceof ApiError && error.code === "SEAT_TAKEN") {
                       void queryClient.invalidateQueries({
                         queryKey: TRIP_KEYS.detail(item.id),
                       });
@@ -442,7 +453,9 @@ export function TripDetailsPage() {
               );
             }}
           >
-            Забронировать место · {item.price} ₽
+            {effectiveSeat !== null
+              ? `Забронировать место №${effectiveSeat} · ${item.price} ₽`
+              : "Забронировать место"}
           </Button>
           {createBooking.error && (
             <Caption

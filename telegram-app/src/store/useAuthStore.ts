@@ -237,6 +237,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
           set({
             status: "authenticated",
+            // Refresh возвращает свежего user (имя/аватар могли измениться) —
+            // подхватываем, иначе стор хранит устаревшее до следующего
+            // bootstrap. Каст — как в applyAuthenticated.
+            user: tokens.user ? (tokens.user as User) : get().user,
             session: {
               accessToken: tokens.accessToken,
               refreshToken: tokens.refreshToken,

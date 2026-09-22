@@ -17,6 +17,7 @@ import {
   useSheetTitleId,
 } from "@/components/SheetTitle/SheetTitle";
 import { ConfirmAction } from "@/components/ConfirmAction";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
@@ -129,6 +130,10 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
   const [editExpires, setEditExpires] = useState("");
   const [editSeats, setEditSeats] = useState("1");
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Несохранённое inline-редактирование — Telegram спросит подтверждение
+  // закрытия приложения (app-close; route-Back модалки хук не ловит).
+  useClosingConfirmation(editingId !== null);
 
   const submit = () => {
     const fromCity = cities.data?.find((city) => city.name === from);

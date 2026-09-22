@@ -9,11 +9,10 @@ import {
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
-import { hapticFeedback } from "@telegram-apps/sdk-react";
+import { haptic } from "@/utils/haptics";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
 import { ReviewCardsSkeleton } from "@/components/Skeletons";
-import { haptic } from "@/utils/haptics";
 import { RatingInput } from "@/components/RatingInput/RatingInput";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
@@ -247,6 +246,11 @@ export const ReviewsBody = memo(function ReviewsBody({
           haptic.success();
           setText("");
           setRating(5);
+          // Сбрасываем выбор: reviewed-поездка уйдёт из available-trips
+          // инвалидацией, повторный сабмит той же цели упёрся бы в
+          // ALREADY_REVIEWED; заодно гаснет dirty-бит закрытия.
+          setSelectedTripId(null);
+          setSelectedPassengerId(null);
           setSuccess(true);
         },
         onError: (error) => {
@@ -277,7 +281,7 @@ export const ReviewsBody = memo(function ReviewsBody({
 
   const pickTab = (next: ReviewsTab) => {
     if (next !== tab) {
-      hapticFeedback.selectionChanged.ifAvailable();
+      haptic.selection();
       setTab(next);
     }
   };
@@ -289,6 +293,7 @@ export const ReviewsBody = memo(function ReviewsBody({
           {TABS.map((option) => (
             <SegmentedControl.Item
               key={option.value}
+              role="tab"
               selected={tab === option.value}
               aria-selected={tab === option.value}
               onClick={() => pickTab(option.value)}
@@ -340,7 +345,7 @@ export const ReviewsBody = memo(function ReviewsBody({
           emptyText=""
           onRetry={() => void available.refetch()}
         >
-          {trips.length === 0 || !selectedTrip ? (
+          {!selectedTrip ? (
             <Placeholder
               header="Пока нет поездок для отзыва"
               description="Когда вы совершите поездку, она появится здесь"

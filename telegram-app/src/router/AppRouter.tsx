@@ -111,13 +111,14 @@ export function Shell() {
   const activeTab: AppTabId =
     location.pathname === "/"
       ? "home"
-      : location.pathname.startsWith("/bookings")
+      : location.pathname.startsWith("/bookings") ||
+          location.pathname.startsWith("/trips/my")
         ? "trips"
-          : location.pathname.startsWith("/notifications")
-            ? "notifications"
-            : location.pathname.startsWith("/trips")
-              ? "search"
-              : "profile";
+        : location.pathname.startsWith("/notifications")
+          ? "notifications"
+          : location.pathname.startsWith("/trips")
+            ? "search"
+            : "profile";
 
   const go = (to: string) => {
     navigate(to);

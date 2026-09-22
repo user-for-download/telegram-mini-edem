@@ -1,6 +1,7 @@
 import { type FC, type PropsWithChildren, useEffect, useState } from "react";
 import { Button, Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
 import { useAuthStore } from "@/store/useAuthStore";
+import type { User } from "@/types";
 import { apiClient } from "@/api/client";
 import { AccountStatePage, RetryAction } from "@/pages/AccountStatePage/AccountStatePage";
 import { AppealForm } from "@/components/AppealForm";
@@ -73,6 +74,10 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
       }
       useAuthStore.setState({
         status: "authenticated",
+        // 401/WS-пути refresh минуют refreshSession стора (его one-shot
+        // подписка там не висит) — подхватываем свежего user и здесь.
+        // Конвергентно со стор-слушателем при любом порядке срабатывания.
+        user: tokens.user ? (tokens.user as User) : state.user,
         session: {
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,

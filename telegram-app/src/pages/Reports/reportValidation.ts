@@ -52,8 +52,15 @@ export function validateReportForm(
   targetId: string,
   description: string,
 ): string | null {
-  if (targetId.trim().length === 0) {
+  const trimmedId = targetId.trim();
+  if (trimmedId.length === 0) {
     return "Укажите идентификатор объекта жалобы";
+  }
+  // Fail-fast до серверного 400: реальные ID — UUID (36 символов), cap
+  // с запасом режет вставку мусора. Формат (charset) — авторитет бэкенда,
+  // здесь не дублируем, чтобы не отказывать валидным будущим форматам.
+  if (trimmedId.length > 100) {
+    return "Идентификатор слишком длинный";
   }
   const trimmed = description.trim();
   if (trimmed.length === 0) {

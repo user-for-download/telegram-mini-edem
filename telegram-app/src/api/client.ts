@@ -1,5 +1,5 @@
 import type { ZodType } from "zod";
-import { authResponseSchema } from "@edem/contracts";
+import { authResponseSchema, type AuthResponse } from "@edem/contracts";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
@@ -47,6 +47,11 @@ export interface TokenUpdate {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  /**
+   * Свежий user из /auth/refresh (бэкенд возвращает полный AuthResponse).
+   * Опционален: подписчики обязаны держать текущий user как fallback.
+   */
+  user?: AuthResponse["user"];
 }
 
 export type RefreshResult = "success" | "permanent-rejection" | "transient-failure";
@@ -92,7 +97,13 @@ export class ApiClient {
   }
 
   private emitTokenUpdate(tokens: TokenUpdate) {
-    this.tokenListeners.forEach((listener) => listener(tokens));
+    this.tokenListeners.forEach((listener) => {
+      try {
+        listener(tokens);
+      } catch (err) {
+        console.error("[ApiClient] tokenUpdate listener error:", err);
+      }
+    });
   }
 
   /**
@@ -231,7 +242,15 @@ export class ApiClient {
   }
 
   private async parseResponse<T>(response: Response, schema: ZodType<T>): Promise<T> {
-    const data = await response.json();
+    let data: unknown;
+    try {
+      data = await response.json();
+    } catch {
+      // Бэкенд/прокси вернул не-JSON на успешный статус (пустое тело, HTML
+      // от nginx) — приводим к стандартизированному ApiError, а не
+      // пробрасываем голый SyntaxError мимо обработки ошибок.
+      throw new ApiError("Invalid server response", "INVALID_RESPONSE", 502);
+    }
 
     const parsed = schema.safeParse(data);
     if (!parsed.success) {
@@ -374,6 +393,7 @@ export class ApiClient {
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
           expiresIn: data.expiresIn,
+          user: data.user,
         });
         return "success";
       } finally {
