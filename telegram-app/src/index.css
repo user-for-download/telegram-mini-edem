@@ -16,13 +16,19 @@
   color-scheme: light dark;
   /* Safe-area из SDK (viewport.bindCssVars даёт --tg-viewport-*,
      обновляется по safeAreaChanged/contentSafeAreaChanged), fallback —
-     системный env() для браузера вне Telegram. */
-  --tg-safe-area-inset-top: var(
-    --tg-viewport-safe-area-inset-top,
+     системный env() для браузера вне Telegram.
+     ВАЖНО: env() участвует в max() РЯДОМ с SDK-переменной, а не как
+     fallback var(): bindCssVars определяет --tg-viewport-* всегда (даже
+     значением 0), поэтому fallback env() никогда не сработал бы, а на
+     части iOS-клиентов во фуллскрине клиент шлёт safe_area 0 при
+     отрисованном под статус-баром вебвью — max(env, SDK) страхует
+     нулевые ответы клиента системной врезкой (viewport-fit=cover). */
+  --tg-safe-area-inset-top: max(
+    var(--tg-viewport-safe-area-inset-top, 0px),
     env(safe-area-inset-top, 0px)
   );
-  --tg-safe-area-inset-bottom: var(
-    --tg-viewport-safe-area-inset-bottom,
+  --tg-safe-area-inset-bottom: max(
+    var(--tg-viewport-safe-area-inset-bottom, 0px),
     env(safe-area-inset-bottom, 0px)
   );
   /* Врезки оверлеев Telegram (дока Bot API 8.0 «ContentSafeAreaInset:
@@ -39,12 +45,12 @@
     --tg-viewport-content-safe-area-inset-bottom,
     0px
   );
-  --tg-safe-area-inset-left: var(
-    --tg-viewport-safe-area-inset-left,
+  --tg-safe-area-inset-left: max(
+    var(--tg-viewport-safe-area-inset-left, 0px),
     env(safe-area-inset-left, 0px)
   );
-  --tg-safe-area-inset-right: var(
-    --tg-viewport-safe-area-inset-right,
+  --tg-safe-area-inset-right: max(
+    var(--tg-viewport-safe-area-inset-right, 0px),
     env(safe-area-inset-right, 0px)
   );
   --tg-content-safe-area-inset-left: var(
