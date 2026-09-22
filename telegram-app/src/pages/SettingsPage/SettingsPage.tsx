@@ -14,33 +14,7 @@ import {
   useProfileQuery,
   useProfileNotificationSettingsMutation,
 } from "@/queries/profile";
-import {
-  PLATFORM_OPTIONS,
-  choiceLabel,
-  nextPlatformChoice,
-  setDevPlatform,
-  useDevPlatform,
-} from "@/utils/devPlatform";
-import { setThemeOverride, useAppSettings } from "@/utils/appSettings";
 import styles from "./SettingsPage.module.css";
-
-/** Dev-стенд: переключатели платформы/темы видны только в dev-сборке
- * (переехали из удалённой AppHeader — прод в Telegram их не показывает). */
-const SHOW_DEV_TOGGLES = import.meta.env.DEV;
-
-const THEME_CYCLE: ReadonlyArray<{
-  value: "dark" | "light" | null;
-  label: string;
-}> = [
-  { value: null, label: "Авто" },
-  { value: "light", label: "Светлая" },
-  { value: "dark", label: "Тёмная" },
-];
-
-function nextTheme(current: "dark" | "light" | null): "dark" | "light" | null {
-  const index = THEME_CYCLE.findIndex((option) => option.value === current);
-  return THEME_CYCLE[(index + 1) % THEME_CYCLE.length]?.value ?? null;
-}
 
 /**
  * Настройки уведомлений Telegram-приложения (без push и сообщений
@@ -151,47 +125,8 @@ export function SettingsPage() {
               </div>
             </div>
           </Section>
-          {SHOW_DEV_TOGGLES && (
-            <DevSettingsSection />
-          )}
         </div>
       </QueryState>
     </>
-  );
-}
-
-/**
- * Dev-only секция: быстрые переключатели платформы UI-кита и темы
- * (переехали из AppHeader при удалении собственной шапки). В проде
- * не рендерится — прод в Telegram следует за клиентом.
- */
-function DevSettingsSection() {
-  const devPlatform = useDevPlatform();
-  const { themeOverride } = useAppSettings();
-
-  return (
-    <Section header="Для разработки">
-      <div className={styles.panel}>
-        <div className={styles.actions}>
-          <button
-            type="button"
-            aria-label="Переключить платформу UI-кита (Авто → iOS → Android)"
-            onClick={() => setDevPlatform(nextPlatformChoice(devPlatform))}
-            className={styles.devButton}
-          >
-            {choiceLabel(PLATFORM_OPTIONS, devPlatform)}
-          </button>
-          <button
-            type="button"
-            aria-label="Переключить тему (Авто → Светлая → Тёмная)"
-            onClick={() => setThemeOverride(nextTheme(themeOverride))}
-            className={styles.devButton}
-          >
-            {THEME_CYCLE.find((option) => option.value === themeOverride)
-              ?.label ?? "Авто"}
-          </button>
-        </div>
-      </div>
-    </Section>
   );
 }

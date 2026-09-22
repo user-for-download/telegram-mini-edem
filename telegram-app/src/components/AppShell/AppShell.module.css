@@ -4,6 +4,7 @@
  * mx-auto классами в AppRouter. Переехало из index.css (.AppShell):
  * модуль неслойный, поэтому бьёт слои Tailwind/tgui без !important. */
 .shell {
+  position: relative;
   min-height: 100vh;
   min-height: var(--tg-viewport-height, 100dvh);
   /* Собственный верхний хром удалён — контент начинается под нативными

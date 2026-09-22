@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import styles from "./AppShell.module.css";
+import { DevToggles } from "@/components/DevToggles/DevToggles";
 
 /** Класс route-fade живёт в CSS-модуле AppShell (хэшируется сборкой). */
 export const ROUTE_FADE_CLASS = styles["route-fade"];
@@ -23,6 +24,9 @@ export interface AppShellProps {
 export function AppShell({ header, children, footer }: AppShellProps) {
   return (
     <div className={styles.shell}>
+      {/* Dev-стенд в браузере: быстрые тумблеры платформы/темы (бывшие
+          AppHeader). В проде компонент — null, в разметку не попадает. */}
+      <DevToggles />
       {header}
       <main className={styles.content} data-shell-content tabIndex={-1}>
         {children}

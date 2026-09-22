@@ -43,16 +43,3 @@
   display: flex;
   gap: 8px;
 }
-
-/* Dev-кнопки секции «Для разработки»: компактные пилюли в духе
- * бывших dev-тумблеров AppHeader (bordered, цвета темы кита). */
-.devButton {
-  padding: 6px 14px;
-  border: 1px solid var(--tgui--secondary_bg_color);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--tgui--text_color);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}

@@ -1,0 +1,28 @@
+/* Dev-пилюля переключателей платформы/темы (components/DevToggles):
+ * плавает поверх контента в правом верхнем углу колонки приложения —
+ * место старых тумблеров AppHeader. Видна только в dev-сборке
+ * (гейт в DevToggles.tsx), раскладку не сдвигает. Цвета — токены кита. */
+
+.panel {
+  position: absolute;
+  top: calc(var(--tg-safe-area-top, 0px) + 8px);
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  gap: 6px;
+  pointer-events: none;
+}
+
+/* Сами кнопки кликабельны; тапы ≥32px, у dev-инструмента достаточно. */
+.devButton {
+  pointer-events: auto;
+  padding: 5px 12px;
+  border: 1px solid var(--tgui--secondary_bg_color);
+  border-radius: 999px;
+  background: var(--tgui--bg_color);
+  color: var(--tgui--hint_color);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.85;
+}
