@@ -33,6 +33,10 @@
     "clean": "rm -rf backend/dist telegram-app/dist webapp/dist packages/contracts/dist",
     "lint": "npm run typecheck",
     "lint:eslint": "eslint .",
+    "lint:eslint:backend": "eslint backend",
+    "lint:eslint:tg-app": "eslint telegram-app",
+    "lint:eslint:webapp": "eslint webapp",
+    "lint:eslint:contracts": "eslint packages/contracts",
     "format:check": "node scripts/format-check.mjs",
     "bundle:check": "node scripts/check-bundle.mjs",
     "load:test": "node scripts/load-test.mjs"
