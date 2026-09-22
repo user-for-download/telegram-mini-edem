@@ -35,15 +35,24 @@
      safe area for displaying content within the app, free from overlapping
      Telegram UI elements»): в нормальном режиме — 0 (вебвью целиком ниже
      нативной шапки), во фуллскрине — высота статус-бара и/или плавающих
-     кнопок/панели клиента. Прокинуто из SDK-переменных (bindCssVars), вне
-     Telegram SDK-переменных нет — 0. */
+     кнопок/панели клиента. Прокинуто из SDK-переменных (bindCssVars); вне
+     Telegram SDK-переменных нет, поэтому дефолты — 0px: агрегатор
+     --tg-safe-area-* при незагруженном SDK не отдаёт NaN. */
+  --tg-viewport-content-safe-area-inset-top: 0px;
+  --tg-viewport-content-safe-area-inset-bottom: 0px;
+  --tg-viewport-content-safe-area-inset-left: 0px;
+  --tg-viewport-content-safe-area-inset-right: 0px;
+  /* Высота плавающего хрома Telegram во фуллскрине на iOS (пилюля
+     «Закрыть»/⌄/•••): клиент может отчитать content-safe-area нулём или
+     с задержкой (tma.js #695/#704), поэтому useTelegramChromiumFallback
+     поднимает контент этим минимумом — см. токен --tg-safe-area-top-min. */
+  --tg-telegram-chromium-height: 56px;
+  /* Прокидка в именованные токены: SDK-переменные уже определены выше. */
   --tg-content-safe-area-inset-top: var(
-    --tg-viewport-content-safe-area-inset-top,
-    0px
+    --tg-viewport-content-safe-area-inset-top
   );
   --tg-content-safe-area-inset-bottom: var(
-    --tg-viewport-content-safe-area-inset-bottom,
-    0px
+    --tg-viewport-content-safe-area-inset-bottom
   );
   --tg-safe-area-inset-left: max(
     var(--tg-viewport-safe-area-inset-left, 0px),
@@ -54,22 +63,26 @@
     env(safe-area-inset-right, 0px)
   );
   --tg-content-safe-area-inset-left: var(
-    --tg-viewport-content-safe-area-inset-left,
-    0px
+    --tg-viewport-content-safe-area-inset-left
   );
   --tg-content-safe-area-inset-right: var(
-    --tg-viewport-content-safe-area-inset-right,
-    0px
+    --tg-viewport-content-safe-area-inset-right
   );
   /* Итоговые отступы для контента: max(системная врезка, врезка UI
-     Telegram) — max() дедуплицирует пересечение (notch бывает учтён в
-     обеих). Боковые (left/right) — в landscape-фуллскрине, когда
-     плавающие панели Telegram заходят по бокам (contentSafeAreaInset
-     документирован для всех 4 сторон). Consumers: AppShell (top и бока),
-     Tabbar (bottom + бока), Toast (top), DevToggles (top + right). */
+     Telegram, floor хука useTelegramChromiumFallback) — max() дедуплицирует
+     пересечение (notch бывает учтён в обеих). Floor (--tg-safe-area-top-min)
+     заполняется JS-хуком на iOS-фуллскрине, пока клиент отчитывает врезку
+     ниже порога хрома Telegram (--tg-telegram-chromium-height); отдельный
+     токен, а не перезапись SDK-переменной — иначе клиент перетёр бы её
+     следующим viewport-событием. Боковые (left/right) — в
+     landscape-фуллскрине, когда плавающие панели Telegram заходят по бокам
+     (contentSafeAreaInset документирован для всех 4 сторон). Consumers:
+     AppShell (top и бока), Tabbar (bottom + бока), Toast (top), DevToggles
+     (top + right). */
   --tg-safe-area-top: max(
     var(--tg-safe-area-inset-top),
-    var(--tg-content-safe-area-inset-top)
+    var(--tg-content-safe-area-inset-top),
+    var(--tg-safe-area-top-min, 0px)
   );
   --tg-safe-area-bottom: max(
     var(--tg-safe-area-inset-bottom),

@@ -21,6 +21,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { ApiError } from "@/api/client";
 import { useAppSettings } from "@/utils/appSettings";
 import { resolveAppRootPlatform, useDevPlatform } from "@/utils/devPlatform";
+import { useTelegramChromiumFallback } from "@/hooks/useTelegramChromiumFallback";
 import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import {
@@ -247,6 +248,9 @@ export const AppConfig: FC<PropsWithChildren> = ({ children }) => {
   const platform = useTguiPlatform();
   const appearance = useTelegramAppearance();
   useFullscreenSubscription();
+  // Компенсация нулевой/заниженной верхней врезки на iOS-фуллскрине
+  // (реальное устройство: iPhone 11, Telegram 12.9.4 — tma.js #695/#704).
+  useTelegramChromiumFallback();
 
   return (
     <QueryClientProvider client={queryClient}>
