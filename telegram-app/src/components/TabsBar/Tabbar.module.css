@@ -8,8 +8,9 @@
 }
 
 .tabbar.tabbar {
-  margin-left: 16px;
-  margin-right: 16px;
+  /* Боковые врезки (landscape-фуллскрин): панели Telegram по бокам. */
+  margin-left: max(var(--tg-safe-area-left, 0px), 16px);
+  margin-right: max(var(--tg-safe-area-right, 0px), 16px);
   /* Фуллскрин: пилюля не должна налипать на системную навигационную
    * полосу/жест — max(системная врезка, врезка UI Telegram). */
   margin-bottom: max(
