@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
+import styles from "./FeedCard.module.css";
 
 /* Единая поверхность карточек лент (фаза 2 унификации секций):
  * поездка, уведомление, отзыв, бронь, заявка, жалоба — один рецепт
@@ -34,7 +35,7 @@ export function FeedCard({
   children: ReactNode;
 } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`${FEED_CARD_SURFACE} ${className}`.trim()} {...restProps}>
+    <div className={`${styles.card} ${className}`.trim()} {...restProps}>
       {children}
     </div>
   );

@@ -1,0 +1,20 @@
+/* Колонка приложения (язык примера): max-w-md по центру, боковые
+ * разделители на широких экранах, фон — базовый tgui. Таббар —
+ * FixedLayout отдельно (fixed, left:0/right:0) с теми же max-w-md +
+ * mx-auto классами в AppRouter. Переехало из index.css (.AppShell):
+ * модуль неслойный, поэтому бьёт слои Tailwind/tgui без !important. */
+.shell {
+  min-height: 100vh;
+  min-height: var(--tg-viewport-height, 100dvh);
+  max-width: 448px;
+  margin: 0 auto;
+  background: var(--tgui--bg_color);
+  border-left: 1px solid var(--tgui--outline);
+  border-right: 1px solid var(--tgui--outline);
+}
+
+/* Контент под шапкой: нижний отступ держит место под плавающую
+ * пилюлю таббара, чтобы конец ленты не уходил под неё. */
+.content {
+  padding-bottom: 96px;
+}

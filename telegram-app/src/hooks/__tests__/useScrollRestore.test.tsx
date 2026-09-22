@@ -158,26 +158,26 @@ describe("useScrollRestore SSR", () => {
   it("Shell со списком: есть сохранённая позиция — рендер не падает", () => {
     saveScrollPosition("/trips", 420);
     const html = renderShell("/trips");
-    expect(html).toContain("AppShell");
+    expect(html).toContain("data-shell-content");
     expect(html).toContain("Список поездок");
   });
 
   it("Shell с модалкой поверх списка: рендер не падает, список под ней цел", () => {
     saveScrollPosition("/trips", 420);
     const html = renderShell("/trips/t-1");
-    expect(html).toContain("AppShell");
+    expect(html).toContain("data-shell-content");
     expect(html).toContain("Модалка поездки");
   });
 
   it("Shell без сохранений и с неизвестным ключом — рендер не падает", () => {
     const html = renderShell("/unknown-route");
-    expect(html).toContain("AppShell");
+    expect(html).toContain("data-shell-content");
     expect(html).toContain("Фолбэк раздела");
   });
 
   it("a11y: контент Shell — фокусируемый landmark для возврата фокуса", () => {
     const html = renderShell("/trips");
-    expect(html).toContain("AppShell__content");
+    expect(html).toContain("data-shell-content");
     expect(html).toContain('tabindex="-1"');
   });
 });

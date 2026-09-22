@@ -12,6 +12,7 @@ import { ChevronRight } from "lucide-react";
 import { usersApi } from "@/api/users.api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ONBOARDING_VERSION } from "@/onboarding/version";
+import styles from "./Onboarding.module.css";
 
 export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
   const user = useAuthStore((state) => state.user);
@@ -47,11 +48,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
     return (
       <>
         {error && (
-          <Caption
-            Component="p"
-            role="alert"
-            className="text-(--tg-theme-destructive-text-color)"
-          >
+          <Caption Component="p" role="alert" className={styles.errorText}>
             {error}
           </Caption>
         )}
@@ -103,12 +100,8 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
   }
 
   return (
-    <main className="Onboarding" aria-labelledby="onboarding-title">
-      <List
-        style={{
-          background: "var(--tgui--secondary_bg_color)",
-        }}
-      >
+    <main className={styles.root} aria-labelledby="onboarding-title">
+      <List className={styles.list}>
         <Placeholder
           header="Добро пожаловать в «Едем»"
           description="Сервис поиска попутчиков для совместных поездок. Вы общаетесь и рассчитываетесь напрямую с другими пользователями."
@@ -118,11 +111,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
           </VisuallyHidden>
         </Placeholder>
         {error && (
-          <Caption
-            Component="p"
-            role="alert"
-            className="text-(--tg-theme-destructive-text-color)"
-          >
+          <Caption Component="p" role="alert" className={styles.errorText}>
             {error}
           </Caption>
         )}
@@ -153,7 +142,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
             Политика конфиденциальности
           </Cell>
 
-          <div>
+          <div className={styles.actions}>
             <Button
               mode="bezeled"
               size="l"
@@ -168,7 +157,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
               size="l"
               mode="plain"
               stretched
-              style={{ color: "var(--tgui--destructive_text_color)" }}
+              className={styles.decline}
               disabled={busy}
               onClick={() => setDeclined(true)}
             >

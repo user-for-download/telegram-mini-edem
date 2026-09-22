@@ -1,6 +1,7 @@
 import { Select } from "@telegram-apps/telegram-ui";
 import { haptic } from "@/utils/haptics";
-import type { PickerCity } from "@/components/CityPickerField";
+import type { PickerCity } from "@/components/CityPicker/CityPickerField";
+import styles from "./CitySelectField.module.css";
 
 /**
  * Выбор города на нативном tgui Select (обычный <select>): тап открывает
@@ -36,7 +37,7 @@ export function CitySelectField({
   const selectedId = cities?.find((city) => city.name === value)?.id ?? "";
 
   return (
-    <div>
+    <div className={styles.field}>
       <label htmlFor={id} className="sr-only">
         {label}
       </label>

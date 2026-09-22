@@ -9,7 +9,7 @@ import {
   isReportTargetType,
   reportErrorMessage,
   validateReportForm,
-} from "@/pages/reportValidation";
+} from "@/pages/Reports/reportValidation";
 
 describe("report guards (рантайм вместо cast из DOM)", () => {
   it("категории: известные проходят, мусор отсекается", () => {

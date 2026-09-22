@@ -256,11 +256,11 @@ export function SearchPage() {
                   >
                     Условия поездки
                   </Caption>
-                  <div className="TagChips">
+                  <div className={styles.tagChips}>
                     {TRIP_TAGS.map((tag) => (
                       <Chip
                         key={tag}
-                        className="TagChip"
+                        className={styles.tagChip}
                         mode={form.tags.includes(tag) ? "elevated" : "mono"}
                         Component="button"
                         aria-pressed={form.tags.includes(tag)}

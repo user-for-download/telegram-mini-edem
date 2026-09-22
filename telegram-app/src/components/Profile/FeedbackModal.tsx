@@ -13,7 +13,7 @@ import { useCreateFeedbackMutation } from "@/queries/useSupportQuery";
 import {
   normalizeSupportForm,
   validateSupportForm,
-} from "@/pages/supportValidation";
+} from "@/pages/Support/supportValidation";
 import { FEEDBACK_TEXT_MAX_LENGTH } from "@edem/contracts";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";

@@ -17,7 +17,7 @@ import { ConfirmAction } from "@/components/ConfirmAction";
 import { EditTripForm } from "@/components/Trip/EditTripForm";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { OfflineBanner } from "@/components/OfflineBanner";
-import { StatusPill } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { shareTrip } from "@/helpers/tripShare";

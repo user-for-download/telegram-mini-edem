@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Button, IconButton } from "@telegram-apps/telegram-ui";
 import { Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { StatusPill, type StatusTone } from "@/components/StatusPill";
+import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
 import { TripStandardCard } from "@/components/Section/TripStandardCard";
 import { DriverTripRequests } from "@/components/Trip/DriverTripRequests";
 import { ConfirmAction } from "@/components/ConfirmAction";

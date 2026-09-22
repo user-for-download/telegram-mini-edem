@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Button, Placeholder } from "@telegram-apps/telegram-ui";
+import styles from "./AccountStatePage.module.css";
 
 export function AccountStatePage({
   title,
@@ -11,7 +12,7 @@ export function AccountStatePage({
   action?: ReactNode;
 }) {
   return (
-    <main className="AccountState" aria-live="polite">
+    <main className={styles.root} aria-live="polite">
       <Placeholder header={title} description={description} action={action} />
     </main>
   );

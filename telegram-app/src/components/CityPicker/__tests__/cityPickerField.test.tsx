@@ -6,7 +6,7 @@ import {
   cityNameFromPicked,
   selectedCityOptions,
   toCityOptions,
-} from "@/components/CityPickerField";
+} from "@/components/CityPicker/CityPickerField";
 
 const CITIES = [
   { id: "1", name: "Вологда" },

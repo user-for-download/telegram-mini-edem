@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import styles from "./StatusPill.module.css";
 
 export type StatusTone = "warning" | "danger" | "info" | "success";
 
@@ -9,12 +10,13 @@ export interface StatusPillProps {
 }
 
 /**
- * Статус-пилюля на .StatusPill-токенах (index.css, untouched).
+ * Статус-пилюля на --app-* токенах (StatusPill.module.css рядом).
  * Смысл всегда дублируется текстом, не только цветом (a11y: color + text).
  */
 export function StatusPill({ tone, className = "", children }: StatusPillProps) {
+  const merged = className ? `${styles.pill} ${className}` : styles.pill;
   return (
-    <span className={`StatusPill ${className}`.trim()} data-tone={tone}>
+    <span className={merged} data-tone={tone}>
       {children}
     </span>
   );

@@ -1,5 +1,6 @@
-// SSR-тесты AppBottomBar: TabsVariant (6 табов в нативном Tabbar, бейдж)
-// и Shell (табы всегда, семантика nav). Только renderToString, без jsdom.
+// SSR-тесты AppBottomBar: нижний бар (nav + 6 табов в нативном Tabbar,
+// бейдж) и Shell (табы всегда, семантика nav). Только renderToString,
+// без jsdom.
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
@@ -26,7 +27,7 @@ vi.mock("@telegram-apps/sdk-react", () => ({
   },
 }));
 
-import { TabsVariant, type AppTabId } from "@/components/AppBottomBar";
+import { AppBottomBar, type AppTabId } from "@/components/AppBottomBar/AppBottomBar";
 import { Shell } from "@/router/AppRouter";
 
 function renderBar(element: ReactNode): string {
@@ -35,7 +36,7 @@ function renderBar(element: ReactNode): string {
 
 function renderTabs(activeTab: AppTabId, unreadCount = 0): string {
   return renderBar(
-    <TabsVariant
+    <AppBottomBar
       activeTab={activeTab}
       onSelect={() => {}}
       unreadCount={unreadCount}
@@ -68,7 +69,7 @@ function renderShell(url: string): string {
   );
 }
 
-describe("TabsVariant", () => {
+describe("AppBottomBar", () => {
   it("шесть табов в нативной панели, без кастомного tablist", () => {
     const html = renderTabs("home");
     expect(html).toContain("Главная");

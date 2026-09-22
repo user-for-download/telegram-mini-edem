@@ -1,0 +1,19 @@
+/* Витрина UI-кита (ShowcasePage): демо-каркас без Tailwind (миграция
+ * папка/компонент). Цвета только --tgui--* / --app-*; ряды демо — зазор
+ * 8px по сетке. Демо-каркас самодостаточен: кросс-слойные глобалы из
+ * index.css не тянем, классы Row/List живут здесь (прецедент
+ * CreateTrip/EditTrip: дубли вместо кросс-слоя). */
+
+/* Фон ленты демо (был inline style на List). Обычный селектор: tgui
+ * лежит в слое, неслойный модуль бьёт его без удвоения. */
+.list {
+  background: var(--tgui--secondary_bg_color);
+}
+
+/* Ряд демо-виджетов в строке (был flex flex-wrap items-center gap-2). */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}

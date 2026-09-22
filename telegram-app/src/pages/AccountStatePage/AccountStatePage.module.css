@@ -1,0 +1,16 @@
+/* Терминальные экраны аккаунта (AccountStatePage: бан/удаление/ошибка
+ * сессии): центрированная колонка поверх Placeholder кита. Порт глобалов
+ * .AccountState/.Onboarding из index.css (глобалы удалены в subtask 03 —
+ * оба потребителя на module.css), дублирование с Onboarding.module.css
+ * осознанное: страницу не тянем кросс-слой в чужой модуль.
+ * Удвоения селектора нет — свои отступы, хэш-классы кита не перебиваем.
+ * Цвета только из кита (Placeholder сам), здесь лишь геометрия. */
+
+.root {
+  box-sizing: border-box;
+  width: min(100%, 640px);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: max(16px, env(safe-area-inset-top)) 0
+    max(24px, env(safe-area-inset-bottom));
+}

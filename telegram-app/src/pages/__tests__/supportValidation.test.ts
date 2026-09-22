@@ -4,7 +4,7 @@ import {
   feedbackErrorMessage,
   normalizeSupportForm,
   validateSupportForm,
-} from "@/pages/supportValidation";
+} from "@/pages/Support/supportValidation";
 
 describe("validateSupportForm", () => {
   it("пустая тема и пустой текст отклоняются", () => {

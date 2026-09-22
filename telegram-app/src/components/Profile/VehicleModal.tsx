@@ -25,7 +25,7 @@ import {
   validateVehicleForm,
   vehicleRemoveErrorMessage,
   vehicleServerErrorMessage,
-} from "@/pages/vehicleValidation";
+} from "./vehicleValidation";
 import styles from "./ProfileModals.module.css";
 
 type Vehicle = NonNullable<ReturnType<typeof useVehicleQuery>["vehicle"]>;

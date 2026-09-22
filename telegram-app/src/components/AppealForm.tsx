@@ -18,7 +18,7 @@ import {
   feedbackErrorMessage,
   normalizeSupportForm,
   validateSupportForm,
-} from "@/pages/supportValidation";
+} from "@/pages/Support/supportValidation";
 
 /**
  * Форма обжалования блокировки (порт FeedbackModal из mini-app для экрана

@@ -12,8 +12,8 @@ import {
 import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
 import { REPORT_DESCRIPTION_MAX_LENGTH } from "@edem/contracts";
 import { PageHeader } from "@/components/PageHeader";
-import { FeedCard } from "@/components/FeedCard";
-import { StatusPill, type StatusTone } from "@/components/StatusPill";
+import { FeedCard } from "@/components/FeedCard/FeedCard";
+import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { ApiError } from "@/api/client";
@@ -31,7 +31,7 @@ import {
   reportErrorMessage,
   validateReportForm,
   type ReportTargetType,
-} from "@/pages/reportValidation";
+} from "./reportValidation";
 import styles from "./ReportsPage.module.css";
 
 function formatDate(createdAt: string): string {

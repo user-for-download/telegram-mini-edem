@@ -9,7 +9,7 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { useNavigate, useParams } from "react-router-dom";
 import { LazyAvatar } from "@/components/LazyAvatar";
-import { StatusPill } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { haptic } from "@/utils/haptics";
 import { useModalBack } from "@/utils/modalBack";

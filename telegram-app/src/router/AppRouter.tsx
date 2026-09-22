@@ -10,13 +10,17 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { backButton, useLaunchParams } from "@telegram-apps/sdk-react";
-import { AppHeader } from "@/components/AppHeader";
-import { TabsVariant, type AppTabId } from "@/components/AppBottomBar";
+import { AppHeader } from "@/components/AppHeader/AppHeader";
+import {
+  AppBottomBar,
+  type AppTabId,
+} from "@/components/AppBottomBar/AppBottomBar";
+import { AppShell } from "@/components/AppShell/AppShell";
 import { useSettingsButton } from "@/hooks/useSettingsButton";
 import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
-import { HomePage } from "@/pages/HomePage";
-import { ShowcasePage } from "@/pages/ShowcasePage";
+import { HomePage } from "@/pages/HomePage/HomePage";
+import { ShowcasePage } from "@/pages/ShowcasePage/ShowcasePage";
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripDetailsRoute } from "@/components/Trip/TripDetailsModal";
 import { CreateTripPage } from "@/pages/CreateTrip/CreateTripPage";
@@ -123,26 +127,25 @@ export function Shell() {
   };
 
   return (
-    <div className="AppShell">
-      {isRoot && <AppHeader />}
-      <main className="AppShell__content" tabIndex={-1}>
-        <motion.div
-          key={location.pathname + location.search}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          <Outlet />
-        </motion.div>
-      </main>
-      <nav aria-label="Основные разделы">
-        <TabsVariant
+    <AppShell
+      header={isRoot ? <AppHeader /> : undefined}
+      footer={
+        <AppBottomBar
           activeTab={activeTab}
           onSelect={go}
           unreadCount={unreadCount}
         />
-      </nav>
-    </div>
+      }
+    >
+      <motion.div
+        key={location.pathname + location.search}
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.15 }}
+      >
+        <Outlet />
+      </motion.div>
+    </AppShell>
   );
 }
 

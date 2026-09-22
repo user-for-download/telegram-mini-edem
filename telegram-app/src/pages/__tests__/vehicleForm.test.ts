@@ -4,7 +4,7 @@ import {
   validateVehicleForm,
   vehicleRemoveErrorMessage,
   vehicleServerErrorMessage,
-} from "@/pages/vehicleValidation";
+} from "@/components/Profile/vehicleValidation";
 import { VEHICLE_KEYS } from "@/queries/vehicle";
 import { PROFILE_KEYS } from "@/queries/profile";
 import { USER_KEYS } from "@/queries/useUsersQuery";

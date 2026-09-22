@@ -6,7 +6,7 @@ import {
 import {
   normalizeReviewText,
   validateReviewForm,
-} from "@/pages/reviewValidation";
+} from "@/pages/Reviews/reviewValidation";
 
 describe("validateReviewForm (порт CreateReviewModal)", () => {
   it("принимает обычный комментарий", () => {

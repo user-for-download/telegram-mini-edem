@@ -30,7 +30,7 @@ import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { QueryState } from "@/components/QueryState";
-import { ReviewCard } from "@/components/ReviewCard";
+import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
 import { FeedbackModal } from "@/components/Profile/FeedbackModal";
 import { ApiError } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";

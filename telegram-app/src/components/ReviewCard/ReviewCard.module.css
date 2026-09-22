@@ -1,0 +1,85 @@
+/* Карточка отзыва (ReviewCard): шапка автор — оценка, текст, подвал
+ * маршрут — статус. Поверхность даёт FeedCard, здесь только раскладка
+ * (было Tailwind: p-3.5, flex-колонка, gap-2). Цвета только
+ * --tgui--* / --app-*; сетка: паддинг 14, зазоры 8, разделитель сверху
+ * с отступом 4. tgui-типографика (Text/Caption) остаётся в TSX. */
+
+/* Тело поверх FeedCard: колонка с зазором 8 (было p-3.5 flex-col gap-2). */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+}
+
+/* Шапка: автор слева, звёзды справа (было justify-between gap-2). */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Автор: аватар + имя/дата, сжимается (было items-center gap-2 min-w-0). */
+.author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.authorBody {
+  min-width: 0;
+}
+
+.authorName.authorName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Звёзды: цвет рейтинга из --app-*, не сжимаются (было gap-0.5 shrink-0). */
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  color: var(--app-rating);
+}
+
+/* Заливка звезды текущим цветом (было Tailwind fill-current, размер — проп size). */
+.star {
+  fill: currentColor;
+}
+
+/* Текст отзыва: расслабленный интерлиньяж (было leading-relaxed 1.625). */
+.body {
+  line-height: 1.625;
+}
+
+/* Подвал: маршрут слева, статус справа, штрих сверху (было pt-1 border-t). */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--tgui--outline);
+}
+
+.route {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Опубликован: деструктивно-зелёный текст, не сжимается. */
+.published {
+  flex-shrink: 0;
+  color: var(--app-success);
+}
+
+/* Не сжимать пилюлю статуса в подвале (было Tailwind shrink-0). */
+.shrink {
+  flex-shrink: 0;
+}

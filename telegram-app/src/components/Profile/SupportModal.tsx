@@ -19,7 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
 import { AppealForm } from "@/components/AppealForm";
-import { StatusPill } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
@@ -35,7 +35,7 @@ import {
   feedbackErrorMessage,
   normalizeSupportForm,
   validateSupportForm,
-} from "@/pages/supportValidation";
+} from "@/pages/Support/supportValidation";
 import styles from "./ProfileModals.module.css";
 
 const FeedbackCard = memo(function FeedbackCard({

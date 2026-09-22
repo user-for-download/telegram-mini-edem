@@ -1,0 +1,45 @@
+/* Настройки (SettingsPage): раскладка без Tailwind (миграция
+ * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы
+ * — бока 16px, вертикаль 14px, низ 96px под таббар.
+ * .row/.link/.prose намеренно дублируют одноимённые классы
+ * ProfileModals.module.css: лист модалки — другой слой (components),
+ * кросс-слой из страницы не тянем (прецедент CreateTrip/EditTrip). */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 16px 96px;
+}
+
+/* Тело Section: колонка с зазором 12px (было p-4). */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+/* Строка «иконка + текст» (было items-center gap-2.5). */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Подтверждение сохранения: ссылочный цвет кита
+ * (было text-(--tgui--link_color)). */
+.link {
+  color: var(--tgui--link_color);
+}
+
+/* Подпись-подсказка: межстрочный 1.625 (leading-relaxed). */
+.prose {
+  line-height: 1.625;
+}
+
+/* Ряд навигационных кнопок (было flex gap-2). */
+.actions {
+  display: flex;
+  gap: 8px;
+}

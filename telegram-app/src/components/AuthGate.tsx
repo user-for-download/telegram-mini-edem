@@ -2,7 +2,7 @@ import { type FC, type PropsWithChildren, useEffect, useState } from "react";
 import { Button, Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
 import { useAuthStore } from "@/store/useAuthStore";
 import { apiClient } from "@/api/client";
-import { AccountStatePage, RetryAction } from "@/pages/AccountStatePage";
+import { AccountStatePage, RetryAction } from "@/pages/AccountStatePage/AccountStatePage";
 import { AppealForm } from "@/components/AppealForm";
 
 // Пауза перед повторной попыткой после 429: каждое нажатие «Попробовать

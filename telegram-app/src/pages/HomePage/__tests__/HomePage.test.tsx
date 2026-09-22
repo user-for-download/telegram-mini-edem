@@ -4,6 +4,7 @@
 // tripsPages.test.tsx (SSR, без testing-library).
 // Данные — только через замокированные queries (profile/bookings),
 // моковых сущностей и mockData в коде страницы нет.
+// Тест рядом с папкой страницы (миграция папка/компонент, B1).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
@@ -59,7 +60,7 @@ vi.mock("@/queries/useReviewsQuery", () => ({
   useUserReviewsQuery: () => ({ data: [], isLoading: false }),
 }));
 
-import { HomePage } from "@/pages/HomePage";
+import { HomePage } from "@/pages/HomePage/HomePage";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {

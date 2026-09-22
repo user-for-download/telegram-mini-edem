@@ -20,7 +20,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { ApiError } from "@/api/client";
 import { useAppSettings } from "@/utils/appSettings";
 import { resolveAppRootPlatform, useDevPlatform } from "@/utils/devPlatform";
-import { Onboarding } from "@/components/Onboarding";
+import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import {
   WsProvider,

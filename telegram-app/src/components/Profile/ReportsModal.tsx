@@ -13,8 +13,8 @@ import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
 import { REPORT_DESCRIPTION_MAX_LENGTH } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
-import { FeedCard } from "@/components/FeedCard";
-import { StatusPill, type StatusTone } from "@/components/StatusPill";
+import { FeedCard } from "@/components/FeedCard/FeedCard";
+import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
 import { QueryState } from "@/components/QueryState";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { haptic } from "@/utils/haptics";
@@ -34,7 +34,7 @@ import {
   reportErrorMessage,
   validateReportForm,
   type ReportTargetType,
-} from "@/pages/reportValidation";
+} from "@/pages/Reports/reportValidation";
 import styles from "./ProfileModals.module.css";
 
 function formatDate(createdAt: string): string {

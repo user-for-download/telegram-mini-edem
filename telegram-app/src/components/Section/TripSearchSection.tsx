@@ -1,7 +1,7 @@
 import { useState, type SubmitEvent } from "react";
 import { Button, Card } from "@telegram-apps/telegram-ui";
 import { Search } from "lucide-react";
-import { CitySelectField } from "@/components/CitySelectField";
+import { CitySelectField } from "@/components/CitySelect/CitySelectField";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import styles from "./TripSearchSection.module.css";
 

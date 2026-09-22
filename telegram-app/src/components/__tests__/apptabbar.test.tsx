@@ -12,17 +12,17 @@ vi.mock("@telegram-apps/sdk-react", () => ({
   },
 }));
 
-import { TabsVariant, type AppTabId } from "@/components/AppBottomBar";
+import { AppBottomBar, type AppTabId } from "@/components/AppBottomBar/AppBottomBar";
 
 function render(activeTab: AppTabId, unreadCount = 0): string {
   return renderToString(
     <AppRoot platform="base">
-      <TabsVariant activeTab={activeTab} onSelect={() => {}} unreadCount={unreadCount} />
+      <AppBottomBar activeTab={activeTab} onSelect={() => {}} unreadCount={unreadCount} />
     </AppRoot>,
   );
 }
 
-describe("TabsVariant", () => {
+describe("AppBottomBar", () => {
   it("пять разделов с подписями в нативном Tabbar", () => {
     const html = render("home");
     expect(html).toContain("Главная");

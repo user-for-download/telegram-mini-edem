@@ -15,6 +15,7 @@ import {
   useProfileQuery,
   useProfileNotificationSettingsMutation,
 } from "@/queries/profile";
+import styles from "./SettingsPage.module.css";
 
 /**
  * Настройки уведомлений Telegram-приложения (порт VK NotificationsPanel,
@@ -31,7 +32,13 @@ export function SettingsPage() {
   const profile = useProfileQuery();
   const save = useProfileNotificationSettingsMutation();
 
-  const [enabled, setEnabled] = useState<boolean | null>(null);
+  // Ленивый инициализатор читает кэш синхронно — страница SSR-тестабельна
+  // (useEffect в renderToString не выполняется); эффект ниже докручивает
+  // значение на клиенте, когда профиль приехал позже первого рендера
+  // (зеркально SettingsBody из components/Profile/SettingsModal).
+  const [enabled, setEnabled] = useState<boolean | null>(
+    () => profile.data?.notificationsEnabled ?? null,
+  );
   const [showSaved, setShowSaved] = useState(false);
 
   useEffect(() => {
@@ -67,11 +74,11 @@ export function SettingsPage() {
         emptyText="Не удалось загрузить настройки."
         onRetry={() => void profile.refetch()}
       >
-        <div className="flex flex-col gap-3.5 px-4 pt-1 pb-24">
+        <div className={styles.wrap}>
           {/* Панель тумблера: поверхность — Section без заголовка. */}
           <Section>
-            <div className="flex flex-col gap-3 p-4">
-              <div className="flex items-center gap-2.5">
+            <div className={styles.panel}>
+              <div className={styles.row}>
                 <IconContainer>
                   {enabled ? <BellRing size={18} /> : <Bell size={18} />}
                 </IconContainer>
@@ -92,19 +99,15 @@ export function SettingsPage() {
                 {enabled ? "Выключить некритичные" : "Включить уведомления"}
               </Button>
               {showSaved && (
-                <Text
-                  Component="p"
-                  className="text-(--tgui--link_color)"
-                  role="status"
-                >
+                <Text Component="p" className={styles.link} role="status">
                   Настройки сохранены
                 </Text>
               )}
-              <Caption Component="p" className="leading-relaxed">
+              <Caption Component="p" className={styles.prose}>
                 Настройка синхронизируется с аккаунтом. Отдельные настройки
                 звука и типов уведомлений пока не поддерживаются.
               </Caption>
-              <div className="flex gap-2">
+              <div className={styles.actions}>
                 <Button
                   mode="bezeled"
                   size="s"

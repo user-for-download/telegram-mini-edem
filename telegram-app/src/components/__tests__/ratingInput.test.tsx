@@ -12,7 +12,7 @@ vi.mock("@/utils/haptics", () => ({
 }));
 
 import { haptic } from "@/utils/haptics";
-import { RatingInput } from "@/components/RatingInput";
+import { RatingInput } from "@/components/RatingInput/RatingInput";
 
 declare global {
   // eslint-disable-next-line no-var

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
-import { CityPickerField } from "@/components/CityPickerField";
+import { CityPickerField } from "@/components/CityPicker/CityPickerField";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PageHeader } from "@/components/PageHeader";
 import { useToast } from "@/components/Toast/ToastProvider";
@@ -512,13 +512,13 @@ export function CreateTripForm({
           footer={`до 6 · выбрано ${tags.length}`}
         >
           <div className={styles.panel}>
-            <div className="TagChips" role="group" aria-label="Условия поездки">
+            <div className={styles.tagChips} role="group" aria-label="Условия поездки">
               {TRIP_TAGS.map((tag) => {
                 const checked = tags.includes(tag);
                 return (
                   <Chip
                     key={tag}
-                    className="TagChip"
+                    className={styles.tagChip}
                     Component="button"
                     type="button"
                     mode={checked ? "elevated" : "mono"}

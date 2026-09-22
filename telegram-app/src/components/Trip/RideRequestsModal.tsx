@@ -7,7 +7,7 @@ import {
   Modal,
   Text,
 } from "@telegram-apps/telegram-ui";
-import { StatusPill } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";

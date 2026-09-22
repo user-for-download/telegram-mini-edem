@@ -11,7 +11,7 @@ import {
 import type { Trip, TripTag } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
 import { Caption, Tappable, Text } from "@telegram-apps/telegram-ui";
-import { StatusPill } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
 import { haptic } from "@/utils/haptics";
 import { LazyAvatar } from "@/components/LazyAvatar";

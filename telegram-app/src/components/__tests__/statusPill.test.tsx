@@ -2,11 +2,12 @@
 // react-dom/server renderToString — паттерн
 // telegram-app/src/components/__tests__/lazyAvatar.test.tsx.
 // Проверяется только обёртка (tone → data-tone, className, текст),
-// внутренности CSS (.StatusPill в index.css) не тестируем.
+// внутренности CSS (StatusPill.module.css рядом с компонентом) не тестируем.
 import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
 
-import { StatusPill, type StatusTone } from "@/components/StatusPill";
+import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
+import styles from "../StatusPill/StatusPill.module.css";
 
 const TONES: StatusTone[] = ["warning", "danger", "info", "success"];
 
@@ -22,7 +23,7 @@ describe("StatusPill", () => {
   it.each(TONES)("tone %s → data-tone=%s", (tone) => {
     const html = render(tone);
     expect(html).toContain(`data-tone="${tone}"`);
-    expect(html).toContain("StatusPill");
+    expect(html).toContain(styles.pill);
   });
 
   it("preserves text content (a11y: color + text, not color-only)", () => {
@@ -31,12 +32,12 @@ describe("StatusPill", () => {
 
   it("merges extra className (e.g. shrink-0)", () => {
     const html = render("info", "shrink-0");
-    expect(html).toContain("StatusPill shrink-0");
+    expect(html).toContain(`${styles.pill} shrink-0`);
     expect(html).toContain('data-tone="info"');
   });
 
   it("renders without extra whitespace when className omitted", () => {
     const html = render("success");
-    expect(html).toContain('class="StatusPill"');
+    expect(html).toContain(`class="${styles.pill}"`);
   });
 });

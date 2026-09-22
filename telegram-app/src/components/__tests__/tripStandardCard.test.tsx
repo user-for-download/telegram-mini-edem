@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { TripStandardCard } from "@/components/Section/TripStandardCard";
-import { StatusPill } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
 
 function render(element: ReactNode): string {
   return renderToString(<AppRoot platform="base">{element}</AppRoot>);

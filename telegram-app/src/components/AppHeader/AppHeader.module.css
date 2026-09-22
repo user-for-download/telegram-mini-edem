@@ -1,0 +1,87 @@
+/* Sticky-шапка: бренд + бейдж строго под нативными контролами
+ * Telegram (safe-area-top сверху, без ручных переключателей — тема
+ * следует за клиентом через AppConfig). Фон — базовый tgui на 95%
+ * с блюром: контент под шапкой слегка просвечивает, смена темы —
+ * мягким transition. Цвета только из --tgui--* токенов. */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  width: 100%;
+  padding-top: max(
+    env(safe-area-inset-top, 0px),
+    var(--tg-safe-area-inset-top, 0px)
+  );
+  border-bottom: 1px solid var(--tgui--outline);
+  /* bg-(--tgui--bg_color)/95 из Tailwind — тот же приём, что пилюля
+   * таббара (Tabbar.module.css): color-mix вместо opacity, чтобы
+   * блюр работал поверх просвечивающего контента. */
+  background: color-mix(in srgb, var(--tgui--bg_color) 95%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+/* Центрирующая строка шапки (было px-4 py-2.5). */
+.inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  text-align: center;
+}
+
+/* Заголовок + бейдж по базовой линии (было gap-1.5): у «Едем» есть
+ * спуск «д» под базой, у капс-пилюли — нет; items-center ставил бы
+ * пилюлю визуально выше строки (см. коммент в TSX). */
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Бейдж — цвет ссылки клиента; удвоение бьёт цвет Caption кита,
+ * !important не используем. */
+.badge.badge {
+  color: var(--tgui--link_color);
+}
+
+/* Подзаголовок региона (было mt-0.5). */
+.subtitle {
+  margin-top: 2px;
+}
+
+/* Dev-стенд: кнопки поверх шапки справа (было right-2, -translate-y-1/2).
+ * Видны только в dev-сборке — прод в Telegram их не показывает. */
+.devToggles {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 4px;
+}
+
+/* Дев-кнопка (было text-xs font-semibold + цвет ссылки): фон/сброс —
+ * как у preflight, явно, чтобы не зависеть от слоя Tailwind. */
+.devButton.devButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--tgui--link_color);
+}

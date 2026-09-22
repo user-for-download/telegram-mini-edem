@@ -1,0 +1,25 @@
+/* Поле выбора города из справочника на tgui Multiselect (форма создания):
+ * раскладка и поверхность — из кита, свои классы только на обёртку и
+ * иконку-маркер в before-слоте (было ml-1/ml-2 и text с --app-info). Цвета только
+ * --tgui--* / --app-*; sr-only в TSX оставлен Tailwind-утилитой осознанно
+ * (a11y, прецедент — ProfileModals/TripModals). */
+
+/* Обёртка поля: блок, не распирает колонку родителя. */
+.field {
+  display: block;
+  min-width: 0;
+}
+
+/* Маркер в before-слоте Input (SSR-ветка): синий, отступ 4px под
+ * внутренние паддинги Input. */
+.pinInput {
+  margin-left: 4px;
+  color: var(--app-info, inherit);
+}
+
+/* Маркер в before-слоте Multiselect: синий, отступ 8px под
+ * внутренние паддинги Multiselect. */
+.pinSelect {
+  margin-left: 8px;
+  color: var(--app-info, inherit);
+}

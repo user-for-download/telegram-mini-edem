@@ -1,0 +1,37 @@
+/* Статус-пилюля: inline-пилюля поверх текста карточек (поиск, поездки,
+ * жалобы, поддержка). Цвета только из --app-* токенов index.css — тема
+ * light/dark переключается там, дублировать палитру здесь не нужно.
+ * Смысл всегда дублируется текстом, не только цветом (a11y: color + text).
+ * Обычный селектор без удвоения: пилюля — свой span без конкуренции
+ * со специфичностью кита, !important не используем. */
+.pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.pill[data-tone="warning"] {
+  color: var(--app-warning);
+  background: var(--app-warning-bg);
+}
+
+.pill[data-tone="danger"] {
+  color: var(--app-danger);
+  background: var(--app-danger-bg);
+}
+
+.pill[data-tone="info"] {
+  color: var(--app-info);
+  background: var(--app-info-bg);
+}
+
+.pill[data-tone="success"] {
+  color: var(--app-success);
+  background: var(--app-success-bg);
+}

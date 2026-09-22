@@ -1,0 +1,39 @@
+/* Онбординг первого входа (components/Onboarding): узкая центрированная
+ * колонка 640px с safe-area — тот же каркас, что у терминальных экранов
+ * pages/AccountStatePage (AccountStatePage.module.css). Листы держим
+ * по слоям, поэтому геометрия осознанно продублирована, а не
+ * переиспользована кросс-слой (прецедент CreateTrip/EditTrip).
+ * Цвета только --tgui--* / --tg-theme-*, хардкода нет. */
+.root {
+  box-sizing: border-box;
+  width: min(100%, 640px);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: max(16px, env(safe-area-inset-top)) 0
+    max(24px, env(safe-area-inset-bottom));
+}
+
+/* Фон списка онбординга — вторичный фон tgui (было inline style):
+ * удвоенный селектор бьёт фон List кита без !important (канон .x.x). */
+.list.list {
+  background: var(--tgui--secondary_bg_color);
+}
+
+/* Ошибка сохранения согласия/удаления
+ * (было text-(--tg-theme-destructive-text-color)). */
+.errorText {
+  color: var(--tg-theme-destructive-text-color);
+}
+
+/* Кнопки «Принять»/«Отклонить» — колонка с зазором 8px (сетка 8/12). */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* «Отклонить» — plain-кнопка деструктивным цветом (было inline style):
+ * удвоение перебивает цвет Button кита без !important. */
+.decline.decline {
+  color: var(--tgui--destructive_text_color);
+}

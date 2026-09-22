@@ -10,9 +10,9 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { BellRing, CheckCheck, Settings2 } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
-import { StatusPill } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { QueryState } from "@/components/QueryState";
-import { FeedCard } from "@/components/FeedCard";
+import { FeedCard } from "@/components/FeedCard/FeedCard";
 import {
   NotificationCardSkeleton,
   NotificationCardsSkeleton,

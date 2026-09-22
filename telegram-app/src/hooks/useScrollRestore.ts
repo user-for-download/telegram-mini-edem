@@ -83,13 +83,15 @@ export function planRouteTransition(
 /**
  * Вернуть фокус landmark контента после навигации назад.
  * Не вырывает фокус из интерактива и не дёргает скролл
- * (a11y: без ловушки скролла).
+ * (a11y: без ловушки скролла). Селектор — по data-shell-content
+ * из AppShell: классы CSS-модуля хэшируются, классовый селектор
+ * был бы хрупким.
  */
 function focusShellContent(): void {
   if (typeof document === "undefined") return;
   const active = document.activeElement;
   if (active !== null && active !== document.body) return;
-  const main = document.querySelector("main.AppShell__content");
+  const main = document.querySelector("main[data-shell-content]");
   if (main instanceof HTMLElement) main.focus({ preventScroll: true });
 }
 

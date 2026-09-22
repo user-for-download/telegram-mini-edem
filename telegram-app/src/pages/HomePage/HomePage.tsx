@@ -6,6 +6,7 @@ import { ProfileSection } from "@/components/Section/ProfileSection";
 import { TripCountersSection } from "@/components/Section/TripCountersSection";
 import { TripSearchSection } from "@/components/Section/TripSearchSection";
 import { haptic } from "@/utils/haptics";
+import styles from "./HomePage.module.css";
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export function HomePage() {
   };
 
   return (
-    <List>
+    <List className={styles.list}>
       <ProfileSection />
       <TripCountersSection />
       <TripSearchSection onSearch={goToSearch} />

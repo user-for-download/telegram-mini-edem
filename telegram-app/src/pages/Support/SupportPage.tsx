@@ -16,7 +16,7 @@ import {
   type UserFeedbackDto,
 } from "@edem/contracts";
 import { PageHeader } from "@/components/PageHeader";
-import { StatusPill } from "@/components/StatusPill";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { AppealForm } from "@/components/AppealForm";
@@ -29,7 +29,7 @@ import {
   feedbackErrorMessage,
   normalizeSupportForm,
   validateSupportForm,
-} from "@/pages/supportValidation";
+} from "./supportValidation";
 import styles from "./SupportPage.module.css";
 
 /**

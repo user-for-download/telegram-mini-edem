@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeProfileForm, validateProfileForm } from "@/pages/profileValidation";
+import { normalizeProfileForm, validateProfileForm } from "@/pages/Profile/profileValidation";
 
 describe("validateProfileForm (порт EditProfileModal)", () => {
   it("принимает корректные имя и «О себе»", () => {

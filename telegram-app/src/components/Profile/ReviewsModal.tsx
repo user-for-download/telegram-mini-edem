@@ -14,9 +14,9 @@ import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
 import { ReviewCardsSkeleton } from "@/components/Skeletons";
 import { haptic } from "@/utils/haptics";
-import { RatingInput } from "@/components/RatingInput";
+import { RatingInput } from "@/components/RatingInput/RatingInput";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
-import { ReviewCard } from "@/components/ReviewCard";
+import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { ApiError } from "@/api/client";
 import { REVIEW_TEXT_MAX_LENGTH, type Trip, type User } from "@edem/contracts";
@@ -32,7 +32,7 @@ import { useTripBookingsQuery } from "@/queries/useBookingsQuery";
 import {
   normalizeReviewText,
   validateReviewForm,
-} from "@/pages/reviewValidation";
+} from "@/pages/Reviews/reviewValidation";
 import styles from "./ProfileModals.module.css";
 
 export type ReviewsTab = "mine" | "new" | "about";
@@ -58,7 +58,7 @@ function tripLabel(trip: Trip): string {
  * header шторки. a11y: нативный telegram-ui Modal (vaul Drawer поверх
  * Radix Dialog) даёт role=dialog + aria-modal, Esc/overlay-закрытие через
  * onOpenChange, focus-trap и возврат фокуса; таргеты ≥44px (звёзды
- * RatingInput — 44px в index.css, кнопки — minHeight 44).
+ * RatingInput — 44px в своём module.css, кнопки — minHeight 44).
  */
 export function ReviewsModal({
   open,

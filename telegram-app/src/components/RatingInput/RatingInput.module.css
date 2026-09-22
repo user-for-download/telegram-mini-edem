@@ -1,0 +1,15 @@
+/* Оценка 1–5 (нативный tgui Rating): центрирование как у старого
+ * .ReviewStars, звёзды 44px ради тач-таргетов ≥44px (a11y).
+ * Неслойный модуль бьёт слой tgui без !important и удвоения: пилюля
+ * обёртки ни с чем не конкурирует, а svg-правило нужно, потому что
+ * кит задаёт звёздам свой размер (40px). */
+.field {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.field svg {
+  width: 44px;
+  height: 44px;
+}

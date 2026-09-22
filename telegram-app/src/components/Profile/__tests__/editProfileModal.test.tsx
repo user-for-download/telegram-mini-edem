@@ -31,7 +31,7 @@ vi.mock("@/queries/profile", () => ({
   useProfileUpdateMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
 }));
 
-vi.mock("@/pages/profileValidation", () => ({
+vi.mock("@/pages/Profile/profileValidation", () => ({
   normalizeProfileForm: (name: string, about: string) => ({ name, about }),
   validateProfileForm: () => null,
 }));

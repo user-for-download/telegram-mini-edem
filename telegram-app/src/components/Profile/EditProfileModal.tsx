@@ -15,7 +15,7 @@ import { useProfileQuery, useProfileUpdateMutation } from "@/queries/profile";
 import {
   normalizeProfileForm,
   validateProfileForm,
-} from "@/pages/profileValidation";
+} from "@/pages/Profile/profileValidation";
 import styles from "./ProfileModals.module.css";
 
 /**

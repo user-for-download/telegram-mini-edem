@@ -53,9 +53,10 @@ import {
   Tooltip,
 } from "@telegram-apps/telegram-ui";
 import { Car, Check, Info, Plus, Search, Star, User } from "lucide-react";
+import styles from "./ShowcasePage.module.css";
 
 function Row({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2">{children}</div>;
+  return <div className={styles.row}>{children}</div>;
 }
 
 /**
@@ -79,7 +80,7 @@ export function ShowcasePage() {
   const tipDarkRef = useRef<HTMLElement>(null!);
 
   return (
-    <List style={{ background: "var(--tgui--secondary_bg_color)" }}>
+    <List className={styles.list}>
       <Section
         header="1. Типографика"
         footer="LargeTitle → Title → Headline → Text → Subheadline → Caption."

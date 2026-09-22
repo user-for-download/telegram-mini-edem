@@ -207,13 +207,13 @@ export function EditTripForm({
         </div>
         <fieldset>
           <legend>Особенности</legend>
-          <div className="TagChips">
+          <div className={styles.tagChips}>
             {TRIP_TAGS.map((tag) => {
               const checked = tags.includes(tag);
               return (
                 <Chip
                   key={tag}
-                  className="TagChip"
+                  className={styles.tagChip}
                   Component="button"
                   type="button"
                   mode={checked ? "elevated" : "mono"}
