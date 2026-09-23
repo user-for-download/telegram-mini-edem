@@ -5,5 +5,8 @@
  * селектором (канон вместо !important; прецедент — ProfilePage .list.list):
  * бока 8 и вертикаль 12 держат сами секции (margin 12px 8px). */
 .list.list {
-  padding: 0;
+  /* Верх — 4px как у остальных страниц (Notifications/Profile/Search):
+   * контент стартует одинаково под sticky-шапкой. Бока/низ — 0,
+   * их держат сами секции (margin 12px 8px). */
+  padding: 4px 0 0;
 }
