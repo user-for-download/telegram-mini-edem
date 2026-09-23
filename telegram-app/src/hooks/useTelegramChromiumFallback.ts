@@ -22,7 +22,7 @@ import {
  * Решение: пока активен фуллскрин на iOS-клиенте и клиентская врезка
  * (max(safeAreaInsetTop, contentSafeAreaInsetTop) — сигналы, т.е. только
  * данные клиента, без нашего же оверрайда) ниже порога хрома Telegram
- * (--tg-telegram-chromium-height из index.css, по умолчанию 56px),
+ * (--tg-telegram-chromium-height из index.css, по умолчанию 88px),
  * выставляем на documentElement токен --tg-safe-area-top-min — третье
  * слагаемое max() в --tg-safe-area-top (index.css). Отдельный токен, а не
  * перезапись SDK-переменной: клиент шлёт viewport-события и в момент
@@ -45,7 +45,7 @@ const OVERRIDE_TOKEN = "--tg-safe-area-top-min";
 const THRESHOLD_VAR = "--tg-telegram-chromium-height";
 /** Fallback порога, если CSS ещё не догрузился (jsdom, SSR).
  * Синхронизирован с --tg-telegram-chromium-height в index.css. */
-const DEFAULT_THRESHOLD_PX = 96;
+const DEFAULT_THRESHOLD_PX = 88;
 
 /** Числовой порог из CSS-переменной (значение — simple length). */
 function readThresholdPx(): number {

@@ -14,7 +14,7 @@ import {
   type AppTabId,
 } from "@/components/AppBottomBar/AppBottomBar";
 import { AppShell } from "@/components/AppShell/AppShell";
-import { AppHeader } from "@/components/AppHeader/AppHeader";
+import { NavHeader } from "@/components/NavHeader/NavHeader";
 import { useSettingsButton } from "@/hooks/useSettingsButton";
 import { useScrollRestore, routeScrollKey } from "@/hooks/useScrollRestore";
 import { handleModalBack } from "@/utils/modalBack";
@@ -124,11 +124,10 @@ export function Shell() {
     navigate(to);
   };
 
-  // Заголовок раздела в верхней зоне фуллскрина (пустое место между
-  // плавающими контролами Telegram и контентом, занимаемое safe-area):
-  // имя вкладки/страницы. Имена корневых вкладок — те же, что в TabsBar
-  // (по одной строке на раздел); для контекстных маршрутов — своё имя.
-  // Скрытие в не-фуллскрине — через CSS (AppHeader.module.css).
+  // Sticky in-app навбар (NavHeader): имя вкладки/страницы. Имена
+  // корневых вкладок — те же, что в TabsBar (по одной строке на раздел);
+  // для контекстных маршрутов — своё имя. Зонного заголовка фуллскрина
+  // больше нет — NavHeader его заменяет (иначе два дубля подряд).
   const headerTitle: string | undefined =
     location.pathname === "/"
       ? "Главная"
@@ -154,7 +153,7 @@ export function Shell() {
 
   return (
     <AppShell
-      header={<AppHeader title={headerTitle} />}
+      header={<NavHeader title={headerTitle} />}
       footer={
         <AppBottomBar
           activeTab={activeTab}

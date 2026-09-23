@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * testing-library. SDK-модуль замокан: useSignal читает замыкания
  * теста, инвессы — vi.fn с семантикой ifAvailable (undefined при
  * недоступности). Порог читается через getComputedStyle — jsdom
- * возвращает пустую строку, срабатывает фолбэк 56px (константа хука).
+ * возвращает пустую строку, срабатывает фолбэк 88px (константа хука).
  */
 
 const { mockRequestContent, mockRequestSafe } = vi.hoisted(() => ({

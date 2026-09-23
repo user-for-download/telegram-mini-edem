@@ -46,10 +46,13 @@
      «Закрыть»/⌄/••• + статус-бар): клиент может отчитать content-safe-area
      нулём или с задержкой (tma.js #695/#704), поэтому
      useTelegramChromiumFallback поднимает контент этим минимумом — см.
-     токен --tg-safe-area-top-min. 96px, калибровка по реальному
-     устройству (iPhone 11, Telegram 12.9.4: 56px мало, 84px мало,
-     112px много). Менять здесь — JS-фолбэк хука держим синхронным. */
-  --tg-telegram-chromium-height: 96px;
+     токен --tg-safe-area-top-min. 88px: кнопки хрома дотягиваются ~84px
+     (калибровка iPhone 11, Telegram 12.9.4: 56 мало, 84 мало, 112 много),
+     +4px зазор. Верхние 44px зоны (44..88) занимает sticky NavHeader —
+     итого один бар как у клиента: статус + навбар ≈ 88px, контент
+     стартует сразу под ним. Менять здесь — JS-фолбэк хука держим
+     синхронным. */
+  --tg-telegram-chromium-height: 88px;
   /* Прокидка в именованные токены: SDK-переменные уже определены выше. */
   --tg-content-safe-area-inset-top: var(
     --tg-viewport-content-safe-area-inset-top
