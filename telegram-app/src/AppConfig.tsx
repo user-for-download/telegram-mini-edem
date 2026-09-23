@@ -185,19 +185,40 @@ function applyThemeOverride(override: ThemeOverride): void {
   }
 }
 
-function useTelegramAppearance(): "dark" | "light" {
+/** Тема приложения (тема клиента или локальный оверрайд) + синхронизация
+ * нативного хрома Telegram. Экспорт — для юнит-теста контраста (AppConfig.test). */
+export function useTelegramAppearance(): "dark" | "light" {
   const tgDark = useSignal(miniApp.isDark);
+  // Hex фона темы клиента: сигнал реактивен на theme_changed (включая
+  // кастомные темы), в отличие от разового themeParams.state().
+  const clientBgColor = useSignal(themeParams.backgroundColor);
   const { themeOverride } = useAppSettings();
   const isDark = themeOverride ? themeOverride === "dark" : tgDark;
+  // Фактический фон приложения: локальный оверрайд важнее темы клиента.
+  const bgHex =
+    themeOverride === "dark"
+      ? DARK_PALETTE["bg-color"]
+      : themeOverride === "light"
+        ? LIGHT_PALETTE["bg-color"]
+        : (clientBgColor ?? LIGHT_PALETTE["bg-color"]);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
     applyThemeOverride(themeOverride);
     // Нативный хром Telegram в цвет приложения (официальная дока):
     // шапка и фон — bg_color, нижняя полоса — secondary_bg_color.
-    setMiniAppHeaderColor.ifAvailable("bg_color");
-    setMiniAppBackgroundColor.ifAvailable("bg_color");
+    // ВАЖНО (iOS, фуллскрин): шапке передаём КОНКРЕТНЫЙ hex, а не keyword.
+    // Keyword уходит в событие как color_key, и клиент задаёт только цвет
+    // шапки, а контраст не трогает: primaryTextColor остаётся nil, поэтому
+    // стиль статус-бара и плавающих кнопок фуллскрина — дефолтный .White
+    // (Telegram-iOS, WebAppController.updateHeaderBackgroundColor →
+    // fullScreenStatusBarStyle). На светлом фоне это белые часы, батарея и
+    // надписи пилюль «Закрыть»/⌄/••• — фактически невидимые. Ветка hex
+    // выбирает .Black/.White по lightness переданного цвета, т.е. даёт
+    // корректный контраст на любом фоне (тёмная тема — светлый статус-бар).
+    setMiniAppHeaderColor.ifAvailable(bgHex);
+    setMiniAppBackgroundColor.ifAvailable(bgHex);
     setMiniAppBottomBarColor.ifAvailable("secondary_bg_color");
-  }, [isDark, themeOverride]);
+  }, [isDark, themeOverride, bgHex]);
   return isDark ? "dark" : "light";
 }
 
