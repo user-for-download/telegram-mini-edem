@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 import {
   Button,
   Caption,
@@ -11,17 +11,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { haptic } from "@/utils/haptics";
 import {
   SheetTitle,
   useSheetTitleId,
 } from "@/components/SheetTitle/SheetTitle";
-import { useModalBack } from "@/utils/modalBack";
 import { TripPage } from "@/pages/Trip/TripPage";
-import {
-  RequestConfirmDialog,
-  type DriverBookingAction,
-} from "@/components/Trip/RequestConfirmDialog";
 import {
   bookingErrorMessage,
   isAuthorizationError,
@@ -75,26 +71,23 @@ const PendingBookingCard = memo(function PendingBookingCard({
         </StatusPill>
       </div>
       <div className={styles.btnRow}>
-        <Button
-          mode="bezeled"
-          stretched
-          size="s"
+        <ConfirmPopup
+          label="Принять"
+          confirmLabel="Подтвердить пассажира?"
+          description={`${booking.passenger.name} · место ${booking.seat}`}
+          pending={pending}
           className="min-h-11"
-          disabled={pending}
-          onClick={() => onAccept(booking.id)}
-        >
-          Принять
-        </Button>
-        <Button
-          mode="bezeled"
-          stretched
-          size="s"
+          onConfirm={() => onAccept(booking.id)}
+        />
+        <ConfirmPopup
+          label="Отклонить"
+          confirmLabel="Отклонить заявку?"
+          description={`${booking.passenger.name} · место ${booking.seat}`}
+          pending={pending}
+          destructive
           className="min-h-11"
-          disabled={pending}
-          onClick={() => onDecline(booking.id)}
-        >
-          Отклонить
-        </Button>
+          onConfirm={() => onDecline(booking.id)}
+        />
       </div>
     </div>
   );
@@ -207,14 +200,6 @@ export const TripRequestsBody = memo(function TripRequestsBody({
   const requests = useTripBookingsQuery(tripId);
   const update = useUpdateBookingStatusMutation();
   const { isOnline } = useOnlineStatus();
-  const [confirm, setConfirm] = useState<{
-    booking: TripBooking;
-    action: DriverBookingAction;
-  } | null>(null);
-  // Нативный Back закрывает окно подтверждения, а не страницу.
-  // Колбэк стабилен (иначе стек modalBack пересобирался бы каждый рендер).
-  const closeConfirm = useCallback(() => setConfirm(null), []);
-  useModalBack(closeConfirm, confirm !== null);
 
   const items = useMemo(
     () => requests.data?.pages.flatMap((page) => page.items) ?? [],
@@ -304,11 +289,23 @@ export const TripRequestsBody = memo(function TripRequestsBody({
                 pending={update.isPending}
                 onAccept={() => {
                   haptic.light();
-                  setConfirm({ booking, action: "confirmed" });
+                  update.mutate(
+                    { id: booking.id, status: "confirmed" },
+                    {
+                      onSuccess: () => haptic.success(),
+                      onError: () => haptic.error(),
+                    },
+                  );
                 }}
                 onDecline={() => {
                   haptic.light();
-                  setConfirm({ booking, action: "declined" });
+                  update.mutate(
+                    { id: booking.id, status: "declined" },
+                    {
+                      onSuccess: () => haptic.success(),
+                      onError: () => haptic.error(),
+                    },
+                  );
                 }}
               />
             ))}
@@ -345,27 +342,6 @@ export const TripRequestsBody = memo(function TripRequestsBody({
           К моим поездкам
         </Button>
       </Stack>
-      {confirm && (
-        <RequestConfirmDialog
-          booking={confirm.booking}
-          action={confirm.action}
-          open
-          pending={update.isPending}
-          onClose={() => setConfirm(null)}
-          onConfirm={() => {
-            const { booking, action } = confirm;
-            setConfirm(null);
-            haptic.light();
-            update.mutate(
-              { id: booking.id, status: action },
-              {
-                onSuccess: () => haptic.success(),
-                onError: () => haptic.error(),
-              },
-            );
-          }}
-        />
-      )}
     </section>
   );
 });

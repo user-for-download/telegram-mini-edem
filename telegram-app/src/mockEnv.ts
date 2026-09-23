@@ -1,4 +1,5 @@
 import { emitEvent, isTMA, mockTelegramEnv } from "@telegram-apps/sdk-react";
+import { markTelegramMockEnv } from "@/utils/telegram-adapter";
 
 // Мок Telegram-окружения для разработки в обычном браузере (вне Telegram).
 // ВАЖНО: работает только при import.meta.env.DEV — в продакшн-сборке код
@@ -29,8 +30,7 @@ if (import.meta.env.DEV) {
     } as const;
     const noInsets = { left: 0, top: 0, bottom: 0, right: 0 } as const;
 
-    mockTelegramEnv({
-      // onEvent в SDK 3.3.x принимает кортеж [method, payload].
+    mockTelegramEnv({      // onEvent в SDK 3.3.x принимает кортеж [method, payload].
       onEvent([method]) {
         // Обработчики методов платформы:
         // https://docs.telegram-mini-apps.com/platform/methods
@@ -90,6 +90,11 @@ if (import.meta.env.DEV) {
         ["tgWebAppPlatform", "tdesktop"],
       ]),
     });
+
+    // Мок не рисует нативные диалоги, но isAvailable() под ним true.
+    // Браузер — среда разработки: UI-код (ConfirmPopup) смотрит этот
+    // флаг и выполняет действие сразу, без подтверждения.
+    markTelegramMockEnv();
 
     console.info(
       "⚠️ Окружение Telegram замокировано (только DEV). В проде приложение " +

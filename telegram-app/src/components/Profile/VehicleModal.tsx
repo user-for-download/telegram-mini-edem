@@ -8,7 +8,7 @@ import {
 import { Car, Hash, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
-import { ConfirmAction } from "@/components/ConfirmAction";
+import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { haptic } from "@/utils/haptics";
 import { QueryState } from "@/components/QueryState";
@@ -140,11 +140,12 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
           <VehicleForm vehicle={vehicle} onDone={onDone} />
           {vehicle && (
             <>
-              <ConfirmAction
+              <ConfirmPopup
                 label="Удалить автомобиль"
                 confirmLabel="Да, удалить"
                 description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано."
                 pending={remove.isPending}
+                destructive
                 onConfirm={() =>
                   remove.mutate(undefined, {
                     onSuccess: () => haptic.success(),

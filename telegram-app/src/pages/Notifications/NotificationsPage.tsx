@@ -57,7 +57,7 @@ export const NOTIFICATION_ROUTES: Readonly<Record<string, string>> = {
   booking_created: "/bookings?segment=driver",
   booking_status_changed: "/bookings",
   trip_cancelled: "/bookings",
-  trip_status_changed: "/bookings?segment=history",
+  trip_status_changed: "/profile/history",
   trip_details_changed: "/trips",
   ride_request_match: "/trips",
   review_approved: "/reviews",

@@ -70,6 +70,18 @@ export function TripActivePage() {
         error={bookings.error ?? driverActive.error}
         empty={activeBookings.length === 0 && activeDriverTrips.length === 0}
         emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
+        emptyAction={
+          <Button
+            mode="bezeled"
+            size="m"
+            onClick={() => {
+              haptic.light();
+              navigate("/profile/history");
+            }}
+          >
+            История поездок
+          </Button>
+        }
         skeleton={<TripCardsSkeleton />}
         onRetry={() => {
           void bookings.refetch();

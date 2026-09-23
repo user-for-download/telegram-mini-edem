@@ -26,6 +26,8 @@ import { CreateTripPage } from "@/pages/CreateTrip/CreateTripPage";
 import { NotificationsPage } from "@/pages/Notifications/NotificationsPage";
 import { VehicleRoute } from "@/components/Profile/VehicleModal";
 import { TripPage } from "@/pages/Trip/TripPage";
+import { TripHistoryPage } from "@/pages/TripHistory/TripHistoryPage";
+import { Page } from "@/ui/Page";
 import { RideRequestsRoute } from "@/components/Trip/RideRequestsModal";
 import { TripRequestsRoute } from "@/components/Trip/TripRequestsModal";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
@@ -141,6 +143,8 @@ export function Shell() {
               ? "Поиск"
               : location.pathname.startsWith("/notifications")
                 ? "Уведомления"
+                : location.pathname.startsWith("/profile/history")
+                ? "История поездок"
                 : location.pathname.startsWith("/profile/edit")
                   ? "Редактирование профиля"
                   : location.pathname.startsWith("/profile/support")
@@ -164,7 +168,7 @@ export function Shell() {
     >
       {/* Route-fade без motion: CSS-анимация вместо motion/react (−39 KiB
           gzip из initial-бандла). Ключ — только pathname: смена query-string
-          (?segment=…) не должна перемонтировать страницу (скелетоны, потеря
+          не должна перемонтировать страницу (скелетоны, потеря
           скролла). Уважение reduced-motion — класс route-fade
           (AppShell.module.css). */}
       <div key={location.pathname} className={ROUTE_FADE_CLASS}>
@@ -194,10 +198,18 @@ export function AppRouter() {
           <Route path="/bookings" element={<TripPage />} />
           <Route
             path="/bookings/history"
-            element={<Navigate to="/bookings?segment=history" replace />}
+            element={<Navigate to="/profile/history" replace />}
           />
           <Route path="/ride-requests" element={<RideRequestsRoute />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route
+            path="/profile/history"
+            element={
+              <Page>
+                <TripHistoryPage />
+              </Page>
+            }
+          />
           <Route path="/profile/edit" element={<EditProfileRoute />} />
           <Route path="/reviews" element={<ReviewsRoute />} />
           <Route path="/settings" element={<SettingsRoute />} />

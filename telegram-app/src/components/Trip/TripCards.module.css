@@ -2,17 +2,23 @@
  * Цвета из --tgui--* / --app-*, удвоенные селекторы против каскада кита,
  * без !important и хэш-классов. */
 
-/* Кнопка на всю ширину строки футера. */
-.grow {
-  flex: 1;
+/* Группа действий футера у правого края (поделиться + отмена). */
+.footerEnd.footerEnd {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* Колонка действий карточки водителя. */
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
+/* Отмена у правого края футера (поделиться — слева): обёртка едет
+ * вправо через margin-left, stretched кита (flex-grow:1 + width:100%)
+ * снимаем удвоенным селектором против каскада, без !important. */
+.cancelRight.cancelRight {
+  margin-left: auto;
+}
+
+.cancelRight.cancelRight button {
+  width: auto;
 }
 
 /* Блок заявок от попутчиков. */
@@ -46,12 +52,6 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-}
-
-.btnRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .gapRow {

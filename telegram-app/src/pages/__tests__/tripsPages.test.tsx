@@ -1,6 +1,6 @@
-// Рендер-тесты страниц поездок/броней: сегменты прод-TripPage
-// (TripActivePage/TripHistoryPage), счётчики заявок водителя,
-// confirm-guards, фильтры поиска. Паттерн
+// Рендер-тесты страниц поездок/броней: TripPage — только активные
+// (TripActivePage), история отдельно (TripHistoryPage.test.tsx),
+// счётчики заявок водителя, confirm-guards, фильтры поиска. Паттерн
 // reviewsPage.test.tsx (SSR, без testing-library).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -148,16 +148,16 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 }
 
 describe("TripPage parity", () => {
-  it("renders two segments on the active tab", () => {
+  it("только активные, без табов; пусто — ссылка на историю", () => {
     mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
     mockUseHistory.mockReturnValue(queryState({ data: [] }));
     mockUseCancelBooking.mockReturnValue(mutation());
     const html = render(<TripPage />);
-    expect(html).toContain("Активные");
-    expect(html).toContain("История");
+    expect(html).not.toContain("Активные");
     expect(html).not.toContain("За рулём");
-    // Пусто везде → подсказка с двумя путями.
+    // Пусто везде → подсказка с двумя путями + кнопка истории.
     expect(html).toContain("Пока тихо");
+    expect(html).toContain("История поездок");
   });
 
   it("shows active booking cards with guarded cancel", () => {
@@ -176,7 +176,6 @@ describe("TripPage parity", () => {
     mockUseHistory.mockReturnValue(queryState({ data: [] }));
     mockUseCancelBooking.mockReturnValue(mutation());
     const html = render(<TripPage />);
-    expect(html).toContain("Детали поездки");
     expect(html).toContain("Отменить");
     expect(html).toContain("На рассмотрении");
     expect(html).toContain("место №2");
@@ -201,85 +200,17 @@ describe("TripPage parity", () => {
         ],
       }),
     );
-    // Легаси ?segment=driver ведёт в «Активные».
+    // Активные (легаси-сегмент игнорируется).
     const html = render(<TripPage />, "/bookings?segment=driver");
     expect(html).toContain("Заявки: 2");
     // Заявки — строки с −/+ вместо «Вы водитель».
     expect(html).toContain("Пётр");
     expect(html).toContain("Принять заявку Пётр");
     expect(html).not.toContain("Вы водитель");
-    // Единый футер без Управления/Завершить.
-    expect(html).toContain("Детали поездки");
+    // Единый футер без Управления/Завершить (детали — тап по карточке).
     expect(html).toContain("Отменить");
     expect(html).not.toContain("Управление поездкой");
     expect(html).not.toContain("Завершить");
-  });
-
-  it("renders history entries as plain rows", () => {
-    mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
-    mockUseHistory.mockReturnValue(
-      queryState({
-        data: [
-          {
-            id: "b-1",
-            seat: 1,
-            status: "confirmed",
-            historyCategory: "completed",
-            trip: {
-              id: "trip-b-1",
-              fromCity: "Москва",
-              toCity: "Тула",
-              date: "2030-06-01",
-              time: "09:00",
-              departureAt: "2030-06-01T09:00:00.000Z",
-              price: 500,
-              driver: { id: "u-d", name: "Иван", avatar: "https://t.me/a.png" },
-            },
-          },
-          {
-            id: "b-2",
-            seat: 1,
-            status: "confirmed",
-            historyCategory: "cancelled",
-            trip: {
-              id: "trip-b-2",
-              fromCity: "Тверь",
-              toCity: "Тула",
-              date: "2030-06-02",
-              time: "10:00",
-              departureAt: "2030-06-02T10:00:00.000Z",
-              price: 400,
-              driver: {
-                id: "u-d2",
-                name: "Пётр",
-                avatar: "https://t.me/b.png",
-              },
-            },
-          },
-        ],
-      }),
-    );
-    const html = render(<TripPage />, "/bookings?segment=history");
-    // История — простые строки: чипов фильтра нет, статус — текстом.
-    expect(html).not.toContain("Фильтр истории");
-    expect(html).toContain("Завершена");
-    expect(html).toContain("Отменена");
-    expect(html).toContain("Москва");
-    expect(html).toContain("Тверь");
-  });
-
-  it("merges driver archive into history as plain rows", () => {
-    mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
-    mockUseHistory.mockReturnValue(queryState({ data: [] }));
-    mockUseInfiniteMyTrips.mockReturnValue(
-      infiniteState([makeTrip({ id: "t-arch", status: "completed" })]),
-    );
-    const html = render(<TripPage />, "/bookings?segment=history");
-    expect(html).not.toContain("Вы водитель");
-    expect(html).toContain("Завершена");
-    // SSR разбивает «→» комментариями.
-    expect(html).toContain("Москва");
-    expect(html).toContain("Тула");
   });
 });
 

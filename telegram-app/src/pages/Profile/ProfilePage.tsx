@@ -18,6 +18,7 @@ import {
   Car,
   ChevronRight,
   Flag,
+  History,
   Moon,
   Star,
   TriangleAlert,
@@ -25,8 +26,7 @@ import {
 } from "lucide-react";
 import { miniApp, useSignal } from "@telegram-apps/sdk-react";
 import { useNavigate } from "react-router-dom";
-import { MutationError } from "@/components/MutationError";
-import { ConfirmAction } from "@/components/ConfirmAction";
+import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { QueryState } from "@/components/QueryState";
 import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
 import { FeedbackModal } from "@/components/Profile/FeedbackModal";
@@ -37,7 +37,6 @@ import { ApiError } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
   useDeleteAccountMutation,
-  useLogoutMutation,
   useProfileNotificationSettingsMutation,
   useProfileQuery,
 } from "@/queries/profile";
@@ -136,16 +135,15 @@ function SwitchRow({
  * с рейтингом и статистикой, субтабы «Настройки и авто» / «Отзывы».
  *
  * Просмотр/редактирование имени и «О себе», переходы в разделы,
- * выход (POST /auth/logout + локальная очистка) и удаление аккаунта
- * (двойное подтверждение, обработка активных обязательств 409).
- * Бан/удаление mid-session: requireUser отвечает 403 — показываем
- * терминальные экраны вместо общей ошибки.
+ * удаление аккаунта (нативный алерт, обработка активных обязательств
+ * 409). Кнопки «Выйти» нет — только удаление, как Delete My Account
+ * официалки. Бан/удаление mid-session: requireUser отвечает 403 —
+ * показываем терминальные экраны вместо общей ошибки.
  */
 export function ProfilePage() {
   const navigate = useNavigate();
   const me = useAuthStore((state) => state.user);
   const profile = useProfileQuery();
-  const logout = useLogoutMutation();
   const remove = useDeleteAccountMutation();
   const saveNotifications = useProfileNotificationSettingsMutation();
   const { themeOverride, soundEnabled } = useAppSettings();
@@ -182,9 +180,8 @@ export function ProfilePage() {
     [aboutReviews.data],
   );
 
-  // Выход — через ConfirmAction (вооружение в UI): нативный
-  // window.confirm ненадёжен в Telegram WebView. Удаление — тоже через
-  // ConfirmAction (двойной window.confirm здесь больше не нужен).
+  // Удаление — через ConfirmPopup (нативный алерт клиента):
+  // нативный window.confirm ненадёжен в Telegram WebView.
 
   if (profile.error instanceof ApiError && profile.error.status === 403) {
     if (profile.error.message === "Account is deleted") {
@@ -215,7 +212,6 @@ export function ProfilePage() {
 
   return (
     <>
-      <MutationError error={logout.error} />
       <QueryState
         loading={profile.isLoading}
         error={profile.error}
@@ -345,6 +341,23 @@ export function ProfilePage() {
 
             {subtab === "settings" ? (
               <Stack>
+                <Section header="Мои поездки">
+                  <MenuRow
+                    label="История поездок"
+                    icon={
+                      <IconContainer>
+                        <History size={18} />
+                      </IconContainer>
+                    }
+                    title="История поездок"
+                    subtitle="Завершённые и отменённые поездки"
+                    onClick={() => {
+                      haptic.light();
+                      navigate("/profile/history");
+                    }}
+                  />
+                </Section>
+
                 <Section header="Мой автомобиль (для поездок)">
                   <MenuRow
                     label={
@@ -466,16 +479,11 @@ export function ProfilePage() {
                   </div>
                 </Section>
 
-                {/* Опасная зона */}
+                {/* Опасная зона — как Delete My Account официалки:
+                    красная текст-строка влево (без фона кнопки) + хинт
+                    последствий; подтверждение — нативный алерт.
+                    Кнопки «Выйти» нет. */}
                 <div className={styles.dangerZone}>
-                  <ConfirmAction
-                    label="Выйти"
-                    confirmLabel="Выйти из аккаунта"
-                    description="Вы сможете войти снова через Telegram."
-                    pending={logout.isPending}
-                    disabled={logout.isPending}
-                    onConfirm={() => logout.mutate()}
-                  />
                   {remove.error && (
                     <Caption
                       Component="p"
@@ -490,16 +498,22 @@ export function ProfilePage() {
                           : "Не удалось удалить профиль"}
                     </Caption>
                   )}
-                  {/* Деструктив — только через ConfirmAction (вооружение вместо
-                      window.confirm: нативные диалоги ненадёжны в WebView). */}
-                  <ConfirmAction
-                    label="Удалить профиль"
-                    confirmLabel="Удалить окончательно"
-                    description="Аккаунт будет анонимизирован, поездки и отзывы сохранятся без вашего имени. Активные поездки и брони завершите или отмените заранее. Восстановление невозможно."
-                    pending={remove.isPending}
-                    disabled={remove.isPending}
-                    onConfirm={() => remove.mutate()}
-                  />
+                  <div className={styles.dangerDelete}>
+                    <ConfirmPopup
+                      label="Удалить профиль"
+                      confirmLabel="Удалить окончательно"
+                      description="Аккаунт будет анонимизирован, поездки и отзывы сохранятся без вашего имени. Активные поездки и брони завершите или отмените заранее. Восстановление невозможно."
+                      pending={remove.isPending}
+                      disabled={remove.isPending}
+                      mode="plain"
+                      destructive
+                      onConfirm={() => remove.mutate()}
+                    />
+                  </div>
+                  <Caption Component="p" className={styles.dangerHint}>
+                    Аккаунт будет анонимизирован. Поездки и отзывы сохранятся
+                    без вашего имени. Восстановление невозможно.
+                  </Caption>
                 </div>
               </Stack>
             ) : (

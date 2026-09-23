@@ -11,6 +11,10 @@ import { Button, Text } from "@telegram-apps/telegram-ui";
  * и клавиатурный пользователь теряет место). Armed-панель — описанная
  * через aria-describedby область с переносом фокуса на кнопку
  * подтверждения и возвратом фокуса на триггер при «Назад».
+ *
+ * actionsEnd — кнопки панели прижать к правому краю (компактные,
+ * вместо stretch на всю ширину): для футеров карточек, где триггер
+ * уже у правого края.
  */
 export function ConfirmAction({
   label,
@@ -20,6 +24,7 @@ export function ConfirmAction({
   mode = "bezeled",
   disabled = false,
   destructive = false,
+  actionsEnd = false,
   onConfirm,
 }: {
   label: string;
@@ -29,6 +34,7 @@ export function ConfirmAction({
   mode?: "bezeled" | "plain";
   disabled?: boolean;
   destructive?: boolean;
+  actionsEnd?: boolean;
   onConfirm: () => void;
 }) {
   const descId = useId();
@@ -76,7 +82,7 @@ export function ConfirmAction({
         {label}
       </Button>
       {armed && (
-        <div className="flex flex-col gap-2 mt-2">
+        <div className={`flex flex-col gap-2 mt-2${actionsEnd ? " items-end" : ""}`}>
           <Text Component="p" id={descId}>
             {description}
           </Text>

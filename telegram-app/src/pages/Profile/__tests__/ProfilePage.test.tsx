@@ -12,7 +12,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockUseProfile.mockReturnValue(queryState({ data: null }));
   mockUseProfileUpdate.mockReturnValue(mutation());
-  mockUseLogout.mockReturnValue(mutation());
   mockUseDeleteAccount.mockReturnValue(mutation());
   mockUseUserReviews.mockReturnValue(infiniteState([]));
 });
@@ -20,14 +19,12 @@ beforeEach(() => {
 const {
   mockUseProfile,
   mockUseProfileUpdate,
-  mockUseLogout,
   mockUseDeleteAccount,
   mockUseUserReviews,
   mockUseNotifSettings,
 } = vi.hoisted(() => ({
   mockUseProfile: vi.fn(),
   mockUseProfileUpdate: vi.fn(),
-  mockUseLogout: vi.fn(),
   mockUseDeleteAccount: vi.fn(),
   mockUseUserReviews: vi.fn(),
   mockUseNotifSettings: vi.fn(() => ({ mutate: vi.fn(), isPending: false, error: null })),
@@ -36,7 +33,6 @@ const {
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: mockUseProfile,
   useProfileUpdateMutation: mockUseProfileUpdate,
-  useLogoutMutation: mockUseLogout,
   useDeleteAccountMutation: mockUseDeleteAccount,
   useProfileNotificationSettingsMutation: mockUseNotifSettings,
 }));
@@ -134,11 +130,14 @@ describe("ProfilePage header", () => {
     mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
     const html = render(<ProfilePage />);
     expect(html).toContain("Настройки и авто");
+    expect(html).toContain("Мои поездки");
+    expect(html).toContain("История поездок");
     expect(html).toContain("Автомобиль");
     expect(html).toContain("Octavia");
     expect(html).toContain("Служба поддержки");
     expect(html).toContain("Жалобы");
-    expect(html).toContain("Выйти");
+    // Кнопки «Выйти» нет — только удаление (как Delete My Account официалки).
+    expect(html).not.toContain("Выйти");
     expect(html).toContain("Удалить профиль");
     // Переключатели из эталона: тема + уведомления и звуки.
     expect(html).toContain("Внешний вид");

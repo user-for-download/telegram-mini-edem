@@ -13,7 +13,7 @@ import { Phone, Send, ShieldCheck, Star } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
-import { ConfirmAction } from "@/components/ConfirmAction";
+import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { EditTripForm } from "@/components/Trip/EditTripForm";
 import { LazyAvatar } from "@/components/LazyAvatar";
@@ -321,11 +321,12 @@ export function TripDetailsPage() {
         <div className={styles.section}>
           {(item.myBooking.status === "pending" ||
             item.myBooking.status === "confirmed") && (
-            <ConfirmAction
+            <ConfirmPopup
               label="Отменить бронирование"
               confirmLabel="Отменить бронь"
               description="Заявка будет отменена, а место снова станет доступно."
               pending={cancelBooking.isPending}
+              destructive
               onConfirm={() =>
                 cancelBooking.mutate(item.myBooking!.id, {
                   onSuccess: () =>
@@ -578,7 +579,7 @@ function DriverBlock({
             {editing ? "Скрыть редактирование" : "Редактировать поездку"}
           </Button>
           {editing && <EditTripForm trip={trip} onDone={onToggleEdit} />}
-          <ConfirmAction
+          <ConfirmPopup
             label="Завершить поездку"
             confirmLabel="Завершить"
             description="Поездка будет перенесена в архив, а пассажиры смогут оставить отзывы."
@@ -593,11 +594,12 @@ function DriverBlock({
               Завершение станет доступно после времени отправления.
             </p>
           )}
-          <ConfirmAction
+          <ConfirmPopup
             label="Отменить поездку"
             confirmLabel="Отменить поездку"
             description="Поездка станет недоступна, а пассажиры получат уведомление об отмене."
             pending={cancelTrip.isPending}
+            destructive
             onConfirm={() => cancelTrip.mutate(tripId)}
           />
           {(cancelTrip.error || completeTrip.error) && (

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Avatar,
   Button,
@@ -10,13 +9,9 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { Armchair, Check, X } from "lucide-react";
 import { haptic } from "@/utils/haptics";
-import { useModalBack } from "@/utils/modalBack";
+import { nativeConfirm } from "@/utils/telegram-adapter";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
-import {
-  RequestConfirmDialog,
-  type DriverBookingAction,
-} from "@/components/Trip/RequestConfirmDialog";
 import {
   useDriverRequestsQuery,
   useUpdateBookingStatusMutation,
@@ -28,8 +23,11 @@ import styles from "./TripCards.module.css";
  * Активные заявки на поездку водителя: строки Cell в стиле персоны
  * карточки (аватар 40 + бейдж рейтинга, имя, subline) — аватар
  * пассажира, место и комментарий брони, IconButton «−»/«+» в after.
- * Вместо машины — комментарий пассажира при бронировании.
  * Клики гасят всплытие (строки живут внутри кликабельной карточки).
+ *
+ * Решение по заявке — через нативный popup (nativeConfirm): в браузере
+ * (dev) действие выполняется сразу, без подтверждения. Диалога-«досье»
+ * больше нет, поэтому комментарий пассажира виден прямо в строке.
  *
  * Данные — общий useDriverRequestsQuery (один запрос на все карточки,
  * кэш shared со счётчиками Главной): бэкенд /driver отдаёт только
@@ -40,12 +38,6 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
   const toast = useToast();
   const query = useDriverRequestsQuery();
   const updateStatus = useUpdateBookingStatusMutation();
-  const [confirm, setConfirm] = useState<{
-    booking: Booking;
-    action: DriverBookingAction;
-  } | null>(null);
-  // Нативный Back закрывает окно подтверждения, а не страницу.
-  useModalBack(() => setConfirm(null), confirm !== null);
 
   const pending = (query.data ?? []).filter(
     (booking) => booking.trip.id === tripId && booking.status === "pending",
@@ -56,12 +48,32 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
     ? updateStatus.variables?.id
     : undefined;
 
+  // Подтверждение — нативный popup клиента (в dev-браузере действие
+  // выполняется сразу). Отклонить — destructive (красная кнопка).
+  const askAndAct = async (
+    booking: Booking,
+    status: "confirmed" | "declined",
+  ) => {
+    haptic.light();
+    const confirmed =
+      await nativeConfirm({
+        title:
+          status === "confirmed"
+            ? "Подтвердить пассажира?"
+            : "Отклонить заявку?",
+        message: `${booking.passenger.name} · место №${booking.seat}`,
+        confirmText: status === "confirmed" ? "Подтвердить" : "Отклонить",
+        destructive: status === "declined",
+      });
+    if (!confirmed) return;
+    act(booking.id, booking.passenger.name, status);
+  };
+
   const act = (
     id: string,
     passengerName: string,
     status: "confirmed" | "declined",
   ) => {
-    haptic.light();
     updateStatus.mutate(
       { id, status },
       {
@@ -83,15 +95,6 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
         },
       },
     );
-  };
-
-  // Подтверждение в окне — сразу закрываем его (как ConfirmAction);
-  // ошибка видна через тост + инлайн-алерт, строка остаётся для повтора.
-  const confirmAction = () => {
-    if (!confirm) return;
-    const { booking, action } = confirm;
-    setConfirm(null);
-    act(booking.id, booking.passenger.name, action);
   };
 
   if (query.isLoading && pending.length === 0) {
@@ -144,11 +147,8 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
 
   if (pending.length === 0) return null;
 
-  // Кнопки −/+ гасят всплытие сами; диалог подтверждения — портал вне
-  // обёртки (иначе его клики всплывали бы в карточку). Обёртка с onClick
-  // запрещена jsx-a11y (см. ConfirmAction.stop).
+  // Кнопки −/+ гасят всплытие сами. Обёртка с onClick запрещена jsx-a11y.
   return (
-    <>
       <div className={styles.requestsList}>
         {updateStatus.error && (
           <Caption Component="p" role="alert" className={styles.requestError}>
@@ -178,6 +178,9 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
                 <Armchair size={14} aria-hidden />
                 {`место №${booking.seat}`}
               </span>
+              {booking.comment?.trim()
+                ? ` · «${booking.comment.trim()}»`
+                : ""}
             </Caption>
           }
           after={
@@ -190,8 +193,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
                 style={{ color: "var(--tgui--destructive_text_color)" }}
                 onClick={(event) => {
                   event.stopPropagation();
-                  haptic.light();
-                  setConfirm({ booking, action: "declined" });
+                  void askAndAct(booking, "declined");
                 }}
               >
                 <X size={18} />
@@ -203,8 +205,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
                 disabled={actingId === booking.id}
                 onClick={(event) => {
                   event.stopPropagation();
-                  haptic.light();
-                  setConfirm({ booking, action: "confirmed" });
+                  void askAndAct(booking, "confirmed");
                 }}
               >
                 <Check size={18} />
@@ -218,16 +219,5 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
         </Cell>
       ))}
       </div>
-      {confirm && (
-        <RequestConfirmDialog
-          booking={confirm.booking}
-          action={confirm.action}
-          open
-          pending={updateStatus.isPending}
-          onClose={() => setConfirm(null)}
-          onConfirm={confirmAction}
-        />
-      )}
-    </>
   );
 }

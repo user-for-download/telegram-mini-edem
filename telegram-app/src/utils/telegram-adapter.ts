@@ -1,6 +1,7 @@
 import {
   miniApp,
   openTelegramLink,
+  popup,
   retrieveRawInitData,
   shareURL,
 } from "@telegram-apps/sdk-react";
@@ -13,7 +14,11 @@ import {
  *
  * Личность пользователя здесь НЕ извлекается: auth-payload строит стор
  * из сырой строки, а подпись проверяет бэкенд (HMAC) — клиентским
- * данным не доверяем. Мок-окружения тут нет (только mockEnv.ts для dev).
+ * данным не доверяем. Мок-окружения тут нет (только mockEnv.ts для dev),
+ * но флаг «мок активен» живёт здесь: нативные UI-методы SDK
+ * (popup.show и т.п.) под mockTelegramEnv рапортуют isAvailable()=true,
+ * хотя показать диалог мок не может, — вызывающий код обязан
+ * откатываться на инлайн-UI через isTelegramMockEnv().
  */
 
 /**
@@ -51,6 +56,38 @@ export function purgeLaunchParamsCache(): void {
 /** Сигнал WebView: контент готов к показу (убирает loading-скелетон Telegram). */
 export function signalAppReady(): void {
   miniApp.ready.ifAvailable();
+}
+
+const MOCK_FLAG = "__TG_ENV_MOCKED__";
+
+/**
+ * mockEnv.ts ставит флаг при включении mockTelegramEnv (только DEV).
+ * Window-флаг, а не модульная переменная: адаптер импортируется
+ * и в тестах, где мока нет, — ложных срабатываний быть не должно.
+ */
+export function markTelegramMockEnv(): void {
+  try {
+    (window as unknown as Record<string, boolean>)[MOCK_FLAG] = true;
+  } catch {
+    // ignore: SSR — флага нет, считаемся реальным окружением
+  }
+}
+
+/**
+ * true — SDK работает на mockTelegramEnv: isAvailable() нативных
+ * UI-методов врёт (мок не рисует диалоги). Вызывающий код пропускает
+ * нативные вызовы: в dev-браузере подтверждения не нужны, действие
+ * выполняется сразу. SSR-safe: без window — false.
+ */
+export function isTelegramMockEnv(): boolean {
+  try {
+    if (typeof window === "undefined") return false;
+    return (
+      (window as unknown as Record<string, unknown>)[MOCK_FLAG] === true
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -92,6 +129,45 @@ export function buildTelegramChatUrl(username: string | undefined): string | nul
   const clean = username.trim().replace(/^@/, "").trim();
   if (clean.length === 0) return null;
   return `https://t.me/${clean}`;
+}
+
+/**
+ * Нативный confirm через popup клиента для мест, где триггер — не
+ * текстовый Button (иконки −/+, IconButton): ConfirmPopup туда не встаёт.
+ * Лимиты popup: title ≤64, message ≤256, текст кнопки ≤64.
+ *
+ * - мок (dev-браузер): true сразу — браузер dev-среда, без подтверждений;
+ * - popup доступен: системный алерт, true только по кнопке confirm
+ *   (закрытие без выбора — false);
+ * - иначе false: клиент без popup (Bot API < 6.2) — вызывающий решает сам
+ *   (как правило, ничего не делать: таких клиентов почти не осталось).
+ * Исключений нет: ошибка SDK — тоже false.
+ */
+export async function nativeConfirm(options: {
+  title: string;
+  message: string;
+  confirmText: string;
+  destructive?: boolean;
+}): Promise<boolean> {
+  try {
+    if (isTelegramMockEnv()) return true;
+    if (!popup.show.isAvailable()) return false;
+    const buttonId = await popup.show({
+      title: options.title,
+      message: options.message,
+      buttons: [
+        { id: "cancel", type: "cancel" },
+        {
+          id: "confirm",
+          type: options.destructive ? "destructive" : "default",
+          text: options.confirmText,
+        },
+      ],
+    });
+    return buttonId === "confirm";
+  } catch {
+    return false;
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
-// Рендер-тесты прод-раздела «Поездки» (TripPage → TripActivePage /
-// TripHistoryPage): сегменты Активные/История из URL (?segment=),
-// заявки водителя и guards destructive-действий, ошибки мутаций.
+// Рендер-тесты прод-раздела «Поездки» (TripPage → только TripActivePage):
+// активные, заявки водителя и guards destructive-действий, ошибки мутаций.
+// История живёт отдельно (/profile/history, TripHistoryPage.test.tsx).
 // Паттерн tripsPages.test.tsx (SSR, без testing-library).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -133,19 +133,20 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("TripPage segments", () => {
-  it("дефолт без ?segment — вкладка «Активные»", () => {
+describe("TripPage: только активные, без табов", () => {
+  it("дефолт — активные и ссылка на историю в пустом состоянии", () => {
     const html = render(<TripPage />);
-    expect(html).toContain("Активные");
-    expect(html).toContain("История");
-    // Пусто везде → подсказка с двумя путями.
+    expect(html).not.toContain("Активные");
+    // Пусто везде → подсказка с двумя путями + кнопка истории.
     expect(html).toContain("Пока тихо");
+    expect(html).toContain("История поездок");
   });
 
-  it("?segment=history — вкладка «История»", () => {
+  it("?segment=history — редирект на /profile/history (контента нет)", () => {
     const html = render(<TripPage />, "/bookings?segment=history");
-    expect(html).toContain("История");
-    expect(html).toContain("Здесь появятся завершённые и отменённые поездки.");
+    expect(html).not.toContain("Пока тихо");
+    expect(html).not.toContain("История поездок");
+    expect(html).not.toContain("Здесь появятся завершённые и отменённые поездки.");
   });
 
   it("легаси ?segment=driver ведёт в «Активные»", () => {
@@ -154,58 +155,6 @@ describe("TripPage segments", () => {
     );
     const html = render(<TripPage />, "/bookings?segment=driver");
     expect(html).toContain("Вы водитель");
-  });
-});
-
-describe("TripPage history", () => {
-  it("история: строки маршрутов с ценой, без вложенного фильтра", () => {
-    mockUseHistory.mockReturnValue(
-      queryState({
-        data: [
-          {
-            id: "h-1",
-            seat: 1,
-            status: "confirmed",
-            historyCategory: "completed",
-            trip: makeTrip({ id: "t-h1" }),
-          },
-          {
-            id: "h-2",
-            seat: 1,
-            status: "cancelled",
-            historyCategory: "cancelled",
-            trip: makeTrip({ id: "t-h2", toCity: "Сокол" }),
-          },
-        ],
-      }),
-    );
-    const html = render(<TripPage />, "/bookings?segment=history");
-    expect(html).not.toContain("Фильтр истории");
-    expect(html).toContain("Вологда");
-    expect(html).toContain("Череповец");
-    expect(html).toContain("Сокол");
-    expect(html).toContain("450");
-    // Статус текстом: completed → «Завершена», cancelled → «Отменена».
-    expect(html).toContain("Завершена");
-    expect(html).toContain("Отменена");
-  });
-
-  it("архив водителя merged в историю простыми строками", () => {
-    mockUseInfiniteMyTrips.mockReturnValue(
-      infiniteState([makeTrip({ id: "t-arch", status: "completed" })]),
-    );
-    const html = render(<TripPage />, "/bookings?segment=history");
-    // История — простые Cell без карточек и бейджа «Вы водитель».
-    expect(html).toContain("Вологда");
-    expect(html).toContain("Череповец");
-    expect(html).toContain("Завершена");
-    expect(html).not.toContain("Вы водитель");
-  });
-
-  it("пустая история — плейсхолдер", () => {
-    mockUseHistory.mockReturnValue(queryState({ data: [] }));
-    const html = render(<TripPage />, "/bookings?segment=history");
-    expect(html).toContain("Здесь появятся завершённые и отменённые поездки.");
   });
 });
 
@@ -250,16 +199,17 @@ describe("TripPage driver", () => {
     expect(html).toContain("Анна");
     // Чужая поездка отфильтрована по trip.id.
     expect(html).not.toContain("Чужой");
-    // Subline заявки: место; рейтинг — бейджем на аватаре.
+    // Subline заявки: место + комментарий (диалога-«досье» больше нет —
+    // решение принимается по строке); рейтинг — бейджем на аватаре.
     expect(html).toContain("место №1");
     expect(html).toContain("4.8");
-    expect(html).not.toContain("еду с рюкзаком");
+    expect(html).toContain("еду с рюкзаком");
     expect(html).toContain("Отклонить заявку Пётр");
     expect(html).toContain("Принять заявку Пётр");
     expect(html).not.toContain("Вы водитель");
     expect(html).not.toContain("Ожидают решения");
-    // Единый футер: Детали — поделиться — Отмена (без Управления/Завершить).
-    expect(html).toContain("Детали поездки");
+    // Единый футер: поделиться — Отмена (без Управления/Завершить;
+    // в детали ведёт тап по карточке).
     expect(html).toContain("Отменить");
     expect(html).not.toContain("Управление поездкой");
     expect(html).not.toContain("Завершить");

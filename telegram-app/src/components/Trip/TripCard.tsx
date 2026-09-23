@@ -1,10 +1,10 @@
-import { Button, IconButton } from "@telegram-apps/telegram-ui";
+import { IconButton } from "@telegram-apps/telegram-ui";
 import { Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
 import { TripStandardCard } from "@/components/Section/TripStandardCard";
 import { DriverTripRequests } from "@/components/Trip/DriverTripRequests";
-import { ConfirmAction } from "@/components/ConfirmAction";
+import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { shareTrip } from "@/helpers/tripShare";
 import { haptic } from "@/utils/haptics";
 import type { PassengerBooking, Trip } from "@edem/contracts";
@@ -53,8 +53,9 @@ export type TripCardVariant =
  * - пассажир: Cell водителя;
  * - водитель без заявок: «Вы водитель»;
  * - водитель с заявками: строки заявок с −/+ вместо персоны.
- * Футеры: бронь — Детали/поделиться/Отмена; своя — Управление/поделиться/
- * Завершить/Отменить.
+ * Футер — группа у правого края: поделиться + «Отменить бронь»
+ * (бронь) / «Отменить поездку» (своя).
+ * В детали ведёт тап по самой карточке (onOpen) — отдельной кнопки нет.
  */
 export function TripCard({ variant }: { variant: TripCardVariant }) {
   const navigate = useNavigate();
@@ -92,19 +93,9 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
           navigate(`/trips/${id}`);
         }}
         footer={
-          <>
-            <Button
-              size="s"
-              mode="bezeled"
-              className={styles.grow}
-              onClick={(event) => {
-                event.stopPropagation();
-                haptic.light();
-                navigate(`/trips/${booking.trip.id}`);
-              }}
-            >
-              Детали поездки
-            </Button>
+          // Группа действий у правого края: поделиться + отмена.
+          // Всплытие гасят сами кнопки — обёртка с onClick запрещена jsx-a11y.
+          <div className={styles.footerEnd}>
             <IconButton
               size="s"
               mode="plain"
@@ -120,17 +111,19 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
             </IconButton>
             {(booking.status === "pending" ||
               booking.status === "confirmed") && (
-              <ConfirmAction
-                label="Отменить"
-                confirmLabel="Отменить бронь"
-                description="Заявка будет отменена, а место снова станет доступно."
-                pending={cancelPending}
-                mode="plain"
-                destructive
-                onConfirm={() => onCancel(booking.id)}
-              />
+              <div className={styles.cancelRight}>
+                <ConfirmPopup
+                  label="Отменить бронь"
+                  confirmLabel="Отменить бронь"
+                  description="Заявка будет отменена, а место снова станет доступно."
+                  pending={cancelPending}
+                  destructive
+                  actionsEnd
+                  onConfirm={() => onCancel(booking.id)}
+                />
+              </div>
             )}
-          </>
+          </div>
         }
       />
     );
@@ -139,8 +132,8 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
   const { trip, driverRating, onCancel, cancelPending } = variant;
   const status = tripStatusLabel(trip);
   const pending = trip.pendingRequestsCount ?? 0;
-  // Футер одинаковый для обеих ролей: Детали — поделиться — Отмена.
-  // Завершить/управление живут в деталях поездки.
+  // Футер одинаковый для обеих ролей: поделиться + отмена у правого края.
+  // Завершить/управление живут в деталях поездки (тап по карточке).
   return (
     <TripStandardCard
       tripId={trip.id}
@@ -165,22 +158,9 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
         navigate(`/trips/${id}`);
       }}
       footer={
-        // Всплытие гасят сами кнопки (Button/IconButton/ConfirmAction) —
-        // обёртка с onClick запрещена jsx-a11y (см. ConfirmAction.stop).
-        <div className={styles.actions}>
-          <div className={styles.btnRow}>
-            <Button
-              size="s"
-              mode="bezeled"
-              className={styles.grow}
-              onClick={(event) => {
-                event.stopPropagation();
-                haptic.light();
-                navigate(`/trips/${trip.id}`);
-              }}
-            >
-              Детали поездки
-            </Button>
+          // Группа действий у правого края: поделиться + отмена.
+          // Всплытие гасят сами кнопки — обёртка с onClick запрещена jsx-a11y.
+        <div className={styles.footerEnd}>
             <IconButton
               size="s"
               mode="plain"
@@ -194,16 +174,17 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
             >
               <Share2 size={15} />
             </IconButton>
-            <ConfirmAction
-              label="Отменить"
-              confirmLabel="Отменить поездку"
-              description="Поездка станет недоступна, а пассажиры получат уведомление."
-              pending={cancelPending}
-              mode="plain"
-              destructive
-              onConfirm={() => onCancel(trip.id)}
-            />
-          </div>
+            <div className={styles.cancelRight}>
+              <ConfirmPopup
+                label="Отменить поездку"
+                confirmLabel="Отменить поездку"
+                description="Поездка станет недоступна, а пассажиры получат уведомление."
+                pending={cancelPending}
+                destructive
+                actionsEnd
+                onConfirm={() => onCancel(trip.id)}
+              />
+            </div>
         </div>
       }
     />

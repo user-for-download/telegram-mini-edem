@@ -50,7 +50,7 @@ export const START_PARAM_ROUTES: Readonly<Record<string, string>> = {
   create: "/trips/my/new",
   new: "/trips/my/new",
   bookings: "/bookings",
-  history: "/bookings?segment=history",
+  history: "/profile/history",
   my_trips: "/bookings?segment=driver",
   profile: "/profile",
   reviews: "/reviews",

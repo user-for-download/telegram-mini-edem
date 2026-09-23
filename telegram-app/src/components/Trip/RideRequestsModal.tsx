@@ -16,7 +16,7 @@ import {
   SheetTitle,
   useSheetTitleId,
 } from "@/components/SheetTitle/SheetTitle";
-import { ConfirmAction } from "@/components/ConfirmAction";
+import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SearchPage } from "@/pages/Search/SearchPage";
@@ -534,11 +534,12 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                           Редактировать
                         </Button>
                         <span className={styles.contentsBtn}>
-                          <ConfirmAction
+                          <ConfirmPopup
                             label="Отменить запрос"
                             confirmLabel="Отменить запрос"
                             description="Запрос будет снят с публикации."
                             pending={cancel.isPending}
+                            destructive
                             onConfirm={() => cancel.mutate(request.id)}
                           />
                         </span>

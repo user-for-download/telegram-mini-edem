@@ -7,6 +7,7 @@ export function QueryState({
   error,
   empty,
   emptyText,
+  emptyAction,
   skeleton,
   onRetry,
   children,
@@ -15,6 +16,8 @@ export function QueryState({
   error: unknown;
   empty: boolean;
   emptyText: string;
+  /** Действие под пустым состоянием (например, ссылка на историю). */
+  emptyAction?: React.ReactNode;
   /** Скелетон tgui Skeleton для списков; без него — Spinner. */
   skeleton?: React.ReactNode;
   onRetry: () => void;
@@ -44,6 +47,11 @@ export function QueryState({
       </Placeholder>
     );
   }
-  if (empty) return <Placeholder header="Пока пусто" description={emptyText} />;
+  if (empty)
+    return (
+      <Placeholder header="Пока пусто" description={emptyText}>
+        {emptyAction}
+      </Placeholder>
+    );
   return <>{children}</>;
 }

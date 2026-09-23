@@ -128,6 +128,25 @@
   color: var(--tg-theme-destructive-text-color);
 }
 
+/* Деструктив как Delete My Account официалки: красная текст-строка
+ * влево, без фона кнопки (ConfirmPopup mode="plain" со stretched кита —
+ * stretched снимаем удвоенным селектором, без !important). */
+.dangerDelete.dangerDelete {
+  display: flex;
+}
+
+.dangerDelete.dangerDelete button {
+  width: auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Хинт последствий под кнопкой удаления (у официалки — хедер экрана
+ * подтверждения; у нас подтверждение — нативный алерт). */
+.dangerHint {
+  color: var(--tgui--hint_color);
+}
+
 /* Вкладка «Отзывы»: вертикальная колонка. */
 .reviews {
   display: flex;

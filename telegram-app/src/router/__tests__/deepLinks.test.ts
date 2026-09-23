@@ -9,15 +9,15 @@ import {
 const UUID = "123e4567-e89b-12d3-a456-426614174000";
 
 // Маршруты ниже обязаны существовать в AppRouter (Routes):
-// /trips, /trips/:tripId, /trips/my/new, /bookings (+?segment=), /profile, /reviews,
-// /settings, /notifications, /profile/support.
+// /trips, /trips/:tripId, /trips/my/new, /bookings, /profile,
+// /profile/history, /reviews, /settings, /notifications, /profile/support.
 const KNOWN_ROUTES = new Set([
   "/trips",
   "/trips/my/new",
   "/bookings",
-  "/bookings?segment=history",
   "/bookings?segment=driver",
   "/profile",
+  "/profile/history",
   "/reviews",
   "/profile/support",
   "/notifications",
@@ -54,7 +54,7 @@ describe("parseTripStartParam", () => {
 describe("START_PARAM_ROUTES (контракт)", () => {
   it("ведёт на существующие маршруты AppRouter", () => {
     expect(START_PARAM_ROUTES["bookings"]).toBe("/bookings");
-    expect(START_PARAM_ROUTES["history"]).toBe("/bookings?segment=history");
+    expect(START_PARAM_ROUTES["history"]).toBe("/profile/history");
     expect(START_PARAM_ROUTES["my_trips"]).toBe("/bookings?segment=driver");
     expect(START_PARAM_ROUTES["profile"]).toBe("/profile");
     expect(START_PARAM_ROUTES["reviews"]).toBe("/reviews");
@@ -78,7 +78,7 @@ describe("resolveStartParamRoute", () => {
   });
 
   it("section-токены ведут на свои разделы", () => {
-    expect(resolveStartParamRoute("bookings")).toBe("/bookings");    expect(resolveStartParamRoute("history")).toBe("/bookings?segment=history");
+    expect(resolveStartParamRoute("bookings")).toBe("/bookings");    expect(resolveStartParamRoute("history")).toBe("/profile/history");
     expect(resolveStartParamRoute("profile")).toBe("/profile");
     expect(resolveStartParamRoute("reviews")).toBe("/reviews");
     expect(resolveStartParamRoute("support")).toBe("/profile/support");
