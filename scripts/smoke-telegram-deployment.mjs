@@ -6,6 +6,8 @@
 //
 // Дефолты — локальный dev-стенд; Host-роутинг требует TELEGRAM_HOSTS с TG_HOST
 // на сервере, иначе шаг честно падает (это и проверяется).
+import { request as httpRequest } from "node:http";
+
 const BACKEND_URL = process.env.BACKEND_URL || "http://127.0.0.1:3011";
 const TG_HOST = process.env.TG_HOST || "";
 
@@ -21,6 +23,38 @@ async function get(path, { host } = {}) {
   });
   const text = await res.text();
   return { status: res.status, text };
+}
+
+/**
+ * GET с НАСТОЯЩИМ заголовком Host. fetch/undici выбрасывает Host как
+ * forbidden header из fetch-спеки: запрос уходит с Host из URL и Host-роутинг
+ * (TELEGRAM_HOSTS) проверить нельзя — шаг 3 ложно падал 404 на корректном
+ * стенде. node:http заголовок отправляет как есть: соединение — на адрес
+ * стенда, Host — целевого домена.
+ */
+function getWithHost(path, host) {
+  const url = new URL(`${BACKEND_URL}${path}`);
+  return new Promise((resolve, reject) => {
+    const req = httpRequest(
+      {
+        hostname: url.hostname,
+        port: url.port || 80,
+        path: url.pathname,
+        method: "GET",
+        headers: { Host: host },
+      },
+      (res) => {
+        let text = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => {
+          text += chunk;
+        });
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, text }));
+      }
+    );
+    req.on("error", reject);
+    req.end();
+  });
 }
 
 let failed = 0;
@@ -47,15 +81,17 @@ try {
   fail("health/ready 200 (db+migrations)", `unreachable: ${e.message}`);
 }
 
-// 3. Telegram host serving: index.html TG-стенда отличается от VK (Telegram-специфика).
+// 3. Telegram host serving: index.html TG-стенда отличается от веб-версии:
+// meta viewport с viewport-fit=cover обязателен для safe-area Telegram-вебвью
+// (в webapp/index.html его нет). Латинских «telegram»-маркеров в TG-HTML не
+// бывает — заголовок и тексты русские, поэтому прежняя проверка по строкам
+// «telegram»/«tgWebApp» давала ложный red даже на верном Host-роутинге.
 if (!TG_HOST) {
   fail("telegram host assets", "TG_HOST is not set — Host routing cannot be verified");
 } else {
   try {
-    const { status, text } = await get("/", { host: TG_HOST });
-    const looksTelegram =
-      status === 200 &&
-      (text.includes("telegram") || text.includes("Telegram") || text.includes("tgWebApp"));
+    const { status, text } = await getWithHost("/", TG_HOST);
+    const looksTelegram = status === 200 && text.includes("viewport-fit=cover");
     if (looksTelegram) check("telegram host assets", true, TG_HOST);
     else fail("telegram host assets", `HTTP ${status}, no Telegram markers (TELEGRAM_HOSTS on server?)`);
   } catch (e) {
