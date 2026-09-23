@@ -24,13 +24,6 @@ const TABS = [
   { key: "profile", text: "Профиль", to: "/profile", Icon: User },
 ] as const;
 
-const SEARCH_TAB = {
-  key: "search",
-  text: "Поиск",
-  to: "/trips",
-  Icon: Search,
-} as const;
-
 function go(
   activeTab: AppTabId,
   key: AppTabId,
@@ -43,60 +36,65 @@ function go(
 }
 
 /**
- * Нативный Tabbar из @telegram-apps/telegram-ui: все 5 разделов (включая
- * Поиск) в единой панели — как в официальном клиенте Telegram. Стили
- * пилюли — Tabbar.module.css (без Tailwind), safe-area, цвета темы
- * и selected-состояние — нативные. Route-driven: активный таб
- * определяет роутер, компонент только рендерит и отдаёт выбор наружу.
- * Бейдж непрочитанных — пропом (счётчик считает роутер из кэша inbox).
- * a11y: Tabbar.Item не несёт tab-семантики, поэтому счётчик дублируем
- * в aria-label кнопки (иначе скринридер его не объявит).
+ * Нижний док как у официального клиента (TabBarUI/TabBarContollerNode +
+ * TabBarComponent): пилюля 64px на 4 раздела + detached-круг поиска 64px
+ * (barHeight 56 + innerInset 2x4, зазор 8px). TGUI Tabbar всегда рендерит
+ * свой FixedLayout, поэтому ряд — свой fixed-контейнер, а Tabbar.Item
+ * используются standalone (это обычные кнопки, fixed им не нужен).
+ * Иконки 28px uniform stroke 2, активный — link_color (синий Telegram),
+ * неактивные — text_color. Бейдж непрочитанных — пропом.
+ * a11y: nav-landmark «Разделы», счётчик дублируем в aria-label кнопки.
  */
 export function TabsBar({
   activeTab,
   onSelect,
   unreadCount = 0,
 }: TabsBarProps) {
-  const items = [...TABS, SEARCH_TAB];
+  const searchSelected = activeTab === "search";
 
   return (
-    /* Tabbar сам рендерит FixedLayout (vertical=bottom по умолчанию) —
-       своя обёртка не нужна: двойной fixed давал наложение. Пилюля:
-       скругление + боковые отступы, снизу — реальный инсет Телеграма
-       (env() в WebView равен 0). overflow-hidden чтобы фоны айтемов
-       не торчали из скруглённых углов. */
-    <Tabbar className={`${styles.fixed} ${styles.tabbar}`}>
-      {items.map(({ key, text, to, Icon }) => {
-        const selected = activeTab === key;
-        const showBadge = key === "notifications" && unreadCount > 0;
+    <div className={styles.dock}>
+      <nav aria-label="Разделы" className={styles.tabbar}>
+        {TABS.map(({ key, text, to, Icon }) => {
+          const selected = activeTab === key;
+          const showBadge = key === "notifications" && unreadCount > 0;
 
-        return (
-          <Tabbar.Item
-            key={key}
-            selected={selected}
-            text={text}
-            aria-label={
-              showBadge ? `${text}, непрочитанных: ${unreadCount}` : text
-            }
-            onClick={() => go(activeTab, key, to, onSelect)}
-          >
-            {/* relative-обёртка для позиционирования Badge поверх иконки */}
-            <span className={styles.iconWrap}>
-              <Icon size={28} strokeWidth={selected ? 2.2 : 1.8} />
-              {showBadge && (
-                <Badge
-                  type="number"
-                  mode="critical"
-                  aria-hidden="true"
-                  className={styles.badge}
-                >
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </Badge>
-              )}
-            </span>
-          </Tabbar.Item>
-        );
-      })}
-    </Tabbar>
+          return (
+            <Tabbar.Item
+              key={key}
+              selected={selected}
+              text={text}
+              aria-label={
+                showBadge ? `${text}, непрочитанных: ${unreadCount}` : text
+              }
+              onClick={() => go(activeTab, key, to, onSelect)}
+            >
+              {/* relative-обёртка для позиционирования Badge поверх иконки */}
+              <span className={styles.iconWrap}>
+                <Icon size={28} strokeWidth={2} />
+                {showBadge && (
+                  <Badge
+                    type="number"
+                    mode="critical"
+                    aria-hidden="true"
+                    className={styles.badge}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Badge>
+                )}
+              </span>
+            </Tabbar.Item>
+          );
+        })}
+      </nav>
+      <button
+        type="button"
+        aria-label="Поиск"
+        className={`${styles.search} ${searchSelected ? styles.searchSelected : ""}`}
+        onClick={() => go(activeTab, "search", "/trips", onSelect)}
+      >
+        <Search size={28} strokeWidth={2} />
+      </button>
+    </div>
   );
 }

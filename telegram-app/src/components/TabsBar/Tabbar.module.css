@@ -1,38 +1,98 @@
-/* Плавающий нижний тапбар-пилюля: геометрия и отступы здесь,
-   интерактив и selected-состояния — нативные (TGUI Tabbar). Цвета и
-   шрифты только из токенов --tgui--* / --tg-theme-*, чтобы жила тема
-   клиента (light/dark). */
+/* Нижний док как у официального клиента (TabBarUI/TabBarContollerNode +
+ * TelegramUI/Components/TabBarComponent): пилюля 64px (item 56 +
+ * innerInset 2x4) + detached-круг поиска, зазор 8px, боковые врезки 12px,
+ * нижняя max(системная, TG-инсет, 8px). Цвета только из токенов
+ * --tgui--* / --tg-theme-*, тема клиента (light/dark). */
 
-.fixed {
+/* Собственный fixed-ряд: TGUI Tabbar всегда рендерит свой FixedLayout,
+ * два таких в ряд не встанут — позиционированием владеет док. */
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 2;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  /* Боковые врезки (landscape-фуллскрин): панели Telegram по бокам. */
+  padding-left: max(var(--tg-safe-area-left, 0px), 12px);
+  padding-right: max(var(--tg-safe-area-right, 0px), 12px);
+  /* Фуллскрин: док не должен налипать на системную навигационную
+   * полосу/жест — max(системная врезка, врезка UI Telegram, 8px). */
+  padding-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-bottom, 0px),
+    8px
+  );
 }
 
-.tabbar.tabbar {
-  /* Боковые врезки (landscape-фуллскрин): панели Telegram по бокам. */
-  margin-left: max(var(--tg-safe-area-left, 0px), 16px);
-  margin-right: max(var(--tg-safe-area-right, 0px), 16px);
-  /* Фуллскрин: пилюля не должна налипать на системную навигационную
-   * полосу/жест — max(системная врезка, врезка UI Telegram). */
-  margin-bottom: max(
-    env(safe-area-inset-bottom, 0px),
-    var(--tg-safe-area-bottom, 0px)
-  );
-  border-radius: 28px;
+/* Пилюля 4 разделов: почти opaque primary surface (в light — белая
+ * на сером фоне страницы, как у клиента) + блюр для глубины. */
+.tabbar {
+  flex: 1;
+  display: flex;
+  min-height: 64px;
+  border-radius: 32px;
   overflow: hidden;
-  background: var(--tgui--secondary_bg_color);
-  /* Прозрачная пилюля, как таббар оригинального клиента: блюр + 78%
-     фона, контент под пилюлей заметно просвечивает. Двойной селектор
-     бьёт нативный фон surface_primary и его верхнюю hairline
-     (box-shadow 0 -1px 0) — она торчала прямой линией над скруглённой
-     пилюлей и давала наложение. */
   background: color-mix(
     in srgb,
-    var(--tgui--secondary_bg_color) 78%,
+    var(--tgui--surface_primary, var(--tgui--bg_color, #fff)) 90%,
     transparent
   );
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  box-shadow: 0 8px 28px rgb(0 0 0 / 0.16);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
+}
+
+/* Detached-круг поиска: фиксированные 64x64 как у клиента (barHeight).
+ * Без aspect-ratio: связка aspect-ratio + stretch сплющивается
+ * в Safari/WebView — явный размер детерминирован везде. */
+.search {
+  flex: none;
+  align-self: center;
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--tgui--text_color, var(--tg-theme-text-color, #000));
+  background: color-mix(
+    in srgb,
+    var(--tgui--surface_primary, var(--tgui--bg_color, #fff)) 90%,
+    transparent
+  );
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
+}
+
+.searchSelected {
+  color: var(--tgui--link_color, #3390ec);
+}
+
+/* Цвета айтемов как у клиента: неактивные — primary text (у TGUI тут
+ * secondary_hint/серый), активный — link_color (синий). Хэши классов из
+ * @telegram-apps/telegram-ui@2.1.13 (pinned) — при bump версии сверить
+ * в dist/styles.css. Порядок важен: selected-правило ниже, специфичность
+ * равная — иначе базовое перебьёт синий активный таб. */
+.tabbar :global(.tgui-64cd0db020a9bacf) {
+  color: var(--tgui--text_color, var(--tg-theme-text-color, #000));
+}
+
+.tabbar :global(.tgui-e6658d0b8927f95e) {
+  color: var(--tgui--link_color, #3390ec);
+}
+
+/* Нативная подложка иконок TGUI (залитый скруглённый чип secondary_fill):
+ * у таббара клиента иконки plain, без чипа. */
+.tabbar :global(.tgui-44d48e11585af170) {
+  background: transparent;
+  min-width: 0;
 }
 
 .iconWrap {
