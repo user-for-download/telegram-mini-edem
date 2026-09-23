@@ -81,3 +81,27 @@
   gap: var(--app-space-sm);
 }
 
+/* ── Карточка (ui/Card) ─────────────────────────────────────────────
+ * Поверхность байт-в-байт прежняя (рецепт FeedCard, который копировался
+ * по ~11 модулям): radius 16, hairline --tgui--outline, shadow-xs,
+ * фон --tgui--section_bg_color. Здесь — единственный источник правила.
+ * Раскладку (gap/flex/строку) не задаём: её держит вызывающий. */
+.card.card {
+  border-radius: var(--app-card-radius);
+  border: var(--tgui--border--width, 1px) solid var(--tgui--outline);
+  background: var(--tgui--section_bg_color);
+  box-shadow: var(--app-card-shadow);
+}
+
+.cardDefault {
+  padding: var(--app-card-pad);
+}
+
+.cardCompact {
+  padding: var(--app-space-sm);
+}
+
+.cardFlush {
+  padding: 0;
+}
+

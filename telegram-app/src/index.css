@@ -150,8 +150,12 @@
   --app-section-pad: var(--app-space-md);
   --app-sheet-pad-top: var(--app-space-sm);
   --app-sheet-pad-bottom: var(--app-space-xl);
+  /* Карточка (ui/Card): паддинг тела и геометрия поверхности. */
   --app-card-radius: 16px;
   --app-card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  --app-card-pad: var(--app-space-md);
+  --app-radius-md: 12px;
+  --app-radius-pill: 999px;
 }
 
 .dark {
