@@ -2,6 +2,7 @@ import { Button, Caption } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
 import { TripCard } from "@/components/Trip/TripCard";
 import { QueryState } from "@/components/QueryState";
+import { Stack } from "@/ui/Stack";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
@@ -75,7 +76,7 @@ export function TripActivePage() {
           void driverActive.refetch();
         }}
       >
-      <div className={styles.list}>
+      <Stack>
         {activeBookings.map((booking) => (
           <TripCard
             key={booking.id}
@@ -125,13 +126,12 @@ export function TripActivePage() {
               className={styles.sentinel}
             />
             {driverActive.isFetchingNextPage && (
-              <div
+              <Stack
                 role="status"
                 aria-label="Загрузка ещё поездок"
-                className={styles.list}
               >
                 <TripCardSkeleton />
-              </div>
+              </Stack>
             )}
             <Button
               stretched
@@ -154,7 +154,7 @@ export function TripActivePage() {
         >
           + Создать поездку
         </Button>
-      </div>
+      </Stack>
     </QueryState>
   </>
 );

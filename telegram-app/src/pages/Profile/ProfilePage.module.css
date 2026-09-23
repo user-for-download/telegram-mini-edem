@@ -1,21 +1,7 @@
-/* Профиль (ProfilePage): раскладка без Tailwind (миграция
- * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы
- * — бока 16px, вертикаль 16px между блоками. */
-
-.wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 4px 16px 16px;
-}
-
-/* Тело Section-карточки: колонка с зазором 12px (было p-4). */
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-}
+/* Профиль (ProfilePage): локальные роли ниже уровня секции.
+ * Каркас экрана — универсальный (src/ui: Page/SectionBody/Stack/SheetBody,
+ * токены --app-* в src/index.css), поэтому отступы уровней «экран» и
+ * «тело секции» здесь не дублируются. Цвета только --tgui--* / --app-*. */
 
 /* Шапка профиля: аватар + имя/рейтинг (было gap-3.5). */
 .headerRow {
@@ -86,16 +72,6 @@
 
 .statRating {
   color: var(--app-rating);
-}
-
-/* Список меню-секций внутри tgui List: снимаем паддинг кита (было
- * Tailwind p-0!) и раскладываем секции колонкой. Удвоение селектора —
- * канон вместо !important: неслойный module.css бьёт слой tgui. */
-.list.list {
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 /* Колонка строк внутри секции (было gap-2). */

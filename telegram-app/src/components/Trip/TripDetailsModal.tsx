@@ -6,7 +6,7 @@ import {
   SheetTitle,
   useSheetTitleId,
 } from "@/components/SheetTitle/SheetTitle";
-import styles from "./TripModals.module.css";
+import { SheetBody } from "@/ui/SheetBody";
 
 /**
  * Детали поездки — route-backed шторка поверх «Поиска»;
@@ -31,10 +31,10 @@ export function TripDetailsModal({
       header={<Modal.Header>Детали поездки</Modal.Header>}
       aria-labelledby={titleId}
     >
-      <div className={styles.sheetBodyPlain}>
+      <SheetBody>
         <SheetTitle titleId={titleId}>Детали поездки</SheetTitle>
         <TripDetailsPage />
-      </div>
+      </SheetBody>
     </Modal>
   );
 }

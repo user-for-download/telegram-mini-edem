@@ -12,6 +12,7 @@ import { ConfirmAction } from "@/components/ConfirmAction";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { haptic } from "@/utils/haptics";
 import { QueryState } from "@/components/QueryState";
+import { SheetBody } from "@/ui/SheetBody";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import {
   useRemoveVehicleMutation,
@@ -56,10 +57,10 @@ export function VehicleModal({
       header={<Modal.Header>Автомобиль</Modal.Header>}
       aria-labelledby={titleId}
     >
-      <div className={styles.sheetBody}>
+      <SheetBody>
         <SheetTitle titleId={titleId}>Автомобиль</SheetTitle>
         <VehicleBody onDone={onClose} />
-      </div>
+      </SheetBody>
     </Modal>
   );
 }

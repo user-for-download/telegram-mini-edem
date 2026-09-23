@@ -7,7 +7,6 @@ import {
   Cell,
   Headline,
   IconContainer,
-  List,
   Placeholder,
   Section,
   SegmentedControl,
@@ -31,6 +30,9 @@ import { ConfirmAction } from "@/components/ConfirmAction";
 import { QueryState } from "@/components/QueryState";
 import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
 import { FeedbackModal } from "@/components/Profile/FeedbackModal";
+import { Page } from "@/ui/Page";
+import { SectionBody } from "@/ui/SectionBody";
+import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -187,17 +189,21 @@ export function ProfilePage() {
   if (profile.error instanceof ApiError && profile.error.status === 403) {
     if (profile.error.message === "Account is deleted") {
       return (
+        <Page>
         <Placeholder
           header="Профиль удалён"
           description="Аккаунт анонимизирован. Поездки и отзывы сохранены без вашего имени. Восстановление невозможно."
         />
+        </Page>
       );
     }
     return (
+      <Page>
       <Placeholder
         header="Аккаунт заблокирован"
         description="Действие недоступно: аккаунт заблокирован. Обжалование пока недоступно в Telegram."
       />
+      </Page>
     );
   }
 
@@ -218,10 +224,10 @@ export function ProfilePage() {
         onRetry={() => void profile.refetch()}
       >
         {profile.data && (
-          <div className={styles.wrap}>
+          <Page>
             {/* Шапка профиля: поверхность — Section без заголовка. */}
             <Section>
-              <div className={styles.panel}>
+              <SectionBody>
                 <div className={styles.headerRow}>
                   <Avatar
                     size={48}
@@ -312,7 +318,7 @@ export function ProfilePage() {
                     Редактировать профиль
                   </Button>
                 )}
-              </div>
+              </SectionBody>
             </Section>
 
             {/* Субтабы: Настройки и авто / Отзывы */}
@@ -338,7 +344,7 @@ export function ProfilePage() {
             </div>
 
             {subtab === "settings" ? (
-              <List className={styles.list}>
+              <Stack>
                 <Section header="Мой автомобиль (для поездок)">
                   <MenuRow
                     label={
@@ -495,7 +501,7 @@ export function ProfilePage() {
                     onConfirm={() => remove.mutate()}
                   />
                 </div>
-              </List>
+              </Stack>
             ) : (
               <div className={styles.reviews}>
                 <div className={styles.reviewNotice}>
@@ -537,7 +543,7 @@ export function ProfilePage() {
                 </QueryState>
               </div>
             )}
-          </div>
+          </Page>
         )}
       </QueryState>
       <FeedbackModal

@@ -13,6 +13,8 @@ import {
   SheetTitle,
   useSheetTitleId,
 } from "@/components/SheetTitle/SheetTitle";
+import { SheetBody } from "@/ui/SheetBody";
+import { Stack } from "@/ui/Stack";
 import styles from "./RequestConfirmDialog.module.css";
 
 export type { DriverBookingAction };
@@ -54,7 +56,7 @@ export function RequestConfirmDialog({
       header={<Modal.Header>{title}</Modal.Header>}
       aria-labelledby={titleId}
     >
-      <div className={styles.body}>
+      <SheetBody>
         <SheetTitle titleId={titleId}>{title}</SheetTitle>
         <RequestConfirmBody
           booking={booking}
@@ -63,7 +65,7 @@ export function RequestConfirmDialog({
           onClose={onClose}
           onConfirm={onConfirm}
         />
-      </div>
+      </SheetBody>
     </Modal>
   );
 }
@@ -84,7 +86,7 @@ export function RequestConfirmBody({
 }) {
   const comment = booking.comment?.trim() ? booking.comment : "Без комментария";
   return (
-    <div className={styles.form}>
+    <Stack>
       <Cell
         className={styles.person}
         before={
@@ -132,6 +134,6 @@ export function RequestConfirmBody({
       >
         Назад
       </Button>
-    </div>
+    </Stack>
   );
 }

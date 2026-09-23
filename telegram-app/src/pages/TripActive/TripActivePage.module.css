@@ -1,15 +1,9 @@
-/* Активные поездки: лента с боками 8 (карточки без внешних боковых),
- * вертикаль — gap. */
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 0 8px;
-}
+/* Активные поездки: лента карточек.
+ * Боковые отступы держит корень экрана (ui/Page, рельс 16), вертикаль —
+ * Stack (токен --app-space-sm), поэтому у ленты своих отступов нет. */
 
 .alert {
   color: var(--tg-theme-destructive-text-color, #ff3b30);
-  padding: 0 8px;
 }
 
 .sentinel {

@@ -10,6 +10,8 @@ import { ArrowLeft, Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
+import { Page } from "@/ui/Page";
+import { SectionBody } from "@/ui/SectionBody";
 import {
   useProfileQuery,
   useProfileNotificationSettingsMutation,
@@ -71,10 +73,10 @@ export function SettingsPage() {
         emptyText="Не удалось загрузить настройки."
         onRetry={() => void profile.refetch()}
       >
-        <div className={styles.wrap}>
+        <Page>
           {/* Панель тумблера: поверхность — Section без заголовка. */}
           <Section>
-            <div className={styles.panel}>
+            <SectionBody>
               <div className={styles.row}>
                 <IconContainer>
                   {enabled ? <BellRing size={18} /> : <Bell size={18} />}
@@ -123,9 +125,9 @@ export function SettingsPage() {
                   Назад в профиль
                 </Button>
               </div>
-            </div>
+            </SectionBody>
           </Section>
-        </div>
+        </Page>
       </QueryState>
     </>
   );

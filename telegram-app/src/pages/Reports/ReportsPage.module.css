@@ -1,28 +1,8 @@
 /* Жалобы (ReportsPage): раскладка без Tailwind (миграция
- * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы
- * — бока 16px, вертикаль 14px, низ 96px под таббар. */
-
-.wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 4px 16px 96px;
-}
-
-/* Тело Section: колонка с зазором 12px (было p-4). */
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-}
-
-/* Лента жалоб. */
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+ * папка/компонент). Цвета только --tgui--* / --app-*.
+ * Каркас экрана — универсальный: корень Page, тело секции SectionBody,
+ * внутренние стеки Stack (src/ui/ui.module.css). Здесь остались только
+ * локальные роли ниже уровня секции. */
 
 /* Карточка жалобы (тело FeedCard, было p-3.5). */
 .card {

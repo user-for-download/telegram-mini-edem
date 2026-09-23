@@ -19,6 +19,8 @@ import {
   SheetTitle,
   useSheetTitleId,
 } from "@/components/SheetTitle/SheetTitle";
+import { SheetBody } from "@/ui/SheetBody";
+import { Stack } from "@/ui/Stack";
 import styles from "./ProfileModals.module.css";
 
 /**
@@ -49,10 +51,10 @@ export function SettingsModal({
       header={<Modal.Header>Настройки</Modal.Header>}
       aria-labelledby={titleId}
     >
-      <div className={styles.sheetBody}>
+      <SheetBody>
         <SheetTitle titleId={titleId}>Настройки</SheetTitle>
         <SettingsBody />
-      </div>
+      </SheetBody>
     </Modal>
   );
 }
@@ -123,7 +125,7 @@ export function SettingsBody() {
         emptyText="Не удалось загрузить настройки."
         onRetry={() => void profile.refetch()}
       >
-        <div className={styles.stackSettings}>
+        <Stack className={styles.stackSettings}>
           <div className={styles.card}>
             <div className={styles.row}>
               <IconContainer>
@@ -169,7 +171,7 @@ export function SettingsBody() {
               Открыть уведомления
             </Button>
           </div>
-        </div>
+        </Stack>
       </QueryState>
     </>
   );

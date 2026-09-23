@@ -26,6 +26,8 @@ import { MutationError } from "@/components/MutationError";
 import { CityPickerField } from "@/components/CityPicker/CityPickerField";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { useToast } from "@/components/Toast/ToastProvider";
+import { Page } from "@/ui/Page";
+import { SectionBody } from "@/ui/SectionBody";
 import { TRIP_TAGS } from "@/consts/tags";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
@@ -232,9 +234,9 @@ export function CreateTripForm({
     return (
       <>
         <OfflineBanner />
-        <div className={styles.wrap}>
+        <Page>
           <Section header="Нужен автомобиль">
-            <div className={styles.panel}>
+            <SectionBody>
               <Caption Component="p" className={styles.prose}>
                 Чтобы публиковать поездки, сначала добавьте автомобиль в
                 профиле.
@@ -250,9 +252,9 @@ export function CreateTripForm({
               >
                 Добавить автомобиль
               </Button>
-            </div>
+            </SectionBody>
           </Section>
-        </div>
+        </Page>
       </>
     );
   }
@@ -260,9 +262,9 @@ export function CreateTripForm({
   return (
     <>
       <OfflineBanner />
-      <div className={styles.wrap}>
+      <Page>
         <Section header="Маршрут">
-          <div className={styles.panel}>
+          <SectionBody>
             <div className={styles.cityFields}>
               <CityPickerField
                 id="create-from"
@@ -353,11 +355,11 @@ export function CreateTripForm({
                 {validationError}
               </FieldError>
             </div>
-          </div>
+          </SectionBody>
         </Section>
 
         <Section header="Поездка">
-          <div className={styles.panel}>
+          <SectionBody>
             <div>
               <label htmlFor="create-date" className="sr-only">
                 Дата и время
@@ -506,14 +508,14 @@ export function CreateTripForm({
                 </FieldError>
               </div>
             </div>
-          </div>
+          </SectionBody>
         </Section>
 
         <Section
           header="Условия поездки"
           footer={`до 6 · выбрано ${tags.length}`}
         >
-          <div className={styles.panel}>
+          <SectionBody>
             <div className={styles.tagChips} role="group" aria-label="Условия поездки">
               {TRIP_TAGS.map((tag) => {
                 const checked = tags.includes(tag);
@@ -550,7 +552,7 @@ export function CreateTripForm({
                 {validationError}
               </FieldError>
             </div>
-          </div>
+          </SectionBody>
         </Section>
 
         {validationError && !errorField && (
@@ -574,7 +576,7 @@ export function CreateTripForm({
         >
           Опубликовать
         </Button>
-      </div>
+      </Page>
     </>
   );
 }

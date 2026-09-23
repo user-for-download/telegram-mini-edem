@@ -34,6 +34,8 @@ import {
   updateRideRequestDtoSchema,
   type RideRequest,
 } from "@edem/contracts";
+import { SheetBody } from "@/ui/SheetBody";
+import { Stack } from "@/ui/Stack";
 import styles from "./TripModals.module.css";
 
 function toDateTimeLocal(iso: string): string {
@@ -77,10 +79,10 @@ export function RideRequestsModal({
       header={<Modal.Header>Ищу попутку</Modal.Header>}
       aria-labelledby={titleId}
     >
-      <div className={styles.sheetBody}>
+      <SheetBody>
         <SheetTitle titleId={titleId}>Ищу попутку</SheetTitle>
         <RideRequestsBody />
-      </div>
+      </SheetBody>
     </Modal>
   );
 }
@@ -233,7 +235,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
   return (
     <section aria-label="Ищу попутку">
       <OfflineBanner />
-      <div className={styles.stackBottom}>
+      <Stack className={styles.stackBottom}>
         <div className={styles.card}>
           <Text weight="2" Component="span">
             Новый запрос
@@ -363,7 +365,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
           emptyText="Активных запросов нет."
           onRetry={() => void requests.refetch()}
         >
-          <div className={styles.list}>
+          <Stack>
             {requests.data?.map((request) => (
               <div
                 key={request.id}
@@ -546,9 +548,9 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                 )}
               </div>
             ))}
-          </div>
+          </Stack>
         </QueryState>
-      </div>
+      </Stack>
     </section>
   );
 });

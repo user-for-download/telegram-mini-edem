@@ -15,6 +15,9 @@ import { FeedCard } from "@/components/FeedCard/FeedCard";
 import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
+import { Page } from "@/ui/Page";
+import { SectionBody } from "@/ui/SectionBody";
+import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
@@ -171,20 +174,20 @@ export function ReportsPage() {
   // общей ошибки (паттерн ProfilePage; глобальные случаи закрывает AuthGate).
   if (myReports.error instanceof ApiError && myReports.error.status === 403) {
     return (
-      <>
+      <Page>
         <Placeholder
           header="Аккаунт заблокирован"
           description="Действие недоступно: аккаунт заблокирован."
         />
-      </>
+      </Page>
     );
   }
 
   return (
     <>
-      <div className={styles.wrap}>
+      <Page>
         <Section header="Сообщите о проблеме">
-          <div className={styles.panel}>
+          <SectionBody>
             <MutationError error={create.error} />
             <div>
               <label htmlFor="report-target-type" className="sr-only">
@@ -307,11 +310,11 @@ export function ReportsPage() {
             >
               {alreadyReported ? "Жалоба уже отправлена" : "Отправить жалобу"}
             </Button>
-          </div>
+          </SectionBody>
         </Section>
 
         <Section header="Мои жалобы">
-          <div className={styles.panel}>
+          <SectionBody>
             <QueryState
               loading={myReports.isLoading}
               error={myReports.error}
@@ -325,16 +328,16 @@ export function ReportsPage() {
                   description="Жалобы на поездки доступны пассажирам с бронью. На свою поездку жаловаться нельзя."
                 />
               ) : (
-                <div className={styles.list}>
+                <Stack>
                   {myReports.data.map((report) => (
                     <ReportCard key={report.id} report={report} />
                   ))}
-                </div>
+                </Stack>
               )}
             </QueryState>
-          </div>
+          </SectionBody>
         </Section>
-      </div>
+      </Page>
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom";
-import { List, TabsList } from "@telegram-apps/telegram-ui";
+import { TabsList } from "@telegram-apps/telegram-ui";
 import { haptic } from "@/utils/haptics";
+import { Page } from "@/ui/Page";
 import { TripActivePage } from "../TripActive/TripActivePage";
 import { TripHistoryPage } from "../TripHistory/TripHistoryPage";
 import styles from "./TripPage.module.css";
@@ -29,7 +30,7 @@ export function TripPage() {
   };
 
   return (
-    <List>
+    <Page>
       <TabsList className={styles.tabs}>
         {SEGMENTS.map((option) => (
           <TabsList.Item
@@ -43,6 +44,6 @@ export function TripPage() {
       </TabsList>
 
       {segment === "active" ? <TripActivePage /> : <TripHistoryPage />}
-    </List>
+    </Page>
   );
 }

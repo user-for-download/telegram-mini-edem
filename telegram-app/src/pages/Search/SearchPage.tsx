@@ -22,6 +22,9 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { QueryState } from "@/components/QueryState";
 import { TripCardsSkeleton } from "@/components/Skeletons";
 import { TripFeedCard } from "@/components/Trip/TripFeedCard";
+import { Page } from "@/ui/Page";
+import { SectionBody } from "@/ui/SectionBody";
+import { Stack } from "@/ui/Stack";
 import { TRIP_TAGS } from "@/consts/tags";
 import {
   DATE_SEGMENTS,
@@ -126,12 +129,12 @@ export function SearchPage() {
   return (
     <>
       <OfflineBanner />
-      <div className={styles.wrap}>
+      <Page>
         {/* Фильтр: поверхность — Section, заголовок — нативный.
             Чипы-действия — первой строкой тела (рядом с заголовком
             им не место: header принимает только текст). */}
         <Section header="Поиск попутных поездок">
-          <div className={styles.filtersBody}>
+          <SectionBody>
             <div className={styles.chipRow}>
               <Chip
                 mode="mono"
@@ -291,7 +294,7 @@ export function SearchPage() {
             >
               Найти
             </Button>
-          </div>
+          </SectionBody>
         </Section>
 
         <div className={styles.resultsBar}>
@@ -322,7 +325,7 @@ export function SearchPage() {
               </Button>
             </Placeholder>
           ) : (
-            <div className={styles.feed}>
+            <Stack>
               {items.map((trip) => (
                 <TripFeedCard key={trip.id} trip={trip} />
               ))}
@@ -365,10 +368,10 @@ export function SearchPage() {
                   </Button>
                 </>
               )}
-            </div>
+            </Stack>
           )}
         </QueryState>
-      </div>
+      </Page>
     </>
   );
 }

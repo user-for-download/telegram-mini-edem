@@ -15,6 +15,7 @@ export function ProfileSection() {
       <Cell
         Component="button"
         type="button"
+        className={styles.cell}
         onClick={() => {
           haptic.light();
           navigate("/profile");

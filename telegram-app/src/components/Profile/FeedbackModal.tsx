@@ -21,6 +21,7 @@ import {
 import { FEEDBACK_TEXT_MAX_LENGTH } from "@edem/contracts";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { SheetBody } from "@/ui/SheetBody";
 import styles from "./ProfileModals.module.css";
 
 const TOPICS = [
@@ -56,10 +57,10 @@ export function FeedbackModal({
       header={<Modal.Header>Служба поддержки</Modal.Header>}
       aria-labelledby={titleId}
     >
-      <div className={styles.sheetBodyStatic}>
+      <SheetBody variant="static">
         <SheetTitle titleId={titleId}>Служба поддержки</SheetTitle>
         <FeedbackForm onClose={onClose} />
-      </div>
+      </SheetBody>
     </Modal>
   );
 }

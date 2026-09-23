@@ -125,6 +125,33 @@
   --app-indigo: #4f5fd6;
   --app-indigo-bg: rgba(79, 95, 214, 0.12);
   --app-rating: #b8860b;
+
+  /* ── Шкала отступов приложения (единственный источник правды) ──────
+     Все экраны (страницы, секции, sheet-модалки) берут вертикальный и
+     боковой ритм ТОЛЬКО отсюда — см. src/ui/ui.module.css. Литералы
+     паддингов на уровнях «экран/секция/sheet» запрещены: это то, что
+     раньше давало три разных гуттера (8/16/18) и четыре `stack`-варианта.
+     Вертикальный ритм между блоками (12px) НЕ задаётся здесь явно: его
+     даёт сам кит правилом `List > :not(:last-child) { margin-bottom: 12px }`,
+     поэтому каркас экранов — всегда tgui List (универсально, см. ui/). */
+  --app-space-2xs: 4px;
+  --app-space-xs: 8px;
+  --app-space-sm: 12px;
+  --app-space-md: 16px;
+  --app-space-lg: 24px;
+  --app-space-xl: 40px;
+  /* Рельс страницы: бока и верх одинаковы на всех экранах; низ держит
+     клиренс под плавающий док таббара (Tabbar: 64px + врезка) и владеет
+     им РОВНО один узел — Page (AppShell.content больше не дублирует). */
+  --app-page-pad-top: var(--app-space-2xs);
+  --app-page-gutter: var(--app-space-md);
+  --app-page-pad-bottom: 96px;
+  /* Тело секции/карточки и sheet-модалка. */
+  --app-section-pad: var(--app-space-md);
+  --app-sheet-pad-top: var(--app-space-sm);
+  --app-sheet-pad-bottom: var(--app-space-xl);
+  --app-card-radius: 16px;
+  --app-card-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
 }
 
 .dark {

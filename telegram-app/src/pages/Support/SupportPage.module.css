@@ -1,36 +1,8 @@
 /* Поддержка (SupportPage): раскладка без Tailwind (миграция
- * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы
- * — бока 16px, вертикаль 14px, низ 96px под таббар. */
-
-.wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 4px 16px 96px;
-}
-
-/* Тело Section: колонка с зазором 12px (было p-4). */
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-}
-
-/* FAQ: аккордеоны идут плотнее — зазор 8px (было gap-2 p-4). */
-.faqPanel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-}
-
-/* Список обращений. */
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+ * папка/компонент). Цвета только --tgui--* / --app-*.
+ * Каркас экрана — универсальный: корень Page, тело секции SectionBody,
+ * внутренние стеки Stack (src/ui/ui.module.css). Здесь остались только
+ * локальные роли ниже уровня секции. */
 
 /* Тело карточки обращения: дата, текст, ответ (было gap-1.5). */
 .cardBody {

@@ -1,4 +1,4 @@
-import { Button, List, Placeholder } from "@telegram-apps/telegram-ui";
+import { Button, Placeholder } from "@telegram-apps/telegram-ui";
 import { PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PopularRoutesSection } from "@/components/Section/PopularRoutesSection";
@@ -6,7 +6,7 @@ import { ProfileSection } from "@/components/Section/ProfileSection";
 import { TripCountersSection } from "@/components/Section/TripCountersSection";
 import { TripSearchSection } from "@/components/Section/TripSearchSection";
 import { haptic } from "@/utils/haptics";
-import styles from "./HomePage.module.css";
+import { Page } from "@/ui/Page";
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ export function HomePage() {
   };
 
   return (
-    <List className={styles.list}>
+    <Page>
       <ProfileSection />
       <TripCountersSection />
       <TripSearchSection onSearch={goToSearch} />
@@ -42,6 +42,6 @@ export function HomePage() {
           </Button>
         }
       />
-    </List>
+    </Page>
   );
 }

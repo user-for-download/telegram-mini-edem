@@ -3,38 +3,14 @@
  * намеренно: одинаковая поверхность карточек, sheet-тела и списки;
  * прецедент — TripCards.module.css. Цвета только --tgui--* / --app-*;
  * в TSX остаются одноразовые утилиты Tailwind: min-h-11 (его проверяют
- * тесты) и sr-only. */
+ * тесты) и sr-only.
+ * Каркас sheet универсальный (src/ui): тело — SheetBody, стеки/списки —
+ * Stack; здесь остались только локальные роли (карточки, строки, ярлыки). */
 
-/* Тело sheet: скролл с ограничением 82dvh; outline снят, фокус ставится
- * на сам скролл-контейнер (как в отзывах). */
-.sheetBody {
-  padding: 8px 16px 40px;
-  max-height: 82dvh;
-  overflow-y: auto;
-  outline: none;
-}
-
-/* Колонка секций модалки (зазор 14px, верхний отступ 4px). */
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 4px;
-}
-
-/* То же + низ 24px (запросы попутчиков: список последний, отбиваем низ). */
+/* Низ стека «Запросы попутчиков»: отбивка списка от жестовой зоны
+ * (верх и бока держит SheetBody, ритм — Stack). */
 .stackBottom {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 4px 0 24px;
-}
-
-/* Список карточек/групп (зазор 12px). */
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  padding-bottom: var(--app-space-lg);
 }
 
 /* Заголовок группы заявок («Ожидают решения (N)»): кегль с бока 4px. */
@@ -134,14 +110,6 @@
 
 .errorText {
   color: var(--tg-theme-destructive-text-color);
-}
-
-/* Тело sheet без снятия фокус-рамки скролл-контейнера (детали поездки;
- * было px-4 pt-2 pb-10 max-h-[82dvh] overflow-y-auto). */
-.sheetBodyPlain {
-  padding: 8px 16px 40px;
-  max-height: 82dvh;
-  overflow-y: auto;
 }
 
 /* Иконочные токены: адрес отправления — синий, прибытия — зелёный,

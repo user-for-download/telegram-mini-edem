@@ -1,13 +1,8 @@
-/* Поиск (SearchPage): раскладка фильтров без Tailwind (миграция
- * папка/компонент). Цвета только --tgui--* / --app-*; сетка страницы
- * — бока 16px, вертикаль 14px между блоками. */
-
-.wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 4px 16px 96px;
-}
+/* Поиск (SearchPage): раскладка без Tailwind (миграция
+ * папка/компонент). Цвета только --tgui--* / --app-*.
+ * Каркас экрана — универсальный: корень Page, тело секции SectionBody,
+ * внутренние стеки Stack (src/ui/ui.module.css). Здесь остались только
+ * локальные роли ниже уровня секции. */
 
 /* Строка «Найдено / Цены без комиссии» — тонкая колонка с бока 4px. */
 .resultsBar {
@@ -15,14 +10,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 4px;
-}
-
-/* Тело Section фильтров: колонка с отступом 16px (как было p-4). */
-.filtersBody {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
 }
 
 /* Чипы-действия («Ищу попутку», «Фильтры»). */
@@ -66,13 +53,6 @@
 
 .tagsHead {
   color: var(--tgui--text_color);
-}
-
-/* Лента результатов: вертикальный список карточек. */
-.feed {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .tagsCol {

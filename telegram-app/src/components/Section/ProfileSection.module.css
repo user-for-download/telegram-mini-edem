@@ -1,4 +1,11 @@
 /* Компактный блок «кто»: имя + счётчик поездок без зазоров TGUI. */
+
+/* Верх первой секции Главной: корень даёт 4px + Cell ~10px = ~14px,
+ * у страниц-карточек контент стартует на 4 + 16 = 20px — дотягиваем
+ * margin-top 6px до той же линии (pinned tgui: Cell padding 10px 16px). */
+.cell {
+  margin-top: 6px;
+}
 .who {
   display: flex;
   flex-direction: column;

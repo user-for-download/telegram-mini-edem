@@ -36,6 +36,8 @@ import {
   SheetTitle,
   useSheetTitleId,
 } from "@/components/SheetTitle/SheetTitle";
+import { SheetBody } from "@/ui/SheetBody";
+import { Stack } from "@/ui/Stack";
 import styles from "./ProfileModals.module.css";
 
 export type ReviewsTab = "mine" | "new" | "about";
@@ -86,10 +88,10 @@ export function ReviewsModal({
       header={<Modal.Header>Отзывы</Modal.Header>}
       aria-labelledby={titleId}
     >
-      <div className={styles.sheetBodyEdge}>
+      <SheetBody variant="edge">
         <SheetTitle titleId={titleId}>Отзывы</SheetTitle>
         <ReviewsBody initialTab={initialTab} />
-      </div>
+      </SheetBody>
     </Modal>
   );
 }
@@ -287,7 +289,7 @@ export const ReviewsBody = memo(function ReviewsBody({
   };
 
   return (
-    <div className={styles.stackPadded}>
+    <Stack className={styles.stackPadded}>
       <div role="tablist" aria-label="Разделы отзывов">
         <SegmentedControl>
           {TABS.map((option) => (
@@ -328,11 +330,11 @@ export const ReviewsBody = memo(function ReviewsBody({
               </Button>
             </Placeholder>
           ) : (
-            <div className={styles.list}>
+            <Stack>
               {my.data.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))}
-            </div>
+            </Stack>
           )}
         </QueryState>
       )}
@@ -494,7 +496,7 @@ export const ReviewsBody = memo(function ReviewsBody({
               description="После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь"
             />
           ) : (
-            <div className={styles.list}>
+            <Stack>
               {aboutItems.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))}
@@ -510,10 +512,10 @@ export const ReviewsBody = memo(function ReviewsBody({
                   Показать ещё
                 </Button>
               )}
-            </div>
+            </Stack>
           )}
         </QueryState>
       )}
-    </div>
+    </Stack>
   );
 });

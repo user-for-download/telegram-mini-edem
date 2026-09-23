@@ -31,6 +31,8 @@ import {
   useTripBookingsQuery,
   useUpdateBookingStatusMutation,
 } from "@/queries/useBookingsQuery";
+import { SheetBody } from "@/ui/SheetBody";
+import { Stack } from "@/ui/Stack";
 import styles from "./TripModals.module.css";
 
 type TripBooking = NonNullable<
@@ -159,10 +161,10 @@ export function TripRequestsModal({
       header={<Modal.Header>Заявки пассажиров</Modal.Header>}
       aria-labelledby={titleId}
     >
-      <div className={styles.sheetBody}>
+      <SheetBody>
         <SheetTitle titleId={titleId}>Заявки пассажиров</SheetTitle>
         <TripRequestsBody tripId={tripId} />
-      </div>
+      </SheetBody>
     </Modal>
   );
 }
@@ -279,7 +281,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
   return (
     <section aria-label="Заявки пассажиров">
       <OfflineBanner />
-      <div className={styles.stack}>
+      <Stack>
         {update.error && (
           <Caption
             Component="p"
@@ -291,11 +293,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         )}
         {!items.length && <Placeholder header="Заявок нет" />}
         {pending.length > 0 && (
-          <div
-            className={styles.list}
-            aria-live="polite"
-            aria-label="Ожидают решения"
-          >
+          <Stack aria-live="polite" aria-label="Ожидают решения">
             <Caption weight="2" Component="span" className={styles.groupLabel}>
               {`Ожидают решения (${pending.length})`}
             </Caption>
@@ -314,17 +312,17 @@ export const TripRequestsBody = memo(function TripRequestsBody({
                 }}
               />
             ))}
-          </div>
+          </Stack>
         )}
         {confirmed.length > 0 && (
-          <div className={styles.list} aria-label="Подтверждены">
+          <Stack aria-label="Подтверждены">
             <Caption weight="2" Component="span" className={styles.groupLabel}>
               {`Подтверждены (${confirmed.length})`}
             </Caption>
             {confirmed.map((booking) => (
               <ConfirmedBookingCard key={booking.id} booking={booking} />
             ))}
-          </div>
+          </Stack>
         )}
         {requests.hasNextPage && (
           <Button
@@ -346,7 +344,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         >
           К моим поездкам
         </Button>
-      </div>
+      </Stack>
       {confirm && (
         <RequestConfirmDialog
           booking={confirm.booking}

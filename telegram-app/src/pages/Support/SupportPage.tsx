@@ -19,6 +19,9 @@ import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { AppealForm } from "@/components/AppealForm";
+import { Page } from "@/ui/Page";
+import { SectionBody } from "@/ui/SectionBody";
+import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
 import {
   useCreateFeedbackMutation,
@@ -171,27 +174,25 @@ export function SupportPage() {
     myFeedbacks.error.status === 403
   ) {
     return (
-      <>
+      <Page>
         <Placeholder
           header="Аккаунт заблокирован"
           description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
         />
-        <div className={styles.wrap}>
-          <Section header="Обжалование блокировки">
-            <div className={styles.panel}>
-              <AppealForm />
-            </div>
-          </Section>
-        </div>
-      </>
+        <Section header="Обжалование блокировки">
+          <SectionBody>
+            <AppealForm />
+          </SectionBody>
+        </Section>
+      </Page>
     );
   }
 
   return (
     <>
-      <div className={styles.wrap}>
+      <Page>
         <Section header="Частые вопросы">
-          <div className={styles.faqPanel}>
+          <SectionBody>
             {SUPPORT_FAQ.map((item) => {
               const isOpen = openedFaqId === item.id;
               return (
@@ -213,11 +214,11 @@ export function SupportPage() {
                 </Accordion>
               );
             })}
-          </div>
+          </SectionBody>
         </Section>
 
         <Section header="Мои обращения">
-          <div className={styles.panel}>
+          <SectionBody>
             <QueryState
               loading={myFeedbacks.isLoading}
               error={myFeedbacks.error}
@@ -235,7 +236,7 @@ export function SupportPage() {
                   </Caption>
                 </>
               ) : (
-                <div className={styles.list}>
+                <Stack>
                   {myFeedbacks.data.map((feedback) => (
                     <FeedbackCard
                       key={feedback.id}
@@ -248,14 +249,14 @@ export function SupportPage() {
                       }
                     />
                   ))}
-                </div>
+                </Stack>
               )}
             </QueryState>
-          </div>
+          </SectionBody>
         </Section>
 
         <Section header="Связаться с нами" aria-label="Связаться с нами">
-          <div className={styles.panel}>
+          <SectionBody>
             <MutationError error={create.error} />
             <div>
               <label htmlFor="support-subject" className="sr-only">
@@ -335,15 +336,15 @@ export function SupportPage() {
             >
               Отправить
             </Button>
-          </div>
+          </SectionBody>
         </Section>
 
         <Section header="Обжалование блокировки">
-          <div className={styles.panel}>
+          <SectionBody>
             <AppealForm />
-          </div>
+          </SectionBody>
         </Section>
-      </div>
+      </Page>
     </>
   );
 }

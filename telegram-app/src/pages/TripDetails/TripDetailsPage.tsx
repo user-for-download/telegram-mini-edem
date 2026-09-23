@@ -19,6 +19,7 @@ import { EditTripForm } from "@/components/Trip/EditTripForm";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { ApiError } from "@/api/client";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { Stack } from "@/ui/Stack";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
@@ -171,7 +172,7 @@ export function TripDetailsPage() {
   };
 
   return (
-    <div className={styles.stack}>
+    <Stack>
       <OfflineBanner />
 
       {hasActiveBooking && item.myBooking && (
@@ -501,7 +502,7 @@ export function TripDetailsPage() {
           trip={item}
         />
       )}
-    </div>
+    </Stack>
   );
 }
 

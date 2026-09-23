@@ -101,12 +101,10 @@ export function TripCountersSection() {
     </InlineButtons.Item>,
   ];
 
-  return (
-    // Без Card-фона: кнопки gray сами несут подложку, обёртка — только отступы.
-    <div className={styles.row}>
-      {/* children спредом: JSX считает массив одним ребёнком и ругается
-          на тип (нужен именно массив Item'ов). */}
-      <InlineButtons mode="gray" {...{ children: items }} />
-    </div>
-  );
+  // Без Card-фона: кнопки gray сами несут подложку. Внешних отступов у
+  // блока больше нет — рельс (бока 16) и вертикальный ритм (12) даёт
+  // корень экрана (ui/Page, токены --app-* в src/index.css).
+  // children спредом: JSX считает массив одним ребёнком и ругается на тип
+  // (нужен именно массив Item'ов).
+  return <InlineButtons mode="gray" {...{ children: items }} />;
 }

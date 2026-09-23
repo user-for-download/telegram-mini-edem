@@ -17,6 +17,8 @@ import {
   NotificationCardSkeleton,
   NotificationCardsSkeleton,
 } from "@/components/Skeletons";
+import { Page } from "@/ui/Page";
+import { SectionBody } from "@/ui/SectionBody";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { ApiError } from "@/api/client";
 import type { Notification } from "@edem/contracts";
@@ -162,7 +164,7 @@ export function NotificationsPage() {
   // общей ошибки (паттерн ProfilePage; глобальные случаи закрывает AuthGate).
   if (inbox.error instanceof ApiError && inbox.error.status === 403) {
     return (
-      <>
+      <Page>
         {/* Таб-страницы без визуального заголовка (как Главная/Поездки/
             Профиль/Поиск — позицию показывает таббар): h1 только для
             скринридера. */}
@@ -171,7 +173,7 @@ export function NotificationsPage() {
           header="Аккаунт заблокирован"
           description="Действие недоступно: аккаунт заблокирован."
         />
-      </>
+      </Page>
     );
   }
 
@@ -187,10 +189,10 @@ export function NotificationsPage() {
         skeleton={<NotificationCardsSkeleton />}
         onRetry={() => void inbox.refetch()}
       >
-        <div className={styles.wrap}>
+        <Page>
           {/* Инфо-панель: поверхность — Section без заголовка. */}
           <Section>
-            <div className={styles.panel}>
+            <SectionBody>
               <div className={styles.unreadRow}>
                 <BellRing size={16} className={styles.bell} />
                 <Text Component="p" aria-live="polite">
@@ -228,14 +230,14 @@ export function NotificationsPage() {
                   Прочитать все
                 </Button>
               </div>
-            </div>
+            </SectionBody>
           </Section>
 
           {/* Лента: поверхность — Section без заголовка (шаблон групп:
             TripRequests, популярные). Пустое состояние — тексты прямо
             на поверхности, карточки хранят свой хром (фаза 2). */}
           <Section>
-            <div className={styles.panel}>
+            <SectionBody>
               {items.length === 0 ? (
                 <>
                   <Text weight="2" Component="p" className={styles.emptyText}>
@@ -288,9 +290,9 @@ export function NotificationsPage() {
                   )}
                 </>
               )}
-            </div>
+            </SectionBody>
           </Section>
-        </div>
+        </Page>
       </QueryState>
     </>
   );

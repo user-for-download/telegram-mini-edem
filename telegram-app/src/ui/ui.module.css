@@ -1,0 +1,83 @@
+/* Универсальный каркас экранов (src/ui/*): единственное место, где
+ * заданы отступы уровней «экран → секция → sheet».
+ *
+ * Механика одна на всё приложение: корень — tgui List, а вертикальный
+ * ритм между блоками даёт правило кита
+ * `.tgui-… > :not(:last-child) { margin-bottom: 12px }`.
+ * Поэтому здесь ТОЛЬКО паддинги: `display:flex` + `gap` не ставим —
+ * иначе ритм удвоится (margin кита + gap).
+ *
+ * Модуль неслойный → бьёт слой `tgui` без !important и без удвоения
+ * селекторов (канон репозитория: AppShell/FeedCard). Побочный эффект —
+ * платформенный паддинг List (на iOS кит добавляет `padding: 10px 18px`)
+ * гасится здесь централизованно, а не в каждой странице. */
+
+/* Корень экрана: верх 4, бока 16, низ — клиренс под таббар. */
+.page {
+  padding: var(--app-page-pad-top) var(--app-page-gutter)
+    var(--app-page-pad-bottom);
+}
+
+/* Ритм страницы задаём САМИ, а не «как решит кит»: правило
+ * `List > :not(:last-child)` у кита уже есть, но его 12px — не наш
+ * контракт (bump кита молча сдвинул бы все экраны). Специфичность
+ * совпадает с китовой, но наш модуль неслойный → побеждаем. */
+.page > :not(:last-child) {
+  margin-bottom: var(--app-space-sm);
+}
+
+/* Тело секции: обычный div, НЕ List.
+ * Внутри секции List не даёт ничего, кроме ритма (паддинг List мы всё
+ * равно перекрываем, а на iOS кит добавляет 10px/18px — ловушка, которую
+ * пришлось бы гасить в каждом месте). Поэтому здесь явный flex + gap из
+ * токена: значение наше, платформенных сюрпризов нет. */
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  padding: var(--app-section-pad);
+}
+
+/* Тело sheet-модалки: скролл 82dvh (как было), верх 12 (= 8 + верх
+ * бывшего .stack), низ 40 — под жест закрытия.
+ * outline снят: фокус ставится программно на сам скролл-контейнер,
+ * кольцо на нём ничего не сообщает (канон AppShell .content). */
+.sheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  padding: var(--app-sheet-pad-top) var(--app-page-gutter)
+    var(--app-sheet-pad-bottom);
+  max-height: 82dvh;
+  overflow-y: auto;
+  outline: none;
+}
+
+/* То же без боковых отступов: контент сам держит рельс (отзывы). */
+.sheetBodyEdge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  padding: var(--app-sheet-pad-top) 0 var(--app-sheet-pad-bottom);
+  max-height: 82dvh;
+  overflow-y: auto;
+  outline: none;
+}
+
+/* Тело без скролла: короткая форма обратной связи. */
+.sheetBodyStatic {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  padding: var(--app-sheet-pad-top) var(--app-page-gutter)
+    var(--app-sheet-pad-bottom);
+}
+
+/* Стек: тот же ритм 12 из токена, что у тела секции и sheet.
+ * Заменяет десятки локальных `.list/.feed/.stack/.form` с gap: 12px. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+

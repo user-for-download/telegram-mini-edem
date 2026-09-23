@@ -20,6 +20,8 @@ import {
   SheetTitle,
   useSheetTitleId,
 } from "@/components/SheetTitle/SheetTitle";
+import { SheetBody } from "@/ui/SheetBody";
+import { Stack } from "@/ui/Stack";
 import styles from "./ProfileModals.module.css";
 
 /**
@@ -52,10 +54,10 @@ export function EditProfileModal({
       header={<Modal.Header>Редактировать профиль</Modal.Header>}
       aria-labelledby={titleId}
     >
-      <div className={styles.sheetBody}>
+      <SheetBody>
         <SheetTitle titleId={titleId}>Редактировать профиль</SheetTitle>
         <EditProfileBody key={profile.data?.id ?? "loading"} onDone={onClose} />
-      </div>
+      </SheetBody>
     </Modal>
   );
 }
@@ -130,7 +132,7 @@ export const EditProfileBody = memo(function EditProfileBody({
   }
 
   return (
-    <div className={styles.form}>
+    <Stack>
       <div>
         <label htmlFor="profile-name" className="sr-only">
           Имя
@@ -196,6 +198,6 @@ export const EditProfileBody = memo(function EditProfileBody({
           Отмена
         </Button>
       </div>
-    </div>
+    </Stack>
   );
 });
