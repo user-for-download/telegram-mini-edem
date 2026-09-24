@@ -1,16 +1,16 @@
-import { Caption } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
 
+/**
+ * Ошибка мутации: пустой рендер без ошибки, role="alert" — канон для
+ * «внезапно не получилось» (тот же рецепт, что FieldError, но с unknown).
+ */
 export function MutationError({ error }: { error: unknown }) {
   if (!error) return null;
   const message =
     error instanceof Error ? error.message : "Не удалось выполнить действие";
   return (
-    <Caption
-      Component="p"
-      role="alert"
-      className="text-(--tg-theme-destructive-text-color)"
-    >
+    <Notice tone="danger" variant="text">
       {message}
-    </Caption>
+    </Notice>
   );
 }

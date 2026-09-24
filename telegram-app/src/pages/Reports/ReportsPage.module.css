@@ -4,12 +4,12 @@
  * внутренние стеки Stack (src/ui/ui.module.css). Здесь остались только
  * локальные роли ниже уровня секции. */
 
-/* Карточка жалобы (тело FeedCard, было p-3.5). */
+/* Карточка жалобы: раскладка поверх ui/Card (паддинг 16 даёт Card,
+ * было p-3.5 → 14px; унификация 14→16 по решению сессии). */
 .card {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 14px;
 }
 
 /* Шапка карточки: категория слева, статус справа. */
@@ -30,15 +30,3 @@
   line-height: 1.625;
 }
 
-/* Счётчик символов и хинт лимита (было text-right). */
-.counter {
-  text-align: right;
-}
-
-.errorText {
-  color: var(--tg-theme-destructive-text-color);
-}
-
-.successText {
-  color: var(--app-success);
-}

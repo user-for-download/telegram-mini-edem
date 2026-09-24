@@ -2,7 +2,6 @@ import { useMemo, useState, type ReactNode } from "react";
 import {
   Avatar,
   Badge,
-  Button,
   Caption,
   Cell,
   Headline,
@@ -13,6 +12,8 @@ import {
   Switch,
   Text,
 } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+
 import {
   Bell,
   Car,
@@ -303,7 +304,6 @@ export function ProfilePage() {
 
                 {subtab === "settings" && (
                   <Button
-                    mode="bezeled"
                     stretched
                     size="s"
                     onClick={() => {
@@ -403,7 +403,6 @@ export function ProfilePage() {
                     />
                     {themeOverride && (
                       <Button
-                        mode="bezeled"
                         stretched
                         size="s"
                         onClick={() => {
@@ -524,7 +523,6 @@ export function ProfilePage() {
                   </span>
                   <Button
                     size="s"
-                    mode="bezeled"
                     onClick={() => navigate("/reviews")}
                   >
                     Оставить отзыв
@@ -544,7 +542,6 @@ export function ProfilePage() {
                     ))}
                     {aboutReviews.hasNextPage && (
                       <Button
-                        mode="bezeled"
                         stretched
                         loading={aboutReviews.isFetchingNextPage}
                         disabled={aboutReviews.isFetchingNextPage}

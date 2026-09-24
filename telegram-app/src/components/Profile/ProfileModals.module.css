@@ -35,32 +35,15 @@
   gap: 8px;
 }
 
-/* Карточка: поверхность tgui-секции + тень shadow-xs (рецепт
- * мигрированных страниц), колонка с зазором 12px. */
+/* Карточка: раскладка поверх ui/Card (поверхность и паддинг 16 — у Card),
+ * колонка с зазором 12px. */
 .card {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--tgui--section_bg_color);
-  border: 1px solid var(--tgui--outline);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
-/* Компактная карточка: зазор 8px (карточка статуса в поддержке). */
-.cardTight {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--tgui--section_bg_color);
-  border: 1px solid var(--tgui--outline);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-}
-
-/* Заголовок карточки: основной цвет текста поверх поверхности. */
+/* Шапка карточки: основной цвет текста поверх поверхности. */
 .cardTitle {
   color: var(--tgui--text_color);
 }
@@ -114,40 +97,15 @@
 
 /* Списки карточек (отзывы/жалобы) — Stack: ритм 12 из токена. */
 
-/* Счётчик символов и хинт лимита (было text-right). */
-.counter {
-  text-align: right;
-}
-
-.errorText {
-  color: var(--tg-theme-destructive-text-color);
-}
-
-.successText {
-  color: var(--app-success);
-}
-
-/* Пустая карточка-заглушка (нет отзывов) — поверхность + центрирование. */
+/* Пустая карточка-заглушка (нет отзывов) — поверхность ui/Card
+ * + центрирование. */
 .emptyCard {
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--tgui--section_bg_color);
-  border: 1px solid var(--tgui--outline);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   text-align: center;
 }
 
 /* Подпись под заголовком заглушки (было mt-1). */
 .emptyNote {
   margin-top: 4px;
-}
-
-/* Карточка жалобы в списке: тело FeedCard (было p-3.5). */
-.reportCard {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
 }
 
 /* Шапка карточки жалобы: категория слева, статус справа. */
@@ -175,7 +133,4 @@
 
 /* Терминальный экран mid-session внутри sheet: отступы как у Placeholder
  * (было px-4 pt-4) + разрушающий цвет текста. */
-.errorScreen {
-  padding: 16px 16px 0;
-  color: var(--tg-theme-destructive-text-color);
-}
+

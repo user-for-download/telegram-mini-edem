@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { MouseEvent } from "react";
-import { Button } from "@telegram-apps/telegram-ui";
+
+import { Button } from "@/ui/Button";
 import { popup } from "@telegram-apps/sdk-react";
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { isTelegramMockEnv } from "@/utils/telegram-adapter";
@@ -21,6 +22,8 @@ import { isTelegramMockEnv } from "@/utils/telegram-adapter";
  * Cancel + destructive/default confirm. Закрытие без выбора (null) —
  * отмена. Popup закрывается по тапу: pending мутации держит disabled
  * на триггере, дабл-сабмит гасится вызывающим кодом через pending.
+ * mode (bezeled|plain, китовый) СОВМЕСТИМ: внутри маппится на variant
+ * ui/Button (secondary|ghost) — вызывающие код не меняли.
  */
 export function ConfirmPopup({
   label,
@@ -56,7 +59,7 @@ export function ConfirmPopup({
   if (isTelegramMockEnv()) {
     return (
       <Button
-        mode={mode}
+        variant={mode === "plain" ? "ghost" : "secondary"}
         size="s"
         stretched
         disabled={disabled || pending}
@@ -94,7 +97,7 @@ export function ConfirmPopup({
 
   return (
     <Button
-      mode={mode}
+      variant={mode === "plain" ? "ghost" : "secondary"}
       size="s"
       stretched
       disabled={disabled || pending}

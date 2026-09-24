@@ -1,4 +1,7 @@
-import { Button, Caption } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { FetchMore } from "@/ui/FetchMore";
+import { Button } from "@/ui/Button";
+
 import { useNavigate } from "react-router-dom";
 import { TripCard } from "@/components/Trip/TripCard";
 import { QueryState } from "@/components/QueryState";
@@ -18,7 +21,6 @@ import {
   useInfiniteMyTripsQuery,
 } from "@/queries/useTripsQuery";
 import { useProfileQuery } from "@/queries/profile";
-import styles from "./TripActivePage.module.css";
 
 export function TripActivePage() {
   const navigate = useNavigate();
@@ -61,9 +63,9 @@ export function TripActivePage() {
   return (
     <>
       {mutationError && (
-        <Caption Component="p" role="alert" className={styles.alert}>
+        <Notice tone="danger" variant="text">
           {bookingErrorMessage(mutationError)}
-        </Caption>
+        </Notice>
       )}
       <QueryState
         loading={bookings.isLoading || driverActive.isLoading}
@@ -72,7 +74,6 @@ export function TripActivePage() {
         emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
         emptyAction={
           <Button
-            mode="bezeled"
             size="m"
             onClick={() => {
               haptic.light();
@@ -130,38 +131,19 @@ export function TripActivePage() {
             }}
           />
         ))}
-        {driverActive.hasNextPage && (
-          <>
-            <div
-              ref={activeSentinelRef}
-              aria-hidden="true"
-              className={styles.sentinel}
-            />
-            {driverActive.isFetchingNextPage && (
-              <Stack
-                role="status"
-                aria-label="Загрузка ещё поездок"
-              >
-                <TripCardSkeleton />
-              </Stack>
-            )}
-            <Button
-              stretched
-              mode="bezeled"
-              loading={driverActive.isFetchingNextPage}
-              disabled={driverActive.isFetchingNextPage}
-              onClick={() => void driverActive.fetchNextPage()}
-            >
-              Показать ещё
-            </Button>
-          </>
-        )}
-        <Button size="l" mode="bezeled" onClick={() => navigate("/trips")}>
+        <FetchMore
+          hasNextPage={driverActive.hasNextPage}
+          isFetchingNextPage={driverActive.isFetchingNextPage}
+          fetchNextPage={() => void driverActive.fetchNextPage()}
+          sentinelRef={activeSentinelRef}
+          placeholder={<TripCardSkeleton />}
+          placeholderLabel="Загрузка ещё поездок"
+        />
+        <Button size="l" onClick={() => navigate("/trips")}>
           Найти поездку
         </Button>
         <Button
           size="l"
-          mode="bezeled"
           onClick={() => navigate("/trips/my/new")}
         >
           + Создать поездку

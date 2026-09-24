@@ -1,19 +1,11 @@
 import { useState } from "react";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
-import {
-  Button,
-  Caption,
-  Chip,
-  Input,
-  Textarea,
-} from "@telegram-apps/telegram-ui";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  RussianRuble,
-  Users,
-} from "lucide-react";
+import { Chip, Input, Textarea } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Field } from "@/ui/Field";
+import { Button } from "@/ui/Button";
+
+import { Calendar, Clock, MapPin, RussianRuble, Users } from "lucide-react";
 import {
   MAX_SEATS,
   updateTripDtoSchema,
@@ -115,111 +107,93 @@ export function EditTripForm({
     <>
       <div className={styles.form}>
         <p>Маршрут изменить нельзя — только адреса, время и условия.</p>
-        <div>
-          <label htmlFor="edit-from" className="sr-only">
-            Адрес отправления
-          </label>
-          <Input
-            id="edit-from"
-            header="Адрес отправления"
-            before={<MapPin size={17} className={styles.iconInfo} />}
-            value={fromAddress}
-            onChange={(event) => setFromAddress(event.target.value)}
-            placeholder="Например: м. Тёплый Стан"
-          />
-        </div>
-        <div>
-          <label htmlFor="edit-to" className="sr-only">
-            Адрес назначения
-          </label>
-          <Input
-            id="edit-to"
-            header="Адрес назначения"
-            before={<MapPin size={17} className={styles.iconSuccess} />}
-            value={toAddress}
-            onChange={(event) => setToAddress(event.target.value)}
-            placeholder="Например: пр-т Ленина"
-          />
-        </div>
-        <div>
-          <label htmlFor="edit-departure" className="sr-only">
-            Дата и время
-          </label>
-          <Input
-            id="edit-departure"
-            header="Дата и время"
-            before={
-              <Calendar size={16} className={styles.iconHint} />
-            }
-            type="datetime-local"
-            value={departure}
-            onChange={(event) => setDeparture(event.target.value)}
-          />
+        <Field label="Адрес отправления" id="edit-from">
+          {(field) => (
+            <Input
+              {...field}
+              before={<MapPin size={17} className={styles.iconInfo} />}
+              value={fromAddress}
+              onChange={(event) => setFromAddress(event.target.value)}
+              placeholder="Например: м. Тёплый Стан"
+            />
+          )}
+        </Field>
+        <Field label="Адрес назначения" id="edit-to">
+          {(field) => (
+            <Input
+              {...field}
+              before={<MapPin size={17} className={styles.iconSuccess} />}
+              value={toAddress}
+              onChange={(event) => setToAddress(event.target.value)}
+              placeholder="Например: пр-т Ленина"
+            />
+          )}
+        </Field>
+        <Field label="Дата и время" id="edit-departure">
+          {(field) => (
+            <Input
+              {...field}
+              before={<Calendar size={16} className={styles.iconHint} />}
+              type="datetime-local"
+              value={departure}
+              onChange={(event) => setDeparture(event.target.value)}
+            />
+          )}
+        </Field>
+        <div className={styles.grid2}>
+          <Field label="В пути, часов" id="edit-duration">
+            {(field) => (
+              <Input
+                {...field}
+                before={<Clock size={16} className={styles.iconHint} />}
+                type="number"
+                min="1"
+                max="168"
+                value={durationHours}
+                onChange={(event) => setDurationHours(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label="Расстояние, км" id="edit-distance">
+            {(field) => (
+              <Input
+                {...field}
+                type="number"
+                min="1"
+                max="20000"
+                value={distanceKm}
+                onChange={(event) => setDistanceKm(event.target.value)}
+              />
+            )}
+          </Field>
         </div>
         <div className={styles.grid2}>
-          <div>
-            <label htmlFor="edit-duration" className="sr-only">
-              В пути, часов
-            </label>
-            <Input
-              id="edit-duration"
-              header="В пути, часов"
-              before={<Clock size={16} className={styles.iconHint} />}
-              type="number"
-              min="1"
-              max="168"
-              value={durationHours}
-              onChange={(event) => setDurationHours(event.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="edit-distance" className="sr-only">
-              Расстояние, км
-            </label>
-            <Input
-              id="edit-distance"
-              header="Расстояние, км"
-              type="number"
-              min="1"
-              max="20000"
-              value={distanceKm}
-              onChange={(event) => setDistanceKm(event.target.value)}
-            />
-          </div>
-        </div>
-        <div className={styles.grid2}>
-          <div>
-            <label htmlFor="edit-price" className="sr-only">
-              Цена, ₽
-            </label>
-            <Input
-              id="edit-price"
-              header="Цена, ₽"
-              before={
-                <RussianRuble size={16} className={styles.iconHint} />
-              }
-              type="number"
-              min="1"
-              max="100000"
-              value={price}
-              onChange={(event) => setPrice(event.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="edit-seats" className="sr-only">
-              Места
-            </label>
-            <Input
-              id="edit-seats"
-              header="Места"
-              before={<Users size={16} className={styles.iconHint} />}
-              type="number"
-              min="1"
-              max={MAX_SEATS}
-              value={seats}
-              onChange={(event) => setSeats(event.target.value)}
-            />
-          </div>
+          <Field label="Цена, ₽" id="edit-price">
+            {(field) => (
+              <Input
+                {...field}
+                before={<RussianRuble size={16} className={styles.iconHint} />}
+                type="number"
+                min="1"
+                max="100000"
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label="Места" id="edit-seats">
+            {(field) => (
+              <Input
+                {...field}
+                before={<Users size={16} className={styles.iconHint} />}
+                type="number"
+                min="1"
+                max={MAX_SEATS}
+                value={seats}
+                onChange={(event) => setSeats(event.target.value)}
+              />
+            )}
+          </Field>
         </div>
         <fieldset>
           <legend>Особенности</legend>
@@ -242,42 +216,31 @@ export function EditTripForm({
             })}
           </div>
         </fieldset>
-        <div>
-          <label htmlFor="edit-comment" className="sr-only">
-            Комментарий пассажирам
-          </label>
-          <Textarea
-            id="edit-comment"
-            header="Комментарий пассажирам"
-            value={comment}
-            maxLength={500}
-            rows={3}
-            placeholder="Например: одна остановка в пути, багажник свободен"
-            status={validationError ? "error" : undefined}
-            onChange={(event) => setComment(event.target.value)}
-          />
-        </div>
+        <Field label="Комментарий пассажирам" id="edit-comment">
+          {(field) => (
+            <Textarea
+              {...field}
+              value={comment}
+              maxLength={500}
+              rows={3}
+              placeholder="Например: одна остановка в пути, багажник свободен"
+              status={validationError ? "error" : undefined}
+              onChange={(event) => setComment(event.target.value)}
+            />
+          )}
+        </Field>
         {validationError && (
-          <Caption
-            Component="p"
-            role="alert"
-            className={styles.errorText}
-          >
+          <Notice tone="danger" variant="text">
             {validationError}
-          </Caption>
+          </Notice>
         )}
         {update.error && (
-          <Caption
-            Component="p"
-            role="alert"
-            className={styles.errorText}
-          >
+          <Notice tone="danger" variant="text">
             {bookingErrorMessage(update.error)}
-          </Caption>
+          </Notice>
         )}
         <div className={styles.btnRow}>
           <Button
-            mode="bezeled"
             stretched
             size="m"
             loading={update.isPending}
@@ -286,7 +249,6 @@ export function EditTripForm({
             Сохранить
           </Button>
           <Button
-            mode="bezeled"
             size="m"
             stretched
             disabled={update.isPending}

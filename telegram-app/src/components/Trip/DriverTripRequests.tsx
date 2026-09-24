@@ -1,12 +1,14 @@
 import {
   Avatar,
-  Button,
   Caption,
   Cell,
   IconButton,
   Skeleton,
   Subheadline,
 } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+import { Notice } from "@/ui/Notice";
+
 import { Armchair, Check, X } from "lucide-react";
 import { haptic } from "@/utils/haptics";
 import { nativeConfirm } from "@/utils/telegram-adapter";
@@ -125,12 +127,11 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
   if (query.error && pending.length === 0) {
     return (
       <div className={styles.requestsList}>
-        <Caption Component="p" role="alert" className={styles.requestError}>
+        <Notice role="alert" tone="danger" variant="text">
           {bookingErrorMessage(query.error)}
-        </Caption>
+        </Notice>
         <Button
           size="s"
-          mode="bezeled"
           onClick={(event) => {
             // «Повторить» не должен открывать детали поездки (карточка
             // кликабельна) — гасим всплытие в самой кнопке, а не обёрткой
@@ -151,9 +152,9 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
   return (
       <div className={styles.requestsList}>
         {updateStatus.error && (
-          <Caption Component="p" role="alert" className={styles.requestError}>
+          <Notice role="alert" tone="danger" variant="text">
             {bookingErrorMessage(updateStatus.error)}
-          </Caption>
+          </Notice>
         )}
         {pending.map((booking) => (
         <Cell

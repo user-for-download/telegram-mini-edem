@@ -105,3 +105,88 @@
   padding: 0;
 }
 
+/* ── Плашка-сообщение (ui/Notice) ────────────────────────────────────
+ * Одна роль «сообщение пользователю» в трёх видах: text — строка ошибки
+ * поля/формы (заменяет 9 копий .errorText и MutationError); banner —
+ * полоса с тонированной подложкой (была пара «своих»: successBanner и
+ * под.); card — карточка-подсказка. Цвета ТОЛЬКО из --app-* токенов
+ * index.css (паттерн StatusPill): инверсия light/dark происходит там,
+ * дублировать палитру в модулях не нужно. Смысл дублируется текстом,
+ * не только цветом. */
+.notice {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.notice[data-tone="danger"] {
+  color: var(--app-danger);
+}
+
+.notice[data-tone="success"] {
+  color: var(--app-success);
+}
+
+.notice[data-tone="info"] {
+  color: var(--app-info);
+}
+
+.notice[data-tone="warning"] {
+  color: var(--app-warning);
+}
+
+.notice[data-variant="banner"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-xs);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border-radius: var(--app-radius-md);
+  font-size: 13px;
+}
+
+.notice[data-variant="banner"][data-tone="danger"] {
+  background: var(--app-danger-bg);
+}
+
+.notice[data-variant="banner"][data-tone="success"] {
+  background: var(--app-success-bg);
+}
+
+.notice[data-variant="banner"][data-tone="info"] {
+  background: var(--app-info-bg);
+}
+
+.notice[data-variant="banner"][data-tone="warning"] {
+  background: var(--app-warning-bg);
+}
+
+.notice[data-variant="card"] {
+  padding: var(--app-card-pad);
+  border: var(--tgui--border--width, 1px) solid var(--tgui--outline);
+  border-radius: var(--app-card-radius);
+  background: var(--tgui--section_bg_color);
+  font-size: 13px;
+}
+
+/* ── Конец ленты (ui/FetchMore) ──────────────────────────────────────
+ * Якорь автодогрузки — пустой div фиксированной высоты (48px): при
+ * схлопывании скелетона вьюпорт не прыгает; overflow-anchor: none —
+ * страховка от «прилипания» якоря. Раньше правило копировалось в
+ * 4 модулей (.sentinel), теперь живёт здесь. Имя класса сохранено:
+ * на него смотрят SSR-тесты (маркер _sentinel_). */
+.sentinel {
+  min-height: 48px;
+}
+
+.fetchMorePlaceholder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+/* Счётчик символов поля (ui/CharCounter): вправо, под контролом. */
+.fieldCounter {
+  text-align: right;
+}
+

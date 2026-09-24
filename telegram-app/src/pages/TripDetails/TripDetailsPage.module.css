@@ -6,16 +6,6 @@
 /* Плашка «Вы записались попутчиком»: успешный фон + рамка 20% токена
  * (было border-(--app-success)/20; смешение с transparent в любом
  * пространстве даёт тот же результат — альфа 0.2). */
-.successBanner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 12px;
-  background: var(--app-success-bg);
-  border: 1px solid color-mix(in srgb, var(--app-success) 20%, transparent);
-}
 
 .success {
   color: var(--app-success);
@@ -26,13 +16,14 @@
   color: color-mix(in srgb, var(--app-success) 80%, transparent);
 }
 
-/* Карточка маршрута: приглушённая поверхность tertiary. */
+/* Карточка маршрута: приглушённая поверхность tertiary, паддинг 16 и
+ * радиус — из токенов карточки (14→16 в этой сессии). */
 .routeCard {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px;
-  border-radius: 16px;
+  padding: var(--app-card-pad);
+  border-radius: var(--app-card-radius);
   background: var(--tgui--tertiary_bg_color);
 }
 
@@ -43,14 +34,15 @@
   justify-content: space-between;
 }
 
-/* Карточка водителя: поверхность секции + hairline кит-обводки. */
+/* Карточка водителя: поверхность секции + hairline кит-обводки
+ * (не ui/Card: без тени), паддинг 16 и радиус — из токенов карточки. */
 .driverCard {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 14px;
-  border-radius: 16px;
+  padding: var(--app-card-pad);
+  border-radius: var(--app-card-radius);
   background: var(--tgui--section_bg_color);
   border: 1px solid var(--tgui--outline);
 }
@@ -191,12 +183,9 @@
 }
 
 /* Правая подпись строки цены (было text-right). */
-.counter {
+/* Подсказка в строке цены (не счётчик!): вправо, подпись способа оплаты. */
+.payHint {
   text-align: right;
-}
-
-.errorText {
-  color: var(--tg-theme-destructive-text-color);
 }
 
 /* Подсказка под деструктивной кнопкой: кегль 12px + приглушённый цвет. */

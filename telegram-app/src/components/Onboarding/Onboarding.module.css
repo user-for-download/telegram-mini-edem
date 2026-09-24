@@ -21,9 +21,6 @@
 
 /* Ошибка сохранения согласия/удаления
  * (было text-(--tg-theme-destructive-text-color)). */
-.errorText {
-  color: var(--tg-theme-destructive-text-color);
-}
 
 /* Кнопки «Принять»/«Отклонить» — колонка с зазором 8px (сетка 8/12). */
 .actions {

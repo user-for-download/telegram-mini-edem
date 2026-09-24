@@ -1,19 +1,12 @@
 import { useState, type SubmitEvent } from "react";
-import {
-  Button,
-  Caption,
-  Modal,
-  Select,
-  Textarea,
-} from "@telegram-apps/telegram-ui";
+import { Button, Caption, Select, Textarea } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Field } from "@/ui/Field";
+import { Sheet } from "@/ui/Sheet";
 import { Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { useCreateFeedbackMutation } from "@/queries/useSupportQuery";
-import {
-  SheetTitle,
-  useSheetTitleId,
-} from "@/components/SheetTitle/SheetTitle";
 import {
   normalizeSupportForm,
   validateSupportForm,
@@ -21,7 +14,6 @@ import {
 import { FEEDBACK_TEXT_MAX_LENGTH } from "@edem/contracts";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
-import { SheetBody } from "@/ui/SheetBody";
 import styles from "./ProfileModals.module.css";
 
 const TOPICS = [
@@ -47,21 +39,15 @@ export function FeedbackModal({
 }) {
   // Имя диалога для скринридера + видимый заголовок на base-платформе
   // (tgui Modal.Header рисует текст только на iOS).
-  const titleId = useSheetTitleId();
   return (
-    <Modal
+    <Sheet
       open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      header={<Modal.Header>Служба поддержки</Modal.Header>}
-      aria-labelledby={titleId}
+      onClose={onClose}
+      title="Служба поддержки"
+      variant="static"
     >
-      <SheetBody variant="static">
-        <SheetTitle titleId={titleId}>Служба поддержки</SheetTitle>
-        <FeedbackForm onClose={onClose} />
-      </SheetBody>
-    </Modal>
+      <FeedbackForm onClose={onClose} />
+    </Sheet>
   );
 }
 
@@ -112,50 +98,42 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
         ситуацию. Наша команда поддержки оперативно поможет вам.
       </Caption>
 
-      <div>
-        <label htmlFor="feedback-topic" className="sr-only">
-          Тема обращения
-        </label>
-        <Select
-          id="feedback-topic"
-          header="Тема обращения"
-          value={topic}
-          onChange={(event) => setTopic(event.target.value)}
-        >
-          {TOPICS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <Field label="Тема обращения" id="feedback-topic">
+        {(field) => (
+          <Select
+            {...field}
+            value={topic}
+            onChange={(event) => setTopic(event.target.value)}
+          >
+            {TOPICS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </Select>
+        )}
+      </Field>
 
-      <div>
-        <label htmlFor="feedback-text" className="sr-only">
-          Текст сообщения
-        </label>
-        <Textarea
-          id="feedback-text"
-          header="Текст сообщения"
-          rows={4}
-          maxLength={FEEDBACK_TEXT_MAX_LENGTH}
-          value={message}
-          onChange={(event) => {
-            setMessage(event.target.value);
-            if (formError) setFormError(null);
-          }}
-          placeholder="Опишите детали вашего обращения..."
-        />
-      </div>
+      <Field label="Текст сообщения" id="feedback-text">
+        {(field) => (
+          <Textarea
+            {...field}
+            rows={4}
+            maxLength={FEEDBACK_TEXT_MAX_LENGTH}
+            value={message}
+            onChange={(event) => {
+              setMessage(event.target.value);
+              if (formError) setFormError(null);
+            }}
+            placeholder="Опишите детали вашего обращения..."
+          />
+        )}
+      </Field>
 
       {formError && (
-        <Caption
-          Component="p"
-          role="alert"
-          className={styles.errorText}
-        >
+        <Notice tone="danger" variant="text">
           {formError}
-        </Caption>
+        </Notice>
       )}
 
       <Button

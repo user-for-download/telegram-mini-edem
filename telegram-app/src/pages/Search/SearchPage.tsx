@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Button,
   Chip,
   IconButton,
   Input,
@@ -10,6 +9,9 @@ import {
   Slider,
   Caption,
 } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+import { FetchMore } from "@/ui/FetchMore";
+
 import {
   ArrowRightLeft,
   Filter,
@@ -59,7 +61,7 @@ function presetFromParams(params: URLSearchParams): SearchFormState {
  * сегменты дат, сворачиваемый drawer фильтров (цена + теги). Пустые
  * фильтры — общая лента (бэкенд скрывает уехавшие: departureAt > now).
  * Стиль фильтров — SearchPage.module.css (миграция папка/компонент),
- * лента — TripFeedCard (поверхность FeedCard в module.css).
+ * лента — TripFeedCard (поверхность — ui/Card).
  */
 export function SearchPage() {
   const [searchParams] = useSearchParams();
@@ -288,7 +290,6 @@ export function SearchPage() {
             <Button
               size="l"
               stretched
-              mode="bezeled"
               before={<SearchIcon size={18} />}
               onClick={submit}
             >
@@ -317,7 +318,6 @@ export function SearchPage() {
             >
               <Button
                 size="m"
-                mode="bezeled"
                 onClick={reset}
                 disabled={!hasActiveFilters && !form.fromCity && !form.toCity}
               >
@@ -329,45 +329,25 @@ export function SearchPage() {
               {items.map((trip) => (
                 <TripFeedCard key={trip.id} trip={trip} />
               ))}
-              {trips.hasNextPage && (
-                <>
-                  {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
-                      высота (48px) держит скролл от прыжков. */}
-                  <div
-                    ref={sentinelRef}
-                    aria-hidden="true"
-                    className={styles.sentinel}
-                    style={{ overflowAnchor: "none" }}
-                  />
-                  {trips.isFetchingNextPage && (
+              <FetchMore
+                hasNextPage={trips.hasNextPage}
+                isFetchingNextPage={trips.isFetchingNextPage}
+                fetchNextPage={() => void trips.fetchNextPage()}
+                sentinelRef={sentinelRef}
+                placeholder={
+                  <div className={styles.loadingMore}>
                     <div
-                      role="status"
-                      aria-label="Загрузка ещё поездок"
-                      className={styles.fetchMore}
-                    >
-                      <div className={styles.loadingMore}>
-                        <div
-                          className={styles.skeletonLine}
-                          style={{ width: "45%" }}
-                        />
-                        <div
-                          className={styles.skeletonLine}
-                          style={{ width: "30%" }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  <Button
-                    stretched
-                    mode="bezeled"
-                    loading={trips.isFetchingNextPage}
-                    disabled={trips.isFetchingNextPage}
-                    onClick={() => void trips.fetchNextPage()}
-                  >
-                    Показать ещё
-                  </Button>
-                </>
-              )}
+                      className={styles.skeletonLine}
+                      style={{ width: "45%" }}
+                    />
+                    <div
+                      className={styles.skeletonLine}
+                      style={{ width: "30%" }}
+                    />
+                  </div>
+                }
+                placeholderLabel="Загрузка ещё поездок"
+              />
             </Stack>
           )}
         </QueryState>

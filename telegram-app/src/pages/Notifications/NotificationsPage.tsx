@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import {
-  Button,
   Caption,
   Link,
   Placeholder,
@@ -8,11 +7,14 @@ import {
   Text,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+import { FetchMore } from "@/ui/FetchMore";
+
 import { BellRing, CheckCheck, Settings2 } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { QueryState } from "@/components/QueryState";
-import { FeedCard } from "@/components/FeedCard/FeedCard";
+import { Card } from "@/ui/Card";
 import {
   NotificationCardSkeleton,
   NotificationCardsSkeleton,
@@ -93,7 +95,7 @@ function NotificationCard({
   const route = notificationRoute(notification.type);
   const critical = isCriticalNotification(notification.type);
   return (
-    <FeedCard className={styles.card}>
+    <Card className={styles.card}>
       <div className={styles.cardHead}>
         <Text weight="2" Component="span">
           {notification.title}
@@ -117,7 +119,6 @@ function NotificationCard({
         {!notification.isRead && (
           <Button
             size="s"
-            mode="bezeled"
             loading={marking}
             disabled={marking}
             onClick={() => onMarkRead(notification.id)}
@@ -126,7 +127,7 @@ function NotificationCard({
           </Button>
         )}
       </div>
-    </FeedCard>
+    </Card>
   );
 }
 
@@ -211,7 +212,6 @@ export function NotificationsPage() {
                 <Button
                   Component="a"
                   href="#/settings"
-                  mode="bezeled"
                   size="s"
                   before={<Settings2 size={15} />}
                   className={styles.settingsBtn}
@@ -221,7 +221,6 @@ export function NotificationsPage() {
                 <Button
                   stretched
                   size="s"
-                  mode="bezeled"
                   before={<CheckCheck size={15} />}
                   loading={markAll.isPending}
                   disabled={markAll.isPending || unreadCount === 0}
@@ -258,36 +257,14 @@ export function NotificationsPage() {
                       onMarkRead={(id) => markRead.mutate(id)}
                     />
                   ))}
-                  {inbox.hasNextPage && (
-                    <>
-                      {/* Якорь автодогрузки: скрыт от скринридера, фиксированная
-                        высота (48px) держит скролл от прыжков. */}
-                      <div
-                        ref={sentinelRef}
-                        aria-hidden="true"
-                        className={styles.sentinel}
-                        style={{ overflowAnchor: "none" }}
-                      />
-                      {inbox.isFetchingNextPage && (
-                        <div
-                          role="status"
-                          aria-label="Загрузка ещё уведомлений"
-                          className={styles.fetchMore}
-                        >
-                          <NotificationCardSkeleton />
-                        </div>
-                      )}
-                      <Button
-                        mode="bezeled"
-                        stretched
-                        loading={inbox.isFetchingNextPage}
-                        disabled={inbox.isFetchingNextPage}
-                        onClick={() => void inbox.fetchNextPage()}
-                      >
-                        Показать ещё
-                      </Button>
-                    </>
-                  )}
+                  <FetchMore
+                    hasNextPage={inbox.hasNextPage}
+                    isFetchingNextPage={inbox.isFetchingNextPage}
+                    fetchNextPage={() => void inbox.fetchNextPage()}
+                    sentinelRef={sentinelRef}
+                    placeholder={<NotificationCardSkeleton />}
+                    placeholderLabel="Загрузка ещё уведомлений"
+                  />
                 </>
               )}
             </SectionBody>

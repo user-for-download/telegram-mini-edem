@@ -3,7 +3,7 @@ import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { REVIEW_STATUS, type Review } from "@edem/contracts";
 import type { MyReview } from "@/api/reviews.api";
 import { LazyAvatar } from "@/components/LazyAvatar";
-import { FeedCard } from "@/components/FeedCard/FeedCard";
+import { Card } from "@/ui/Card";
 import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
 import styles from "./ReviewCard.module.css";
 
@@ -26,7 +26,7 @@ export function reviewStatusBadge(
 export function ReviewCard({ review }: { review: Review | MyReview }) {
   const badge = reviewStatusBadge(review.status);
   return (
-    <FeedCard className={styles.root}>
+    <Card className={styles.root}>
       <div className={styles.head}>
         <div className={styles.author}>
           <LazyAvatar
@@ -70,6 +70,6 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
           </Text>
         )}
       </Caption>
-    </FeedCard>
+    </Card>
   );
 }

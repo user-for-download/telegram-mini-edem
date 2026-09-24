@@ -1,6 +1,5 @@
 import { memo, useRef, useState } from "react";
 import {
-  Button,
   Caption,
   Input,
   Placeholder,
@@ -9,10 +8,18 @@ import {
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Field } from "@/ui/Field";
+import { CharCounter } from "@/ui/CharCounter";
+import { Button } from "@/ui/Button";
+
 import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
 import { REPORT_DESCRIPTION_MAX_LENGTH } from "@edem/contracts";
-import { FeedCard } from "@/components/FeedCard/FeedCard";
-import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
+import { Card } from "@/ui/Card";
+import {
+  StatusPill,
+  type StatusTone,
+} from "@/components/StatusPill/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { Page } from "@/ui/Page";
@@ -65,12 +72,15 @@ function reportStatusTone(status: Report["status"]): StatusTone {
 
 const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
   return (
-    <FeedCard className={styles.card}>
+    <Card className={styles.card}>
       <div className={styles.cardHead}>
         <Text weight="2" Component="span">
           {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
         </Text>
-        <StatusPill tone={reportStatusTone(report.status)} className={styles.pill}>
+        <StatusPill
+          tone={reportStatusTone(report.status)}
+          className={styles.pill}
+        >
           {REPORT_STATUS_LABELS[report.status]}
         </StatusPill>
       </div>
@@ -78,7 +88,7 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
       <Text Component="div" className={styles.prose}>
         {report.description}
       </Text>
-    </FeedCard>
+    </Card>
   );
 });
 
@@ -189,118 +199,102 @@ export function ReportsPage() {
         <Section header="Сообщите о проблеме">
           <SectionBody>
             <MutationError error={create.error} />
-            <div>
-              <label htmlFor="report-target-type" className="sr-only">
-                Что случилось
-              </label>
-              <Select
-                id="report-target-type"
-                header="Что случилось"
-                value={targetType}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  if (!isReportTargetType(next)) return;
-                  setTargetType(next);
-                  if (formError) setFormError(null);
-                }}
-              >
-                {(
-                  Object.keys(REPORT_TARGET_TYPE_LABELS) as ReportTargetType[]
-                ).map((value) => (
-                  <option key={value} value={value}>
-                    {REPORT_TARGET_TYPE_LABELS[value]}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <label htmlFor="report-target-id" className="sr-only">
-                Идентификатор объекта
-              </label>
-              <Input
-                id="report-target-id"
-                header="Идентификатор объекта"
-                placeholder="Например: идентификатор поездки из её страницы"
-                value={targetId}
-                onChange={(event) => {
-                  setTargetId(event.target.value);
-                  if (formError) setFormError(null);
-                  if (success) setSuccess(false);
-                }}
-              />
-            </div>
-            <div>
-              <label htmlFor="report-category" className="sr-only">
-                Причина
-              </label>
-              <Select
-                id="report-category"
-                header="Причина"
-                value={category}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  if (!isReportCategory(next)) return;
-                  setCategory(next);
-                }}
-              >
-                {REPORT_CATEGORIES.map((value) => (
-                  <option key={value} value={value}>
-                    {REPORT_CATEGORY_LABELS[value]}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <label htmlFor="report-description" className="sr-only">
-                Описание
-              </label>
-              <Textarea
-                id="report-description"
-                header="Описание"
-                rows={4}
-                maxLength={REPORT_DESCRIPTION_MAX_LENGTH}
-                placeholder="Опишите, что произошло"
-                value={description}
-                aria-invalid={Boolean(formError)}
-                status={formError ? "error" : undefined}
-                onChange={(event) => {
-                  setDescription(event.target.value);
-                  if (formError) setFormError(null);
-                  if (success) setSuccess(false);
-                }}
-              />
-            </div>
+            <Field label="Что случилось" id="report-target-type">
+              {(field) => (
+                <Select
+                  {...field}
+                  value={targetType}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (!isReportTargetType(next)) return;
+                    setTargetType(next);
+                    if (formError) setFormError(null);
+                  }}
+                >
+                  {(
+                    Object.keys(REPORT_TARGET_TYPE_LABELS) as ReportTargetType[]
+                  ).map((value) => (
+                    <option key={value} value={value}>
+                      {REPORT_TARGET_TYPE_LABELS[value]}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field label="Идентификатор объекта" id="report-target-id">
+              {(field) => (
+                <Input
+                  {...field}
+                  placeholder="Например: идентификатор поездки из её страницы"
+                  value={targetId}
+                  onChange={(event) => {
+                    setTargetId(event.target.value);
+                    if (formError) setFormError(null);
+                    if (success) setSuccess(false);
+                  }}
+                />
+              )}
+            </Field>
+            <Field label="Причина" id="report-category">
+              {(field) => (
+                <Select
+                  {...field}
+                  value={category}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (!isReportCategory(next)) return;
+                    setCategory(next);
+                  }}
+                >
+                  {REPORT_CATEGORIES.map((value) => (
+                    <option key={value} value={value}>
+                      {REPORT_CATEGORY_LABELS[value]}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field label="Описание" id="report-description">
+              {(field) => (
+                <Textarea
+                  {...field}
+                  rows={4}
+                  maxLength={REPORT_DESCRIPTION_MAX_LENGTH}
+                  placeholder="Опишите, что произошло"
+                  value={description}
+                  aria-invalid={Boolean(formError)}
+                  status={formError ? "error" : undefined}
+                  onChange={(event) => {
+                    setDescription(event.target.value);
+                    if (formError) setFormError(null);
+                    if (success) setSuccess(false);
+                  }}
+                />
+              )}
+            </Field>
             {description.length > 0 && (
-              <Caption Component="p" className={styles.counter} aria-live="polite">
-                {description.length}/{REPORT_DESCRIPTION_MAX_LENGTH}
-              </Caption>
+              <CharCounter
+                value={description.length}
+                max={REPORT_DESCRIPTION_MAX_LENGTH}
+              />
             )}
             {alreadyReported && (
-              <Caption Component="p" className={styles.counter} aria-live="polite">
+              <Notice tone="info" variant="text">
                 Вы уже отправляли жалобу на этот объект. Повторная отправка
                 недоступна.
-              </Caption>
+              </Notice>
             )}
             {formError && (
-              <Caption
-                Component="p"
-                role="alert"
-                className={styles.errorText}
-              >
+              <Notice tone="danger" variant="text">
                 {formError}
-              </Caption>
+              </Notice>
             )}
             {success && (
-              <Text
-                Component="p"
-                role="status"
-                className={styles.successText}
-              >
+              <Notice tone="success" variant="text">
                 Жалоба отправлена
-              </Text>
+              </Notice>
             )}
             <Button
-              mode="bezeled"
               stretched
               size="l"
               className="min-h-11"

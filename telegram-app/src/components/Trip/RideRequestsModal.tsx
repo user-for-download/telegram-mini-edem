@@ -1,21 +1,16 @@
 import { memo } from "react";
 import { useState } from "react";
-import {
-  Button,
-  Caption,
-  Input,
-  Modal,
-  Text,
-} from "@telegram-apps/telegram-ui";
+import { Caption, Input, Text } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Field } from "@/ui/Field";
+import { Sheet } from "@/ui/Sheet";
+import { Button } from "@/ui/Button";
+
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
-import {
-  SheetTitle,
-  useSheetTitleId,
-} from "@/components/SheetTitle/SheetTitle";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -34,7 +29,7 @@ import {
   updateRideRequestDtoSchema,
   type RideRequest,
 } from "@edem/contracts";
-import { SheetBody } from "@/ui/SheetBody";
+import { Card } from "@/ui/Card";
 import { Stack } from "@/ui/Stack";
 import styles from "./TripModals.module.css";
 
@@ -69,21 +64,10 @@ export function RideRequestsModal({
   // свой role=dialog не добавляем — vaul уже рендерит dialog (двойной анонс).
   // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
   // текст только на iOS.
-  const titleId = useSheetTitleId();
   return (
-    <Modal
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      header={<Modal.Header>Ищу попутку</Modal.Header>}
-      aria-labelledby={titleId}
-    >
-      <SheetBody>
-        <SheetTitle titleId={titleId}>Ищу попутку</SheetTitle>
-        <RideRequestsBody />
-      </SheetBody>
-    </Modal>
+    <Sheet open={open} onClose={onClose} title="Ищу попутку">
+      <RideRequestsBody />
+    </Sheet>
   );
 }
 
@@ -236,110 +220,87 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
     <section aria-label="Ищу попутку">
       <OfflineBanner />
       <Stack className={styles.stackBottom}>
-        <div className={styles.card}>
+        <Card className={styles.card}>
           <Text weight="2" Component="span">
             Новый запрос
           </Text>
-          <div>
-            <label htmlFor="ride-from" className="sr-only">
-              Откуда
-            </label>
-            <Input
-              id="ride-from"
-              header="Откуда"
-              before={<MapPin size={17} className={styles.iconInfo} />}
-              list="request-cities"
-              value={from}
-              onChange={(event) => setFrom(event.target.value)}
-              placeholder="Город отправления"
-            />
-          </div>
-          <div>
-            <label htmlFor="ride-to" className="sr-only">
-              Куда
-            </label>
-            <Input
-              id="ride-to"
-              header="Куда"
-              before={<MapPin size={17} className={styles.iconSuccess} />}
-              list="request-cities"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-              placeholder="Город назначения"
-            />
-          </div>
+          <Field label="Откуда" id="ride-from">
+            {(field) => (
+              <Input
+                {...field}
+                before={<MapPin size={17} className={styles.iconInfo} />}
+                list="request-cities"
+                value={from}
+                onChange={(event) => setFrom(event.target.value)}
+                placeholder="Город отправления"
+              />
+            )}
+          </Field>
+          <Field label="Куда" id="ride-to">
+            {(field) => (
+              <Input
+                {...field}
+                before={<MapPin size={17} className={styles.iconSuccess} />}
+                list="request-cities"
+                value={to}
+                onChange={(event) => setTo(event.target.value)}
+                placeholder="Город назначения"
+              />
+            )}
+          </Field>
           <datalist id="request-cities">
             {cities.data?.map((city) => (
               <option key={city.id} value={city.name} />
             ))}
           </datalist>
           <div className={styles.grid2}>
-            <div>
-              <label htmlFor="ride-earliest" className="sr-only">
-                Не раньше
-              </label>
-              <Input
-                id="ride-earliest"
-                header="Не раньше"
-                before={
-                  <Calendar size={16} className={styles.iconHint} />
-                }
-                type="datetime-local"
-                value={earliest}
-                onChange={(event) => setEarliest(event.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="ride-latest" className="sr-only">
-                Не позже
-              </label>
-              <Input
-                id="ride-latest"
-                header="Не позже"
-                before={
-                  <Calendar size={16} className={styles.iconHint} />
-                }
-                type="datetime-local"
-                value={latest}
-                onChange={(event) => setLatest(event.target.value)}
-              />
-            </div>
+            <Field label="Не раньше" id="ride-earliest">
+              {(field) => (
+                <Input
+                  {...field}
+                  before={<Calendar size={16} className={styles.iconHint} />}
+                  type="datetime-local"
+                  value={earliest}
+                  onChange={(event) => setEarliest(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Не позже" id="ride-latest">
+              {(field) => (
+                <Input
+                  {...field}
+                  before={<Calendar size={16} className={styles.iconHint} />}
+                  type="datetime-local"
+                  value={latest}
+                  onChange={(event) => setLatest(event.target.value)}
+                />
+              )}
+            </Field>
           </div>
-          <div>
-            <label htmlFor="ride-seats" className="sr-only">
-              Места
-            </label>
-            <Input
-              id="ride-seats"
-              header="Места"
-              before={<Users size={16} className={styles.iconHint} />}
-              type="number"
-              min="1"
-              max="3"
-              value={seats}
-              onChange={(event) => setSeats(event.target.value)}
-            />
-          </div>
+          <Field label="Места" id="ride-seats">
+            {(field) => (
+              <Input
+                {...field}
+                before={<Users size={16} className={styles.iconHint} />}
+                type="number"
+                min="1"
+                max="3"
+                value={seats}
+                onChange={(event) => setSeats(event.target.value)}
+              />
+            )}
+          </Field>
           {validationError && (
-            <Caption
-              Component="p"
-              role="alert"
-              className={styles.errorText}
-            >
+            <Notice tone="danger" variant="text">
               {validationError}
-            </Caption>
+            </Notice>
           )}
           {create.error && (
-            <Caption
-              Component="p"
-              role="alert"
-              className={styles.errorText}
-            >
+            <Notice tone="danger" variant="text">
               {bookingErrorMessage(create.error)}
-            </Caption>
+            </Notice>
           )}
           <Button
-            mode="bezeled"
             stretched
             size="l"
             className="min-h-11"
@@ -348,15 +309,11 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
           >
             Опубликовать запрос
           </Button>
-        </div>
+        </Card>
         {(status.error || cancel.error || update.error) && (
-          <Caption
-            Component="p"
-            role="alert"
-            className={styles.errorText}
-          >
+          <Notice tone="danger" variant="text">
             {bookingErrorMessage(status.error ?? cancel.error ?? update.error)}
-          </Caption>
+          </Notice>
         )}
         <QueryState
           loading={requests.isLoading}
@@ -367,10 +324,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
         >
           <Stack>
             {requests.data?.map((request) => (
-              <div
-                key={request.id}
-                className={styles.card}
-              >
+              <Card key={request.id} className={styles.card}>
                 <div className={styles.cardHead}>
                   <Text weight="2" Component="span" className={styles.truncate}>
                     {`${request.fromCity.name} → ${request.toCity.name}`}
@@ -386,82 +340,70 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                 </Caption>
                 {editingId === request.id ? (
                   <>
-                    <div>
-                      <label
-                        htmlFor={`ride-edit-earliest-${request.id}`}
-                        className="sr-only"
-                      >
-                        Не раньше
-                      </label>
-                      <Input
-                        id={`ride-edit-earliest-${request.id}`}
-                        header="Не раньше"
-                        type="datetime-local"
-                        value={editEarliest}
-                        onChange={(event) =>
-                          setEditEarliest(event.target.value)
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor={`ride-edit-latest-${request.id}`}
-                        className="sr-only"
-                      >
-                        Не позже
-                      </label>
-                      <Input
-                        id={`ride-edit-latest-${request.id}`}
-                        header="Не позже"
-                        type="datetime-local"
-                        value={editLatest}
-                        onChange={(event) => setEditLatest(event.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor={`ride-edit-expires-${request.id}`}
-                        className="sr-only"
-                      >
-                        Действует до
-                      </label>
-                      <Input
-                        id={`ride-edit-expires-${request.id}`}
-                        header="Действует до"
-                        type="datetime-local"
-                        value={editExpires}
-                        onChange={(event) => setEditExpires(event.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor={`ride-edit-seats-${request.id}`}
-                        className="sr-only"
-                      >
-                        Места
-                      </label>
-                      <Input
-                        id={`ride-edit-seats-${request.id}`}
-                        header="Места"
-                        type="number"
-                        min="1"
-                        max="3"
-                        value={editSeats}
-                        onChange={(event) => setEditSeats(event.target.value)}
-                      />
-                    </div>
+                    <Field
+                      label="Не раньше"
+                      id={`ride-edit-earliest-${request.id}`}
+                    >
+                      {(field) => (
+                        <Input
+                          {...field}
+                          type="datetime-local"
+                          value={editEarliest}
+                          onChange={(event) =>
+                            setEditEarliest(event.target.value)
+                          }
+                        />
+                      )}
+                    </Field>
+                    <Field
+                      label="Не позже"
+                      id={`ride-edit-latest-${request.id}`}
+                    >
+                      {(field) => (
+                        <Input
+                          {...field}
+                          type="datetime-local"
+                          value={editLatest}
+                          onChange={(event) =>
+                            setEditLatest(event.target.value)
+                          }
+                        />
+                      )}
+                    </Field>
+                    <Field
+                      label="Действует до"
+                      id={`ride-edit-expires-${request.id}`}
+                    >
+                      {(field) => (
+                        <Input
+                          {...field}
+                          type="datetime-local"
+                          value={editExpires}
+                          onChange={(event) =>
+                            setEditExpires(event.target.value)
+                          }
+                        />
+                      )}
+                    </Field>
+                    <Field label="Места" id={`ride-edit-seats-${request.id}`}>
+                      {(field) => (
+                        <Input
+                          {...field}
+                          type="number"
+                          min="1"
+                          max="3"
+                          value={editSeats}
+                          onChange={(event) => setEditSeats(event.target.value)}
+                        />
+                      )}
+                    </Field>
                     {editError && (
-                      <Caption
-                        Component="p"
-                        role="alert"
-                        className={styles.errorText}
-                      >
+                      <Notice tone="danger" variant="text">
                         {editError}
-                      </Caption>
+                      </Notice>
                     )}
                     <div className={styles.btnRow}>
                       <Button
-                        mode="bezeled"
                         stretched
                         size="s"
                         className="min-h-11"
@@ -471,7 +413,6 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                         Сохранить
                       </Button>
                       <Button
-                        mode="bezeled"
                         size="s"
                         stretched
                         className="min-h-11"
@@ -486,7 +427,6 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                   <div className={styles.btnRowWrap}>
                     {request.status === "active" && (
                       <Button
-                        mode="bezeled"
                         size="s"
                         stretched
                         className="min-h-11"
@@ -504,7 +444,6 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                     )}
                     {request.status === "paused" && (
                       <Button
-                        mode="bezeled"
                         size="s"
                         stretched
                         className="min-h-11"
@@ -524,7 +463,6 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       request.status === "paused") && (
                       <>
                         <Button
-                          mode="bezeled"
                           size="s"
                           stretched
                           className="min-h-11"
@@ -547,7 +485,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                     )}
                   </div>
                 )}
-              </div>
+              </Card>
             ))}
           </Stack>
         </QueryState>

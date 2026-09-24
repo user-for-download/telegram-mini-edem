@@ -1,5 +1,7 @@
 import { type FC, type PropsWithChildren, useEffect, useState } from "react";
-import { Button, Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
+import { Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+
 import { useAuthStore } from "@/store/useAuthStore";
 import type { User } from "@/types";
 import { apiClient } from "@/api/client";
@@ -181,7 +183,6 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
           description="Сервер временно ограничил вход (защита от перебора). Подождите немного и попробуйте один раз — повторные нажатия продлевают блокировку."
           action={
             <Button
-              mode="bezeled"
               size="l"
               stretched
               disabled={cooldownLeft > 0}
@@ -226,7 +227,6 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
         description="Не удалось проверить данные авторизации. Проверьте подключение к интернету."
         action={
           <Button
-            mode="bezeled"
             size="l"
             stretched
             onClick={() => void bootstrap()}

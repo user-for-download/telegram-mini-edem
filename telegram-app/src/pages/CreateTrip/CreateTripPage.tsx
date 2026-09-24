@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import {
-  Button,
   Caption,
   Chip,
   IconButton,
@@ -11,6 +10,11 @@ import {
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Field } from "@/ui/Field";
+import { FieldError } from "@/ui/FieldError";
+import { Button } from "@/ui/Button";
+
 import {
   ArrowRightLeft,
   Calendar,
@@ -39,26 +43,6 @@ import { MAX_SEATS, type TripTag } from "@edem/contracts";
 import styles from "./CreateTripPage.module.css";
 
 const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString();
-
-/** Текст ошибки под полем (виден рядом с красной подсветкой, не внизу страницы). */
-function FieldError({
-  show,
-  children,
-}: {
-  show: boolean;
-  children: string | null;
-}) {
-  if (!show || !children) return null;
-  return (
-    <Caption
-      Component="p"
-      role="alert"
-      className={styles.errorText}
-    >
-      {children}
-    </Caption>
-  );
-}
 
 /**
  * Создание поездки — отдельная страница (роут /trips/my/new).
@@ -242,7 +226,7 @@ export function CreateTripForm({
                 профиле.
               </Caption>
               <Button
-                mode="filled"
+                variant="primary"
                 size="l"
                 stretched
                 onClick={() => {
@@ -278,9 +262,9 @@ export function CreateTripForm({
                   setFrom(name);
                 }}
               />
-              <FieldError show={errorField === "create-from"}>
-                {validationError}
-              </FieldError>
+              <FieldError
+                error={errorField === "create-from" ? validationError : null}
+              />
               <CityPickerField
                 id="create-to"
                 label="Город назначения"
@@ -293,9 +277,9 @@ export function CreateTripForm({
                   setTo(name);
                 }}
               />
-              <FieldError show={errorField === "create-to"}>
-                {validationError}
-              </FieldError>
+              <FieldError
+                error={errorField === "create-to" ? validationError : null}
+              />
               <IconButton
                 type="button"
                 size="s"
@@ -307,109 +291,118 @@ export function CreateTripForm({
                 <ArrowRightLeft size={14} className={styles.iconInfo} />
               </IconButton>
             </div>
-            <div>
-              <label htmlFor="create-from-address" className="sr-only">
-                Адрес отправления
-              </label>
-              <Input
-                id="create-from-address"
-                header="Адрес отправления"
-                before={
-                  <Navigation size={16} className={styles.iconHint} />
-                }
-                value={fromAddress}
-                status={
-                  errorField === "create-from-address" ? "error" : undefined
-                }
-                onChange={(event) => {
-                  touch();
-                  setFromAddress(event.target.value);
-                }}
-                placeholder="Точка встречи"
-              />
-              <FieldError show={errorField === "create-from-address"}>
-                {validationError}
-              </FieldError>
-            </div>
-            <div>
-              <label htmlFor="create-to-address" className="sr-only">
-                Адрес назначения
-              </label>
-              <Input
-                id="create-to-address"
-                header="Адрес назначения"
-                before={
-                  <Navigation size={16} className={styles.iconHint} />
-                }
-                value={toAddress}
-                status={
-                  errorField === "create-to-address" ? "error" : undefined
-                }
-                onChange={(event) => {
-                  touch();
-                  setToAddress(event.target.value);
-                }}
-                placeholder="Точка прибытия"
-              />
-              <FieldError show={errorField === "create-to-address"}>
-                {validationError}
-              </FieldError>
-            </div>
+            <Field label="Адрес отправления" id="create-from-address">
+              {(field) => (
+                <>
+                  <Input
+                    {...field}
+                    before={
+                      <Navigation size={16} className={styles.iconHint} />
+                    }
+                    value={fromAddress}
+                    status={
+                      errorField === "create-from-address" ? "error" : undefined
+                    }
+                    onChange={(event) => {
+                      touch();
+                      setFromAddress(event.target.value);
+                    }}
+                    placeholder="Точка встречи"
+                  />
+                  <FieldError
+                    error={
+                      errorField === "create-from-address"
+                        ? validationError
+                        : null
+                    }
+                  />
+                </>
+              )}
+            </Field>
+            <Field label="Адрес назначения" id="create-to-address">
+              {(field) => (
+                <>
+                  <Input
+                    {...field}
+                    before={
+                      <Navigation size={16} className={styles.iconHint} />
+                    }
+                    value={toAddress}
+                    status={
+                      errorField === "create-to-address" ? "error" : undefined
+                    }
+                    onChange={(event) => {
+                      touch();
+                      setToAddress(event.target.value);
+                    }}
+                    placeholder="Точка прибытия"
+                  />
+                  <FieldError
+                    error={
+                      errorField === "create-to-address"
+                        ? validationError
+                        : null
+                    }
+                  />
+                </>
+              )}
+            </Field>
           </SectionBody>
         </Section>
 
         <Section header="Поездка">
           <SectionBody>
-            <div>
-              <label htmlFor="create-date" className="sr-only">
-                Дата и время
-              </label>
-              <Input
-                id="create-date"
-                header="Дата и время"
-                before={
-                  <Calendar size={16} className={styles.iconHint} />
-                }
-                type="datetime-local"
-                value={date}
-                status={errorField === "create-date" ? "error" : undefined}
-                onChange={(event) => {
-                  touch();
-                  setDate(event.target.value);
-                }}
-              />
-              <FieldError show={errorField === "create-date"}>
-                {validationError}
-              </FieldError>
-            </div>
+            <Field label="Дата и время" id="create-date">
+              {(field) => (
+                <>
+                  <Input
+                    {...field}
+                    before={<Calendar size={16} className={styles.iconHint} />}
+                    type="datetime-local"
+                    value={date}
+                    status={errorField === "create-date" ? "error" : undefined}
+                    onChange={(event) => {
+                      touch();
+                      setDate(event.target.value);
+                    }}
+                  />
+                  <FieldError
+                    error={
+                      errorField === "create-date" ? validationError : null
+                    }
+                  />
+                </>
+              )}
+            </Field>
             <div className={styles.grid2}>
-              <div>
-                <label htmlFor="create-price" className="sr-only">
-                  Цена, ₽
-                </label>
-                <Input
-                  id="create-price"
-                  header="Цена, ₽"
-                  before={
-                    <RussianRuble
-                      size={16}
-                      className={styles.iconHint}
+              <Field label="Цена, ₽" id="create-price">
+                {(field) => (
+                  <>
+                    <Input
+                      {...field}
+                      before={
+                        <RussianRuble size={16} className={styles.iconHint} />
+                      }
+                      type="number"
+                      min="1"
+                      max="100000"
+                      value={price}
+                      status={
+                        errorField === "create-price" ? "error" : undefined
+                      }
+                      onChange={(event) => {
+                        touch();
+                        setPrice(event.target.value);
+                      }}
                     />
-                  }
-                  type="number"
-                  min="1"
-                  max="100000"
-                  value={price}
-                  status={errorField === "create-price" ? "error" : undefined}
-                  onChange={(event) => {
-                    touch();
-                    setPrice(event.target.value);
-                  }}
-                />
-                <FieldError show={errorField === "create-price"}>
-                  {validationError}
-                </FieldError>
-              </div>
+                    <FieldError
+                      error={
+                        errorField === "create-price" ? validationError : null
+                      }
+                    />
+                  </>
+                )}
+              </Field>
               <fieldset>
                 <legend>Места</legend>
                 <div
@@ -448,65 +441,69 @@ export function CreateTripForm({
                     <Plus size={16} />
                   </IconButton>
                 </div>
-                <FieldError show={errorField === "create-seats"}>
-                  {validationError}
-                </FieldError>
+                <FieldError
+                  error={errorField === "create-seats" ? validationError : null}
+                />
               </fieldset>
             </div>
             <div className={styles.grid2}>
-              <div>
-                <label htmlFor="create-distance" className="sr-only">
-                  Расстояние, км
-                </label>
-                <Input
-                  id="create-distance"
-                  header="Расстояние, км"
-                  before={
-                    <MapPin size={16} className={styles.iconHint} />
-                  }
-                  type="number"
-                  min="1"
-                  max="20000"
-                  value={distanceKm}
-                  status={
-                    errorField === "create-distance" ? "error" : undefined
-                  }
-                  onChange={(event) => {
-                    touch();
-                    setDistanceKm(event.target.value);
-                  }}
-                  placeholder="180"
-                />
-                <FieldError show={errorField === "create-distance"}>
-                  {validationError}
-                </FieldError>
-              </div>
-              <div>
-                <label htmlFor="create-duration" className="sr-only">
-                  В пути, часов
-                </label>
-                <Input
-                  id="create-duration"
-                  header="В пути, часов"
-                  before={
-                    <Clock size={16} className={styles.iconHint} />
-                  }
-                  type="number"
-                  min="1"
-                  max="168"
-                  value={durationHours}
-                  status={
-                    errorField === "create-duration" ? "error" : undefined
-                  }
-                  onChange={(event) => {
-                    touch();
-                    setDurationHours(event.target.value);
-                  }}
-                />
-                <FieldError show={errorField === "create-duration"}>
-                  {validationError}
-                </FieldError>
-              </div>
+              <Field label="Расстояние, км" id="create-distance">
+                {(field) => (
+                  <>
+                    <Input
+                      {...field}
+                      before={<MapPin size={16} className={styles.iconHint} />}
+                      type="number"
+                      min="1"
+                      max="20000"
+                      value={distanceKm}
+                      status={
+                        errorField === "create-distance" ? "error" : undefined
+                      }
+                      onChange={(event) => {
+                        touch();
+                        setDistanceKm(event.target.value);
+                      }}
+                      placeholder="180"
+                    />
+                    <FieldError
+                      error={
+                        errorField === "create-distance"
+                          ? validationError
+                          : null
+                      }
+                    />
+                  </>
+                )}
+              </Field>
+              <Field label="В пути, часов" id="create-duration">
+                {(field) => (
+                  <>
+                    <Input
+                      {...field}
+                      before={<Clock size={16} className={styles.iconHint} />}
+                      type="number"
+                      min="1"
+                      max="168"
+                      value={durationHours}
+                      status={
+                        errorField === "create-duration" ? "error" : undefined
+                      }
+                      onChange={(event) => {
+                        touch();
+                        setDurationHours(event.target.value);
+                      }}
+                    />
+                    <FieldError
+                      error={
+                        errorField === "create-duration"
+                          ? validationError
+                          : null
+                      }
+                    />
+                  </>
+                )}
+              </Field>
             </div>
           </SectionBody>
         </Section>
@@ -516,7 +513,11 @@ export function CreateTripForm({
           footer={`до 6 · выбрано ${tags.length}`}
         >
           <SectionBody>
-            <div className={styles.tagChips} role="group" aria-label="Условия поездки">
+            <div
+              className={styles.tagChips}
+              role="group"
+              aria-label="Условия поездки"
+            >
               {TRIP_TAGS.map((tag) => {
                 const checked = tags.includes(tag);
                 return (
@@ -548,26 +549,21 @@ export function CreateTripForm({
                   setComment(event.target.value);
                 }}
               />
-              <FieldError show={errorField === "create-comment"}>
-                {validationError}
-              </FieldError>
+              <FieldError
+                error={errorField === "create-comment" ? validationError : null}
+              />
             </div>
           </SectionBody>
         </Section>
 
         {validationError && !errorField && (
-          <Text
-            Component="p"
-            role="alert"
-            ref={errorRef}
-            className={styles.errorText}
-          >
+          <Notice tone="danger" variant="text" ref={errorRef}>
             {validationError}
-          </Text>
+          </Notice>
         )}
         <MutationError error={create.error} />
         <Button
-          mode="filled"
+          variant="primary"
           size="l"
           stretched
           loading={create.isPending}

@@ -15,6 +15,7 @@ import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
 import { haptic } from "@/utils/haptics";
 import { LazyAvatar } from "@/components/LazyAvatar";
+import { CARD_PAD, CARD_SURFACE } from "@/ui/classes";
 import styles from "./TripFeedCard.module.css";
 
 /** Иконки для очевидных тегов (язык примера); остальные теги не
@@ -51,7 +52,7 @@ export function TripFeedCard({ trip }: { trip: Trip }) {
         haptic.light();
         navigate(`/trips/${trip.id}`);
       }}
-      className={styles.card}
+      className={`${CARD_SURFACE} ${CARD_PAD} ${styles.card}`}
     >
       <div className={styles.topRow}>
         <div className={styles.routeCol}>

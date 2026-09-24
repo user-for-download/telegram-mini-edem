@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { MouseEvent } from "react";
-import { Button, Text } from "@telegram-apps/telegram-ui";
+import { Text } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+
 
 /**
  * Confirm-guard для деструктивных действий:
@@ -63,7 +65,9 @@ export function ConfirmAction({
     <div>
       <Button
         ref={triggerRef}
-        mode={mode}
+        // Наш ui/Button говорит на языке variant; публичный mode-параметр
+        // ConfirmAction оставлен совместимым с прежними вызовами (bezeled|plain).
+        variant={mode === "plain" ? "ghost" : "secondary"}
         size="s"
         stretched
         disabled={disabled || pending}
@@ -90,7 +94,7 @@ export function ConfirmAction({
               от «Назад» (исключение из правила «всё bezeled»). */}
           <Button
             ref={confirmRef}
-            mode="filled"
+            variant="primary"
             size="s"
             stretched
             loading={pending}
@@ -104,7 +108,6 @@ export function ConfirmAction({
             {confirmLabel}
           </Button>
           <Button
-            mode="bezeled"
             size="s"
             stretched
             disabled={pending}

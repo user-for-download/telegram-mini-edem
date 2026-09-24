@@ -1,4 +1,6 @@
-import { Button, Placeholder, Spinner } from "@telegram-apps/telegram-ui";
+import { Placeholder, Spinner } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+
 
 /** Состояния запроса: loading (скелетон списка или спиннер),
  *  error с retry, empty, контент. */
@@ -41,7 +43,7 @@ export function QueryState({
         header="Не удалось загрузить данные"
         description="Проверьте соединение и повторите попытку."
       >
-        <Button mode="bezeled" size="m" onClick={onRetry}>
+        <Button size="m" onClick={onRetry}>
           Повторить
         </Button>
       </Placeholder>

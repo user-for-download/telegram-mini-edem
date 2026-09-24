@@ -1,14 +1,19 @@
 import { memo, useMemo, useRef, useState } from "react";
 import {
-  Button,
   Caption,
-  Modal,
   Placeholder,
   SegmentedControl,
   Select,
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Field } from "@/ui/Field";
+import { CharCounter } from "@/ui/CharCounter";
+import { FetchMore } from "@/ui/FetchMore";
+import { Sheet } from "@/ui/Sheet";
+import { Button } from "@/ui/Button";
+
 import { haptic } from "@/utils/haptics";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
@@ -32,11 +37,7 @@ import {
   normalizeReviewText,
   validateReviewForm,
 } from "@/pages/Reviews/reviewValidation";
-import {
-  SheetTitle,
-  useSheetTitleId,
-} from "@/components/SheetTitle/SheetTitle";
-import { SheetBody } from "@/ui/SheetBody";
+import { Card } from "@/ui/Card";
 import { Stack } from "@/ui/Stack";
 import styles from "./ProfileModals.module.css";
 
@@ -78,21 +79,10 @@ export function ReviewsModal({
   // свой role=dialog не добавляем — vaul уже рендерит dialog (двойной анонс).
   // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
   // текст только на iOS.
-  const titleId = useSheetTitleId();
   return (
-    <Modal
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      header={<Modal.Header>Отзывы</Modal.Header>}
-      aria-labelledby={titleId}
-    >
-      <SheetBody variant="edge">
-        <SheetTitle titleId={titleId}>Отзывы</SheetTitle>
-        <ReviewsBody initialTab={initialTab} />
-      </SheetBody>
-    </Modal>
+    <Sheet open={open} onClose={onClose} title="Отзывы" variant="edge">
+      <ReviewsBody initialTab={initialTab} />
+    </Sheet>
   );
 }
 
@@ -322,7 +312,6 @@ export const ReviewsBody = memo(function ReviewsBody({
             >
               <Button
                 size="m"
-                mode="bezeled"
                 style={{ minHeight: 44 }}
                 onClick={() => pickTab("new")}
               >
@@ -353,46 +342,42 @@ export const ReviewsBody = memo(function ReviewsBody({
               description="Когда вы совершите поездку, она появится здесь"
             />
           ) : (
-            <div className={styles.card}>
-              <div>
-                <label htmlFor="review-trip" className="sr-only">
-                  Поездка
-                </label>
-                <Select
-                  id="review-trip"
-                  header="Поездка"
-                  value={selectedTrip.id}
-                  onChange={(event) => pickTrip(event.target.value)}
-                >
-                  {trips.map((trip) => (
-                    <option key={trip.id} value={trip.id}>
-                      {tripLabel(trip)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              {isDriverTrip ? (
-                <div>
-                  <label htmlFor="review-target" className="sr-only">
-                    Кому оставить отзыв
-                  </label>
+            <Card className={styles.card}>
+              <Field label="Поездка" id="review-trip">
+                {(field) => (
                   <Select
-                    id="review-target"
-                    header="Кому оставить отзыв"
-                    value={targetUser?.id ?? ""}
-                    onChange={(event) => {
-                      setSelectedPassengerId(event.target.value);
-                      if (formError) setFormError(null);
-                    }}
+                    {...field}
+                    value={selectedTrip.id}
+                    onChange={(event) => pickTrip(event.target.value)}
                   >
-                    {passengers.map((passenger) => (
-                      <option key={passenger.id} value={passenger.id}>
-                        {passenger.name}
+                    {trips.map((trip) => (
+                      <option key={trip.id} value={trip.id}>
+                        {tripLabel(trip)}
                       </option>
                     ))}
                   </Select>
-                </div>
+                )}
+              </Field>
+
+              {isDriverTrip ? (
+                <Field label="Кому оставить отзыв" id="review-target">
+                  {(field) => (
+                    <Select
+                      {...field}
+                      value={targetUser?.id ?? ""}
+                      onChange={(event) => {
+                        setSelectedPassengerId(event.target.value);
+                        if (formError) setFormError(null);
+                      }}
+                    >
+                      {passengers.map((passenger) => (
+                        <option key={passenger.id} value={passenger.id}>
+                          {passenger.name}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
               ) : (
                 <Text weight="2" Component="p">
                   Отзыв о {targetUser?.name ?? "водителе"}
@@ -404,57 +389,40 @@ export const ReviewsBody = memo(function ReviewsBody({
                 <RatingInput value={rating} onChange={setRating} />
               </div>
 
-              <div>
-                <label htmlFor="review-text" className="sr-only">
-                  Комментарий
-                </label>
-                <Textarea
-                  id="review-text"
-                  header="Комментарий"
-                  rows={3}
-                  maxLength={REVIEW_TEXT_MAX_LENGTH}
-                  placeholder="Расскажите, что понравилось или что стоит улучшить"
-                  value={text}
-                  aria-invalid={Boolean(formError)}
-                  status={formError ? "error" : undefined}
-                  onChange={(event) => {
-                    setText(event.target.value);
-                    if (formError) setFormError(null);
-                    if (success) setSuccess(false);
-                  }}
-                />
-              </div>
+              <Field label="Комментарий" id="review-text">
+                {(field) => (
+                  <Textarea
+                    {...field}
+                    rows={3}
+                    maxLength={REVIEW_TEXT_MAX_LENGTH}
+                    placeholder="Расскажите, что понравилось или что стоит улучшить"
+                    value={text}
+                    aria-invalid={Boolean(formError)}
+                    status={formError ? "error" : undefined}
+                    onChange={(event) => {
+                      setText(event.target.value);
+                      if (formError) setFormError(null);
+                      if (success) setSuccess(false);
+                    }}
+                  />
+                )}
+              </Field>
               {text.length > 0 && (
-                <Caption
-                  Component="p"
-                  className={styles.counter}
-                  aria-live="polite"
-                >
-                  {text.length}/{REVIEW_TEXT_MAX_LENGTH}
-                </Caption>
+                <CharCounter value={text.length} max={REVIEW_TEXT_MAX_LENGTH} />
               )}
 
               {formError && (
-                <Caption
-                  Component="p"
-                  role="alert"
-                  className={styles.errorText}
-                >
+                <Notice tone="danger" variant="text">
                   {formError}
-                </Caption>
+                </Notice>
               )}
               {success && (
-                <Text
-                  Component="p"
-                  role="status"
-                  className={styles.successText}
-                >
+                <Notice tone="success" variant="text">
                   Отзыв отправлен на модерацию — он появится в профиле после
                   одобрения
-                </Text>
+                </Notice>
               )}
               <Button
-                mode="bezeled"
                 stretched
                 size="l"
                 loading={create.isPending}
@@ -463,7 +431,7 @@ export const ReviewsBody = memo(function ReviewsBody({
               >
                 Отправить отзыв
               </Button>
-            </div>
+            </Card>
           )}
         </QueryState>
       )}
@@ -481,14 +449,14 @@ export const ReviewsBody = memo(function ReviewsBody({
           }}
         >
           {profile.data && (
-            <div className={styles.emptyCard}>
+            <Card className={styles.emptyCard}>
               <Text weight="2" Component="p">
                 {`Рейтинг ${profile.data.rating.toFixed(1)} · ${profile.data.reviewsCount} отзывов`}
               </Text>
               <Caption Component="p" className={styles.emptyNote}>
                 Рейтинг учитывает только опубликованные отзывы
               </Caption>
-            </div>
+            </Card>
           )}
           {aboutItems.length === 0 ? (
             <Placeholder
@@ -500,18 +468,11 @@ export const ReviewsBody = memo(function ReviewsBody({
               {aboutItems.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))}
-              {about.hasNextPage && (
-                <Button
-                  mode="bezeled"
-                  stretched
-                  style={{ minHeight: 44 }}
-                  loading={about.isFetchingNextPage}
-                  disabled={about.isFetchingNextPage}
-                  onClick={() => void about.fetchNextPage()}
-                >
-                  Показать ещё
-                </Button>
-              )}
+              <FetchMore
+                hasNextPage={about.hasNextPage}
+                isFetchingNextPage={about.isFetchingNextPage}
+                fetchNextPage={() => void about.fetchNextPage()}
+              />
             </Stack>
           )}
         </QueryState>

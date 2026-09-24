@@ -42,10 +42,6 @@
   gap: 8px;
 }
 
-.errorText {
-  color: var(--tg-theme-destructive-text-color);
-}
-
 /* Теги-пилюли особенностей (tgui Chip-кнопки с aria-pressed): флекс-ряд
  * с зазором 8px; фокус клавиатуры виден на пилюле (a11y: native button).
  * Продублировано в pages/Search/SearchPage.module.css и

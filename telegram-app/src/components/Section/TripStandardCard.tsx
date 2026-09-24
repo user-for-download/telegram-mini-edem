@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import {
   Avatar,
   Caption,
-  Card,
   Cell,
   Headline,
   Subheadline,
@@ -10,6 +9,7 @@ import {
 import { ArrowDown, Calendar, CarFront, MapPin } from "lucide-react";
 import { formatRelativeDeparture } from "@/utils/bookingSplit";
 import { RatingPill } from "@/components/RatingPill";
+import { Card } from "@/ui/Card";
 import styles from "./TripStandardCard.module.css";
 
 export interface TripStandardPerson {
@@ -61,7 +61,7 @@ export function TripStandardCard({
 }: TripStandardCardProps) {
   return (
     <Card
-      type="plain"
+      variant="flush"
       className={styles.card}
       onClick={() => onOpen(tripId)}
     >

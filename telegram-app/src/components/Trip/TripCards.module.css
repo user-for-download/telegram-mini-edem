@@ -1,4 +1,5 @@
-/* Карточки поездок (активные + архив): раскладка без Tailwind.
+/* Карточки поездок (активные + история): раскладка без Tailwind.
+ * Поверхность — ui/Card (один рецепт), здесь только роли раскладки.
  * Цвета из --tgui--* / --app-*, удвоенные селекторы против каскада кита,
  * без !important и хэш-классов. */
 
@@ -21,25 +22,6 @@
   width: auto;
 }
 
-/* Блок заявок от попутчиков. */
-.requests {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px dashed var(--tgui--outline);
-  background: var(--tgui--bg_color);
-}
-
-.requestsHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.warn {
-  color: var(--app-warning);
-}
-
 .rowBetween {
   display: flex;
   align-items: center;
@@ -54,17 +36,8 @@
   min-width: 0;
 }
 
-.gapRow {
-  display: flex;
-  gap: 8px;
-}
-
 .shrink {
   flex-shrink: 0;
-}
-
-.fit {
-  min-width: 0;
 }
 
 .truncate {
@@ -99,9 +72,6 @@
 }
 
 /* Ошибка загрузки/обновления заявок: деструктивный текст. */
-.requestError.requestError {
-  color: var(--tgui--destructive_text_color);
-}
 
 /* Скелетон строк заявок: зеркало requestCell (аватар 40 + строки).
  * Skeleton — overlay: форму задают children, фон/шиммер — сам кит. */
@@ -142,38 +112,4 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-}
-
-/* Архивная карточка: рецепт FeedCard (rounded-2xl, рамка,
- * фон секции, xs-тень), интерактивная. */
-.archived.archived {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 14px;
-  border-radius: 16px;
-  border: var(--tgui--border--width, 1px) solid var(--tgui--outline);
-  background: var(--tgui--section_bg_color);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  opacity: 0.9;
-  transition: opacity 0.15s;
-}
-
-.archived.archived:hover {
-  opacity: 1;
-}
-
-.archivedHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.archivedRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
 }

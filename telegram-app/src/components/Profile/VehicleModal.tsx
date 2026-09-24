@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from "react";
-import {
-  Button,
-  Caption,
-  Input,
-  Modal,
-} from "@telegram-apps/telegram-ui";
+import { Caption, Input } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Field } from "@/ui/Field";
+import { Sheet } from "@/ui/Sheet";
+import { Button } from "@/ui/Button";
+
 import { Car, Hash, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "@/api/client";
@@ -12,7 +12,7 @@ import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { haptic } from "@/utils/haptics";
 import { QueryState } from "@/components/QueryState";
-import { SheetBody } from "@/ui/SheetBody";
+import { Card } from "@/ui/Card";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import {
   useRemoveVehicleMutation,
@@ -26,10 +26,6 @@ import {
   vehicleRemoveErrorMessage,
   vehicleServerErrorMessage,
 } from "./vehicleValidation";
-import {
-  SheetTitle,
-  useSheetTitleId,
-} from "@/components/SheetTitle/SheetTitle";
 import styles from "./ProfileModals.module.css";
 
 type Vehicle = NonNullable<ReturnType<typeof useVehicleQuery>["vehicle"]>;
@@ -47,21 +43,10 @@ export function VehicleModal({
 }) {
   // Имя диалога для скринридера + видимый заголовок на base-платформе
   // (tgui Modal.Header рисует текст только на iOS).
-  const titleId = useSheetTitleId();
   return (
-    <Modal
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      header={<Modal.Header>Автомобиль</Modal.Header>}
-      aria-labelledby={titleId}
-    >
-      <SheetBody>
-        <SheetTitle titleId={titleId}>Автомобиль</SheetTitle>
-        <VehicleBody onDone={onClose} />
-      </SheetBody>
-    </Modal>
+    <Sheet open={open} onClose={onClose} title="Автомобиль">
+      <VehicleBody onDone={onClose} />
+    </Sheet>
   );
 }
 
@@ -91,15 +76,11 @@ export function VehicleRoute() {
  * 403 от requireUser → Placeholder вместо общей ошибки). */
 function VehicleTerminal({ deleted }: { deleted: boolean }) {
   return (
-    <Caption
-      Component="p"
-      className={styles.errorScreen}
-      role="alert"
-    >
+    <Notice role="alert" tone="danger" variant="text">
       {deleted
         ? "Профиль удалён — данные автомобиля недоступны."
         : "Действие недоступно: аккаунт заблокирован."}
-    </Caption>
+    </Notice>
   );
 }
 
@@ -131,7 +112,7 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
       onRetry={() => void vehicleQuery.refetch()}
     >
       {vehicleQuery.data && (
-        <div className={styles.card}>
+        <Card className={styles.card}>
           {!vehicle && (
             <Caption Component="p" className={styles.prose}>
               Чтобы публиковать поездки, добавьте автомобиль.
@@ -154,17 +135,13 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
                 }
               />
               {remove.isError && (
-                <Caption
-                  Component="p"
-                  role="alert"
-                  className={styles.errorText}
-                >
+                <Notice tone="danger" variant="text">
                   {vehicleRemoveErrorMessage(remove.error)}
-                </Caption>
+                </Notice>
               )}
             </>
           )}
-        </div>
+        </Card>
       )}
     </QueryState>
   );
@@ -211,74 +188,63 @@ function VehicleForm({
   };
   return (
     <>
-      <div>
-        <label htmlFor="vehicle-model" className="sr-only">
-          Модель
-        </label>
-        <Input
-          id="vehicle-model"
-          header="Модель"
-          before={<Car size={17} className={styles.info} />}
-          value={model}
-          maxLength={VEHICLE_LIMITS.model}
-          placeholder="Skoda Octavia"
-          onChange={(e) => {
-            setModel(e.target.value.slice(0, VEHICLE_LIMITS.model));
-            if (formError) setFormError(null);
-          }}
-        />
-      </div>
-      <div>
-        <label htmlFor="vehicle-color" className="sr-only">
-          Цвет
-        </label>
-        <Input
-          id="vehicle-color"
-          header="Цвет"
-          before={<Palette size={16} className={styles.hint} />}
-          value={color}
-          maxLength={VEHICLE_LIMITS.color}
-          placeholder="белый"
-          onChange={(e) => {
-            setColor(e.target.value.slice(0, VEHICLE_LIMITS.color));
-            if (formError) setFormError(null);
-          }}
-        />
-      </div>
-      <div>
-        <label htmlFor="vehicle-plate" className="sr-only">
-          Номер (необязательно)
-        </label>
-        <Input
-          id="vehicle-plate"
-          header="Номер (необязательно)"
-          before={<Hash size={16} className={styles.hint} />}
-          value={plate}
-          maxLength={VEHICLE_LIMITS.plate}
-          placeholder="Например: 583"
-          onChange={(e) => {
-            setPlate(
-              e.target.value.toUpperCase().slice(0, VEHICLE_LIMITS.plate),
-            );
-            if (formError) setFormError(null);
-          }}
-        />
-      </div>
+      <Field label="Модель" id="vehicle-model">
+        {(field) => (
+          <Input
+            {...field}
+            before={<Car size={17} className={styles.info} />}
+            value={model}
+            maxLength={VEHICLE_LIMITS.model}
+            placeholder="Skoda Octavia"
+            onChange={(e) => {
+              setModel(e.target.value.slice(0, VEHICLE_LIMITS.model));
+              if (formError) setFormError(null);
+            }}
+          />
+        )}
+      </Field>
+      <Field label="Цвет" id="vehicle-color">
+        {(field) => (
+          <Input
+            {...field}
+            before={<Palette size={16} className={styles.hint} />}
+            value={color}
+            maxLength={VEHICLE_LIMITS.color}
+            placeholder="белый"
+            onChange={(e) => {
+              setColor(e.target.value.slice(0, VEHICLE_LIMITS.color));
+              if (formError) setFormError(null);
+            }}
+          />
+        )}
+      </Field>
+      <Field label="Номер (необязательно)" id="vehicle-plate">
+        {(field) => (
+          <Input
+            {...field}
+            before={<Hash size={16} className={styles.hint} />}
+            value={plate}
+            maxLength={VEHICLE_LIMITS.plate}
+            placeholder="Например: 583"
+            onChange={(e) => {
+              setPlate(
+                e.target.value.toUpperCase().slice(0, VEHICLE_LIMITS.plate),
+              );
+              if (formError) setFormError(null);
+            }}
+          />
+        )}
+      </Field>
       <Caption Component="p" className={styles.prose}>
         Номер — примета для узнавания, видна только вам. Чтобы убрать номер,
         очистите поле и сохраните.
       </Caption>
       {(formError || upsert.error) && (
-        <Caption
-          Component="p"
-          role="alert"
-          className={styles.errorText}
-        >
+        <Notice tone="danger" variant="text">
           {formError ?? vehicleServerErrorMessage(upsert.error)}
-        </Caption>
+        </Notice>
       )}
       <Button
-        mode="bezeled"
         stretched
         size="l"
         loading={upsert.isPending}
@@ -288,7 +254,6 @@ function VehicleForm({
         Сохранить автомобиль
       </Button>
       <Button
-        mode="bezeled"
         stretched
         disabled={upsert.isPending}
         onClick={() => {

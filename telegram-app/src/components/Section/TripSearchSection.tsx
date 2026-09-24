@@ -1,8 +1,10 @@
 import { useState, type SubmitEvent } from "react";
-import { Button, Card } from "@telegram-apps/telegram-ui";
+
+import { Button } from "@/ui/Button";
 import { Search } from "lucide-react";
 import { CitySelectField } from "@/components/CitySelect/CitySelectField";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
+import { Card } from "@/ui/Card";
 import styles from "./TripSearchSection.module.css";
 
 interface TripSearchSectionProps {
@@ -25,7 +27,7 @@ export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
 
   return (
     <form onSubmit={submitSearch}>
-      <Card type="plain" className={styles.searchCard}>
+      <Card variant="flush" className={styles.searchCard}>
         <div className={styles.fields}>
           <CitySelectField
             id="home-from"
@@ -49,7 +51,7 @@ export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
         <Button
           className={styles.submit}
           size="l"
-          mode="filled"
+          variant="primary"
           stretched
           before={<Search size={18} />}
           type="submit"

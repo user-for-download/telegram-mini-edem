@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { Button, Placeholder } from "@telegram-apps/telegram-ui";
+import { Placeholder } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+
 import styles from "./AccountStatePage.module.css";
 
 export function AccountStatePage({
@@ -29,7 +31,6 @@ export function RetryAction({
 }) {
   return (
     <Button
-      mode="bezeled"
       size="l"
       stretched
       disabled={disabled}

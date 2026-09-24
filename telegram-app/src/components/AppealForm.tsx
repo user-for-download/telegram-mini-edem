@@ -1,11 +1,10 @@
 import { useRef, useState } from "react";
-import {
-  Button,
-  Caption,
-  Input,
-  Text,
-  Textarea,
-} from "@telegram-apps/telegram-ui";
+import { Input, Textarea } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+import { Field } from "@/ui/Field";
+import { CharCounter } from "@/ui/CharCounter";
+import { Notice } from "@/ui/Notice";
+
 import { MessageSquareText, Send } from "lucide-react";
 import {
   FEEDBACK_SUBJECT_MAX_LENGTH,
@@ -70,70 +69,59 @@ export function AppealForm() {
 
   return (
     <>
-      <div>
-        <label htmlFor="appeal-subject" className="sr-only">
-          Тема
-        </label>
-        <Input
-          id="appeal-subject"
-          header="Тема"
-          before={
-            <MessageSquareText
-              size={16}
-              className="text-(--tgui--hint_color)"
-            />
-          }
-          value={subject}
-          maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
-          status={formError ? "error" : undefined}
-          onChange={(event) => {
-            setSubject(event.target.value);
-            if (formError) setFormError(null);
-            if (success) setSuccess(false);
-          }}
-        />
-      </div>
-      <div>
-        <label htmlFor="appeal-text" className="sr-only">
-          Сообщение
-        </label>
-        <Textarea
-          id="appeal-text"
-          header="Сообщение"
-          rows={4}
-          maxLength={FEEDBACK_TEXT_MAX_LENGTH}
-          placeholder="Почему блокировка ошибочна и что просите пересмотреть"
-          value={text}
-          aria-invalid={Boolean(formError)}
-          status={formError ? "error" : undefined}
-          onChange={(event) => {
-            setText(event.target.value);
-            if (formError) setFormError(null);
-            if (success) setSuccess(false);
-          }}
-        />
-      </div>
+      <Field label="Тема" id="appeal-subject">
+        {(field) => (
+          <Input
+            {...field}
+            before={
+              <MessageSquareText
+                size={16}
+                className="text-(--tgui--hint_color)"
+              />
+            }
+            value={subject}
+            maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
+            status={formError ? "error" : undefined}
+            onChange={(event) => {
+              setSubject(event.target.value);
+              if (formError) setFormError(null);
+              if (success) setSuccess(false);
+            }}
+          />
+        )}
+      </Field>
+      <Field label="Сообщение" id="appeal-text">
+        {(field) => (
+          <Textarea
+            {...field}
+            rows={4}
+            maxLength={FEEDBACK_TEXT_MAX_LENGTH}
+            placeholder="Почему блокировка ошибочна и что просите пересмотреть"
+            value={text}
+            aria-invalid={Boolean(formError)}
+            status={formError ? "error" : undefined}
+            onChange={(event) => {
+              setText(event.target.value);
+              if (formError) setFormError(null);
+              if (success) setSuccess(false);
+            }}
+          />
+        )}
+      </Field>
       {text.length > 0 && (
-        <Caption Component="p" className="text-right" aria-live="polite">
-          {text.length}/{FEEDBACK_TEXT_MAX_LENGTH}
-        </Caption>
+        <CharCounter value={text.length} max={FEEDBACK_TEXT_MAX_LENGTH} />
       )}
       {formError && (
-        <Caption
-          Component="p"
-          role="alert"
-          className="text-(--tg-theme-destructive-text-color)"
-        >
+        <Notice tone="danger" variant="text">
           {formError}
-        </Caption>
+        </Notice>
       )}
       {success && (
-        <Text Component="p" role="status" className="text-(--app-success)">
+        <Notice tone="success" variant="text">
           Обращение отправлено — администрация рассмотрит его как можно скорее
-        </Text>
+        </Notice>
       )}
       <Button
-        mode="bezeled"
         stretched
         size="l"
         before={<Send size={16} />}

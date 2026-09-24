@@ -1,22 +1,21 @@
 import { memo, useMemo } from "react";
 import {
-  Button,
   Caption,
-  Modal,
   Placeholder,
   Spinner,
   Text,
 } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { FetchMore } from "@/ui/FetchMore";
+import { Sheet } from "@/ui/Sheet";
+import { Button } from "@/ui/Button";
+
 import { useNavigate, useParams } from "react-router-dom";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { haptic } from "@/utils/haptics";
-import {
-  SheetTitle,
-  useSheetTitleId,
-} from "@/components/SheetTitle/SheetTitle";
 import { TripPage } from "@/pages/Trip/TripPage";
 import {
   bookingErrorMessage,
@@ -27,7 +26,7 @@ import {
   useTripBookingsQuery,
   useUpdateBookingStatusMutation,
 } from "@/queries/useBookingsQuery";
-import { SheetBody } from "@/ui/SheetBody";
+import { Card } from "@/ui/Card";
 import { Stack } from "@/ui/Stack";
 import styles from "./TripModals.module.css";
 
@@ -48,7 +47,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
   onDecline: (id: string) => void;
 }) {
   return (
-    <div className={styles.card}>
+    <Card className={styles.card}>
       <div className={styles.cardHead}>
         <div className={styles.rowInfo}>
           <LazyAvatar
@@ -89,7 +88,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
           onConfirm={() => onDecline(booking.id)}
         />
       </div>
-    </div>
+    </Card>
   );
 });
 
@@ -100,7 +99,7 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
   booking: TripBooking;
 }) {
   return (
-    <div className={styles.cardRow}>
+    <Card className={styles.cardRow}>
       <div className={styles.rowInfo}>
         <LazyAvatar
           size={40}
@@ -118,7 +117,7 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
       <StatusPill tone="success" className={styles.shrink}>
         Подтверждён
       </StatusPill>
-    </div>
+    </Card>
   );
 });
 
@@ -144,21 +143,14 @@ export function TripRequestsModal({
   // Фокус, Esc и Tab-trap — нативные (Radix FocusScope + onOpenChange).
   // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
   // текст только на iOS.
-  const titleId = useSheetTitleId();
   return (
-    <Modal
+    <Sheet
       open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      header={<Modal.Header>Заявки пассажиров</Modal.Header>}
-      aria-labelledby={titleId}
+      onClose={onClose}
+      title="Заявки пассажиров"
     >
-      <SheetBody>
-        <SheetTitle titleId={titleId}>Заявки пассажиров</SheetTitle>
-        <TripRequestsBody tripId={tripId} />
-      </SheetBody>
-    </Modal>
+      <TripRequestsBody tripId={tripId} />
+    </Sheet>
   );
 }
 
@@ -240,7 +232,6 @@ export const TripRequestsBody = memo(function TripRequestsBody({
             <>
               {!forbidden && (
                 <Button
-                  mode="bezeled"
                   stretched
                   onClick={() => void requests.refetch()}
                 >
@@ -248,7 +239,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
                 </Button>
               )}
               <Button
-                mode="outline"
+                variant="outline"
                 stretched
                 onClick={() => navigate("/bookings?segment=driver")}
               >
@@ -268,13 +259,9 @@ export const TripRequestsBody = memo(function TripRequestsBody({
       <OfflineBanner />
       <Stack>
         {update.error && (
-          <Caption
-            Component="p"
-            role="alert"
-            className={styles.errorText}
-          >
+          <Notice tone="danger" variant="text">
             {bookingErrorMessage(update.error)}
-          </Caption>
+          </Notice>
         )}
         {!items.length && <Placeholder header="Заявок нет" />}
         {pending.length > 0 && (
@@ -321,20 +308,12 @@ export const TripRequestsBody = memo(function TripRequestsBody({
             ))}
           </Stack>
         )}
-        {requests.hasNextPage && (
-          <Button
-            stretched
-            mode="bezeled"
-            className="min-h-11"
-            loading={requests.isFetchingNextPage}
-            disabled={requests.isFetchingNextPage}
-            onClick={() => void requests.fetchNextPage()}
-          >
-            Показать ещё
-          </Button>
-        )}
+        <FetchMore
+          hasNextPage={requests.hasNextPage}
+          isFetchingNextPage={requests.isFetchingNextPage}
+          fetchNextPage={() => void requests.fetchNextPage()}
+        />
         <Button
-          mode="bezeled"
           stretched
           className="min-h-11"
           onClick={() => navigate("/bookings?segment=driver")}

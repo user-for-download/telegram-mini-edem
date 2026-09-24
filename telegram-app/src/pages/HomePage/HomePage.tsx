@@ -1,4 +1,6 @@
-import { Button, Placeholder } from "@telegram-apps/telegram-ui";
+import { Placeholder } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+
 import { PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PopularRoutesSection } from "@/components/Section/PopularRoutesSection";
@@ -31,7 +33,6 @@ export function HomePage() {
         action={
           <Button
             size="l"
-            mode="bezeled"
             before={<PlusCircle size={16} />}
             onClick={() => {
               haptic.light();

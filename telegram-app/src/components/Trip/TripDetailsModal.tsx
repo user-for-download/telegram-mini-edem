@@ -1,12 +1,7 @@
-import { Modal } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
+import { Sheet } from "@/ui/Sheet";
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripDetailsPage } from "@/pages/TripDetails/TripDetailsPage";
-import {
-  SheetTitle,
-  useSheetTitleId,
-} from "@/components/SheetTitle/SheetTitle";
-import { SheetBody } from "@/ui/SheetBody";
 
 /**
  * Детали поездки — route-backed шторка поверх «Поиска»;
@@ -21,21 +16,14 @@ export function TripDetailsModal({
 }) {
   // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
   // текст только на iOS.
-  const titleId = useSheetTitleId();
   return (
-    <Modal
+    <Sheet
       open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      header={<Modal.Header>Детали поездки</Modal.Header>}
-      aria-labelledby={titleId}
+      onClose={onClose}
+      title="Детали поездки"
     >
-      <SheetBody>
-        <SheetTitle titleId={titleId}>Детали поездки</SheetTitle>
-        <TripDetailsPage />
-      </SheetBody>
-    </Modal>
+      <TripDetailsPage />
+    </Sheet>
   );
 }
 

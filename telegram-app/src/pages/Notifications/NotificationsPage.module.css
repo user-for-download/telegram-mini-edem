@@ -38,12 +38,11 @@
   text-align: center;
 }
 
-/* Карточка уведомления (тело FeedCard): колонка с зазором 8px. */
+/* Карточка уведомления: раскладка поверх ui/Card (паддинг 16 даёт Card). */
 .card {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 16px;
 }
 
 /* Шапка карточки: заголовок + пилюля (Новое/Важное). */
@@ -75,16 +74,6 @@
 }
 
 /* Якорь автодогрузки: скрыт от скринридера, высота 48px держит скролл. */
-.sentinel {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-  justify-content: center;
-}
 
 /* Обёртка догрузки: вертикальная колонка болванок. */
-.fetchMore {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+

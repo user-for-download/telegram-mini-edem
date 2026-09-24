@@ -1,6 +1,5 @@
 import { type FC, type PropsWithChildren, useRef, useState } from "react";
 import {
-  Button,
   Caption,
   Cell,
   List,
@@ -8,6 +7,9 @@ import {
   Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Button } from "@/ui/Button";
+
 import { ChevronRight } from "lucide-react";
 import { usersApi } from "@/api/users.api";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -48,9 +50,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
     return (
       <>
         {error && (
-          <Caption Component="p" role="alert" className={styles.errorText}>
-            {error}
-          </Caption>
+          <Notice tone="danger" variant="text">{error}</Notice>
         )}
         <Placeholder
           header="Без согласия сервис недоступен"
@@ -58,7 +58,6 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
           action={
             <>
               <Button
-                mode="bezeled"
                 size="l"
                 stretched
                 onClick={() => setDeclined(false)}
@@ -67,7 +66,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
               </Button>
               <Button
                 size="l"
-                mode="outline"
+                variant="outline"
                 stretched
                 loading={deleting}
                 disabled={deleting}
@@ -111,9 +110,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
           </VisuallyHidden>
         </Placeholder>
         {error && (
-          <Caption Component="p" role="alert" className={styles.errorText}>
-            {error}
-          </Caption>
+          <Notice tone="danger" variant="text">{error}</Notice>
         )}
         <Section
           header="Перед началом"
@@ -144,7 +141,6 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
 
           <div className={styles.actions}>
             <Button
-              mode="bezeled"
               size="l"
               stretched
               loading={busy}
@@ -155,7 +151,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
             </Button>
             <Button
               size="l"
-              mode="plain"
+              variant="ghost"
               stretched
               className={styles.decline}
               disabled={busy}

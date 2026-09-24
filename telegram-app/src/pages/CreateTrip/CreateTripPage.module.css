@@ -21,6 +21,8 @@
 
 /* Кнопка смены городов: удвоенный селектор — канон вместо Tailwind-
  * суффиксов ! (перебиваем кит Button без !important). */
+/* Кнопка swap поверх полей: тень-возвышение (не карточка) — ui/Card
+ * осознанно не применён, см. SearchPage .swap. */
 .swap.swap {
   position: absolute;
   right: 8px;
@@ -58,10 +60,6 @@
 .stepperValue {
   flex: 1 1 0%;
   text-align: center;
-}
-
-.errorText {
-  color: var(--tg-theme-destructive-text-color);
 }
 
 /* Теги-пилюли условий (tgui Chip-кнопки с aria-pressed): флекс-ряд

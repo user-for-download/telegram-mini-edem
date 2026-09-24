@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import {
-  Button,
   Caption,
   IconContainer,
-  Modal,
   Text,
 } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+
 import { Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
@@ -15,11 +15,8 @@ import {
   useProfileNotificationSettingsMutation,
   useProfileQuery,
 } from "@/queries/profile";
-import {
-  SheetTitle,
-  useSheetTitleId,
-} from "@/components/SheetTitle/SheetTitle";
-import { SheetBody } from "@/ui/SheetBody";
+import { Card } from "@/ui/Card";
+import { Sheet } from "@/ui/Sheet";
 import { Stack } from "@/ui/Stack";
 import styles from "./ProfileModals.module.css";
 
@@ -41,21 +38,14 @@ export function SettingsModal({
 }) {
   // Имя диалога для скринридера + видимый заголовок на base-платформе
   // (tgui Modal.Header рисует текст только на iOS).
-  const titleId = useSheetTitleId();
   return (
-    <Modal
+    <Sheet
       open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      header={<Modal.Header>Настройки</Modal.Header>}
-      aria-labelledby={titleId}
+      onClose={onClose}
+      title="Настройки"
     >
-      <SheetBody>
-        <SheetTitle titleId={titleId}>Настройки</SheetTitle>
-        <SettingsBody />
-      </SheetBody>
-    </Modal>
+      <SettingsBody />
+    </Sheet>
   );
 }
 
@@ -126,7 +116,7 @@ export function SettingsBody() {
         onRetry={() => void profile.refetch()}
       >
         <Stack className={styles.stackSettings}>
-          <div className={styles.card}>
+          <Card className={styles.card}>
             <div className={styles.row}>
               <IconContainer>
                 {enabled ? <BellRing size={18} /> : <Bell size={18} />}
@@ -138,7 +128,6 @@ export function SettingsBody() {
               </Text>
             </div>
             <Button
-              mode="bezeled"
               stretched
               size="l"
               className="min-h-11"
@@ -162,7 +151,6 @@ export function SettingsBody() {
               и типов уведомлений пока не поддерживаются.
             </Caption>
             <Button
-              mode="bezeled"
               size="m"
               stretched
               className="min-h-11"
@@ -170,7 +158,7 @@ export function SettingsBody() {
             >
               Открыть уведомления
             </Button>
-          </div>
+          </Card>
         </Stack>
       </QueryState>
     </>

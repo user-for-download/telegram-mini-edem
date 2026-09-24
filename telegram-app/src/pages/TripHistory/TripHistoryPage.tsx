@@ -1,10 +1,11 @@
 import {
   Badge,
-  Button,
   Cell,
   IconContainer,
   Section,
 } from "@telegram-apps/telegram-ui";
+import { FetchMore } from "@/ui/FetchMore";
+
 import { useNavigate } from "react-router-dom";
 import { CarFront, CircleUserRound } from "lucide-react";
 import { QueryState } from "@/components/QueryState";
@@ -160,33 +161,14 @@ export function TripHistoryPage() {
           })}
         </Section>
       )}
-      {driverArchive.hasNextPage && (
-        <>
-          <div
-            ref={archiveSentinelRef}
-            aria-hidden="true"
-            className={styles.sentinel}
-          />
-          {driverArchive.isFetchingNextPage && (
-            <div
-              role="status"
-              aria-label="Загрузка ещё поездок"
-              className={styles.list}
-            >
-              <TripCardSkeleton />
-            </div>
-          )}
-          <Button
-            stretched
-            mode="bezeled"
-            loading={driverArchive.isFetchingNextPage}
-            disabled={driverArchive.isFetchingNextPage}
-            onClick={() => void driverArchive.fetchNextPage()}
-          >
-            Показать ещё
-          </Button>
-        </>
-      )}
+      <FetchMore
+        hasNextPage={driverArchive.hasNextPage}
+        isFetchingNextPage={driverArchive.isFetchingNextPage}
+        fetchNextPage={() => void driverArchive.fetchNextPage()}
+        sentinelRef={archiveSentinelRef}
+        placeholder={<TripCardSkeleton />}
+        placeholderLabel="Загрузка ещё поездок"
+      />
     </QueryState>
   );
 }

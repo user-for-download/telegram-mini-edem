@@ -1,6 +1,5 @@
 import {
   Avatar,
-  Button,
   Caption,
   Headline,
   Modal,
@@ -15,13 +14,12 @@ import {
   List,
   IconContainer,
 } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+import { Sheet } from "@/ui/Sheet";
+
 import { CarFront, X } from "lucide-react";
 import type { Booking, DriverBookingAction, Review } from "@edem/contracts";
 import { formatSeatNumber } from "@/utils/bookingSplit";
-import {
-  SheetTitle,
-  useSheetTitleId,
-} from "@/components/SheetTitle/SheetTitle";
 
 /**
  * Досье пассажира в нижней модалке (vaul): аватар с бейджем рейтинга,
@@ -51,42 +49,33 @@ export function PassengerRequestModal({
   reviews,
   reviewsLoading,
 }: PassengerRequestModalProps) {
-  // Динамический заголовок (маршрут заявки): titleId — в aria-labelledby,
-  // тот же текст — скрытым h2 и видимым на base через SheetTitle.
-  const titleId = useSheetTitleId();
+  // Динамический заголовок (маршрут заявки): связку «скрытый h2 +
+  // видимый заголовок + aria-labelledby» держит ui/Sheet (SheetTitle внутри).
   const title = booking
     ? `Заявка · ${booking.trip.fromCity} → ${booking.trip.toCity}`
     : "Заявка";
   return (
-    <Modal
+    <Sheet
       open={open && booking !== null}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      aria-labelledby={titleId}
+      onClose={onClose}
+      title={title}
+      variant="edge"
+      headerAfter={
+        <Modal.Close>
+          <X style={{ color: "var(--tgui--plain_foreground)" }} />
+        </Modal.Close>
+      }
     >
       {booking && (
-        <>
-          <Modal.Header
-            after={
-              <Modal.Close>
-                <X style={{ color: "var(--tgui--plain_foreground)" }} />
-              </Modal.Close>
-            }
-          >
-            {title}
-          </Modal.Header>
-          <SheetTitle titleId={titleId}>{title}</SheetTitle>
-          <PassengerRequestModalBody
-            booking={booking}
-            onDecide={onDecide}
-            busy={busy}
-            reviews={reviews}
-            reviewsLoading={reviewsLoading}
-          />
-        </>
+        <PassengerRequestModalBody
+          booking={booking}
+          onDecide={onDecide}
+          busy={busy}
+          reviews={reviews}
+          reviewsLoading={reviewsLoading}
+        />
       )}
-    </Modal>
+    </Sheet>
   );
 }
 
@@ -197,7 +186,7 @@ export function PassengerRequestModalBody({
       <Button
         size="l"
         stretched
-        mode="filled"
+        variant="primary"
         disabled={busy !== null}
         onClick={() => onDecide("confirmed")}
       >
@@ -206,7 +195,6 @@ export function PassengerRequestModalBody({
       <Button
         size="l"
         stretched
-        mode="bezeled"
         disabled={busy !== null}
         style={{ color: "var(--tgui--destructive_text_color)" }}
         onClick={() => onDecide("declined")}

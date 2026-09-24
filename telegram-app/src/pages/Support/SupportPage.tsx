@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import {
   Accordion,
-  Button,
   Caption,
   Input,
   Placeholder,
@@ -9,6 +8,11 @@ import {
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Field } from "@/ui/Field";
+import { CharCounter } from "@/ui/CharCounter";
+import { Button } from "@/ui/Button";
+
 import { MessageSquareText, Send } from "lucide-react";
 import {
   FEEDBACK_SUBJECT_MAX_LENGTH,
@@ -258,75 +262,57 @@ export function SupportPage() {
         <Section header="Связаться с нами" aria-label="Связаться с нами">
           <SectionBody>
             <MutationError error={create.error} />
-            <div>
-              <label htmlFor="support-subject" className="sr-only">
-                Тема
-              </label>
-              <Input
-                id="support-subject"
-                header="Тема"
-                before={
-                  <MessageSquareText
-                    size={16}
-                    className={styles.hintIcon}
-                  />
-                }
-                placeholder="Например: не приходит уведомление"
-                value={subject}
-                maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
-                status={formError ? "error" : undefined}
-                onChange={(event) => {
-                  setSubject(event.target.value);
-                  if (formError) setFormError(null);
-                  if (success) setSuccess(false);
-                }}
-              />
-            </div>
-            <div>
-              <label htmlFor="support-text" className="sr-only">
-                Сообщение
-              </label>
-              <Textarea
-                id="support-text"
-                header="Сообщение"
-                rows={4}
-                maxLength={FEEDBACK_TEXT_MAX_LENGTH}
-                placeholder="Расскажите подробнее, что произошло"
-                value={text}
-                aria-invalid={Boolean(formError)}
-                status={formError ? "error" : undefined}
-                onChange={(event) => {
-                  setText(event.target.value);
-                  if (formError) setFormError(null);
-                  if (success) setSuccess(false);
-                }}
-              />
-            </div>
+            <Field label="Тема" id="support-subject">
+              {(field) => (
+                <Input
+                  {...field}
+                  before={
+                    <MessageSquareText size={16} className={styles.hintIcon} />
+                  }
+                  placeholder="Например: не приходит уведомление"
+                  value={subject}
+                  maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
+                  status={formError ? "error" : undefined}
+                  onChange={(event) => {
+                    setSubject(event.target.value);
+                    if (formError) setFormError(null);
+                    if (success) setSuccess(false);
+                  }}
+                />
+              )}
+            </Field>
+            <Field label="Сообщение" id="support-text">
+              {(field) => (
+                <Textarea
+                  {...field}
+                  rows={4}
+                  maxLength={FEEDBACK_TEXT_MAX_LENGTH}
+                  placeholder="Расскажите подробнее, что произошло"
+                  value={text}
+                  aria-invalid={Boolean(formError)}
+                  status={formError ? "error" : undefined}
+                  onChange={(event) => {
+                    setText(event.target.value);
+                    if (formError) setFormError(null);
+                    if (success) setSuccess(false);
+                  }}
+                />
+              )}
+            </Field>
             {text.length > 0 && (
-              <Caption Component="p" className={styles.counter} aria-live="polite">
-                {text.length}/{FEEDBACK_TEXT_MAX_LENGTH}
-              </Caption>
+              <CharCounter value={text.length} max={FEEDBACK_TEXT_MAX_LENGTH} />
             )}
             {formError && (
-              <Caption
-                Component="p"
-                role="alert"
-                className={styles.errorText}
-              >
+              <Notice tone="danger" variant="text">
                 {formError}
-              </Caption>
+              </Notice>
             )}
             {success && (
-              <Text
-                Component="p"
-                role="status"
-                className={styles.successText}
-              >
+              <Notice tone="success" variant="text">
                 Обращение отправлено — мы ответим вам как можно скорее
-              </Text>
+              </Notice>
             )}
             <Button
-              mode="bezeled"
               stretched
               size="l"
               before={<Send size={16} />}

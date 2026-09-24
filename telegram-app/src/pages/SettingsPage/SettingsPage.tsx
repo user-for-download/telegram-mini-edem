@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import {
-  Button,
   Caption,
   IconContainer,
   Section,
   Text,
 } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
+
 import { ArrowLeft, Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
@@ -88,7 +89,6 @@ export function SettingsPage() {
                 </Text>
               </div>
               <Button
-                mode="bezeled"
                 stretched
                 size="l"
                 loading={save.isPending}
@@ -108,7 +108,6 @@ export function SettingsPage() {
               </Caption>
               <div className={styles.actions}>
                 <Button
-                  mode="bezeled"
                   size="s"
                   stretched
                   onClick={() => navigate("/notifications")}
@@ -116,7 +115,6 @@ export function SettingsPage() {
                   Открыть уведомления
                 </Button>
                 <Button
-                  mode="bezeled"
                   size="s"
                   stretched
                   before={<ArrowLeft size={15} />}

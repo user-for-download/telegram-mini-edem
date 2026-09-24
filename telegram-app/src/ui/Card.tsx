@@ -27,13 +27,24 @@ const VARIANTS = {
  * по модулям (ProfileModals ×3, TripModals ×2, TripFeedCard, TripCards,
  * CreateTrip, ProfilePage, SearchPage, FeedCard).
  *
- * kit <Card> из @telegram-apps/telegram-ui НЕ используем: visual-check
- * tgui-adoption-04 отклонил его (radius 20 vs 16, нет рамки, bg
- * tertiary вместо section, тень 0 32px, display:inline-block, конфликт
- * Card.Cell/Card.Chip) — аргументы зафиксированы в FeedCard.tsx.
+ * TGUI Card visual-check (2026-09-15, tgui-adoption-04): STOP — миграция
+ * на `Card` из @telegram-apps/telegram-ui (v2.1.13) отклонена, расхождения
+ * по всем пунктам (dist/styles.css как источник истины):
+ * - radius: Card 20px vs rounded-2xl (16px)
+ * - border: у Card нет рамки vs hairline --tgui--outline
+ * - bg: Card tertiary_bg_color (#f4f4f7) vs section_bg_color (#fff)
+ * - shadow: Card 0 32px 64px + 0 0 2px vs shadow-xs
+ * - layout: Card display:inline-block + overflow:hidden, рендерит <article>
+ *   (не <div>) — ломает блочную раскладку ленты
+ * - Card.Cell оборачивает в интерактивный Cell (padding 0 20px) —
+ *   конфликтует с системой паддингов; `readOnly` в CellProps нет
+ * - Card.Chip position:absolute — ломает инлайн-пилюлю мест
+ * Решение: только div-рецепт (этот примитив), нулевой риск регрессии.
  *
  * Раскладка (gap/flex/вид строки) остаётся у вызывающего: он докладывает
- * свой className, как и раньше у FeedCard.
+ * свой className, как и раньше у FeedCard. Для контейнеров, которые нельзя
+ * сделать div (Tappable/button/китовая обёртка), есть класс-константы в
+ * ui/classes.ts — правило то же, контейнер любой.
  */
 export function Card({
   variant = "default",

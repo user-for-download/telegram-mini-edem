@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Button,
   Caption,
   Chip,
   IconButton,
@@ -9,6 +8,10 @@ import {
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
+import { Notice } from "@/ui/Notice";
+import { Field } from "@/ui/Field";
+import { Button } from "@/ui/Button";
+
 import { Phone, Send, ShieldCheck, Star } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -97,16 +100,12 @@ export function TripDetailsPage() {
           action={
             <>
               {!isNotFound && (
-                <Button
-                  mode="bezeled"
-                  stretched
-                  onClick={() => void trip.refetch()}
-                >
+                <Button stretched onClick={() => void trip.refetch()}>
                   Повторить
                 </Button>
               )}
               <Button
-                mode="outline"
+                variant="outline"
                 stretched
                 onClick={() => navigate("/trips")}
               >
@@ -176,14 +175,13 @@ export function TripDetailsPage() {
       <OfflineBanner />
 
       {hasActiveBooking && item.myBooking && (
-        <div className={styles.successBanner}>
+        <Notice tone="success" variant="banner">
           <div>
             <Text weight="2" Component="div" className={styles.success}>
               Вы записались попутчиком
             </Text>
             <Caption Component="div" className={styles.successMuted}>
-              Место №{item.myBooking.seat} · {item.price}{" "}
-              ₽
+              Место №{item.myBooking.seat} · {item.price} ₽
             </Caption>
           </div>
           <StatusPill
@@ -193,7 +191,7 @@ export function TripDetailsPage() {
               ? "Подтверждено"
               : "На рассмотрении"}
           </StatusPill>
-        </div>
+        </Notice>
       )}
 
       <div className={styles.routeCard}>
@@ -224,24 +222,14 @@ export function TripDetailsPage() {
             alt={item.driver.name}
           />
           <div className={styles.grow}>
-            <Text
-              weight="2"
-              Component="div"
-              className={styles.nameRow}
-            >
+            <Text weight="2" Component="div" className={styles.nameRow}>
               <span className={styles.truncate}>{item.driver.name}</span>
               {item.driver.isVerified && (
-                <ShieldCheck
-                  size={15}
-                  className={styles.verified}
-                />
+                <ShieldCheck size={15} className={styles.verified} />
               )}
             </Text>
             <Caption Component="div" className={styles.ratingRow}>
-              <Star
-                size={12}
-                className={styles.star}
-              />
+              <Star size={12} className={styles.star} />
               <span>{item.driver.rating.toFixed(1)}</span>
               <span>({item.driver.reviewsCount} отзывов)</span>
             </Caption>
@@ -273,7 +261,6 @@ export function TripDetailsPage() {
       </div>
 
       <Button
-        mode="bezeled"
         size="m"
         stretched
         before={<Send size={16} />}
@@ -336,13 +323,9 @@ export function TripDetailsPage() {
             />
           )}
           {cancelBooking.error && (
-            <Caption
-              Component="p"
-              role="alert"
-              className={styles.errorText}
-            >
+            <Notice tone="danger" variant="text">
               {bookingErrorMessage(cancelBooking.error)}
-            </Caption>
+            </Notice>
           )}
         </div>
       )}
@@ -361,7 +344,7 @@ export function TripDetailsPage() {
                 takenSeats.includes(seat) ? (
                   <Button
                     key={seat}
-                    mode="outline"
+                    variant="outline"
                     disabled
                     aria-label={`Место ${seat} занято`}
                   >
@@ -369,7 +352,6 @@ export function TripDetailsPage() {
                   </Button>
                 ) : effectiveSeat === seat ? (
                   <Button
-                    mode="bezeled"
                     key={seat}
                     disabled={createBooking.isPending}
                     onClick={() => setSelectedSeat(seat)}
@@ -381,7 +363,7 @@ export function TripDetailsPage() {
                 ) : (
                   <Button
                     key={seat}
-                    mode="outline"
+                    variant="outline"
                     disabled={createBooking.isPending}
                     onClick={() => setSelectedSeat(seat)}
                     aria-pressed={false}
@@ -393,20 +375,18 @@ export function TripDetailsPage() {
               )}
             </div>
           </div>
-          <div>
-            <label htmlFor="booking-comment" className="sr-only">
-              Комментарий водителю
-            </label>
-            <Textarea
-              id="booking-comment"
-              header="Комментарий водителю"
-              value={comment}
-              maxLength={300}
-              rows={3}
-              placeholder="Например: буду с небольшим чемоданом, подойду к 9:25"
-              onChange={(event) => setComment(event.target.value)}
-            />
-          </div>
+          <Field label="Комментарий водителю" id="booking-comment">
+            {(field) => (
+              <Textarea
+                {...field}
+                value={comment}
+                maxLength={300}
+                rows={3}
+                placeholder="Например: буду с небольшим чемоданом, подойду к 9:25"
+                onChange={(event) => setComment(event.target.value)}
+              />
+            )}
+          </Field>
           <div className={styles.priceRow}>
             <div>
               <Caption Component="div">Цена за место</Caption>
@@ -414,14 +394,13 @@ export function TripDetailsPage() {
                 {item.price} ₽
               </Text>
             </div>
-            <Caption Component="div" className={styles.counter}>
+            <Caption Component="div" className={styles.payHint}>
               Оплата водителю
               <br />
               при посадке
             </Caption>
           </div>
           <Button
-            mode="bezeled"
             size="l"
             stretched
             loading={createBooking.isPending}
@@ -445,7 +424,10 @@ export function TripDetailsPage() {
                   },
                   onError: (error) => {
                     // Гонка за место: обновляем схему мест с сервера.
-                    if (error instanceof ApiError && error.code === "SEAT_TAKEN") {
+                    if (
+                      error instanceof ApiError &&
+                      error.code === "SEAT_TAKEN"
+                    ) {
                       void queryClient.invalidateQueries({
                         queryKey: TRIP_KEYS.detail(item.id),
                       });
@@ -460,13 +442,9 @@ export function TripDetailsPage() {
               : "Забронировать место"}
           </Button>
           {createBooking.error && (
-            <Caption
-              Component="p"
-              role="alert"
-              className={styles.errorText}
-            >
+            <Notice tone="danger" variant="text">
               {bookingErrorMessage(createBooking.error)}
-            </Caption>
+            </Notice>
           )}
         </div>
       )}
@@ -553,29 +531,24 @@ function DriverBlock({
       {isActive && (
         <>
           <Button
-            mode="bezeled"
             stretched
             onClick={() => navigate(`/trips/my/${tripId}/requests`)}
           >
             Заявки пассажиров{bookings.data ? ` (${pendingCount})` : ""}
           </Button>
           {bookings.isError && (
-            <Caption
-              Component="p"
-              role="alert"
-              className={styles.errorText}
-            >
+            <Notice tone="danger" variant="text">
               {bookingErrorMessage(bookings.error)}{" "}
               <Button
-                mode="plain"
+                variant="ghost"
                 size="s"
                 onClick={() => void bookings.refetch()}
               >
                 Повторить
               </Button>
-            </Caption>
+            </Notice>
           )}
-          <Button mode="bezeled" stretched onClick={onToggleEdit}>
+          <Button stretched onClick={onToggleEdit}>
             {editing ? "Скрыть редактирование" : "Редактировать поездку"}
           </Button>
           {editing && <EditTripForm trip={trip} onDone={onToggleEdit} />}
@@ -603,13 +576,9 @@ function DriverBlock({
             onConfirm={() => cancelTrip.mutate(tripId)}
           />
           {(cancelTrip.error || completeTrip.error) && (
-            <Caption
-              Component="p"
-              role="alert"
-              className={styles.errorText}
-            >
+            <Notice tone="danger" variant="text">
               {bookingErrorMessage(cancelTrip.error ?? completeTrip.error)}
-            </Caption>
+            </Notice>
           )}
         </>
       )}

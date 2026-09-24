@@ -27,19 +27,8 @@
 }
 
 /* Счётчик символов под полем (было text-right). */
-.counter {
-  text-align: right;
-}
-
 /* Иконка в поле ввода: подсказочный цвет. */
 .hintIcon {
   color: var(--tgui--hint_color);
 }
 
-.errorText {
-  color: var(--tg-theme-destructive-text-color);
-}
-
-.successText {
-  color: var(--app-success);
-}
