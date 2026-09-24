@@ -15,6 +15,8 @@ import { wsManager } from "../ws/manager.js";
 import { revokeAllActiveTokens } from "../auth/tokens.js";
 import { ERROR_CODES } from "../errors.js";
 import { DEFAULT_AVATAR_URL } from "../constants.js";
+import { logBusinessEvent } from "../logger/business.js";
+import { createNotification } from "../services/notification.service.js";
 
 const updateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
@@ -38,23 +40,118 @@ export const usersRouter = new Hono<AuthEnv>();
 usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
   const user = c.get("user");
   const now = new Date();
+  // Каскад вместо 409 ACCOUNT_HAS_ACTIVE_OBLIGATIONS: удаление завершает
+  // активные поездки водителя (forced complete — departure-гейт пропущен,
+  // аккаунт исчезает и поездки нельзя оставить висеть) и отменяет
+  // pending/confirmed брони пользователя на активных поездках.
+  // Семантика — зеркало рантайма: complete (PATCH /trips/:id/complete)
+  // отклоняет pending, оставляет confirmed историей, гасит места;
+  // cancel брони (PATCH /bookings/:id/cancel) возвращает место в пул.
   const result = await db.$transaction(
     async (tx) => {
-      const activeTrip = await tx.trip.findFirst({
+      const completedTrips: Array<{
+        id: string;
+        fromCity: string;
+        toCity: string;
+        confirmedPassengerIds: string[];
+        declinedPassengerIds: string[];
+      }> = [];
+      const ownTrips = await tx.trip.findMany({
         where: { driverId: user.id, status: "active" },
-        select: { id: true },
+        select: { id: true, fromCity: true, toCity: true },
       });
-      const activeBooking = await tx.booking.findFirst({
+      for (const trip of ownTrips) {
+        const pendings = await tx.booking.findMany({
+          where: { tripId: trip.id, status: "pending" },
+          select: { passengerId: true },
+        });
+        const confirmed = await tx.booking.findMany({
+          where: { tripId: trip.id, status: "confirmed" },
+          select: { passengerId: true },
+        });
+        await tx.booking.updateMany({
+          where: { tripId: trip.id, status: "pending" },
+          data: {
+            status: "declined",
+            cancelledAt: now,
+            cancelledByType: "system",
+            cancellationReason: "Trip completed (driver deleted account)",
+          },
+        });
+        const declinedPassengerIds = Array.from(
+          new Set(pendings.map((b) => b.passengerId)),
+        );
+        const confirmedPassengerIds = Array.from(
+          new Set(confirmed.map((b) => b.passengerId)),
+        );
+        for (const passengerId of confirmedPassengerIds) {
+          await tx.user.update({
+            where: { id: passengerId },
+            data: { tripsCount: { increment: 1 } },
+          });
+        }
+        await tx.trip.update({
+          where: { id: trip.id },
+          data: { status: "completed", seatsAvailable: 0 },
+        });
+        completedTrips.push({
+          id: trip.id,
+          fromCity: trip.fromCity,
+          toCity: trip.toCity,
+          confirmedPassengerIds,
+          declinedPassengerIds,
+        });
+      }
+
+      // Свои брони — ПОСЛЕ завершения своих поездок: поездка уже completed
+      // исключается фильтром trip.status active (самобронь на свою поездку
+      // невозможна, но порядок страхует от двойной обработки).
+      const ownBookings = await tx.booking.findMany({
         where: {
           passengerId: user.id,
           status: { in: ["pending", "confirmed"] },
-          // Только активные поездки — завершённые/отменённые это история
-          // и удалению не мешают (иначе история блокировала бы его навсегда).
           trip: { status: "active" },
         },
-        select: { id: true },
+        select: {
+          id: true,
+          tripId: true,
+          trip: {
+            select: {
+              driverId: true,
+              seatsAvailable: true,
+              seatsTotal: true,
+            },
+          },
+        },
       });
-      if (activeTrip || activeBooking) return { kind: "obligations" as const };
+      const cancelledBookings: Array<{ id: string; tripId: string; driverId: string }> = [];
+      for (const booking of ownBookings) {
+        await tx.trip.update({
+          where: { id: booking.tripId },
+          data: {
+            seatsAvailable: Math.min(
+              booking.trip.seatsAvailable + 1,
+              booking.trip.seatsTotal,
+            ),
+          },
+        });
+        await tx.booking.update({
+          where: { id: booking.id },
+          data: {
+            status: "cancelled",
+            cancelledAt: now,
+            cancelledByType: "user",
+            cancelledByUserId: user.id,
+            cancellationReason: "Passenger deleted account",
+          },
+        });
+        cancelledBookings.push({
+          id: booking.id,
+          tripId: booking.tripId,
+          driverId: booking.trip.driverId,
+        });
+      }
+
       await tx.refreshToken.deleteMany({ where: { userId: user.id } });
       await tx.notification.deleteMany({ where: { userId: user.id } });
       await tx.feedback.deleteMany({ where: { userId: user.id } });
@@ -83,18 +180,64 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
           consentAcceptedAt: null,
         },
       });
-      return { kind: "deleted" as const };
+      return { completedTrips, cancelledBookings };
     },
     { isolationLevel: "Serializable" },
   );
-  if (result.kind === "obligations")
-    return c.json(
-      {
-        code: ERROR_CODES.ACCOUNT_HAS_ACTIVE_OBLIGATIONS,
-        message: "Resolve active trips and bookings first",
-      },
-      409,
-    );
+
+  // Уведомления + WS вне транзакции (паттерн complete/cancel рантайма).
+  for (const trip of result.completedTrips) {
+    logBusinessEvent("trip.completed", {
+      tripId: trip.id,
+      driverId: user.id,
+      passengersCount: trip.confirmedPassengerIds.length,
+    });
+    for (const pid of trip.confirmedPassengerIds) {
+      await createNotification(
+        pid,
+        "trip_status_changed",
+        "Поездка завершена",
+        `Поездка ${trip.fromCity} → ${trip.toCity} завершена. Вы можете оставить отзыв.`,
+        "/bookings/history",
+      );
+      wsManager.sendToUser(pid, {
+        type: "trip:status_changed",
+        payload: { tripId: trip.id, status: "completed" },
+      });
+      wsManager.sendToUser(pid, {
+        type: "notification:new",
+        payload: { id: "refresh" },
+      });
+    }
+    for (const pid of trip.declinedPassengerIds) {
+      await createNotification(
+        pid,
+        "trip_status_changed",
+        "Поездка завершена",
+        `Поездка ${trip.fromCity} → ${trip.toCity} завершена, ваша заявка отклонена.`,
+        "/bookings/history",
+      );
+      wsManager.sendToUser(pid, {
+        type: "trip:status_changed",
+        payload: { tripId: trip.id, status: "completed" },
+      });
+      wsManager.sendToUser(pid, {
+        type: "notification:new",
+        payload: { id: "refresh" },
+      });
+    }
+  }
+  for (const booking of result.cancelledBookings) {
+    logBusinessEvent("booking.cancelled", {
+      bookingId: booking.id,
+      passengerId: user.id,
+    });
+    wsManager.sendToUser(booking.driverId, {
+      type: "booking:status_changed",
+      payload: { bookingId: booking.id, tripId: booking.tripId, status: "cancelled" },
+    });
+  }
+
   wsManager.closeUserConnections(user.id, 4403, "Account deleted");
   await revokeAllActiveTokens(user.id);
   return c.json({ success: true });
@@ -250,8 +393,9 @@ usersRouter.patch("/me/car", requireUser, profileUpdateLimiter, upsertCar);
  * Инвариант trips-creation (trips/index.ts: создание поездки требует car,
  * иначе NO_CAR): водитель с активными поездками без машины — неконсистентное
  * состояние (карточки поездок показывают авто водителя). Поэтому при наличии
- * active-поездок удаление блокируется 409 ACCOUNT_HAS_ACTIVE_OBLIGATIONS —
- * зеркально DELETE /users/me. Завершённые/отменённые поездки — история,
+ * active-поездок удаление блокируется 409 ACCOUNT_HAS_ACTIVE_OBLIGATIONS
+ * (удаление аккаунта DELETE /users/me, наоборот, завершает поездки
+ * каскадом). Завершённые/отменённые поездки — история,
  * удалению не мешают. Брони пассажира машину не затрагивают (авто нужно
  * только водителю), их не проверяем.
  *

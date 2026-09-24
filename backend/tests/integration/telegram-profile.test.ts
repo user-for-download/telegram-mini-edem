@@ -257,7 +257,7 @@ describe("DELETE /users/me (telegram)", () => {
     expect(await db.user.count({ where: { telegramUserId: tgId } })).toBe(1);
   });
 
-  it("409 при активной поездке водителя (ACCOUNT_HAS_ACTIVE_OBLIGATIONS)", async () => {
+  it("удаление завершает активную поездку водителя вместо 409", async () => {
     const userId = await seedTelegramUser();
     const token = await signAccessToken(userId);
     const trip = await db.trip.create({
@@ -280,11 +280,12 @@ describe("DELETE /users/me (telegram)", () => {
 
     const res = await authed("DELETE", "/api/v1/users/me", token);
 
-    expect(res.status).toBe(409);
-    expect(((await res.json()) as { code: string }).code).toBe("ACCOUNT_HAS_ACTIVE_OBLIGATIONS");
+    expect(res.status).toBe(200);
+    const completed = await db.trip.findUnique({ where: { id: trip.id } });
+    expect(completed?.status).toBe("completed");
   });
 
-  it("409 при активной брони на активной поездке; история не блокирует", async () => {
+  it("удаление отменяет активную бронь; история не мешает", async () => {
     const userId = await seedTelegramUser();
     const driverId = await seedTelegramUser();
     const token = await signAccessToken(userId);
@@ -310,11 +311,39 @@ describe("DELETE /users/me (telegram)", () => {
     });
     createdBookingIds.push(booking.id);
 
-    const blocked = await authed("DELETE", "/api/v1/users/me", token);
-    expect(blocked.status).toBe(409);
+    const deleted = await authed("DELETE", "/api/v1/users/me", token);
+    expect(deleted.status).toBe(200);
+    const cancelled = await db.booking.findUnique({ where: { id: booking.id } });
+    expect(cancelled?.status).toBe("cancelled");
+  });
 
-    // Завершённая поездка — история: удалению не мешает
-    await db.trip.update({ where: { id: trip.id }, data: { status: "completed" } });
+  it("бронь только на завершённой поездке (история) удалению не мешает", async () => {
+    const userId = await seedTelegramUser();
+    const driverId = await seedTelegramUser();
+    const token = await signAccessToken(userId);
+    const trip = await db.trip.create({
+      data: {
+        driverId,
+        fromCity: "Москва",
+        fromAddress: "A",
+        toCity: "Тула",
+        toAddress: "B",
+        departureAt: new Date("2030-01-01T10:00:00Z"),
+        durationMinutes: 120,
+        distanceKm: 180,
+        price: 700,
+        seatsTotal: 3,
+        seatsAvailable: 3,
+        tags: [],
+        status: "completed",
+      },
+    });
+    createdTripIds.push(trip.id);
+    const booking = await db.booking.create({
+      data: { tripId: trip.id, passengerId: userId, seat: 1, status: "confirmed" },
+    });
+    createdBookingIds.push(booking.id);
+
     const allowed = await authed("DELETE", "/api/v1/users/me", token);
     expect(allowed.status).toBe(200);
   });

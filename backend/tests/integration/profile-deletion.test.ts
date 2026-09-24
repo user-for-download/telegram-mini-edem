@@ -41,24 +41,48 @@ describe("DELETE /api/v1/users/me", () => {
     expect(after.status).toBe(403);
   });
 
-  it("blocks deletion while the user has an active trip obligation", async () => {
-
-    const ownTrip = await db.trip.create({ data: { driverId: userId, fromCity: "Москва", fromAddress: "A", toCity: "Тула", toAddress: "B", departureAt: new Date("2030-01-01T10:00:00Z"), durationMinutes: 120, distanceKm: 180, price: 700, seatsTotal: 3, seatsAvailable: 3, tags: [] } });
+  it("completes own active trips on deletion (pending declined, confirmed kept)", async () => {
+    const ownTrip = await db.trip.create({ data: { driverId: userId, fromCity: "Москва", fromAddress: "A", toCity: "Тула", toAddress: "B", departureAt: new Date("2030-01-01T10:00:00Z"), durationMinutes: 120, distanceKm: 180, price: 700, seatsTotal: 3, seatsAvailable: 1, tags: [] } });
+    const suffix = Date.now() + Math.floor(Math.random() * 1000);
+    // active_passenger_booking: одна активная бронь на связку
+    // (поездка, пассажир) — pending и confirmed у разных пассажиров.
+    const [paxPending, paxConfirmed] = await Promise.all([
+      db.user.create({ data: { name: `PaxP ${suffix}`, telegramUserId: BigInt(6300000 + (suffix % 100000)), avatar: "" } }),
+      db.user.create({ data: { name: `PaxC ${suffix}`, telegramUserId: BigInt(6400000 + (suffix % 100000)), avatar: "" } }),
+    ]);
+    await db.booking.create({ data: { tripId: ownTrip.id, passengerId: paxPending.id, seat: 1, status: "pending" } });
+    await db.booking.create({ data: { tripId: ownTrip.id, passengerId: paxConfirmed.id, seat: 2, status: "confirmed" } });
     try {
       const response = await app.request("/api/v1/users/me", { method: "DELETE", headers: { Authorization: `Bearer ${devMockAccessToken(userId)}` } });
-      expect(response.status).toBe(409);
-      expect((await response.json()).code).toBe("ACCOUNT_HAS_ACTIVE_OBLIGATIONS");
+      expect(response.status).toBe(200);
+      const trip = await db.trip.findUnique({ where: { id: ownTrip.id } });
+      expect(trip?.status).toBe("completed");
+      expect(trip?.seatsAvailable).toBe(0);
+      const bookings = await db.booking.findMany({ where: { tripId: ownTrip.id } });
+      expect(bookings.find((b) => b.seat === 1)?.status).toBe("declined");
+      expect(bookings.find((b) => b.seat === 2)?.status).toBe("confirmed");
+      const confirmedAfter = await db.user.findUnique({ where: { id: paxConfirmed.id } });
+      expect(confirmedAfter?.tripsCount).toBe(1);
+      const tombstone = await db.user.findUnique({ where: { id: userId } });
+      expect(tombstone?.deletedAt).not.toBeNull();
     } finally {
+      await db.booking.deleteMany({ where: { tripId: ownTrip.id } });
       await db.trip.delete({ where: { id: ownTrip.id } });
+      await db.user.deleteMany({ where: { id: { in: [paxPending.id, paxConfirmed.id] } } });
     }
   });
 
-  it("blocks deletion while the user has a booking on an active trip", async () => {
+  it("cancels own bookings on active trips on deletion (seat restored)", async () => {
+    await db.trip.update({ where: { id: tripId }, data: { seatsAvailable: 2 } });
     const booking = await db.booking.create({ data: { tripId, passengerId: userId, seat: 1, status: "confirmed" } });
     try {
       const response = await app.request("/api/v1/users/me", { method: "DELETE", headers: { Authorization: `Bearer ${devMockAccessToken(userId)}` } });
-      expect(response.status).toBe(409);
-      expect((await response.json()).code).toBe("ACCOUNT_HAS_ACTIVE_OBLIGATIONS");
+      expect(response.status).toBe(200);
+      const cancelled = await db.booking.findUnique({ where: { id: booking.id } });
+      expect(cancelled?.status).toBe("cancelled");
+      expect(cancelled?.cancelledByType).toBe("user");
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip?.seatsAvailable).toBe(3);
     } finally {
       await db.booking.delete({ where: { id: booking.id } });
     }

@@ -110,41 +110,9 @@
   border: 1px solid var(--tgui--outline);
 }
 
-/* Опасная зона: рамка — 30% от --app-danger (было border-(--app-danger)/30),
- * тень — рецепт shadow-xs из мигрированных карточек. */
-.dangerZone {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--tgui--section_bg_color);
-  border: 1px solid color-mix(in srgb, var(--app-danger) 30%, transparent);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-}
-
 /* Ошибка деструктивного действия (кит-токен разрушающего цвета). */
 .errorText {
   color: var(--tg-theme-destructive-text-color);
-}
-
-/* Деструктив как Delete My Account официалки: красная текст-строка
- * влево, без фона кнопки (ConfirmPopup mode="plain" со stretched кита —
- * stretched снимаем удвоенным селектором, без !important). */
-.dangerDelete.dangerDelete {
-  display: flex;
-}
-
-.dangerDelete.dangerDelete button {
-  width: auto;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-/* Хинт последствий под кнопкой удаления (у официалки — хедер экрана
- * подтверждения; у нас подтверждение — нативный алерт). */
-.dangerHint {
-  color: var(--tgui--hint_color);
 }
 
 /* Вкладка «Отзывы»: вертикальная колонка. */

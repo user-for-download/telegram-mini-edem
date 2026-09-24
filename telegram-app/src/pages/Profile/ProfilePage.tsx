@@ -478,11 +478,13 @@ export function ProfilePage() {
                   </div>
                 </Section>
 
-                {/* Опасная зона — как Delete My Account официалки:
-                    красная текст-строка влево (без фона кнопки) + хинт
-                    последствий; подтверждение — нативный алерт.
-                    Кнопки «Выйти» нет. */}
-                <div className={styles.dangerZone}>
+                {/* Опасная зона — как Add Account официалки: секция,
+                    в ней красная надпись-кнопка, описание — в футере
+                    секции. Кнопки «Выйти» нет. */}
+                <Section
+                  header="Опасная зона"
+                  footer="Активные поездки будут завершены, брони и заявки отменены. Восстановление невозможно."
+                >
                   {remove.error && (
                     <Caption
                       Component="p"
@@ -497,23 +499,17 @@ export function ProfilePage() {
                           : "Не удалось удалить профиль"}
                     </Caption>
                   )}
-                  <div className={styles.dangerDelete}>
-                    <ConfirmPopup
-                      label="Удалить профиль"
-                      confirmLabel="Удалить окончательно"
-                      description="Аккаунт будет анонимизирован, поездки и отзывы сохранятся без вашего имени. Активные поездки и брони завершите или отмените заранее. Восстановление невозможно."
-                      pending={remove.isPending}
-                      disabled={remove.isPending}
-                      mode="plain"
-                      destructive
-                      onConfirm={() => remove.mutate()}
-                    />
-                  </div>
-                  <Caption Component="p" className={styles.dangerHint}>
-                    Аккаунт будет анонимизирован. Поездки и отзывы сохранятся
-                    без вашего имени. Восстановление невозможно.
-                  </Caption>
-                </div>
+                  <ConfirmPopup
+                    label="Удалить профиль"
+                    confirmLabel="Удалить окончательно"
+                    description="Аккаунт будет анонимизирован. Активные поездки будут завершены, брони и заявки отменены. Поездки и отзывы сохранятся без вашего имени. Восстановление невозможно."
+                    pending={remove.isPending}
+                    disabled={remove.isPending}
+                    mode="plain"
+                    destructive
+                    onConfirm={() => remove.mutate()}
+                  />
+                </Section>
               </Stack>
             ) : (
               <div className={styles.reviews}>
