@@ -7,6 +7,7 @@ import {
   Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
+import { Stack } from "@/ui/Stack";
 import { Notice } from "@/ui/Notice";
 import { Button } from "@/ui/Button";
 
@@ -139,7 +140,9 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
             Политика конфиденциальности
           </Cell>
 
-          <div className={styles.actions}>
+          <Stack
+            style={{ gap: 8 }}
+          >
             <Button
               size="l"
               stretched
@@ -159,7 +162,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
             >
               Отклонить
             </Button>
-          </div>
+          </Stack>
         </Section>
       </List>
     </main>

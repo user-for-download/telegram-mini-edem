@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { Chip, Input, Textarea } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { BTN_ROW, HINT } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Button } from "@/ui/Button";
 
@@ -133,7 +134,7 @@ export function EditTripForm({
           {(field) => (
             <Input
               {...field}
-              before={<Calendar size={16} className={styles.iconHint} />}
+              before={<Calendar size={16} className={HINT} />}
               type="datetime-local"
               value={departure}
               onChange={(event) => setDeparture(event.target.value)}
@@ -145,7 +146,7 @@ export function EditTripForm({
             {(field) => (
               <Input
                 {...field}
-                before={<Clock size={16} className={styles.iconHint} />}
+                before={<Clock size={16} className={HINT} />}
                 type="number"
                 min="1"
                 max="168"
@@ -172,7 +173,7 @@ export function EditTripForm({
             {(field) => (
               <Input
                 {...field}
-                before={<RussianRuble size={16} className={styles.iconHint} />}
+                before={<RussianRuble size={16} className={HINT} />}
                 type="number"
                 min="1"
                 max="100000"
@@ -185,7 +186,7 @@ export function EditTripForm({
             {(field) => (
               <Input
                 {...field}
-                before={<Users size={16} className={styles.iconHint} />}
+                before={<Users size={16} className={HINT} />}
                 type="number"
                 min="1"
                 max={MAX_SEATS}
@@ -239,7 +240,7 @@ export function EditTripForm({
             {bookingErrorMessage(update.error)}
           </Notice>
         )}
-        <div className={styles.btnRow}>
+        <div className={BTN_ROW}>
           <Button
             stretched
             size="m"

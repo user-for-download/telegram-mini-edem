@@ -25,9 +25,6 @@
   color: var(--app-success);
 }
 
-.iconHint {
-  color: var(--tgui--hint_color);
-}
 
 /* Два поля в ряд. */
 .grid2 {
@@ -36,11 +33,6 @@
   gap: 12px;
 }
 
-/* Ряд кнопок «Сохранить/Отмена». */
-.btnRow {
-  display: flex;
-  gap: 8px;
-}
 
 /* Теги-пилюли особенностей (tgui Chip-кнопки с aria-pressed): флекс-ряд
  * с зазором 8px; фокус клавиатуры виден на пилюле (a11y: native button).

@@ -3,13 +3,14 @@ import {
   Chip,
   IconButton,
   Input,
-  Placeholder,
   Section,
   SegmentedControl,
   Slider,
   Caption,
 } from "@telegram-apps/telegram-ui";
+
 import { Button } from "@/ui/Button";
+import { EmptyState } from "@/ui/EmptyState";
 import { FetchMore } from "@/ui/FetchMore";
 
 import {
@@ -312,18 +313,19 @@ export function SearchPage() {
           onRetry={() => void trips.refetch()}
         >
           {items.length === 0 ? (
-            <Placeholder
+            <EmptyState
               header="Поездок не найдено"
               description="Попробуйте изменить города или выбрать другие даты отправления"
-            >
-              <Button
-                size="m"
-                onClick={reset}
-                disabled={!hasActiveFilters && !form.fromCity && !form.toCity}
-              >
-                Сбросить фильтры
-              </Button>
-            </Placeholder>
+              action={
+                <Button
+                  size="m"
+                  onClick={reset}
+                  disabled={!hasActiveFilters && !form.fromCity && !form.toCity}
+                >
+                  Сбросить фильтры
+                </Button>
+              }
+            />
           ) : (
             <Stack>
               {items.map((trip) => (

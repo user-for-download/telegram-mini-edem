@@ -5,6 +5,7 @@ import {
   Text,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { PROSE, ROW_BETWEEN } from "@/ui/classes";
 
 import { Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -117,7 +118,7 @@ export function SettingsBody() {
       >
         <Stack className={styles.stackSettings}>
           <Card className={styles.card}>
-            <div className={styles.row}>
+            <div className={ROW_BETWEEN}>
               <IconContainer>
                 {enabled ? <BellRing size={18} /> : <Bell size={18} />}
               </IconContainer>
@@ -146,7 +147,7 @@ export function SettingsBody() {
                 Настройки сохранены
               </Text>
             )}
-            <Caption Component="p" className={styles.prose}>
+            <Caption Component="p" className={PROSE}>
               Настройка синхронизируется с аккаунтом. Отдельные настройки звука
               и типов уведомлений пока не поддерживаются.
             </Caption>

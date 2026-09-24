@@ -11,6 +11,7 @@ import {
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { HINT, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { FieldError } from "@/ui/FieldError";
 import { Button } from "@/ui/Button";
@@ -221,7 +222,7 @@ export function CreateTripForm({
         <Page>
           <Section header="Нужен автомобиль">
             <SectionBody>
-              <Caption Component="p" className={styles.prose}>
+              <Caption Component="p" className={PROSE}>
                 Чтобы публиковать поездки, сначала добавьте автомобиль в
                 профиле.
               </Caption>
@@ -297,7 +298,7 @@ export function CreateTripForm({
                   <Input
                     {...field}
                     before={
-                      <Navigation size={16} className={styles.iconHint} />
+                      <Navigation size={16} className={HINT} />
                     }
                     value={fromAddress}
                     status={
@@ -325,7 +326,7 @@ export function CreateTripForm({
                   <Input
                     {...field}
                     before={
-                      <Navigation size={16} className={styles.iconHint} />
+                      <Navigation size={16} className={HINT} />
                     }
                     value={toAddress}
                     status={
@@ -357,7 +358,7 @@ export function CreateTripForm({
                 <>
                   <Input
                     {...field}
-                    before={<Calendar size={16} className={styles.iconHint} />}
+                    before={<Calendar size={16} className={HINT} />}
                     type="datetime-local"
                     value={date}
                     status={errorField === "create-date" ? "error" : undefined}
@@ -381,7 +382,7 @@ export function CreateTripForm({
                     <Input
                       {...field}
                       before={
-                        <RussianRuble size={16} className={styles.iconHint} />
+                        <RussianRuble size={16} className={HINT} />
                       }
                       type="number"
                       min="1"
@@ -452,7 +453,7 @@ export function CreateTripForm({
                   <>
                     <Input
                       {...field}
-                      before={<MapPin size={16} className={styles.iconHint} />}
+                      before={<MapPin size={16} className={HINT} />}
                       type="number"
                       min="1"
                       max="20000"
@@ -481,7 +482,7 @@ export function CreateTripForm({
                   <>
                     <Input
                       {...field}
-                      before={<Clock size={16} className={styles.iconHint} />}
+                      before={<Clock size={16} className={HINT} />}
                       type="number"
                       min="1"
                       max="168"

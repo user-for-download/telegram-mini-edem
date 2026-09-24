@@ -22,12 +22,6 @@
 /* Ошибка сохранения согласия/удаления
  * (было text-(--tg-theme-destructive-text-color)). */
 
-/* Кнопки «Принять»/«Отклонить» — колонка с зазором 8px (сетка 8/12). */
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 
 /* «Отклонить» — plain-кнопка деструктивным цветом (было inline style):
  * удвоение перебивает цвет Button кита без !important. */

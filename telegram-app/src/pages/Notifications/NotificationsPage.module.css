@@ -17,16 +17,7 @@
   flex-shrink: 0;
 }
 
-/* Подпись про критичные статусы: межстрочный 1.625 (leading-relaxed). */
-.note {
-  line-height: 1.625;
-}
 
-/* Две bezel-кнопки в ряд: настройки + прочитать все. */
-.actions {
-  display: flex;
-  gap: 8px;
-}
 
 /* Кнопка-ссылка на настройки растёт (было flex-1). */
 .settingsBtn {

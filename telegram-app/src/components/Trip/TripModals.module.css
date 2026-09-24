@@ -51,36 +51,6 @@
   min-width: 0;
 }
 
-/* Блок имени/подписи: нулевая min-width даёт работать ellipsis. */
-.grow {
-  min-width: 0;
-}
-
-/* Обрезка в одну строку (было truncate). */
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Статус/аватар не сжимаются. */
-.shrink {
-  flex-shrink: 0;
-}
-
-/* Ряд кнопок действия (зазор 8px). */
-.btnRow {
-  display: flex;
-  gap: 8px;
-}
-
-/* Ряд кнопок с переносом (до 4 действий в карточке запроса). */
-.btnRowWrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 /* Два поля в ряд (даты «с» и «по»). */
 .grid2 {
   display: grid;
@@ -108,6 +78,3 @@
   color: var(--app-success);
 }
 
-.iconHint {
-  color: var(--tgui--hint_color);
-}

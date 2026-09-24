@@ -18,9 +18,3 @@
   margin-top: 12px;
 }
 
-.hint {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--tgui--hint_color, inherit);
-  text-align: center;
-}

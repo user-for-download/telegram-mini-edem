@@ -1,0 +1,46 @@
+/* Текстовые утилиты (src/ui/text): типографика без дублей по модулям.
+ *
+ * Одна роль — одно правило: расслабленный абзац (line-height 1.625),
+ * приглушённая подпись, обрезка в строку, несжимаемый элемент, растущий
+ * блок с нулевой min-width (даёт работать ellipsis). Цвета только из
+ * --tgui--* / --app-*. Модуль неслойный → бьёт слой tgui без !important.
+ *
+ * Исключение — Notifications .body: там к prose добавлен
+ * overflow-wrap: anywhere (перенос длинных слов уведомлений).
+ * Исключение осознанно локальное, сюда не тянем. */
+
+/* Расслабленный абзац: межстрочный 1.625 (leading-relaxed).
+ * Заменяет копии .prose (Reports/Settings/CreateTrip/Support ×4),
+ * ProfileModals .prose, Notifications .note, ReviewCard .body,
+ * ProfileModals .proseText (без цвета — см. ниже). */
+.prose {
+  line-height: 1.625;
+}
+
+/* Тот же абзац основным цветом текста.
+ * Заменяет ProfileModals .proseText (был color + line-height). */
+.proseText {
+  color: var(--tgui--text_color);
+  line-height: 1.625;
+}
+
+/* Подпись-подсказка: приглушённый цвет + межстрочный 1.625.
+ * Заменяет ProfileModals .hintProse. */
+.hintProse {
+  color: var(--tgui--hint_color);
+  line-height: 1.625;
+}
+
+/* Приглушённая подпись/иконка (цвет подсказки, без интерлиньяжа).
+ * Заменяет копии .hint (ProfileModals, TripFeedCard, ProfilePage),
+ * .iconHint (TripModals ×2 правила, EditTripForm, CreateTrip),
+ * .hintIcon (Support), VehicleModal .hint. */
+.hint {
+  color: var(--tgui--hint_color);
+}
+
+/* Центрированный текст пустого состояния.
+ * Заменяет ProfileModals .centerText, Support .centerText. */
+.centerText {
+  text-align: center;
+}

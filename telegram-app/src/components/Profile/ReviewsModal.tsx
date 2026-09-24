@@ -1,13 +1,14 @@
 import { memo, useMemo, useRef, useState } from "react";
 import {
   Caption,
-  Placeholder,
   SegmentedControl,
   Select,
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
+
 import { Notice } from "@/ui/Notice";
+import { EmptyState } from "@/ui/EmptyState";
 import { Field } from "@/ui/Field";
 import { CharCounter } from "@/ui/CharCounter";
 import { FetchMore } from "@/ui/FetchMore";
@@ -306,18 +307,15 @@ export const ReviewsBody = memo(function ReviewsBody({
           onRetry={() => void my.refetch()}
         >
           {!my.data || my.data.length === 0 ? (
-            <Placeholder
+            <EmptyState
               header="Вы пока не оставили отзывов"
               description="Оставьте отзыв о поездке — это поможет другим выбрать маршрут"
-            >
-              <Button
-                size="m"
-                style={{ minHeight: 44 }}
-                onClick={() => pickTab("new")}
-              >
-                Оставить отзыв
-              </Button>
-            </Placeholder>
+              action={
+                <Button size="m" onClick={() => pickTab("new")}>
+                  Оставить отзыв
+                </Button>
+              }
+            />
           ) : (
             <Stack>
               {my.data.map((review) => (
@@ -337,7 +335,7 @@ export const ReviewsBody = memo(function ReviewsBody({
           onRetry={() => void available.refetch()}
         >
           {!selectedTrip ? (
-            <Placeholder
+            <EmptyState
               header="Пока нет поездок для отзыва"
               description="Когда вы совершите поездку, она появится здесь"
             />
@@ -459,7 +457,7 @@ export const ReviewsBody = memo(function ReviewsBody({
             </Card>
           )}
           {aboutItems.length === 0 ? (
-            <Placeholder
+            <EmptyState
               header="О вас пока нет отзывов"
               description="После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь"
             />

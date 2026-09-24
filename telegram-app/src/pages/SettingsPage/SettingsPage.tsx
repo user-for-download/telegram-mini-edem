@@ -6,6 +6,7 @@ import {
   Text,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { BTN_ROW, PROSE } from "@/ui/classes";
 
 import { ArrowLeft, Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -102,11 +103,11 @@ export function SettingsPage() {
                   Настройки сохранены
                 </Text>
               )}
-              <Caption Component="p" className={styles.prose}>
+              <Caption Component="p" className={PROSE}>
                 Настройка синхронизируется с аккаунтом. Отдельные настройки
                 звука и типов уведомлений пока не поддерживаются.
               </Caption>
-              <div className={styles.actions}>
+              <div className={BTN_ROW}>
                 <Button
                   size="s"
                   stretched

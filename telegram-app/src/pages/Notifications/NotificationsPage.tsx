@@ -8,6 +8,7 @@ import {
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { BTN_ROW, PROSE, SHRINK } from "@/ui/classes";
 import { FetchMore } from "@/ui/FetchMore";
 
 import { BellRing, CheckCheck, Settings2 } from "lucide-react";
@@ -101,11 +102,11 @@ function NotificationCard({
           {notification.title}
         </Text>
         {critical ? (
-          <StatusPill tone="danger" className={styles.pill}>
+          <StatusPill tone="danger" className={SHRINK}>
             Важное
           </StatusPill>
         ) : !notification.isRead ? (
-          <StatusPill tone="info" className={styles.pill}>
+          <StatusPill tone="info" className={SHRINK}>
             Новое
           </StatusPill>
         ) : null}
@@ -202,11 +203,11 @@ export function NotificationsPage() {
                     : "Все уведомления прочитаны."}
                 </Text>
               </div>
-              <Caption Component="p" className={styles.note}>
+              <Caption Component="p" className={PROSE}>
                 Важные статусы поездки и брони сохраняются всегда, даже если
                 некритичные уведомления выключены.
               </Caption>
-              <div className={styles.actions}>
+              <div className={BTN_ROW}>
                 {/* Кнопка-ссылка: официальный паттерн tgui (стори Blocks/Button → Link):
                   Button с Component="a" вместо самописного <a> со стилями. */}
                 <Button

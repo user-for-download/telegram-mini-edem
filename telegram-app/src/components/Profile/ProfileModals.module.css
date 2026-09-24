@@ -28,12 +28,6 @@
   gap: 12px;
 }
 
-/* Ряд кнопок формы (зазор 8px). */
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 
 /* Карточка: раскладка поверх ui/Card (поверхность и паддинг 16 — у Card),
  * колонка с зазором 12px. */
@@ -43,57 +37,22 @@
   gap: 12px;
 }
 
-/* Шапка карточки: основной цвет текста поверх поверхности. */
-.cardTitle {
-  color: var(--tgui--text_color);
-}
 
-/* Абзац карточки: основной цвет + межстрочный 1.625. */
-.proseText {
-  color: var(--tgui--text_color);
-  line-height: 1.625;
-}
 
-/* Подпись-подсказка: приглушённый цвет, межстрочный 1.625. */
-.hintProse {
-  color: var(--tgui--hint_color);
-  line-height: 1.625;
-}
 
 /* Ссылка (кит-токен ссылочного цвета). */
 .link {
   color: var(--tgui--link_color);
 }
 
-/* Строка «иконка + текст» внутри карточки настроек. */
-.row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 
-/* Тело карточки обращения: дата, текст, ответ (зазор 6px). */
-.cardBody {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 
 /* Подпись-подсказка. */
 .hint {
   color: var(--tgui--hint_color);
 }
 
-/* Заголовок «Ответ поддержки»: основной цвет + отступ сверху 4px. */
-.replyTitle {
-  color: var(--tgui--text_color);
-  padding-top: 4px;
-}
 
-/* Пустое состояние списка: центрированные строки. */
-.centerText {
-  text-align: center;
-}
 
 /* Списки карточек (отзывы/жалобы) — Stack: ритм 12 из токена. */
 
@@ -108,23 +67,8 @@
   margin-top: 4px;
 }
 
-/* Шапка карточки жалобы: категория слева, статус справа. */
-.reportHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
 
-/* Пилюля статуса не сжимается. */
-.pill {
-  flex-shrink: 0;
-}
 
-/* Межстрочный 1.625 одиночным абзацам без своего цвета. */
-.prose {
-  line-height: 1.625;
-}
 
 /* Иконка в поле ввода: синий акцент (кит-токен информационного цвета). */
 .info {

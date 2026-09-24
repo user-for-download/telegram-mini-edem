@@ -15,7 +15,7 @@ import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
 import { haptic } from "@/utils/haptics";
 import { LazyAvatar } from "@/components/LazyAvatar";
-import { CARD_PAD, CARD_SURFACE } from "@/ui/classes";
+import { CARD_PAD, CARD_SURFACE, HINT, TRUNCATE } from "@/ui/classes";
 import styles from "./TripFeedCard.module.css";
 
 /** Иконки для очевидных тегов (язык примера); остальные теги не
@@ -72,17 +72,17 @@ export function TripFeedCard({ trip }: { trip: Trip }) {
           <Text weight="2" Component="div">
             {trip.price} ₽
           </Text>
-          <Caption className={styles.hint}>за место</Caption>
+          <Caption className={HINT}>за место</Caption>
         </div>
       </div>
 
       {(trip.fromAddress || trip.toAddress) && (
         <Caption Component="div" className={styles.addresses}>
           {trip.fromAddress && (
-            <div className={styles.truncate}>Посадка: {trip.fromAddress}</div>
+            <div className={TRUNCATE}>Посадка: {trip.fromAddress}</div>
           )}
           {trip.toAddress && (
-            <div className={styles.truncate}>Высадка: {trip.toAddress}</div>
+            <div className={TRUNCATE}>Высадка: {trip.toAddress}</div>
           )}
         </Caption>
       )}
@@ -101,7 +101,7 @@ export function TripFeedCard({ trip }: { trip: Trip }) {
               Component="div"
               className={styles.driverName}
             >
-              <span className={styles.truncate}>{trip.driver.name}</span>
+              <span className={TRUNCATE}>{trip.driver.name}</span>
               {trip.driver.isVerified && (
                 <ShieldCheck className={styles.verified} aria-hidden />
               )}

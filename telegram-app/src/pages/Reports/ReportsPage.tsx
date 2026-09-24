@@ -9,6 +9,8 @@ import {
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { EmptyState } from "@/ui/EmptyState";
+import { PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { CharCounter } from "@/ui/CharCounter";
 import { Button } from "@/ui/Button";
@@ -85,7 +87,7 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
         </StatusPill>
       </div>
       <Caption Component="span">{formatDate(report.createdAt)}</Caption>
-      <Text Component="div" className={styles.prose}>
+      <Text Component="div" className={PROSE}>
         {report.description}
       </Text>
     </Card>
@@ -317,7 +319,7 @@ export function ReportsPage() {
               onRetry={() => void myReports.refetch()}
             >
               {!myReports.data || myReports.data.length === 0 ? (
-                <Placeholder
+                <EmptyState
                   header="Вы пока не отправляли жалоб"
                   description="Жалобы на поездки доступны пассажирам с бронью. На свою поездку жаловаться нельзя."
                 />

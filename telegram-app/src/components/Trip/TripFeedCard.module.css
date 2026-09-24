@@ -125,8 +125,3 @@
   color: var(--tgui--hint_color);
 }
 
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}

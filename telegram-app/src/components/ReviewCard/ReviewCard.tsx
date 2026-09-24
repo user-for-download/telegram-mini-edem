@@ -4,6 +4,7 @@ import { REVIEW_STATUS, type Review } from "@edem/contracts";
 import type { MyReview } from "@/api/reviews.api";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { Card } from "@/ui/Card";
+import { PROSE, SHRINK } from "@/ui/classes";
 import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
 import styles from "./ReviewCard.module.css";
 
@@ -51,13 +52,13 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
           ))}
         </div>
       </div>
-      <Text Component="div" className={styles.body}>
+      <Text Component="div" className={PROSE}>
         {review.text}
       </Text>
       <Caption Component="div" className={styles.foot}>
         <span className={styles.route}>Маршрут: {review.tripRoute}</span>
         {badge ? (
-          <StatusPill tone={badge.tone} className={styles.shrink}>
+          <StatusPill tone={badge.tone} className={SHRINK}>
             {badge.label}
           </StatusPill>
         ) : (

@@ -78,7 +78,3 @@
   color: var(--app-success);
 }
 
-/* Не сжимать пилюлю статуса в подвале (было Tailwind shrink-0). */
-.shrink {
-  flex-shrink: 0;
-}

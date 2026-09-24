@@ -1,0 +1,62 @@
+/* Раскладочные утилиты (src/ui/layout): микро-layout без дублей.
+ *
+ * Одна роль — одно правило: обрезка в строку, несжимаемый/растущий
+ * элемент, ряд кнопок, ряд «дата — в пути» / «шапка — статус».
+ * Зазоры из сетки 8/12 (--app-space-*). Модуль неслойный → бьёт
+ * слой tgui без !important.
+ *
+ * Исключения осознанно локальные, сюда НЕ тянем:
+ * - TripCards .rowInfo (ряд с min-width:0, прицел под заявки);
+ * - TripCards .requestSkeleton* (зеркало requestCell под Skeleton-overlay);
+ * - TripDetails .nameRow (ряд с gap 6 под имя+значок);
+ * - ProfilePage .flexText (flex-рост + min-width:0).
+ */
+
+/* Обрезка в одну строку (было truncate).
+ * Заменяет копии .truncate (TripModals, TripCards, TripFeedCard,
+ * TripDetails, ProfilePage — там ещё display:block для span). */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Не сжимать элемент во флекс-ряду (пилюля статуса, аватар).
+ * Заменяет копии .shrink (ReviewCard, TripModals, TripCards),
+ * .pill (ProfileModals, Notifications — тот же flex-shrink:0). */
+.shrink {
+  flex-shrink: 0;
+}
+
+/* Растущий блок с нулевой min-width — даёт работать ellipsis рядом.
+ * Заменяет копии .grow (TripModals ×2 правила, TripDetails). */
+.grow {
+  min-width: 0;
+  flex: 1 1 0%;
+}
+
+/* Ряд кнопок действия (зазор 8px).
+ * Заменяет .btnRow (TripModals, EditTripForm, RideRequestsModal).
+ * Профиль .actions — колонка (flex-direction:column), НЕ этот ряд:
+ * она мигрирует на Stack (см. ниже, колонка с ритмом 8 — локально). */
+.btnRow {
+  display: flex;
+  gap: var(--app-space-xs);
+}
+
+/* Тот же ряд с переносом (до 4 действий в карточке запроса). */
+.btnRowWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-xs);
+}
+
+/* Ряд «шапка слева — статус справа»: space-between + зазор 8px.
+ * Заменяет TripCards .rowBetween, TripDetails .rowBetween,
+ * ProfileModals .reportHead (та же тройка правил). */
+.rowBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-xs);
+}

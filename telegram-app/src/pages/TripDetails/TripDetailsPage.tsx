@@ -9,6 +9,8 @@ import {
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { EmptyState } from "@/ui/EmptyState";
+import { GROW, ROW_BETWEEN, TRUNCATE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Button } from "@/ui/Button";
 
@@ -88,7 +90,7 @@ export function TripDetailsPage() {
     return (
       <>
         <OfflineBanner />
-        <Placeholder
+        <EmptyState
           header="Поездка не найдена"
           description={
             isNotFound
@@ -111,11 +113,10 @@ export function TripDetailsPage() {
               >
                 К поиску
               </Button>
+              {!isOnline && <p>Проверьте подключение к интернету.</p>}
             </>
           }
-        >
-          {!isOnline && <p>Проверьте подключение к интернету.</p>}
-        </Placeholder>
+        />
       </>
     );
   }
@@ -195,7 +196,7 @@ export function TripDetailsPage() {
       )}
 
       <div className={styles.routeCard}>
-        <Caption className={styles.rowBetween} Component="div">
+        <Caption className={ROW_BETWEEN} Component="div">
           <span>{dayLabel(item.date)}</span>
           <span>
             В пути ~ {formatDurationLocal(item.durationMinutes)} ·{" "}
@@ -221,9 +222,9 @@ export function TripDetailsPage() {
             acronym={item.driver.name.slice(0, 1).toUpperCase()}
             alt={item.driver.name}
           />
-          <div className={styles.grow}>
+          <div className={GROW}>
             <Text weight="2" Component="div" className={styles.nameRow}>
-              <span className={styles.truncate}>{item.driver.name}</span>
+              <span className={TRUNCATE}>{item.driver.name}</span>
               {item.driver.isVerified && (
                 <ShieldCheck size={15} className={styles.verified} />
               )}
@@ -454,20 +455,20 @@ export function TripDetailsPage() {
         !departed &&
         item.seatsAvailable <= 0 &&
         !hasActiveBooking && (
-          <Placeholder
+          <EmptyState
             header="Свободных мест нет"
             description="Попробуйте другую поездку или оставьте запрос попутчика."
           />
         )}
       {!isDriver && isActive && departed && (
-        <Placeholder
+        <EmptyState
           header="Поездка уже отправилась"
           description="Бронирование недоступно. Найдите другую поездку."
         />
       )}
-      {item.status === "cancelled" && <Placeholder header="Поездка отменена" />}
+      {item.status === "cancelled" && <EmptyState header="Поездка отменена" />}
       {item.status === "completed" && (
-        <Placeholder header="Поездка завершена" />
+        <EmptyState header="Поездка завершена" />
       )}
 
       {isDriver && (

@@ -9,6 +9,7 @@ import {
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { CENTER_TEXT, HINT, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { CharCounter } from "@/ui/CharCounter";
 import { Button } from "@/ui/Button";
@@ -99,7 +100,7 @@ function FeedbackCard({
           <Caption Component="span">
             {new Date(feedback.createdAt).toLocaleDateString("ru-RU")}
           </Caption>
-          <Text Component="p" className={styles.prose}>
+          <Text Component="p" className={PROSE}>
             {feedback.text}
           </Text>
           {feedback.reply ? (
@@ -107,7 +108,7 @@ function FeedbackCard({
               <Text weight="2" Component="span" className={styles.replyTitle}>
                 Ответ поддержки
               </Text>
-              <Text Component="p" className={styles.prose}>
+              <Text Component="p" className={PROSE}>
                 {feedback.reply}
               </Text>
             </>
@@ -211,7 +212,7 @@ export function SupportPage() {
                     {item.question}
                   </Accordion.Summary>
                   <Accordion.Content>
-                    <Caption Component="p" className={styles.prose}>
+                    <Caption Component="p" className={PROSE}>
                       {item.answer}
                     </Caption>
                   </Accordion.Content>
@@ -232,10 +233,10 @@ export function SupportPage() {
             >
               {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
                 <>
-                  <Text weight="2" Component="p" className={styles.centerText}>
+                  <Text weight="2" Component="p" className={CENTER_TEXT}>
                     У вас пока нет обращений
                   </Text>
-                  <Caption Component="p" className={styles.centerText}>
+                  <Caption Component="p" className={CENTER_TEXT}>
                     Здесь появятся ваши обращения и ответы поддержки
                   </Caption>
                 </>
@@ -267,7 +268,7 @@ export function SupportPage() {
                 <Input
                   {...field}
                   before={
-                    <MessageSquareText size={16} className={styles.hintIcon} />
+                    <MessageSquareText size={16} className={HINT} />
                   }
                   placeholder="Например: не приходит уведомление"
                   value={subject}

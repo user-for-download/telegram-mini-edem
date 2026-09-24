@@ -6,6 +6,8 @@ import {
   Text,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { EmptyState } from "@/ui/EmptyState";
+import { BTN_ROW, GROW, SHRINK, TRUNCATE } from "@/ui/classes";
 import { FetchMore } from "@/ui/FetchMore";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
@@ -56,8 +58,8 @@ const PendingBookingCard = memo(function PendingBookingCard({
             acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
             alt={booking.passenger.name}
           />
-          <div className={styles.grow}>
-            <Text Component="div" className={styles.truncate}>
+          <div className={GROW}>
+            <Text Component="div" className={TRUNCATE}>
               {booking.passenger.name}
             </Text>
             <Caption Component="div">
@@ -65,11 +67,11 @@ const PendingBookingCard = memo(function PendingBookingCard({
             </Caption>
           </div>
         </div>
-        <StatusPill tone="warning" className={styles.shrink}>
+        <StatusPill tone="warning" className={SHRINK}>
           Ожидает решения
         </StatusPill>
       </div>
-      <div className={styles.btnRow}>
+      <div className={BTN_ROW}>
         <ConfirmPopup
           label="Принять"
           confirmLabel="Подтвердить пассажира?"
@@ -107,14 +109,14 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
           acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
           alt={booking.passenger.name}
         />
-        <div className={styles.grow}>
-          <Text Component="div" className={styles.truncate}>
+        <div className={GROW}>
+          <Text Component="div" className={TRUNCATE}>
             {booking.passenger.name}
           </Text>
           <Caption Component="div">{`место ${booking.seat}`}</Caption>
         </div>
       </div>
-      <StatusPill tone="success" className={styles.shrink}>
+      <StatusPill tone="success" className={SHRINK}>
         Подтверждён
       </StatusPill>
     </Card>
@@ -263,7 +265,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
             {bookingErrorMessage(update.error)}
           </Notice>
         )}
-        {!items.length && <Placeholder header="Заявок нет" />}
+        {!items.length && <EmptyState header="Заявок нет" />}
         {pending.length > 0 && (
           <Stack aria-live="polite" aria-label="Ожидают решения">
             <Caption weight="2" Component="span" className={styles.groupLabel}>

@@ -2,6 +2,7 @@ import { memo } from "react";
 import { useState } from "react";
 import { Caption, Input, Text } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { BTN_ROW, BTN_ROW_WRAP, HINT, TRUNCATE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
@@ -258,7 +259,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
               {(field) => (
                 <Input
                   {...field}
-                  before={<Calendar size={16} className={styles.iconHint} />}
+                  before={<Calendar size={16} className={HINT} />}
                   type="datetime-local"
                   value={earliest}
                   onChange={(event) => setEarliest(event.target.value)}
@@ -269,7 +270,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
               {(field) => (
                 <Input
                   {...field}
-                  before={<Calendar size={16} className={styles.iconHint} />}
+                  before={<Calendar size={16} className={HINT} />}
                   type="datetime-local"
                   value={latest}
                   onChange={(event) => setLatest(event.target.value)}
@@ -281,7 +282,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             {(field) => (
               <Input
                 {...field}
-                before={<Users size={16} className={styles.iconHint} />}
+                before={<Users size={16} className={HINT} />}
                 type="number"
                 min="1"
                 max="3"
@@ -326,7 +327,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             {requests.data?.map((request) => (
               <Card key={request.id} className={styles.card}>
                 <div className={styles.cardHead}>
-                  <Text weight="2" Component="span" className={styles.truncate}>
+                  <Text weight="2" Component="span" className={TRUNCATE}>
                     {`${request.fromCity.name} → ${request.toCity.name}`}
                   </Text>
                   <StatusPill
@@ -402,7 +403,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                         {editError}
                       </Notice>
                     )}
-                    <div className={styles.btnRow}>
+                    <div className={BTN_ROW}>
                       <Button
                         stretched
                         size="s"
@@ -424,7 +425,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                     </div>
                   </>
                 ) : (
-                  <div className={styles.btnRowWrap}>
+                  <div className={BTN_ROW_WRAP}>
                     {request.status === "active" && (
                       <Button
                         size="s"

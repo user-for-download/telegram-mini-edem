@@ -1,5 +1,7 @@
-import { Placeholder } from "@telegram-apps/telegram-ui";
+import {  } from "@telegram-apps/telegram-ui";
+
 import { Button } from "@/ui/Button";
+import { EmptyState } from "@/ui/EmptyState";
 
 import { PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -27,7 +29,7 @@ export function HomePage() {
       <TripCountersSection />
       <TripSearchSection onSearch={goToSearch} />
       <PopularRoutesSection onSelect={goToSearch} />
-      <Placeholder
+      <EmptyState
         header="Едете на машине?"
         description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы"
         action={

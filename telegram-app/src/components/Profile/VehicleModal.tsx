@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Caption, Input } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { HINT, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
@@ -114,7 +115,7 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
       {vehicleQuery.data && (
         <Card className={styles.card}>
           {!vehicle && (
-            <Caption Component="p" className={styles.prose}>
+            <Caption Component="p" className={PROSE}>
               Чтобы публиковать поездки, добавьте автомобиль.
             </Caption>
           )}
@@ -207,7 +208,7 @@ function VehicleForm({
         {(field) => (
           <Input
             {...field}
-            before={<Palette size={16} className={styles.hint} />}
+            before={<Palette size={16} className={HINT} />}
             value={color}
             maxLength={VEHICLE_LIMITS.color}
             placeholder="белый"
@@ -222,7 +223,7 @@ function VehicleForm({
         {(field) => (
           <Input
             {...field}
-            before={<Hash size={16} className={styles.hint} />}
+            before={<Hash size={16} className={HINT} />}
             value={plate}
             maxLength={VEHICLE_LIMITS.plate}
             placeholder="Например: 583"
@@ -235,7 +236,7 @@ function VehicleForm({
           />
         )}
       </Field>
-      <Caption Component="p" className={styles.prose}>
+      <Caption Component="p" className={PROSE}>
         Номер — примета для узнавания, видна только вам. Чтобы убрать номер,
         очистите поле и сохраните.
       </Caption>

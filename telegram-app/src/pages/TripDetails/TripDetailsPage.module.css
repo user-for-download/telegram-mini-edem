@@ -27,12 +27,6 @@
   background: var(--tgui--tertiary_bg_color);
 }
 
-/* Строка «дата — в пути» / «профиль — действия». */
-.rowBetween {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
 
 /* Карточка водителя: поверхность секции + hairline кит-обводки
  * (не ui/Card: без тени), паддинг 16 и радиус — из токенов карточки. */

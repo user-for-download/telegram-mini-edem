@@ -152,7 +152,7 @@ export const EditProfileBody = memo(function EditProfileBody({
               : "Не удалось сохранить")}
         </Notice>
       )}
-      <div className={styles.actions}>
+      <Stack style={{ gap: 8 }}>
         <Button
           stretched
           size="l"
@@ -165,7 +165,7 @@ export const EditProfileBody = memo(function EditProfileBody({
         <Button size="l" stretched disabled={update.isPending} onClick={onDone}>
           Отмена
         </Button>
-      </div>
+      </Stack>
     </Stack>
   );
 });
