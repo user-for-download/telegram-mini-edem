@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { ONBOARDING_VERSION } from "@/onboarding/version";
+import styles from "../Onboarding.module.css";
 
 const authState = vi.hoisted(() => ({
   user: null as { onboardingVersion: string | null } | null,
@@ -62,18 +63,19 @@ describe("Onboarding", () => {
     expect(html).not.toContain("Добро пожаловать");
   });
 
-  it("версия устарела — приветствие и кнопки, детей нет", () => {
-    authState.user = { onboardingVersion: "1" };
+  it("версия устарела — приветствие и дисклеймер, детей нет", () => {
+    authState.user = { onboardingVersion: "2" };
     const html = render(
       <Onboarding>
         <span>Лента</span>
       </Onboarding>,
     );
     expect(html).toContain("Добро пожаловать");
-    expect(html).toContain("Пользовательское соглашение");
-    expect(html).toContain("Политика конфиденциальности");
-    expect(html).toContain("Принять и продолжить");
-    expect(html).toContain("Отклонить");
+    expect(html).toContain("Всё на доверии");
+    expect(html).toContain("Ответственность — на пользователях");
+    expect(html).toContain("Минимум данных");
+    expect(html).toContain("Я понял");
+    expect(html).toContain(styles.accept);
     expect(html).not.toContain("Лента");
   });
 
@@ -85,6 +87,6 @@ describe("Onboarding", () => {
       </Onboarding>,
     );
     expect(html).toContain("Добро пожаловать");
-    expect(html).toContain("Принять и продолжить");
+    expect(html).toContain("Я понял");
   });
 });

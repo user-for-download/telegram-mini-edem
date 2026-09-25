@@ -6,13 +6,19 @@ import { MIN_TARGET } from "@/ui/classes";
  * Смысловые варианты кнопки → режимы кита (маппинг 1:1: визуально ничего
  * не меняем, но выбор «какая это кнопка» перестаёт быть выбором mode).
  */
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "outline";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "outline"
+  | "white";
 
 const MODES = {
   primary: "filled",
   secondary: "bezeled",
   ghost: "plain",
   outline: "outline",
+  white: "white",
 } as const;
 
 export interface ButtonProps
@@ -21,7 +27,8 @@ export interface ButtonProps
    * primary — главное действие экрана/диалога (1–2 на экран);
    * secondary (по умолчанию) — обычное действие;
    * ghost — «тихая» кнопка-ссылка;
-   * outline — действие с рамкой (тихие переходы, чипы-кнопки).
+   * outline — действие с рамкой (тихие переходы, чипы-кнопки);
+   * white — белая кнопка на тонированной поверхности.
    */
   variant?: ButtonVariant;
 }

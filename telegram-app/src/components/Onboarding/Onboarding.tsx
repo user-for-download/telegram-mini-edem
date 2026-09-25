@@ -7,11 +7,10 @@ import {
   Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
-import { Stack } from "@/ui/Stack";
 import { Notice } from "@/ui/Notice";
 import { Button } from "@/ui/Button";
 
-import { ChevronRight } from "lucide-react";
+import { Handshake, Lock, Scale } from "lucide-react";
 import { usersApi } from "@/api/users.api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ONBOARDING_VERSION } from "@/onboarding/version";
@@ -19,9 +18,7 @@ import styles from "./Onboarding.module.css";
 
 export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
   const user = useAuthStore((state) => state.user);
-  const [declined, setDeclined] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busyRef = useRef(false);
 
@@ -38,7 +35,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
       .then((updated) => useAuthStore.setState({ user: updated }))
       .catch(() =>
         setError(
-          "Не удалось сохранить согласие. Проверьте интернет и попробуйте ещё раз.",
+          "Не удалось продолжить. Проверьте интернет и попробуйте ещё раз.",
         ),
       )
       .finally(() => {
@@ -47,64 +44,13 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
       });
   };
 
-  if (declined) {
-    return (
-      <>
-        {error && (
-          <Notice tone="danger" variant="text">{error}</Notice>
-        )}
-        <Placeholder
-          header="Без согласия сервис недоступен"
-          description="Для поиска попутчиков нужно принять условия. Можно вернуться к документам или удалить созданный профиль."
-          action={
-            <>
-              <Button
-                size="l"
-                stretched
-                onClick={() => setDeclined(false)}
-              >
-                Вернуться
-              </Button>
-              <Button
-                size="l"
-                variant="outline"
-                stretched
-                loading={deleting}
-                disabled={deleting}
-                onClick={() => {
-                  if (busyRef.current) return;
-                  busyRef.current = true;
-                  setDeleting(true);
-                  setError(null);
-                  void usersApi
-                    .deleteCurrentUser()
-                    .then(() => useAuthStore.getState().markAccountDeleted())
-                    .catch(() =>
-                      setError(
-                        "Не удалось удалить данные. Завершите активные поездки и попробуйте ещё раз.",
-                      ),
-                    )
-                    .finally(() => {
-                      busyRef.current = false;
-                      setDeleting(false);
-                    });
-                }}
-              >
-                Удалить мои данные
-              </Button>
-            </>
-          }
-        />
-      </>
-    );
-  }
-
   return (
     <main className={styles.root} aria-labelledby="onboarding-title">
       <List className={styles.list}>
         <Placeholder
           header="Добро пожаловать в «Едем»"
-          description="Сервис поиска попутчиков для совместных поездок. Вы общаетесь и рассчитываетесь напрямую с другими пользователями."
+          description="Попутчики для совместных поездок: вы находите друг друга здесь, а дальше — договариваетесь напрямую."
+          className={styles.hero}
         >
           <VisuallyHidden Component="span" id="onboarding-title">
             Первый вход
@@ -114,53 +60,62 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
           <Notice tone="danger" variant="text">{error}</Notice>
         )}
         <Section
-          header="Перед началом"
-          footer="Сервис доступен пользователям старше 14 лет. Нажимая кнопку, вы принимаете оба документа"
+          header="Прочитайте перед началом"
+          footer="Сервис доступен пользователям старше 14 лет"
+          className={styles.section}
         >
           <Cell
             multiline
+            before={<Handshake aria-hidden />}
             subtitle={
               <Caption level="1" weight="3">
-                Обработка данных о поездках
+                Вы общаетесь, договариваетесь и рассчитываетесь напрямую
+                с другими пользователями — без посредников.
               </Caption>
             }
-            after={<ChevronRight />}
           >
-            Пользовательское соглашение
+            Всё на доверии
           </Cell>
           <Cell
             multiline
+            before={<Scale aria-hidden />}
             subtitle={
               <Caption level="1" weight="3">
-                Как мы храним и используем ваши данные
+                Сервис не предоставляет юридической защиты и не несёт
+                обязательств по вашим договорённостям.
               </Caption>
             }
-            after={<ChevronRight />}
           >
-            Политика конфиденциальности
+            Ответственность — на пользователях
           </Cell>
-
-          <Stack gap="xs">
-            <Button
-              size="l"
-              stretched
-              loading={busy}
-              disabled={busy}
-              onClick={accept}
-            >
-              Принять и продолжить
-            </Button>
-            <Button
-              size="l"
-              variant="ghost"
-              stretched
-              className={styles.decline}
-              disabled={busy}
-              onClick={() => setDeclined(true)}
-            >
-              Отклонить
-            </Button>
-          </Stack>
+          <Cell
+            multiline
+            before={<Lock aria-hidden />}
+            subtitle={
+              <Caption level="1" weight="3">
+                Только то, что нужно для поездок: профиль, маршруты и заявки.
+                Переписка и расчёты проходят мимо нас.
+              </Caption>
+            }
+          >
+            Минимум данных
+          </Cell>
+        </Section>
+        <Section
+          footer="Нажимая кнопку, вы подтверждаете, что всё поняли"
+          className={`${styles.section} ${styles.action}`}
+        >
+          <Button
+            size="l"
+            variant="white"
+            stretched
+            loading={busy}
+            disabled={busy}
+            onClick={accept}
+            className={styles.accept}
+          >
+            Я понял
+          </Button>
         </Section>
       </List>
     </main>

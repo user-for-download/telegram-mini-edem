@@ -10,6 +10,8 @@
  * включают и SDK-данные, и системный env. */
 .root {
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   width: min(100%, 640px);
   min-height: 100%;
   margin: 0 auto;
@@ -18,17 +20,47 @@
 }
 
 /* Фон списка онбординга — вторичный фон tgui (было inline style):
- * удвоенный селектор бьёт фон List кита без !important (канон .x.x). */
+ * удвоенный селектор бьёт фон List кита без !important (канон .x.x).
+ * flex:1 тянет лист на всю высоту корня — фон на весь экран. */
 .list.list {
   background: var(--tgui--secondary_bg_color);
+  flex: 1;
 }
 
-/* Ошибка сохранения согласия/удаления
+/* Лист всегда в край экрана; стандартные боковые отступы несут
+ * внутренние элементы: приветствие и секции (канон Page). */
+.hero {
+  padding-inline: var(--app-page-gutter);
+}
+
+.section {
+  margin-inline: var(--app-page-gutter);
+}
+
+/* Футер секции почти вплотную к телу: верхний паддинг кита 12px → 4px.
+ * Хэш класса из @telegram-apps/telegram-ui@2.1.13 (pinned) — при bump
+ * версии сверить в dist/styles.css (прецедент Tabbar.module.css). */
+.list :global(.tgui-dbb364e8ced00cc8) {
+  padding-top: var(--app-space-2xs);
+}
+
+/* Ошибка сохранения согласия
  * (было text-(--tg-theme-destructive-text-color)). */
 
+/* Кнопка «Я понял»: белый овал на всю ширину секции поверх кита.
+ * Удвоение бьёт радиусы кита (8–12px) без !important; оверлей ховера —
+ * тот же овал, иначе квадратные углы просвечивают. */
+.accept.accept {
+  border-radius: 999px;
+  min-height: 60px;
+}
 
-/* «Отклонить» — plain-кнопка деструктивным цветом (было inline style):
- * удвоение перебивает цвет Button кита без !important. */
-.decline.decline {
-  color: var(--tgui--destructive_text_color);
+.accept.accept::after {
+  border-radius: inherit;
+}
+
+/* Отбивка секции кнопки от дисклеймера: ритм List (12px) здесь мал,
+ * берём 24px сверху (margin-top не contested китом, collapse даёт 24). */
+.action {
+  margin-top: var(--app-space-lg);
 }
