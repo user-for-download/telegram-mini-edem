@@ -168,7 +168,7 @@ describe("RideRequestsBody: a11y", () => {
     const html = renderBody();
 
     expect(html).toContain('aria-label="Ищу попутку"');
-    expect(html).toContain("min-h-11");
+    expect(html).toContain('data-tap-target="44"');
   });
 
   it("ошибка создания рендерится с role=alert", () => {

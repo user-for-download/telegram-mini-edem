@@ -1,5 +1,5 @@
-// Тесты Button (K4): min-h-11 для m/l (тап-таргет 44px, WCAG 2.5.8),
-// size="s" — компактный, без навязанного min-h. SSR renderToString,
+// Тесты Button (TGUI-native): data-tap-target="44" для m/l (тап-таргет 44px,
+// WCAG 2.5.8), size="s" — компактный, без навязанного min-h. SSR renderToString,
 // паттерн ui/__tests__/notice.test.tsx.
 import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
@@ -17,23 +17,25 @@ function renderButton(props: ComponentProps<typeof Button>): string {
 }
 
 describe("Button", () => {
-  it("default (m) держит min-h-11", () => {
-    expect(renderButton({ children: "Ок" })).toContain("min-h-11");
+  it("default (m) держит tap-target 44", () => {
+    expect(renderButton({ children: "Ок" })).toContain('data-tap-target="44"');
   });
 
-  it('size="l" держит min-h-11', () => {
-    expect(renderButton({ children: "Ок", size: "l" })).toContain("min-h-11");
-  });
-
-  it('size="s" без min-h-11 (компактный контекст)', () => {
-    expect(renderButton({ children: "Ок", size: "s" })).not.toContain(
-      "min-h-11",
+  it('size="l" держит tap-target 44', () => {
+    expect(renderButton({ children: "Ок", size: "l" })).toContain(
+      'data-tap-target="44"',
     );
   });
 
-  it("явный className сохраняется рядом с min-h", () => {
+  it('size="s" без tap-target (компактный контекст)', () => {
+    expect(renderButton({ children: "Ок", size: "s" })).not.toContain(
+      "data-tap-target",
+    );
+  });
+
+  it("явный className сохраняется рядом с tap-target", () => {
     const html = renderButton({ children: "Ок", className: "foo" });
-    expect(html).toContain("min-h-11");
+    expect(html).toContain('data-tap-target="44"');
     expect(html).toContain("foo");
   });
 });

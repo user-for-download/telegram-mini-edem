@@ -34,9 +34,9 @@ describe("AppBottomBar", () => {
     expect(html).not.toContain('role="tablist"');
   });
 
-  it("порядок: Главная → Поездки → Уведомления → Профиль, Поиск отдельно", () => {
+  it("порядок: Главная → Поездки → Поиск → Уведомления → Профиль (нативный ряд)", () => {
     const html = render("home");
-    const order = ["Главная", "Поездки", "Уведомления", "Профиль", "Поиск"].map((t) =>
+    const order = ["Главная", "Поездки", "Поиск", "Уведомления", "Профиль"].map((t) =>
       html.indexOf(t),
     );
     expect(order.every((i) => i >= 0)).toBe(true);

@@ -187,7 +187,7 @@ describe("SettingsBody", () => {
     // Закрытие — через header модалки: PageHeader и кнопки «назад» внутри нет.
     expect(html).not.toContain("Назад в профиль");
     // Таргеты ≥44px заданы явно (проверяемо в SSR).
-    expect(html).toContain("min-h-11");
+    expect(html).toContain('data-tap-target="44"');
   });
 
   it("уведомления выключены — инверсия текста и кнопки", () => {

@@ -36,13 +36,10 @@ describe("каркас: слой TGUI и нижний клиренс", () => {
     expect(indexCss).toContain("--app-page-pad-bottom: calc(");
   });
 
-  it("док таббара использует те же токены геометрии, что и Page", () => {
-    expect(tabbarCss).toContain("min-height: var(--app-dock-height);");
-    expect(tabbarCss).toContain("width: var(--app-dock-height);");
-    expect(tabbarCss).toContain("height: var(--app-dock-height);");
-    expect(tabbarCss).toContain(
-      "max(var(--app-safe-bottom), var(--app-dock-gap))",
-    );
+  it("нативный таббар: позиционированием и safe-area владеет кит (свой док удалён)", () => {
+    expect(tabbarCss).toContain("FixedLayout");
+    expect(tabbarCss).not.toContain(".dock");
+    expect(tabbarCss).not.toContain("position: fixed");
   });
 
   it("Tailwind не возвращается в telegram-app", () => {

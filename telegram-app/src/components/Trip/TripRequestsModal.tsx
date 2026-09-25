@@ -74,7 +74,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
           confirmLabel="Подтвердить пассажира?"
           description={`${booking.passenger.name} · место ${booking.seat}`}
           pending={pending}
-          className={`${MIN_TARGET} min-h-11`}
+          className={MIN_TARGET}
           onConfirm={() => onAccept(booking.id)}
         />
         <ConfirmPopup
@@ -83,7 +83,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
           description={`${booking.passenger.name} · место ${booking.seat}`}
           pending={pending}
           destructive
-          className={`${MIN_TARGET} min-h-11`}
+          className={MIN_TARGET}
           onConfirm={() => onDecline(booking.id)}
         />
       </div>

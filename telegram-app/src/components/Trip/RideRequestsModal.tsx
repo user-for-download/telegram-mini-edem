@@ -407,7 +407,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       <Button
                         stretched
                         size="s"
-                        className={`${MIN_TARGET} min-h-11`}
+                        className={MIN_TARGET}
                         loading={update.isPending}
                         onClick={() => submitEdit(request.id)}
                       >
@@ -416,7 +416,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       <Button
                         size="s"
                         stretched
-                        className={`${MIN_TARGET} min-h-11`}
+                        className={MIN_TARGET}
                         disabled={update.isPending}
                         onClick={() => setEditingId(null)}
                       >
@@ -430,7 +430,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       <Button
                         size="s"
                         stretched
-                        className={`${MIN_TARGET} min-h-11`}
+                        className={MIN_TARGET}
                         loading={
                           status.isPending &&
                           status.variables?.id === request.id
@@ -447,7 +447,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       <Button
                         size="s"
                         stretched
-                        className={`${MIN_TARGET} min-h-11`}
+                        className={MIN_TARGET}
                         loading={
                           status.isPending &&
                           status.variables?.id === request.id
@@ -466,7 +466,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                         <Button
                           size="s"
                           stretched
-                          className={`${MIN_TARGET} min-h-11`}
+                          className={MIN_TARGET}
                           disabled={status.isPending || cancel.isPending}
                           onClick={() => startEdit(request)}
                         >

@@ -5,6 +5,7 @@
 // внутренности CSS (StatusPill.module.css рядом с компонентом) не тестируем.
 import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
+import { AppRoot } from "@telegram-apps/telegram-ui";
 
 import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
 import styles from "../StatusPill/StatusPill.module.css";
@@ -13,9 +14,11 @@ const TONES: StatusTone[] = ["warning", "danger", "info", "success"];
 
 function render(tone: StatusTone, className?: string): string {
   return renderToString(
-    <StatusPill tone={tone} className={className}>
-      Статус
-    </StatusPill>,
+    <AppRoot platform="base">
+      <StatusPill tone={tone} className={className}>
+        Статус
+      </StatusPill>
+    </AppRoot>,
   );
 }
 
@@ -38,6 +41,7 @@ describe("StatusPill", () => {
 
   it("renders without extra whitespace when className omitted", () => {
     const html = render("success");
-    expect(html).toContain(`class="${styles.pill}"`);
+    expect(html).toContain(styles.pill);
+    expect(html).toContain('data-tone="success"');
   });
 });

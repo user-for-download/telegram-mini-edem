@@ -81,7 +81,7 @@ describe("ReportsPage: форма (порт ReportModal)", () => {
     expect(html).toContain("Мошенничество");
     expect(html).toContain("Недостоверная информация");
     expect(html).toContain("Отправить жалобу");
-    expect(html).toContain("min-h-11");
+    expect(html).toContain('data-tap-target="44"');
   });
 
   it("описание с браузерным maxLength 2000 из контракта", () => {

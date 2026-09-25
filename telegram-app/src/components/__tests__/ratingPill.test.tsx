@@ -1,9 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { AppRoot } from "@telegram-apps/telegram-ui";
 import { RatingPill } from "@/components/RatingPill";
 
 function render(value: number | null, size?: "m" | "s"): string {
-  return renderToStaticMarkup(<RatingPill value={value} size={size} />);
+  return renderToStaticMarkup(
+    <AppRoot platform="base">
+      <RatingPill value={value} size={size} />
+    </AppRoot>,
+  );
 }
 
 describe("RatingPill", () => {

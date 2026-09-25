@@ -47,7 +47,7 @@ export function ConfirmPopup({
   destructive?: boolean;
   /** Инлайн-фолбэк: кнопки панели к правому краю (см. ConfirmAction). */
   actionsEnd?: boolean;
-  /** Класс на кнопку-триггер (например, min-h-11); фолбэк-панель — без него. */
+  /** Класс на кнопку-триггер (нативный MIN_TARGET); фолбэк-панель — без него. */
   className?: string;
   onConfirm: () => void;
 }) {

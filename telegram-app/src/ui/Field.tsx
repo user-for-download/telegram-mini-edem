@@ -34,10 +34,10 @@ export interface FieldProps
 }
 
 /**
- * Поле формы: sr-only лейбл + контрол (Input/Textarea/Select кита)
+ * Поле формы: visually-hidden лейбл + контрол (Input/Textarea/Select кита)
  * + опциональная ошибка, связанная через aria-describedby.
  *
- * Почему sr-only, а не kit-`header`: в kите header рисует FormInputTitle
+ * Почему visually-hidden, а не kit-`header`: в kите header рисует FormInputTitle
  * ВНЕ <label> и только на platform === 'base' (на iOS текста нет вообще,
  * см. FormInput.js) — на видимом заголовке держать доступное имя нельзя.
  * Наши label+htmlFor дают имя на всех платформах.
@@ -72,7 +72,7 @@ export function Field({
     : { id, header: label };
   return (
     <div {...rest} className={className}>
-      <label htmlFor={id} className={`${VISUALLY_HIDDEN} sr-only`}>
+      <label htmlFor={id} className={VISUALLY_HIDDEN}>
         {label}
       </label>
       {children(control)}

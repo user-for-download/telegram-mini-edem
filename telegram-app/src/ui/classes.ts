@@ -5,12 +5,11 @@ import layoutStyles from "./layout.module.css";
 /**
  * Классы поверхности карточки для НЕстандартных контейнеров.
  *
- * `ui/Card` рендерит div и покрывает 90% мест. Но есть контейнеры, которые
- * нельзя заменить на div без потери поведения: интерактивная `Tappable`
- * (button), карточка-строка на `<button>`, обёртка над китовой `Card`.
- * Для них экспортируем класс из единого источника (ui.module.css), как это
- * уже сделано для `ROUTE_FADE_CLASS` в AppShell: правило одно, контейнер
- * любой. Прецедент канона: экспорт хэш-класса из модуля.
+ * Статичные карточки — через `ui/Card` (нативный TguiCard, Batch4).
+ * Здесь — исключение для контейнеров, которые не могут быть article:
+ * интерактивная `Tappable` ленты (button) и Skeleton-болванки.
+ * Рецепт на tgui-токенах (ui.module.css .card), визуал legacy.
+ * Новые места — только через ui/Card.
  */
 export const CARD_SURFACE = styles.card;
 
@@ -69,11 +68,11 @@ export const BTN_ROW_WRAP = layoutStyles.btnRowWrap;
 /** Ряд space-between с зазором 8px. */
 export const ROW_BETWEEN = layoutStyles.rowBetween;
 
-/** Visually hidden label for screen readers (replaces tailwind `sr-only`). */
+/** Visually hidden label for screen readers (нативный TGUI-паттерн). */
 export const VISUALLY_HIDDEN = textStyles.visuallyHidden;
 
-/** Minimum 44px tap-target height (replaces tailwind `min-h-11`). */
+/** Minimum 44px tap-target height (нативный хэш-класс, WCAG 2.5.8). */
 export const MIN_TARGET = textStyles.minTarget;
 
-/** Loading pulse animation (replaces tailwind `animate-pulse`). */
+/** Loading pulse animation (нативная, disabled under prefers-reduced-motion). */
 export const PULSE = textStyles.pulse;

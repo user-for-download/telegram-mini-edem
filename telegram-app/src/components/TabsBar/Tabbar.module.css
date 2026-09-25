@@ -1,77 +1,25 @@
-/* Нижний док как у официального клиента (TabBarUI/TabBarContollerNode +
- * TelegramUI/Components/TabBarComponent): пилюля 64px (item 56 +
- * innerInset 2x4) + detached-круг поиска, зазор 8px, боковые врезки 12px,
- * нижняя max(системная/TG-врезка, 8px). Высота и нижний отступ — из токенов
- * --app-dock-height/--app-dock-gap: ту же геометрию складывает клиренс Page
- * (--app-page-pad-bottom в index.css), менять синхронно.
- * Цвета только из токенов --tgui--* / --tg-theme-*, тема клиента (light/dark). */
+/* Нативный Tabbar кита (FixedLayout bottom + safe-area из кита),
+ * стилизован парящей пилюлей: приподнят над низом, полупрозрачный,
+ * полностью овальный. Позиционированием fixed владеет кит, здесь только
+ * отступы/форма/фон (неслойный модуль бьёт слой tgui без !important).
+ * Геометрия низа страниц — токены --app-* в index.css (Batch7). */
 
-/* Собственный fixed-ряд: TGUI Tabbar всегда рендерит свой FixedLayout,
- * два таких в ряд не встанут — позиционированием владеет док. */
-.dock {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  display: flex;
-  align-items: stretch;
-  gap: var(--app-dock-gap);
-  /* Боковые врезки (landscape-фуллскрин): панели Telegram по бокам. */
-  padding-left: max(var(--tg-safe-area-left, 0px), 12px);
-  padding-right: max(var(--tg-safe-area-right, 0px), 12px);
-  /* Фуллскрин: док не должен налипать на системную навигационную
-   * полосу/жест — --app-safe-bottom агрегирует env и SDK-врезку,
-   * --app-dock-gap — минимальный отступ, если врезки нет. */
-  padding-bottom: max(var(--app-safe-bottom), var(--app-dock-gap));
-}
-
-/* Пилюля 4 разделов: почти opaque primary surface (в light — белая
- * на сером фоне страницы, как у клиента) + блюр для глубины. */
-.tabbar {
-  flex: 1;
-  display: flex;
-  min-height: var(--app-dock-height);
+/* Парящий овал: бока 12px (в landscape — не меньше safe-area), низ 12px
+ * поверх внутренней safe-area кита, радиус-пилюля, прозрачный фон + блюр. */
+.tabbar.tabbar {
+  left: max(12px, var(--tg-safe-area-left, 0px));
+  right: max(12px, var(--tg-safe-area-right, 0px));
+  bottom: 12px;
   border-radius: 32px;
   overflow: hidden;
   background: color-mix(
     in srgb,
-    var(--tgui--surface_primary, var(--tgui--bg_color, #fff)) 90%,
+    var(--tgui--surface_primary, var(--tgui--bg_color, #fff)) 82%,
     transparent
   );
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
-}
-
-/* Detached-круг поиска: квадрат --app-dock-height как у клиента
- * (barHeight). Без aspect-ratio: связка aspect-ratio + stretch
- * сплющивается в Safari/WebView — явный размер детерминирован везде. */
-.search {
-  flex: none;
-  align-self: center;
-  width: var(--app-dock-height);
-  height: var(--app-dock-height);
-  border: none;
-  border-radius: 50%;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--tgui--text_color, var(--tg-theme-text-color, #000));
-  background: color-mix(
-    in srgb,
-    var(--tgui--surface_primary, var(--tgui--bg_color, #fff)) 90%,
-    transparent
-  );
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
-}
-
-.searchSelected {
-  color: var(--tgui--link_color, #3390ec);
 }
 
 /* Цвета айтемов как у клиента: неактивные — primary text (у TGUI тут
@@ -92,6 +40,26 @@
 .tabbar :global(.tgui-44d48e11585af170) {
   background: transparent;
   min-width: 0;
+}
+
+/* Центральный акцент поиска: залитый круг button_color поверх сброса
+ * выше (порядок ниже + двойной класс = побеждаем без !important).
+ * Иконка внутри — белая, чуть крупнее задана в TSX (30px). Подписи нет
+ * (только aria-label) — кнопку центрируем по обеим осям. */
+.tabbar .searchItem:global(.tgui-64cd0db020a9bacf),
+.tabbar .searchItem:global(.tgui-e6658d0b8927f95e) {
+  justify-content: center;
+}
+.tabbar .searchItem:global(.tgui-64cd0db020a9bacf) :global(.tgui-44d48e11585af170),
+.tabbar .searchItem:global(.tgui-e6658d0b8927f95e) :global(.tgui-44d48e11585af170) {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--tgui--button_color, #007aff);
+  color: var(--tgui--button_text_color, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .iconWrap {

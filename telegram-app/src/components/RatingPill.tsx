@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { Chip as TguiChip } from "@telegram-apps/telegram-ui";
 import styles from "./RatingPill.module.css";
 
 interface RatingPillProps {
@@ -9,7 +10,8 @@ interface RatingPillProps {
 }
 
 /**
- * Пилюля рейтинга «★ 4.9»: звезда lucide, десятичный разделитель — точка,
+ * Пилюля рейтинга «★ 4.9» на нативном `Chip` кита (mode mono, Component span):
+ * звезда lucide в слоте before, десятичный разделитель — точка,
  * null — прочерк. Фон и текст — из переменных темы UI-кита.
  */
 export function RatingPill({ value, size = "m" }: RatingPillProps) {
@@ -18,14 +20,18 @@ export function RatingPill({ value, size = "m" }: RatingPillProps) {
     clamped == null ? "Рейтинг пока отсутствует" : `Рейтинг ${clamped.toFixed(1)} из 5`;
 
   return (
-    <span
+    <TguiChip
+      Component="span"
+      mode="mono"
+      before={
+        <span className={styles.star} aria-hidden="true">
+          <Star size={size === "s" ? 12 : 14} fill="currentColor" strokeWidth={0} />
+        </span>
+      }
       className={`${styles.pill} ${size === "s" ? styles.small : ""}`}
       aria-label={label}
     >
-      <span className={styles.star} aria-hidden="true">
-        <Star size={size === "s" ? 12 : 14} fill="currentColor" strokeWidth={0} />
-      </span>
-      <span>{clamped == null ? "—" : clamped.toFixed(1)}</span>
-    </span>
+      {clamped == null ? "—" : clamped.toFixed(1)}
+    </TguiChip>
   );
 }

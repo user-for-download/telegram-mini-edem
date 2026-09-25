@@ -109,7 +109,7 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
  * уход со страницы/закрытие приложения, а не закрытие модалки. Хук
  * сам снимает флаг в cleanup при размонтировании страницы.
  *
- * a11y: интерактив — таргеты ≥44px (min-h-11), счётчик и хинт лимита —
+  * a11y: интерактив — таргеты ≥44px (нативный MIN_TARGET), счётчик и хинт лимита —
  * aria-live, ошибки — role=alert, успех — role=status.
  */
 export function ReportsPage() {

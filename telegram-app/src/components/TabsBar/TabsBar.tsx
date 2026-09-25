@@ -1,4 +1,4 @@
-import { Badge, Tabbar, Tappable } from "@telegram-apps/telegram-ui";
+import { Badge, Tabbar } from "@telegram-apps/telegram-ui";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { Bell, Car, Home, Search, User } from "lucide-react";
 import styles from "./Tabbar.module.css";
@@ -15,6 +15,7 @@ export interface TabsBarProps {
 const TABS = [
   { key: "home", text: "Главная", to: "/", Icon: Home },
   { key: "trips", text: "Поездки", to: "/bookings", Icon: Car },
+  { key: "search", text: "Поиск", to: "/trips", Icon: Search },
   {
     key: "notifications",
     text: "Уведомления",
@@ -36,70 +37,53 @@ function go(
 }
 
 /**
- * Нижний док как у официального клиента (TabBarUI/TabBarContollerNode +
- * TabBarComponent): пилюля 64px на 4 раздела + detached-круг поиска 64px
- * (barHeight 56 + innerInset 2x4, зазор 8px). TGUI Tabbar всегда рендерит
- * свой FixedLayout, поэтому ряд — свой fixed-контейнер, а Tabbar.Item
- * используются standalone (это обычные кнопки, fixed им не нужен).
- * Иконки 28px uniform stroke 2, активный — link_color (синий Telegram),
- * неактивные — text_color. Бейдж непрочитанных — пропом.
- * a11y: nav-landmark «Разделы», счётчик дублируем в aria-label кнопки.
+ * Нижний таббар на нативном `Tabbar` кита (внутри — FixedLayout bottom
+ * с safe-area). Пять разделов табом, бейдж непрочитанных — пропом.
+ * Поиск — центральный акцент: залитый круг button_color, иконка чуть
+ * крупнее (30px). Остальные иконки 28px uniform stroke 2, активный —
+ * link_color. a11y: nav-landmark «Разделы» держит AppBottomBar, счётчик
+ * дублируем в aria-label кнопки.
  */
 export function TabsBar({
   activeTab,
   onSelect,
   unreadCount = 0,
 }: TabsBarProps) {
-  const searchSelected = activeTab === "search";
-
   return (
-    <div className={styles.dock}>
-      <nav aria-label="Разделы" className={styles.tabbar}>
-        {TABS.map(({ key, text, to, Icon }) => {
-          const selected = activeTab === key;
-          const showBadge = key === "notifications" && unreadCount > 0;
+    <Tabbar className={styles.tabbar}>
+      {TABS.map(({ key, text, to, Icon }) => {
+        const selected = activeTab === key;
+        const showBadge = key === "notifications" && unreadCount > 0;
+        const isSearch = key === "search";
 
-          return (
-            <Tabbar.Item
-              key={key}
-              selected={selected}
-              text={text}
-              aria-label={
-                showBadge ? `${text}, непрочитанных: ${unreadCount}` : text
-              }
-              onClick={() => go(activeTab, key, to, onSelect)}
-            >
-              {/* relative-обёртка для позиционирования Badge поверх иконки */}
-              <span className={styles.iconWrap}>
-                <Icon size={28} strokeWidth={2} />
-                {showBadge && (
-                  <Badge
-                    type="number"
-                    mode="critical"
-                    aria-hidden="true"
-                    className={styles.badge}
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </Badge>
-                )}
-              </span>
-            </Tabbar.Item>
-          );
-        })}
-      </nav>
-      {/* Detached-круг поиска — китовая Tappable (Component="button"):
-          статика побайт прежняя (.search), от кита — нативный press/ripple.
-          Tabbar.Item здесь не подходит: у него чипованная подложка иконки
-          и таб-семантика, а круг — отдельное действие дока. */}
-      <Tappable
-        Component="button"
-        type="button"
-        aria-label="Поиск"
-        className={`${styles.search} ${searchSelected ? styles.searchSelected : ""}`}
-        onClick={() => go(activeTab, "search", "/trips", onSelect)}
-      >
-        <Search size={28} strokeWidth={2} />
-      </Tappable>
-    </div>
+        return (
+          <Tabbar.Item
+            key={key}
+            selected={selected}
+            text={isSearch ? undefined : text}
+            aria-label={
+              showBadge ? `${text}, непрочитанных: ${unreadCount}` : text
+            }
+            onClick={() => go(activeTab, key, to, onSelect)}
+            className={isSearch ? styles.searchItem : undefined}
+          >
+            {/* relative-обёртка для позиционирования Badge поверх иконки */}
+            <span className={styles.iconWrap}>
+              <Icon size={isSearch ? 30 : 28} strokeWidth={2} />
+              {showBadge && (
+                <Badge
+                  type="number"
+                  mode="critical"
+                  aria-hidden="true"
+                  className={styles.badge}
+                >
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Badge>
+              )}
+            </span>
+          </Tabbar.Item>
+        );
+      })}
+    </Tabbar>
   );
 }

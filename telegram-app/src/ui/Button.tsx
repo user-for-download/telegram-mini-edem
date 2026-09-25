@@ -47,15 +47,22 @@ export function Button({
   className,
   ...restProps
 }: ButtonProps) {
-  // Tailwind decommission: hashed MIN_TARGET carries the style, literal
-  // `min-h-11` keeps SSR assertions (button/modals/reports tests) stable.
-  // Глобальный .minTarget44 в index.css — читаемая строка-имя того же 44px
-  // (без Tailwind-префлайта): хэш несёт стиль, литералы держат ассерты.
-  const minH = size === "s" ? undefined : `${MIN_TARGET} min-h-11 minTarget44`;
+  // Нативный кит: тап-таргет 44px (WCAG 2.5.8) — только хэш-класс MIN_TARGET
+  // для размеров m/l. Явный MIN_TARGET в className (компактные size="s"
+  // в модалках) тоже считается: data-атрибут ниже — стабильный хук для
+  // SSR-тестов вместо строки класса.
+  const minH = size === "s" ? undefined : MIN_TARGET;
+  const hasExplicitMinTarget =
+    typeof className === "string" &&
+    typeof MIN_TARGET === "string" &&
+    MIN_TARGET.length > 0 &&
+    className.includes(MIN_TARGET);
+  const hasMinTarget = Boolean(minH) || hasExplicitMinTarget;
   return (
     <TguiButton
       mode={MODES[variant]}
       size={size}
+      data-tap-target={hasMinTarget ? "44" : undefined}
       className={[minH, className].filter(Boolean).join(" ") || undefined}
       {...restProps}
     />

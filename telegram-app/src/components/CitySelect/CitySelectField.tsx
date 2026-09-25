@@ -39,7 +39,7 @@ export function CitySelectField({
 
   return (
     <div className={styles.field}>
-      <label htmlFor={id} className={`${VISUALLY_HIDDEN} sr-only`}>
+      <label htmlFor={id} className={VISUALLY_HIDDEN}>
         {label}
       </label>
       <Select
