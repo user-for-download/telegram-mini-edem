@@ -4,7 +4,16 @@
  * у страниц-карточек контент стартует на 4 + 16 = 20px — дотягиваем
  * margin-top 6px до той же линии (pinned tgui: Cell padding 10px 16px). */
 .cell {
+  /* Кнопка вне Section: кит Cell прозрачен сам по себе (фона/бордера
+   * у .tgui-b8df… нет — только flex + padding), но <button> по умолчанию
+   * shrink-wrap (inline-block): без width:100% строка сжимается под контент.
+   * Явные transparent/0 документируют намерение «голая строка на всю ширину»
+   * и страхуют от future-chrome при bump кита. */
+  width: 100%;
   margin-top: 6px;
+  text-align: left;
+  background: transparent;
+  border: 0;
 }
 .who {
   display: flex;

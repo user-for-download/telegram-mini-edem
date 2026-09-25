@@ -49,7 +49,9 @@ export function Button({
 }: ButtonProps) {
   // Tailwind decommission: hashed MIN_TARGET carries the style, literal
   // `min-h-11` keeps SSR assertions (button/modals/reports tests) stable.
-  const minH = size === "s" ? undefined : `${MIN_TARGET} min-h-11`;
+  // Глобальный .minTarget44 в index.css — читаемая строка-имя того же 44px
+  // (без Tailwind-префлайта): хэш несёт стиль, литералы держат ассерты.
+  const minH = size === "s" ? undefined : `${MIN_TARGET} min-h-11 minTarget44`;
   return (
     <TguiButton
       mode={MODES[variant]}

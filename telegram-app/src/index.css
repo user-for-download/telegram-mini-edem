@@ -212,16 +212,6 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Совместимость с Tailwind-классами (tailwind-decommission):
-   неслойные глобальные классы для SSR-ассертов и a11y
-   (`min-h-11` — тап-таргет 44px, `sr-only` — скрытие
-   для скринридера). Канонический путь —
-   classes.ts (MIN_TARGET/VISUALLY_HIDDEN/PULSE); здесь только алиасы для
-   старых строк-имён в тестах. */
-.min-h-11 {
-  min-height: 44px;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -233,18 +223,3 @@ body {
   white-space: nowrap;
   border: 0;
 }
-
-/* Prevent auto-zoom on iOS Safari/Telegram WebView when focusing text inputs
-   (tgui не выставляет 16px сам — дублируем поверх его стилей). */
-input,
-select,
-textarea {
-  font-size: 16px !important;
-}
-
-/* Уведомления/поддержка/жалобы: FAQ и карточки обращений — tgui Accordion,
-   карточки списков — CSS-модули на tgui-переменных. */
-
-/* Отзывы: форма — ui/Card, список — карточки, табы —
-   tgui SegmentedControl. Звёзды ввода — нативный tgui Rating
-   (см. components/RatingInput/RatingInput.module.css). */

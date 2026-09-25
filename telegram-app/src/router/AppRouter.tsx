@@ -125,34 +125,24 @@ export function Shell() {
     navigate(to);
   };
 
-  // Sticky in-app навбар (NavHeader): имя вкладки/страницы. Имена
-  // корневых вкладок — те же, что в TabsBar (по одной строке на раздел);
-  // для контекстных маршрутов — своё имя. Зонного заголовка фуллскрина
-  // больше нет — NavHeader его заменяет (иначе два дубля подряд).
-  const headerTitle: string | undefined =
-    location.pathname === "/"
-      ? "Главная"
-      : location.pathname.startsWith("/trips/my")
-        ? "Мои поездки"
-        : location.pathname.startsWith("/bookings")
-          ? "Поездки"
-          : location.pathname.startsWith("/trips/")
-            ? "Поездка"
-            : location.pathname.startsWith("/trips")
-              ? "Поиск"
-              : location.pathname.startsWith("/notifications")
-                ? "Уведомления"
-                : location.pathname.startsWith("/profile/history")
-                ? "История поездок"
-                : location.pathname.startsWith("/profile/edit")
-                  ? "Редактирование профиля"
-                  : location.pathname.startsWith("/profile/support")
-                    ? "Поддержка"
-                    : location.pathname.startsWith("/profile/reports")
-                      ? "Мои обращения"
-                      : location.pathname.startsWith("/profile")
-                        ? "Профиль"
-                        : undefined;
+  // Вне компонента Shell — не пересоздаётся на каждый рендер
+  const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
+    [(p) => p === "/", "Главная"],
+    [(p) => p.startsWith("/trips/my"), "Мои поездки"],
+    [(p) => p.startsWith("/bookings"), "Поездки"],
+    [(p) => p.startsWith("/trips/"), "Поездка"],
+    [(p) => p.startsWith("/trips"), "Поиск"],
+    [(p) => p.startsWith("/notifications"), "Уведомления"],
+    [(p) => p.startsWith("/profile/history"), "История поездок"],
+    [(p) => p.startsWith("/profile/edit"), "Редактирование профиля"],
+    [(p) => p.startsWith("/profile/support"), "Поддержка"],
+    [(p) => p.startsWith("/profile/reports"), "Мои обращения"],
+    [(p) => p.startsWith("/profile"), "Профиль"],
+  ];
+
+  const headerTitle = HEADER_TITLE_RULES.find(([match]) =>
+    match(location.pathname),
+  )?.[1];
 
   return (
     <AppShell
