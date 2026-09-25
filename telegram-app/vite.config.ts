@@ -1,5 +1,4 @@
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { readFileSync } from "node:fs";
 import { defineConfig, loadEnv } from "vite";
@@ -25,9 +24,6 @@ export default defineConfig(({ mode }) => {
     base: './',
     plugins: [
       react(),
-      // Tailwind v4 (стиль примера edem-telegram-mini-app): утилиты поверх
-      // tgui-переменных, tree-shaken в билде.
-      tailwindcss(),
       // PWA отключён и здесь: Service Worker кэширует старую версию и
       // конфликтует с деплоем.
       // Для Telegram WebView офлайн не критичен, белый экран — критичен.

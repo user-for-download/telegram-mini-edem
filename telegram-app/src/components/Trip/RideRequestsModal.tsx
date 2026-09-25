@@ -2,7 +2,7 @@ import { memo } from "react";
 import { useState } from "react";
 import { Caption, Input, Text } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
-import { BTN_ROW, BTN_ROW_WRAP, HINT, INFO, SUCCESS, TRUNCATE } from "@/ui/classes";
+import { BTN_ROW, BTN_ROW_WRAP, HINT, INFO, MIN_TARGET, SUCCESS, TRUNCATE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
@@ -407,7 +407,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       <Button
                         stretched
                         size="s"
-                        className="min-h-11"
+                        className={`${MIN_TARGET} min-h-11`}
                         loading={update.isPending}
                         onClick={() => submitEdit(request.id)}
                       >
@@ -416,7 +416,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       <Button
                         size="s"
                         stretched
-                        className="min-h-11"
+                        className={`${MIN_TARGET} min-h-11`}
                         disabled={update.isPending}
                         onClick={() => setEditingId(null)}
                       >
@@ -430,7 +430,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       <Button
                         size="s"
                         stretched
-                        className="min-h-11"
+                        className={`${MIN_TARGET} min-h-11`}
                         loading={
                           status.isPending &&
                           status.variables?.id === request.id
@@ -447,7 +447,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                       <Button
                         size="s"
                         stretched
-                        className="min-h-11"
+                        className={`${MIN_TARGET} min-h-11`}
                         loading={
                           status.isPending &&
                           status.variables?.id === request.id
@@ -466,7 +466,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                         <Button
                           size="s"
                           stretched
-                          className="min-h-11"
+                          className={`${MIN_TARGET} min-h-11`}
                           disabled={status.isPending || cancel.isPending}
                           onClick={() => startEdit(request)}
                         >

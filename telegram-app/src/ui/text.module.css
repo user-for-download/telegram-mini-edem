@@ -58,3 +58,47 @@
   color: var(--app-success);
 }
 
+
+/* -- Tailwind decommission: own a11y/interactive classes (no tailwindcss) -- */
+
+/* Visually hidden label, still announced by screen readers (WCAG pattern).
+ * Replaces `sr-only`: form field labels (ui/Field, CityPicker, CitySelect). */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Minimum tap-target height 44px (WCAG 2.5.8).
+ * Replaces `min-h-11`: ui/Button applies it for sizes m/l. */
+.minTarget {
+  min-height: 44px;
+}
+
+/* Loading placeholder pulse (avatar before entering viewport).
+ * Replaces `animate-pulse`; disabled under prefers-reduced-motion. */
+@keyframes pulseSoft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+}

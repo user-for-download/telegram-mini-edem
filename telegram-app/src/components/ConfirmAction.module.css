@@ -4,3 +4,13 @@
 .destructive {
   color: var(--app-danger);
 }
+
+/* Armed-панель подтверждения: отступ 8px от триггера (было mt-2).
+ * Модификатор actionsEnd прижимает кнопки к правому краю (было items-end). */
+.confirmPanel {
+  margin-top: var(--app-space-xs);
+}
+
+.confirmPanelEnd {
+  align-items: flex-end;
+}

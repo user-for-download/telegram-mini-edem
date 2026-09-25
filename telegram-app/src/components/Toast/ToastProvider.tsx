@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Snackbar } from "@telegram-apps/telegram-ui";
 import { CheckCircle2 } from "lucide-react";
+import { SHRINK, SUCCESS } from "@/ui/classes";
 import styles from "./Toast.module.css";
 
 export interface Toast {
@@ -67,7 +68,7 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
             duration={TOAST_DURATION_MS}
             before={
               toast.before ?? (
-                <CheckCircle2 size={20} className="text-(--app-success) shrink-0" />
+                <CheckCircle2 size={20} className={`${SUCCESS} ${SHRINK}`} />
               )
             }
             description={toast.description}

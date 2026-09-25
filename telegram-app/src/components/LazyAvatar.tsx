@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@telegram-apps/telegram-ui";
+import { PULSE } from "@/ui/classes";
 
 export interface LazyAvatarProps {
   src?: string | null;
@@ -80,7 +81,7 @@ export function LazyAvatar({
               size={size}
               acronym={acronym}
               alt={label}
-              className="animate-pulse motion-reduce:animate-none"
+              className={PULSE}
             />
           </span>
         </div>

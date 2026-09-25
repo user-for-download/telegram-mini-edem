@@ -150,7 +150,7 @@ describe("CreateTripForm (страница /trips/my/new)", () => {
     expect(html).toContain("Overlap with passenger booking");
   });
 
-  it("без автомобиля — гейт вместо формы, с дорогой в профиль", () => {
+  it("без автомобиля — гейт с кнопкой-шторкой вместо формы (без навигации на /vehicle)", () => {
     mockUseAllCities.mockReturnValue(queryState({ data: CITIES }));
     mockUseVehicle.mockReturnValue(queryState({ vehicle: null }));
     const html = render(<CreateTripForm onCreated={() => {}} />);
@@ -158,6 +158,7 @@ describe("CreateTripForm (страница /trips/my/new)", () => {
     expect(html).toContain("Добавить автомобиль");
     expect(html).not.toContain("Маршрут");
     expect(html).not.toContain("Опубликовать");
+    // Шторка VehicleModal — портал: в renderToString не попадает, тело формы покрыто VehicleBody-тестами.
   });
 });
 

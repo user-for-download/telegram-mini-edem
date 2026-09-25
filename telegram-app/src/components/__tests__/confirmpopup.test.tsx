@@ -109,8 +109,9 @@ describe("ConfirmPopup", () => {
       const confirm = buttons.find((b) =>
         b.textContent?.includes("Отменить поездку"),
       );
-      // Панель — родитель кнопки подтверждения.
-      expect(confirm?.parentElement?.className).toContain("items-end");
+      // Панель — родитель кнопки подтверждения (канон: confirmPanelEnd
+      // вместо tailwind items-end).
+      expect(confirm?.parentElement?.className).toContain("confirmPanelEnd");
     });
   });
 

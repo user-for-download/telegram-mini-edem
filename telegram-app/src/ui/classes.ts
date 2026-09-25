@@ -68,3 +68,12 @@ export const BTN_ROW_WRAP = layoutStyles.btnRowWrap;
 
 /** Ряд space-between с зазором 8px. */
 export const ROW_BETWEEN = layoutStyles.rowBetween;
+
+/** Visually hidden label for screen readers (replaces tailwind `sr-only`). */
+export const VISUALLY_HIDDEN = textStyles.visuallyHidden;
+
+/** Minimum 44px tap-target height (replaces tailwind `min-h-11`). */
+export const MIN_TARGET = textStyles.minTarget;
+
+/** Loading pulse animation (replaces tailwind `animate-pulse`). */
+export const PULSE = textStyles.pulse;

@@ -1,0 +1,229 @@
+/* Классы скелетонов (Overlay на tgui Skeleton): размеры, сетка и
+ * структура болванок с привязкой к токенам приложения (--app-* и --tgui--*).
+ */
+
+.cardSkeleton {
+  overflow: hidden;
+}
+
+.topRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+}
+
+.routeCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.priceCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.linePrice {
+  height: 16px;
+  width: 56px;
+}
+
+.lineUnit {
+  height: 12px;
+  width: 48px;
+}
+
+.lineTime {
+  height: 16px;
+  width: 112px;
+}
+
+.lineCities {
+  height: 14px;
+  width: 176px;
+}
+
+.lineSub {
+  height: 12px;
+  width: 80px;
+}
+
+.lineAddress {
+  height: 12px;
+  width: 40%;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-xs);
+  border-top: var(--tgui--border--width, 1px) solid var(--tgui--outline);
+  padding-top: var(--app-space-xs);
+}
+
+.driverInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+}
+
+.driverLines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lineDriverName {
+  height: 12px;
+  width: 96px;
+}
+
+.lineDriverRating {
+  height: 10px;
+  width: 56px;
+}
+
+.avatarCircle {
+  height: 40px;
+  width: 40px;
+  border-radius: var(--app-radius-pill);
+}
+
+.seatsPill {
+  height: 20px;
+  width: 112px;
+  border-radius: var(--app-radius-pill);
+}
+
+/* Болванка уведомления */
+.notifHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-xs);
+}
+
+.lineNotifTitle {
+  height: 16px;
+  width: 40%;
+}
+
+.notifPill {
+  height: 20px;
+  width: 64px;
+  border-radius: var(--app-radius-pill);
+}
+
+.lineFull {
+  height: 12px;
+  width: 100%;
+}
+
+.line60 {
+  height: 12px;
+  width: 60%;
+}
+
+.notifFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  border-top: var(--tgui--border--width, 1px) solid var(--tgui--outline);
+  padding-top: var(--app-space-xs);
+}
+
+.lineDate {
+  height: 12px;
+  width: 64px;
+}
+
+.notifActionBtn {
+  height: 32px;
+  width: 144px;
+  border-radius: var(--app-radius-md);
+}
+
+/* Болванка отзыва */
+.reviewHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-xs);
+}
+
+.authorInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+}
+
+.authorAvatar {
+  height: 28px;
+  width: 28px;
+  border-radius: var(--app-radius-pill);
+}
+
+.authorLines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lineAuthorName {
+  height: 12px;
+  width: 96px;
+}
+
+.lineAuthorRole {
+  height: 10px;
+  width: 64px;
+}
+
+.starsRow {
+  display: flex;
+  gap: 2px;
+}
+
+.starItem {
+  height: 12px;
+  width: 12px;
+}
+
+.line80 {
+  height: 12px;
+  width: 80%;
+}
+
+.line50 {
+  height: 10px;
+  width: 50%;
+}
+
+/* Болванка профиль-бара главной */
+.profileBarRoot {
+  overflow: hidden;
+  border-radius: var(--app-card-radius);
+}
+
+.profileBarContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-xs);
+}
+
+.profileBarUser {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profileBarRating {
+  height: 24px;
+  width: 56px;
+  border-radius: var(--app-radius-pill);
+}

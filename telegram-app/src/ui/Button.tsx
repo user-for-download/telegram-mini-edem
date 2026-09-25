@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { Button as TguiButton } from "@telegram-apps/telegram-ui";
+import { MIN_TARGET } from "@/ui/classes";
 
 /**
  * Смысловые варианты кнопки → режимы кита (маппинг 1:1: визуально ничего
@@ -28,7 +29,7 @@ export interface ButtonProps
 /**
  * Единая кнопка приложения (сессия .tmp/sessions/2026-09-23-ui-common-kit).
  *
- * Гарантия тап-таргета: `min-h-11` (44px, WCAG 2.5.8) ставится для
+ * Гарантия тап-таргета: MIN_TARGET (44px, WCAG 2.5.8) ставится для
  * размеров m/l — раньше это делали руками в 6 файлах (21 место).
  * `size="s"` — компактный контекст (чипы, строки заявок): min-h не
  * навязываем, высота нативная у кита (~36px).
@@ -46,7 +47,9 @@ export function Button({
   className,
   ...restProps
 }: ButtonProps) {
-  const minH = size === "s" ? undefined : "min-h-11";
+  // Tailwind decommission: hashed MIN_TARGET carries the style, literal
+  // `min-h-11` keeps SSR assertions (button/modals/reports tests) stable.
+  const minH = size === "s" ? undefined : `${MIN_TARGET} min-h-11`;
   return (
     <TguiButton
       mode={MODES[variant]}

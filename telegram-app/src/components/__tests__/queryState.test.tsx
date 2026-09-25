@@ -119,17 +119,18 @@ describe("Skeletons", () => {
   });
 
   it("count задаёт число болванок (по умолчанию 3)", () => {
-    // Маркер на болванку: уникальный класс первой строки каждой карточки.
+    // Маркер на болванку: семантический класс первой строки каждой карточки
+    // (канон: Skeletons.module.css вместо tailwind h-4 w-28).
     const tripDefault = render(<TripCardsSkeleton />);
-    expect(tripDefault.match(/h-4 w-28/g)?.length).toBe(3);
+    expect(tripDefault.match(/lineTime/g)?.length).toBe(3);
     const tripTwo = render(<TripCardsSkeleton count={2} />);
-    expect(tripTwo.match(/h-4 w-28/g)?.length).toBe(2);
+    expect(tripTwo.match(/lineTime/g)?.length).toBe(2);
 
     const notif = render(<NotificationCardsSkeleton count={2} />);
-    expect(notif.match(/h-4 w-2\/5/g)?.length).toBe(2);
+    expect(notif.match(/lineNotifTitle/g)?.length).toBe(2);
 
     const reviews = render(<ReviewCardsSkeleton count={1} />);
-    expect(reviews.match(/h-7 w-7/g)?.length).toBe(1);
+    expect(reviews.match(/authorAvatar/g)?.length).toBe(1);
   });
 
   it("одиночные болванки без собственного role=status (их объявляет родитель)", () => {

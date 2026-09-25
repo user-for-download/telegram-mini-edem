@@ -20,6 +20,7 @@ beforeEach(() => {
   mockUseAllCities.mockReturnValue(queryState({ data: [] }));
   mockUseDriverRequests.mockReturnValue(queryState({ data: [] }));
   mockUseUpdateBookingStatus.mockReturnValue({ mutate: vi.fn() });
+  mockUseVehicle.mockReturnValue(queryState({ vehicle: { model: "Skoda", color: "белый" } }));
 });
 
 const {
@@ -29,6 +30,7 @@ const {
   mockUseDriverRequests,
   mockUseUpdateBookingStatus,
   mockUseMyTrips,
+  mockUseVehicle,
 } = vi.hoisted(() => ({
   mockUseProfile: vi.fn(),
   mockUseMyBookings: vi.fn(),
@@ -36,6 +38,7 @@ const {
   mockUseDriverRequests: vi.fn(),
   mockUseUpdateBookingStatus: vi.fn(),
   mockUseMyTrips: vi.fn(),
+  mockUseVehicle: vi.fn(),
 }));
 
 vi.mock("@/queries/profile", () => ({
@@ -54,6 +57,10 @@ vi.mock("@/queries/useAllCities", () => ({
 
 vi.mock("@/queries/useTripsQuery", () => ({
   useInfiniteMyTripsQuery: mockUseMyTrips,
+}));
+
+vi.mock("@/queries/vehicle", () => ({
+  useVehicleQuery: mockUseVehicle,
 }));
 
 vi.mock("@/queries/useReviewsQuery", () => ({

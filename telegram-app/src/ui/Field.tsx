@@ -1,6 +1,7 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
 import { FieldError } from "@/ui/FieldError";
+import { VISUALLY_HIDDEN } from "@/ui/classes";
 
 export interface FieldControl {
   id: string;
@@ -71,7 +72,7 @@ export function Field({
     : { id, header: label };
   return (
     <div {...rest} className={className}>
-      <label htmlFor={id} className="sr-only">
+      <label htmlFor={id} className={`${VISUALLY_HIDDEN} sr-only`}>
         {label}
       </label>
       {children(control)}

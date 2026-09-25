@@ -23,9 +23,9 @@ export interface PageProps {
  *   гасится нашим неслойным модулем — Android и iOS выглядят одинаково
  *   (раньше TripPage жил на голом `<List>` и на iOS получал бока 18px);
  * - бока 16px и верх 4px приходят из токенов `--app-page-*`;
- * - низ 96px (клиренс под док таббара) владеется ТОЛЬКО здесь —
- *   AppShell.content клиренс больше не дублирует, иначе получалось 192px.
- */
+ * - низ — `--app-page-pad-bottom` (высота дока таббара + зазор + нижняя
+ *   safe-area): владеется ТОЛЬКО здесь, AppShell.content клиренс не
+ *   дублирует, иначе получалось 192px. */
 export function Page({ children, className }: PageProps) {
   return (
     <List className={className ? `${styles.page} ${className}` : styles.page}>

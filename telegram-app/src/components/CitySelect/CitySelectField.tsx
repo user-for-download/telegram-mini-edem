@@ -1,5 +1,6 @@
 import { Select } from "@telegram-apps/telegram-ui";
 import { haptic } from "@/utils/haptics";
+import { VISUALLY_HIDDEN } from "@/ui/classes";
 import type { PickerCity } from "@/components/CityPicker/CityPickerField";
 import styles from "./CitySelectField.module.css";
 
@@ -38,7 +39,7 @@ export function CitySelectField({
 
   return (
     <div className={styles.field}>
-      <label htmlFor={id} className="sr-only">
+      <label htmlFor={id} className={`${VISUALLY_HIDDEN} sr-only`}>
         {label}
       </label>
       <Select

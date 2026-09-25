@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Input, Multiselect } from "@telegram-apps/telegram-ui";
 import { MapPin } from "lucide-react";
 import { haptic } from "@/utils/haptics";
+import { VISUALLY_HIDDEN } from "@/ui/classes";
 import styles from "./CityPickerField.module.css";
 
 export interface PickerCity {
@@ -88,7 +89,7 @@ export function CityPickerField({
   if (typeof document === "undefined") {
     return (
       <div className={styles.field}>
-        <label htmlFor={id} className="sr-only">
+        <label htmlFor={id} className={`${VISUALLY_HIDDEN} sr-only`}>
           {label}
         </label>
         <Input
@@ -109,7 +110,7 @@ export function CityPickerField({
       {/* Видимую подпись рисует сам Multiselect через header (стандарт tgui);
           внешний label — только sr-only: header на iOS не рендерится
           (нужен скринридерам), а связка htmlFor+id держит e2e getByLabel. */}
-      <label htmlFor={id} className="sr-only">
+      <label htmlFor={id} className={`${VISUALLY_HIDDEN} sr-only`}>
         {label}
       </label>
       <Multiselect

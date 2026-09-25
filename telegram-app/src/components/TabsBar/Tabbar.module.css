@@ -1,8 +1,10 @@
 /* Нижний док как у официального клиента (TabBarUI/TabBarContollerNode +
  * TelegramUI/Components/TabBarComponent): пилюля 64px (item 56 +
  * innerInset 2x4) + detached-круг поиска, зазор 8px, боковые врезки 12px,
- * нижняя max(системная, TG-инсет, 8px). Цвета только из токенов
- * --tgui--* / --tg-theme-*, тема клиента (light/dark). */
+ * нижняя max(системная/TG-врезка, 8px). Высота и нижний отступ — из токенов
+ * --app-dock-height/--app-dock-gap: ту же геометрию складывает клиренс Page
+ * (--app-page-pad-bottom в index.css), менять синхронно.
+ * Цвета только из токенов --tgui--* / --tg-theme-*, тема клиента (light/dark). */
 
 /* Собственный fixed-ряд: TGUI Tabbar всегда рендерит свой FixedLayout,
  * два таких в ряд не встанут — позиционированием владеет док. */
@@ -14,17 +16,14 @@
   z-index: 2;
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: var(--app-dock-gap);
   /* Боковые врезки (landscape-фуллскрин): панели Telegram по бокам. */
   padding-left: max(var(--tg-safe-area-left, 0px), 12px);
   padding-right: max(var(--tg-safe-area-right, 0px), 12px);
   /* Фуллскрин: док не должен налипать на системную навигационную
-   * полосу/жест — max(системная врезка, врезка UI Telegram, 8px). */
-  padding-bottom: max(
-    env(safe-area-inset-bottom, 0px),
-    var(--tg-safe-area-bottom, 0px),
-    8px
-  );
+   * полосу/жест — --app-safe-bottom агрегирует env и SDK-врезку,
+   * --app-dock-gap — минимальный отступ, если врезки нет. */
+  padding-bottom: max(var(--app-safe-bottom), var(--app-dock-gap));
 }
 
 /* Пилюля 4 разделов: почти opaque primary surface (в light — белая
@@ -32,7 +31,7 @@
 .tabbar {
   flex: 1;
   display: flex;
-  min-height: 64px;
+  min-height: var(--app-dock-height);
   border-radius: 32px;
   overflow: hidden;
   background: color-mix(
@@ -45,14 +44,14 @@
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
 }
 
-/* Detached-круг поиска: фиксированные 64x64 как у клиента (barHeight).
- * Без aspect-ratio: связка aspect-ratio + stretch сплющивается
- * в Safari/WebView — явный размер детерминирован везде. */
+/* Detached-круг поиска: квадрат --app-dock-height как у клиента
+ * (barHeight). Без aspect-ratio: связка aspect-ratio + stretch
+ * сплющивается в Safari/WebView — явный размер детерминирован везде. */
 .search {
   flex: none;
   align-self: center;
-  width: 64px;
-  height: 64px;
+  width: var(--app-dock-height);
+  height: var(--app-dock-height);
   border: none;
   border-radius: 50%;
   padding: 0;

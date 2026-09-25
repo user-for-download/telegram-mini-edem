@@ -1,15 +1,10 @@
 /* Базовые стили telegram-app: тема и компоненты — @telegram-apps/telegram-ui
-   (tgui.xelene.me), раскладка — Tailwind v4 утилитами на tgui-переменных
-   (язык примера edem-telegram-mini-app).
-   Каскад (CSS Cascade 5): Tailwind v4 живёт в слоях
-   theme/base/components/utilities, а tgui-stylesheet — неслойный, и неслойные
-   стили бьют слойные всегда, независимо от порядка импортов. Поэтому tgui
-   импортируется сюда же в собственный слой `tgui` между base и components:
-   preflight (base) нативные стили tgui не трогает, а utilities/components
-   и наши неслойные классы ниже законно переопределяют tgui без !important.
-   Здесь только токены + семантические классы, которых нет в tgui. */
-@layer theme, base, tgui, components, utilities;
-@import "tailwindcss";
+   (tgui.xelene.me). Кастомная раскладка — CSS-модули на tgui-переменных
+   и токенах --app-* (канон: TGUI-каркас + @/ui-фасад + модули).
+   TGUI подключён в отдельном слое `tgui`: неслойные стили приложения и
+   CSS-модули переопределяют его без !important и независимо от порядка
+   импортов. Tailwind здесь больше не используется. */
+@layer tgui;
 @import "@telegram-apps/telegram-ui/dist/styles.css" layer(tgui);
 
 :root {
@@ -140,12 +135,31 @@
   --app-space-md: 16px;
   --app-space-lg: 24px;
   --app-space-xl: 40px;
-  /* Рельс страницы: бока и верх одинаковы на всех экранах; низ держит
-     клиренс под плавающий док таббара (Tabbar: 64px + врезка) и владеет
-     им РОВНО один узел — Page (AppShell.content больше не дублирует). */
+  /* Нижняя безопасная врезка: системная (env) + данные Telegram
+     (SDK/viewport + content-safe-area, см. --tg-safe-area-bottom выше).
+     Один вход и для дока таббара, и для клиренса Page — низ не разъезжается.
+     max() здесь, потому что в WebView Telegram env(safe-area-inset-bottom)
+     может быть 0, а SDK-врезка при этом ненулевая. */
+  --app-safe-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-bottom, 0px)
+  );
+  /* Геометрия дока таббара: высота пилюли/круга поиска и минимальный
+     нижний отступ (Tabbar.module.css). Визуальный зазор над доком —
+     --app-page-gap. */
+  --app-dock-height: 64px;
+  --app-dock-gap: 8px;
+  --app-page-gap: var(--app-space-lg);
+  /* Рельс страницы: бока и верх одинаковы на всех экранах; низ —
+     высота дока + визуальный зазор + нижняя безопасная врезка (не меньше
+     --app-dock-gap, иначе док налипнет на контент). Владеет клиренсом
+     РОВНО один узел — Page (AppShell.content не дублирует). */
   --app-page-pad-top: var(--app-space-2xs);
   --app-page-gutter: var(--app-space-md);
-  --app-page-pad-bottom: 96px;
+  --app-page-pad-bottom: calc(
+    var(--app-dock-height) + var(--app-page-gap) +
+      max(var(--app-safe-bottom), var(--app-dock-gap))
+  );
   /* Тело секции/карточки и sheet-модалка. */
   --app-section-pad: var(--app-space-md);
   --app-sheet-pad-top: var(--app-space-sm);
@@ -198,6 +212,28 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* Совместимость с Tailwind-классами (tailwind-decommission):
+   неслойные глобальные классы для SSR-ассертов и a11y
+   (`min-h-11` — тап-таргет 44px, `sr-only` — скрытие
+   для скринридера). Канонический путь —
+   classes.ts (MIN_TARGET/VISUALLY_HIDDEN/PULSE); здесь только алиасы для
+   старых строк-имён в тестах. */
+.min-h-11 {
+  min-height: 44px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Prevent auto-zoom on iOS Safari/Telegram WebView when focusing text inputs
    (tgui не выставляет 16px сам — дублируем поверх его стилей). */
 input,
@@ -207,8 +243,8 @@ textarea {
 }
 
 /* Уведомления/поддержка/жалобы: FAQ и карточки обращений — tgui Accordion,
-   карточки списков — tailwind-утилиты на tgui-переменных (язык примера). */
+   карточки списков — CSS-модули на tgui-переменных. */
 
-/* Отзывы: форма — tailwind-карточка, список — карточки, табы —
+/* Отзывы: форма — ui/Card, список — карточки, табы —
    tgui SegmentedControl. Звёзды ввода — нативный tgui Rating
    (см. components/RatingInput/RatingInput.module.css). */

@@ -3,7 +3,7 @@ import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { BTN_ROW, GROW, SHRINK, TRUNCATE } from "@/ui/classes";
+import { BTN_ROW, GROW, MIN_TARGET, SHRINK, TRUNCATE } from "@/ui/classes";
 import { FetchMore } from "@/ui/FetchMore";
 import { Loading } from "@/ui/Loading";
 import { Sheet } from "@/ui/Sheet";
@@ -74,7 +74,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
           confirmLabel="Подтвердить пассажира?"
           description={`${booking.passenger.name} · место ${booking.seat}`}
           pending={pending}
-          className="min-h-11"
+          className={`${MIN_TARGET} min-h-11`}
           onConfirm={() => onAccept(booking.id)}
         />
         <ConfirmPopup
@@ -83,7 +83,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
           description={`${booking.passenger.name} · место ${booking.seat}`}
           pending={pending}
           destructive
-          className="min-h-11"
+          className={`${MIN_TARGET} min-h-11`}
           onConfirm={() => onDecline(booking.id)}
         />
       </div>

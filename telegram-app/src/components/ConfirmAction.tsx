@@ -86,7 +86,7 @@ export function ConfirmAction({
       {armed && (
         <Stack
           gap="xs"
-          className={actionsEnd ? "mt-2 items-end" : "mt-2"}
+          className={actionsEnd ? `${styles.confirmPanel} ${styles.confirmPanelEnd}` : styles.confirmPanel}
         >
           <Text Component="p" id={descId}>
             {description}

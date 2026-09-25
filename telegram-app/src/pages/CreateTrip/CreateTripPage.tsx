@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Caption,
   Input,
@@ -35,9 +35,11 @@ import { SectionBody } from "@/ui/SectionBody";
 import { TRIP_TAGS } from "@/consts/tags";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useModalBack } from "@/utils/modalBack";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useCreateTripMutation } from "@/queries/useTripsQuery";
 import { useVehicleQuery } from "@/queries/vehicle";
+import { VehicleModal } from "@/components/Profile/VehicleModal";
 import { validateCreateTripDraft } from "@/helpers/createTripForm";
 import { MAX_SEATS, type TripTag } from "@edem/contracts";
 import styles from "./CreateTripPage.module.css";
@@ -74,7 +76,6 @@ export function CreateTripForm({
   onCreated: (tripId: string) => void;
 }) {
   const toast = useToast();
-  const navigate = useNavigate();
   const cities = useAllCitiesQuery();
   const create = useCreateTripMutation();
   const vehicleQuery = useVehicleQuery({ refetchOnMount: "always" });
@@ -82,6 +83,23 @@ export function CreateTripForm({
   // Гейт решает по свежим данным: refetch идёт при каждом монтировании
   // (кэш профиля мог устареть — авто добавлено мимо app-flow/e2e-sql).
   const vehicleChecking = vehicleQuery.isLoading || vehicleQuery.isFetching;
+  // Нет авто — сразу шторка VehicleModal поверх гейта (без промежуточной
+  // навигации на /vehicle): форма авто короткая (3 поля), возврат — сюда же,
+  // кэш ["users","me"] после сохранения сам переключит hasCar.
+  const [vehicleOpen, setVehicleOpen] = useState(false);
+  const vehicleAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (
+      !vehicleChecking &&
+      !hasCar &&
+      !vehicleAutoOpenedRef.current
+    ) {
+      vehicleAutoOpenedRef.current = true;
+      setVehicleOpen(true);
+    }
+  }, [vehicleChecking, hasCar]);
+  const closeVehicle = () => setVehicleOpen(false);
+  useModalBack(closeVehicle, vehicleOpen);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [fromAddress, setFromAddress] = useState("");
@@ -217,8 +235,7 @@ export function CreateTripForm({
           <Section header="Нужен автомобиль">
             <SectionBody>
               <Caption Component="p" className={PROSE}>
-                Чтобы публиковать поездки, сначала добавьте автомобиль в
-                профиле.
+                Чтобы публиковать поездки, добавьте автомобиль — откроется окно с тремя полями.
               </Caption>
               <Button
                 variant="primary"
@@ -226,7 +243,7 @@ export function CreateTripForm({
                 stretched
                 onClick={() => {
                   haptic.light();
-                  navigate("/vehicle");
+                  setVehicleOpen(true);
                 }}
               >
                 Добавить автомобиль
@@ -234,6 +251,7 @@ export function CreateTripForm({
             </SectionBody>
           </Section>
         </Page>
+        <VehicleModal open={vehicleOpen} onClose={closeVehicle} />
       </>
     );
   }
