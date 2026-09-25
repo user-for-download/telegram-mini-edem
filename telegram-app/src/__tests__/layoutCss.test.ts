@@ -29,10 +29,11 @@ describe("каркас: слой TGUI и нижний клиренс", () => {
     expect(pageCss).toMatch(/\.page\s*\{[\s\S]*?var\(--app-page-pad-bottom\)/);
   });
 
-  it("клиренс Page включает высоту дока и нижнюю safe-area", () => {
+  it("клиренс Page включает высоту дока, отрыв пилюли и нижнюю safe-area", () => {
     expect(indexCss).toContain("--app-safe-bottom:");
     expect(indexCss).toContain("--app-dock-height: 64px;");
     expect(indexCss).toContain("--app-dock-gap: 8px;");
+    expect(indexCss).toContain("--app-dock-float: 12px;");
     expect(indexCss).toContain("--app-page-pad-bottom: calc(");
   });
 

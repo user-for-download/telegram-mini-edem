@@ -9,7 +9,7 @@
 .tabbar.tabbar {
   left: max(12px, var(--tg-safe-area-left, 0px));
   right: max(12px, var(--tg-safe-area-right, 0px));
-  bottom: 12px;
+  bottom: var(--app-dock-float, 12px);
   border-radius: 32px;
   overflow: hidden;
   background: color-mix(

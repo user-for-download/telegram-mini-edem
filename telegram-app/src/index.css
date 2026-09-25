@@ -144,20 +144,22 @@
     env(safe-area-inset-bottom, 0px),
     var(--tg-safe-area-bottom, 0px)
   );
-  /* Геометрия дока таббара: высота пилюли/круга поиска и минимальный
-     нижний отступ (Tabbar.module.css). Визуальный зазор над доком —
-     --app-page-gap. */
+  /* Геометрия дока таббара: высота пилюли и минимальный нижний отступ
+  * (Tabbar.module.css). --app-dock-float — отрыв парящей пилюли от низа
+  * (нативный Tabbar кита + bottom-офсет). Визуальный зазор над доком —
+  * --app-page-gap. */
   --app-dock-height: 64px;
   --app-dock-gap: 8px;
+  --app-dock-float: 12px;
   --app-page-gap: var(--app-space-lg);
   /* Рельс страницы: бока и верх одинаковы на всех экранах; низ —
-     высота дока + визуальный зазор + нижняя безопасная врезка (не меньше
-     --app-dock-gap, иначе док налипнет на контент). Владеет клиренсом
-     РОВНО один узел — Page (AppShell.content не дублирует). */
+  * высота дока + отрыв пилюли + визуальный зазор + нижняя безопасная
+  * врезка (не меньше --app-dock-gap, иначе док налипнет на контент).
+  * Владеет клиренсом РОВНО один узел — Page (AppShell.content не дублирует). */
   --app-page-pad-top: var(--app-space-2xs);
   --app-page-gutter: var(--app-space-md);
   --app-page-pad-bottom: calc(
-    var(--app-dock-height) + var(--app-page-gap) +
+    var(--app-dock-height) + var(--app-dock-float) + var(--app-page-gap) +
       max(var(--app-safe-bottom), var(--app-dock-gap))
   );
   /* Тело секции/карточки и sheet-модалка. */
