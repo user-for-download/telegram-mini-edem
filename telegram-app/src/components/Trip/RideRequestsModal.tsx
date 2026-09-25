@@ -2,7 +2,7 @@ import { memo } from "react";
 import { useState } from "react";
 import { Caption, Input, Text } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
-import { BTN_ROW, BTN_ROW_WRAP, HINT, TRUNCATE } from "@/ui/classes";
+import { BTN_ROW, BTN_ROW_WRAP, HINT, INFO, SUCCESS, TRUNCATE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
@@ -11,6 +11,7 @@ import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { haptic } from "@/utils/haptics";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
@@ -229,7 +230,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             {(field) => (
               <Input
                 {...field}
-                before={<MapPin size={17} className={styles.iconInfo} />}
+                before={<MapPin size={17} className={INFO} />}
                 list="request-cities"
                 value={from}
                 onChange={(event) => setFrom(event.target.value)}
@@ -241,7 +242,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             {(field) => (
               <Input
                 {...field}
-                before={<MapPin size={17} className={styles.iconSuccess} />}
+                before={<MapPin size={17} className={SUCCESS} />}
                 list="request-cities"
                 value={to}
                 onChange={(event) => setTo(event.target.value)}
@@ -304,7 +305,6 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
           <Button
             stretched
             size="l"
-            className="min-h-11"
             loading={create.isPending}
             onClick={submit}
           >
@@ -320,7 +320,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
           loading={requests.isLoading}
           error={requests.error}
           empty={!requests.data?.length}
-          emptyText="Активных запросов нет."
+          emptyText={EMPTY_STATES.rideRequestsEmpty.description}
           onRetry={() => void requests.refetch()}
         >
           <Stack>

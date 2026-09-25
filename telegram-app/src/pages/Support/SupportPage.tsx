@@ -3,13 +3,14 @@ import {
   Accordion,
   Caption,
   Input,
-  Placeholder,
   Section,
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
-import { CENTER_TEXT, HINT, PROSE } from "@/ui/classes";
+import { HINT, PROSE } from "@/ui/classes";
+import { EmptyState } from "@/ui/EmptyState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Field } from "@/ui/Field";
 import { CharCounter } from "@/ui/CharCounter";
 import { Button } from "@/ui/Button";
@@ -180,7 +181,7 @@ export function SupportPage() {
   ) {
     return (
       <Page>
-        <Placeholder
+        <EmptyState
           header="Аккаунт заблокирован"
           description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
         />
@@ -232,14 +233,10 @@ export function SupportPage() {
               onRetry={() => void myFeedbacks.refetch()}
             >
               {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
-                <>
-                  <Text weight="2" Component="p" className={CENTER_TEXT}>
-                    У вас пока нет обращений
-                  </Text>
-                  <Caption Component="p" className={CENTER_TEXT}>
-                    Здесь появятся ваши обращения и ответы поддержки
-                  </Caption>
-                </>
+                <EmptyState
+                  header={EMPTY_STATES.supportEmpty.header}
+                  description={EMPTY_STATES.supportEmpty.description}
+                />
               ) : (
                 <Stack>
                   {myFeedbacks.data.map((feedback) => (

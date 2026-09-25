@@ -280,20 +280,18 @@ try {
       `UPDATE "Trip" SET "departureAt" = NOW() - INTERVAL '2 hours' WHERE id = '${tripId}'`,
     );
     if (out !== "UPDATE 1") throw new Error(`time-travel: ${out}`);
-    // Поездки водителя — сегмент «За рулём» объединённого таба «Поездки».
-    await hashUrl(page, "/bookings?segment=driver");
-    const finishButtons = page.getByRole("button", { name: "Завершить" });
+    // Завершение живёт в деталях поездки (карточка списка ведёт тапом по
+    // onOpen, отдельной кнопки «Завершить» в ленте больше нет).
+    await hashUrl(page, `/trips/${tripId}`);
     try {
-      await finishButtons.first().click({ timeout: 30000 });
+      await page
+        .getByRole("button", { name: "Завершить поездку" })
+        .click({ timeout: 30000 });
     } catch (e) {
-      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "complete-list")}`);
+      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "complete-details")}`);
     }
-    await page
-      .getByText("Поездка будет перенесена в архив")
-      .waitFor({ timeout: 15000 });
-    await page.getByRole("button", { name: "Завершить" }).last().click();
-    // Завершённая поездка остаётся в списке водителя с пилюлей «Завершена».
-    await page.getByText("Завершена").first().waitFor({ timeout: 30000 });
+    // После завершения детали показывают терминальный экран статуса.
+    await page.getByText("Поездка завершена").first().waitFor({ timeout: 30000 });
     await shot(page, "trip-completed");
     return "status=completed";
   });
@@ -402,9 +400,10 @@ try {
 
   await runStep("delete: удаление профиля в UI, экран «Профиль удалён»", async () => {
     await hashUrl(page, "/profile");
+    // ConfirmPopup: в браузер-моке (dev) действие выполняется сразу —
+    // нативного popup в браузере нет, второго клика «Удалить окончательно».
+    // В реальном Telegram это нативный алерт [Отмена | красная].
     await page.getByRole("button", { name: "Удалить профиль" }).click();
-    // ConfirmAction: первый клик вооружает (без window.confirm), второй — подтверждает.
-    await page.getByRole("button", { name: "Удалить окончательно" }).click();
     await page.getByText("Профиль удалён").waitFor({ timeout: 30000 });
     await shot(page, "account-deleted");
     return "tombstone shown";

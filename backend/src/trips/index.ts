@@ -485,6 +485,10 @@ tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
   // Остальным адреса не отдаются вовсе (приватность места встречи).
   const canSeePrivateDetails =
     currentUser?.id === trip.driverId || myBooking !== null;
+  // Телефон водителя (F1) — строже адресов: только водитель
+  // и ПОДТВЕРЖДЁННЫЙ пассажир. Pending-заявителю номер не светим.
+  const canSeeDriverPhone =
+    currentUser?.id === trip.driverId || myBooking?.status === "confirmed";
 
   return c.json(
     serializeTrip(trip, {
@@ -492,6 +496,7 @@ tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
       myBooking,
       includePlate: false,
       includePrivateDetails: canSeePrivateDetails,
+      includeDriverPhone: canSeeDriverPhone,
       // Приватные детали видят только участники (водитель/активная бронь).
       // Платформенный ID водителя наружу не отдаётся.
     }),

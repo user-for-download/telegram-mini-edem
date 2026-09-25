@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import styles from "./ui.module.css";
 
@@ -26,6 +27,15 @@ const VARIANTS = {
  * Обычный div (не List) по той же причине, что SectionBody/Stack:
  * внутри экрана List приносит только платформенный паддинг и чужое
  * значение ритма.
+ *
+ * Минимальный фокус-менеджмент шторки: контейнер — программная цель
+ * (tabIndex={-1}, вне таб-порядка), при монтировании — т.е. при открытии
+ * шторки — переносим на него фокус: точка входа для клавиатуры и
+ * скринридера. Дальше — нативный trap vaul (Tab внутри шторки, Esc —
+ * закрыть, фокус возвращается на триггер): своих role="dialog" и
+ * focus-trap не добавляем. preventScroll — шторка сама анимируется,
+ * прыжок страницы не нужен. Видимое кольцо — только для клавиатуры
+ * (:focus-visible в ui.module.css, канон WCAG 2.4.7).
  */
 export function SheetBody({
   variant = "padded",
@@ -33,8 +43,16 @@ export function SheetBody({
   children,
 }: SheetBodyProps) {
   const variantClass = VARIANTS[variant];
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.focus({ preventScroll: true });
+  }, []);
   return (
-    <div className={className ? `${variantClass} ${className}` : variantClass}>
+    <div
+      ref={ref}
+      tabIndex={-1}
+      className={className ? `${variantClass} ${className}` : variantClass}
+    >
       {children}
     </div>
   );

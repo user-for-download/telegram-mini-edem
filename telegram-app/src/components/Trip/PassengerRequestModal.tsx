@@ -16,6 +16,7 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { Sheet } from "@/ui/Sheet";
+import styles from "./TripModals.module.css";
 
 import { CarFront, X } from "lucide-react";
 import type { Booking, DriverBookingAction, Review } from "@edem/contracts";
@@ -62,7 +63,7 @@ export function PassengerRequestModal({
       variant="edge"
       headerAfter={
         <Modal.Close>
-          <X style={{ color: "var(--tgui--plain_foreground)" }} />
+          <X className={styles.modalCloseIcon} />
         </Modal.Close>
       }
     >
@@ -108,11 +109,7 @@ export function PassengerRequestModalBody({
     passenger.rating != null ? passenger.rating.toFixed(1) : "—";
 
   return (
-    <List
-      style={{
-        background: "var(--tgui--secondary_bg_color)",
-      }}
-    >
+    <List className={styles.dossierList}>
       {/* Досье */}
       <Placeholder
         description={
@@ -196,7 +193,7 @@ export function PassengerRequestModalBody({
         size="l"
         stretched
         disabled={busy !== null}
-        style={{ color: "var(--tgui--destructive_text_color)" }}
+        className={styles.declineButton}
         onClick={() => onDecide("declined")}
       >
         Отказать

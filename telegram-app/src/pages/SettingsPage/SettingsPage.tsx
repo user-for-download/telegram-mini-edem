@@ -12,6 +12,7 @@ import { ArrowLeft, Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
 import {
@@ -72,7 +73,7 @@ export function SettingsPage() {
         loading={profile.isLoading}
         error={profile.error}
         empty={!profile.data || enabled === null}
-        emptyText="Не удалось загрузить настройки."
+        emptyText={EMPTY_STATES.settingsEmpty.description}
         onRetry={() => void profile.refetch()}
       >
         <Page>

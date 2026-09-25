@@ -47,10 +47,6 @@
   text-align: right;
 }
 
-.hint {
-  color: var(--tgui--hint_color);
-}
-
 /* Адреса посадки/высадки: вертикальная линия слева (было border-l + pl). */
 .addresses {
   display: flex;

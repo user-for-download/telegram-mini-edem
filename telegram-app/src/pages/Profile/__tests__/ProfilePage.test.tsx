@@ -180,18 +180,28 @@ describe("ProfilePage terminal states", () => {
     expect(html).toContain("Аккаунт заблокирован");
   });
 
-  it("409 удаления — подсказка про активные обязательства", () => {
+  it("ошибка удаления — текст ошибки как есть, без ветки 409", () => {
     mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
     mockUseDeleteAccount.mockReturnValue(
       mutation({
-        error: new ApiError(
-          "Active obligations",
-          "ACCOUNT_HAS_ACTIVE_OBLIGATIONS",
-          409,
-        ),
+        error: new ApiError("Server boom", "INTERNAL", 500),
       }),
     );
     const html = render(<ProfilePage />);
-    expect(html).toContain("Завершите активные поездки");
+    expect(html).toContain("Server boom");
+    expect(html).not.toContain("Завершите активные поездки");
+  });
+
+  it("футер опасной зоны описывает реальный каскад DELETE /me", () => {
+    mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
+    const html = render(<ProfilePage />);
+    // Свои active-поездки → forced completed (pending отклоняются,
+    // confirmed остаются историей), свои брони на чужих active и
+    // заявки → cancelled. DELETE /me никогда не отвечает 409.
+    expect(html).toContain("Ваши активные поездки завершатся");
+    expect(html).toContain("ожидающие заявки отклонятся");
+    expect(html).toContain("подтверждённые останутся историей");
+    expect(html).toContain("ваши брони на чужих поездках");
+    expect(html).toContain("заявки на поездку отменятся");
   });
 });

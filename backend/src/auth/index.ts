@@ -176,7 +176,7 @@ authRouter.post("/telegram", tgAuthLimiter, async (c) => {
     accessToken,
     refreshToken,
     expiresIn: env.JWT_ACCESS_TTL_SECONDS,
-    user: serializeUser(finalUser),
+    user: serializeUser(finalUser, { includePhone: true }),
   });
 });
 
@@ -242,7 +242,7 @@ authRouter.post("/refresh", refreshLimiter, async (c) => {
         accessToken,
         refreshToken: `${MOCK_REFRESH_TOKEN_PREFIX}${userId}-${refreshExp}`,
         expiresIn: env.JWT_ACCESS_TTL_SECONDS,
-        user: serializeUser(user),
+        user: serializeUser(user, { includePhone: true }),
       });
     }
 
@@ -292,7 +292,7 @@ authRouter.post("/refresh", refreshLimiter, async (c) => {
       accessToken,
       refreshToken,
       expiresIn: env.JWT_ACCESS_TTL_SECONDS,
-      user: serializeUser(user),
+      user: serializeUser(user, { includePhone: true }),
     });
   } catch (error) {
     // Reuse detection: предъявление уже отозванного (ротированного) токена —

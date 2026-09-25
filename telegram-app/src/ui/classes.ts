@@ -40,6 +40,12 @@ export const HINT = textStyles.hint;
 /** Центрированный текст пустого состояния. */
 export const CENTER_TEXT = textStyles.centerText;
 
+/** Семантический акцент «информация» (--app-info): иконки/ссылки. */
+export const INFO = textStyles.info;
+
+/** Семантический акцент «успех» (--app-success): подтверждения. */
+export const SUCCESS = textStyles.success;
+
 /* ── Раскладка (ui/layout): одна роль — одно правило ──────────────────
  * Обрезка, shrink/grow, ряды кнопок, ряд space-between. Заменяют
  * копии .truncate/.shrink/.grow/.btnRow/.rowBetween (см.

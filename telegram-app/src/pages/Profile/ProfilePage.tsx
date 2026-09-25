@@ -6,7 +6,6 @@ import {
   Cell,
   Headline,
   IconContainer,
-  Placeholder,
   Section,
   SegmentedControl,
   Switch,
@@ -34,6 +33,10 @@ import { FeedbackModal } from "@/components/Profile/FeedbackModal";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
 import { Stack } from "@/ui/Stack";
+import { FetchMore } from "@/ui/FetchMore";
+import { Notice } from "@/ui/Notice";
+import { HINT, INFO, PROSE_TEXT, SUCCESS } from "@/ui/classes";
+import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { ApiError } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -136,10 +139,12 @@ function SwitchRow({
  * с рейтингом и статистикой, субтабы «Настройки и авто» / «Отзывы».
  *
  * Просмотр/редактирование имени и «О себе», переходы в разделы,
- * удаление аккаунта (нативный алерт, обработка активных обязательств
- * 409). Кнопки «Выйти» нет — только удаление, как Delete My Account
- * официалки. Бан/удаление mid-session: requireUser отвечает 403 —
- * показываем терминальные экраны вместо общей ошибки.
+ * удаление аккаунта каскадом через ConfirmPopup (нативный алерт клиента).
+ * Бэкенд DELETE /me никогда не отвечает 409: свои active-поездки
+ * принудительно завершаются, брони и заявки отменяются (см. футер
+ * «Опасной зоны»). Кнопки «Выйти» нет — только удаление, как Delete
+ * My Account официалки. Бан/удаление mid-session: requireUser отвечает
+ * 403 — показываем терминальные экраны вместо общей ошибки.
  */
 export function ProfilePage() {
   const navigate = useNavigate();
@@ -187,21 +192,17 @@ export function ProfilePage() {
   if (profile.error instanceof ApiError && profile.error.status === 403) {
     if (profile.error.message === "Account is deleted") {
       return (
-        <Page>
-        <Placeholder
-          header="Профиль удалён"
+        <AccountStatePage
+          title="Профиль удалён"
           description="Аккаунт анонимизирован. Поездки и отзывы сохранены без вашего имени. Восстановление невозможно."
         />
-        </Page>
       );
     }
     return (
-      <Page>
-      <Placeholder
-        header="Аккаунт заблокирован"
+      <AccountStatePage
+        title="Аккаунт заблокирован"
         description="Действие недоступно: аккаунт заблокирован. Обжалование пока недоступно в Telegram."
       />
-      </Page>
     );
   }
 
@@ -242,7 +243,7 @@ export function ProfilePage() {
                         <Star size={11} />
                         <span>{`${profile.data.rating.toFixed(1)} (${profile.data.reviewsCount})`}</span>
                       </Badge>
-                      <Caption weight="2" className={styles.verified}>
+                      <Caption weight="2" className={SUCCESS}>
                         Telegram верифицирован
                       </Caption>
                     </div>
@@ -250,10 +251,7 @@ export function ProfilePage() {
                 </div>
 
                 {profile.data.about && (
-                  <Text
-                    Component="p"
-                    className={styles.about}
-                  >
+                  <Text Component="p" className={PROSE_TEXT}>
                     {profile.data.about}
                   </Text>
                 )}
@@ -271,11 +269,7 @@ export function ProfilePage() {
                     </Caption>
                   </div>
                   <div className={styles.stat}>
-                    <Text
-                      weight="2"
-                      Component="div"
-                      className={styles.statInfo}
-                    >
+                    <Text weight="2" Component="div" className={INFO}>
                       {profile.data.reviewsCount}
                     </Text>
                     <Caption
@@ -381,7 +375,7 @@ export function ProfilePage() {
                 </Section>
 
                 <Section header="Внешний вид">
-                  <div className={styles.stack}>
+                  <Stack gap="xs">
                     <SwitchRow
                       label="Тёмная тема"
                       icon={
@@ -413,11 +407,11 @@ export function ProfilePage() {
                         Как в Telegram
                       </Button>
                     )}
-                  </div>
+                  </Stack>
                 </Section>
 
                 <Section header="Уведомления и звуки">
-                  <div className={styles.stack}>
+                  <Stack gap="xs">
                     <SwitchRow
                       label="Уведомления"
                       icon={
@@ -445,11 +439,11 @@ export function ProfilePage() {
                         if (next) haptic.light();
                       }}
                     />
-                  </div>
+                  </Stack>
                 </Section>
 
                 <Section header="Сервис и помощь">
-                  <div className={styles.stack}>
+                  <Stack gap="xs">
                     <MenuRow
                       label="Служба поддержки"
                       icon={
@@ -475,7 +469,7 @@ export function ProfilePage() {
                       subtitle="Сообщить о проблеме с пользователем"
                       onClick={() => navigate("/profile/reports")}
                     />
-                  </div>
+                  </Stack>
                 </Section>
 
                 {/* Опасная зона — как Add Account официалки: секция,
@@ -483,26 +477,19 @@ export function ProfilePage() {
                     секции. Кнопки «Выйти» нет. */}
                 <Section
                   header="Опасная зона"
-                  footer="Активные поездки будут завершены, брони и заявки отменены. Восстановление невозможно."
+                  footer="Ваши активные поездки завершатся (ожидающие заявки отклонятся, подтверждённые останутся историей), ваши брони на чужих поездках и заявки на поездку отменятся. Восстановление невозможно."
                 >
                   {remove.error && (
-                    <Caption
-                      Component="p"
-                      role="alert"
-                      className={styles.errorText}
-                    >
-                      {remove.error instanceof ApiError &&
-                      remove.error.code === "ACCOUNT_HAS_ACTIVE_OBLIGATIONS"
-                        ? "Завершите активные поездки и отмените брони, затем повторите удаление."
-                        : remove.error instanceof Error
-                          ? remove.error.message
-                          : "Не удалось удалить профиль"}
-                    </Caption>
+                    <Notice tone="danger" variant="text">
+                      {remove.error instanceof Error
+                        ? remove.error.message
+                        : "Не удалось удалить профиль"}
+                    </Notice>
                   )}
                   <ConfirmPopup
                     label="Удалить профиль"
                     confirmLabel="Удалить окончательно"
-                    description="Аккаунт будет анонимизирован. Активные поездки будут завершены, брони и заявки отменены. Поездки и отзывы сохранятся без вашего имени. Восстановление невозможно."
+                    description="Аккаунт будет анонимизирован. Ваши активные поездки завершатся (ожидающие заявки отклонятся, подтверждённые останутся историей), ваши брони на чужих поездках и заявки на поездку отменятся. Восстановление невозможно."
                     pending={remove.isPending}
                     disabled={remove.isPending}
                     mode="plain"
@@ -512,9 +499,9 @@ export function ProfilePage() {
                 </Section>
               </Stack>
             ) : (
-              <div className={styles.reviews}>
-                <div className={styles.reviewNotice}>
-                  <span className={styles.hint}>
+              <Stack>
+                <Notice variant="banner" tone="info">
+                  <span className={HINT}>
                     Все отзывы проходят пре-модерацию
                   </span>
                   <Button
@@ -523,7 +510,7 @@ export function ProfilePage() {
                   >
                     Оставить отзыв
                   </Button>
-                </div>
+                </Notice>
 
                 <QueryState
                   loading={aboutReviews.isLoading}
@@ -532,23 +519,18 @@ export function ProfilePage() {
                   emptyText="После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь."
                   onRetry={() => void aboutReviews.refetch()}
                 >
-                  <div className={styles.reviews}>
+                  <Stack>
                     {aboutItems.map((review) => (
                       <ReviewCard key={review.id} review={review} />
                     ))}
-                    {aboutReviews.hasNextPage && (
-                      <Button
-                        stretched
-                        loading={aboutReviews.isFetchingNextPage}
-                        disabled={aboutReviews.isFetchingNextPage}
-                        onClick={() => void aboutReviews.fetchNextPage()}
-                      >
-                        Показать ещё
-                      </Button>
-                    )}
-                  </div>
+                    <FetchMore
+                      hasNextPage={aboutReviews.hasNextPage}
+                      isFetchingNextPage={aboutReviews.isFetchingNextPage}
+                      fetchNextPage={() => void aboutReviews.fetchNextPage()}
+                    />
+                  </Stack>
                 </QueryState>
-              </div>
+              </Stack>
             )}
           </Page>
         )}

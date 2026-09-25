@@ -1,7 +1,5 @@
 import { useState } from "react";
 import {
-  Chip,
-  IconButton,
   Input,
   Section,
   SegmentedControl,
@@ -10,8 +8,12 @@ import {
 } from "@telegram-apps/telegram-ui";
 
 import { Button } from "@/ui/Button";
+import { Chip } from "@/ui/Chip";
+import { IconButton } from "@/ui/IconButton";
 import { EmptyState } from "@/ui/EmptyState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { FetchMore } from "@/ui/FetchMore";
+import { BTN_ROW_WRAP, HINT, INFO, SUCCESS } from "@/ui/classes";
 
 import {
   ArrowRightLeft,
@@ -140,7 +142,7 @@ export function SearchPage() {
           <SectionBody>
             <div className={styles.chipRow}>
               <Chip
-                mode="mono"
+                variant="quiet"
                 Component="a"
                 href="#/ride-requests"
                 className={styles.chip}
@@ -148,7 +150,7 @@ export function SearchPage() {
                 Ищу попутку
               </Chip>
               <Chip
-                mode={showFilters ? "elevated" : "mono"}
+                variant={showFilters ? "active" : "quiet"}
                 Component="button"
                 onClick={() => {
                   haptic.selection();
@@ -165,17 +167,16 @@ export function SearchPage() {
             <div className={styles.cityFields}>
               <Input
                 id="search-from"
-                before={<MapPin size={17} className="text-(--app-info)" />}
+                before={<MapPin size={17} className={INFO} />}
                 after={
                   form.fromCity ? (
                     <IconButton
                       type="button"
                       size="s"
-                      mode="plain"
                       onClick={() => set("fromCity", "")}
                       aria-label="Очистить откуда"
                     >
-                      <X size={14} className="text-(--tgui--hint_color)" />
+                      <X size={14} className={HINT} />
                     </IconButton>
                   ) : undefined
                 }
@@ -185,17 +186,16 @@ export function SearchPage() {
               />
               <Input
                 id="search-to"
-                before={<MapPin size={17} className="text-(--app-success)" />}
+                before={<MapPin size={17} className={SUCCESS} />}
                 after={
                   form.toCity ? (
                     <IconButton
                       type="button"
                       size="s"
-                      mode="plain"
                       onClick={() => set("toCity", "")}
                       aria-label="Очистить куда"
                     >
-                      <X size={14} className="text-(--tgui--hint_color)" />
+                      <X size={14} className={HINT} />
                     </IconButton>
                   ) : undefined
                 }
@@ -206,12 +206,11 @@ export function SearchPage() {
               <IconButton
                 type="button"
                 size="s"
-                mode="plain"
                 onClick={swapCities}
                 aria-label="Поменять направление"
-                className={`${styles.swap} absolute! right-2! top-1/2! -translate-y-1/2!`}
+                className={styles.swap}
               >
-                <ArrowRightLeft size={14} className="text-(--app-info)" />
+                <ArrowRightLeft size={14} className={INFO} />
               </IconButton>
             </div>
 
@@ -267,12 +266,14 @@ export function SearchPage() {
                   >
                     Условия поездки
                   </Caption>
-                  <div className={styles.tagChips}>
+                  <div className={BTN_ROW_WRAP}>
                     {TRIP_TAGS.map((tag) => (
                       <Chip
                         key={tag}
-                        className={styles.tagChip}
-                        mode={form.tags.includes(tag) ? "elevated" : "mono"}
+                        tone="accent"
+                        variant={
+                          form.tags.includes(tag) ? "active" : "quiet"
+                        }
                         Component="button"
                         aria-pressed={form.tags.includes(tag)}
                         onClick={() => {
@@ -314,8 +315,8 @@ export function SearchPage() {
         >
           {items.length === 0 ? (
             <EmptyState
-              header="Поездок не найдено"
-              description="Попробуйте изменить города или выбрать другие даты отправления"
+              header={EMPTY_STATES.searchNoResults.header}
+              description={EMPTY_STATES.searchNoResults.description}
               action={
                 <Button
                   size="m"
@@ -339,12 +340,10 @@ export function SearchPage() {
                 placeholder={
                   <div className={styles.loadingMore}>
                     <div
-                      className={styles.skeletonLine}
-                      style={{ width: "45%" }}
+                      className={`${styles.skeletonLine} ${styles.skeletonLineWide}`}
                     />
                     <div
-                      className={styles.skeletonLine}
-                      style={{ width: "30%" }}
+                      className={`${styles.skeletonLine} ${styles.skeletonLineShort}`}
                     />
                   </div>
                 }

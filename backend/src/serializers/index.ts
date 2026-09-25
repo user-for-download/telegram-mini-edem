@@ -78,7 +78,7 @@ export function formatTimeRu(date: Date): string {
 
 export function serializeUser(
   user: UserWithCar,
-  options?: { includePlate?: boolean },
+  options?: { includePlate?: boolean; includePhone?: boolean },
 ) {
   const isDeleted = Boolean(user.deletedAt);
   return {
@@ -91,6 +91,11 @@ export function serializeUser(
     isVerified: user.isVerified,
     notificationsEnabled: user.notificationsEnabled,
     verifiedAt: user.verifiedAt?.toISOString() ?? null,
+    // Телефон (F1) — только по явному флагу: own-контексты и детали
+    // поездки для подтверждённой стороны. Публично не отдаём никогда.
+    ...(options?.includePhone && !isDeleted && user.phone
+      ? { phone: user.phone }
+      : {}),
     // Версия показанного онбординга (null — ещё не пройден или сброшен админом).
     onboardingVersion: user.onboardingVersion ?? null,
     car: user.car
@@ -144,6 +149,9 @@ export function serializeTrip(
     } | null;
     includePlate?: boolean;
     includePrivateDetails?: boolean;
+    // Телефон водителя в деталях поездки (F1): только водителю
+    // и подтверждённому пассажиру — решает вызывающий роут.
+    includeDriverPhone?: boolean;
   },
 ) {
   return {
@@ -168,6 +176,7 @@ export function serializeTrip(
     seatsAvailable: trip.seatsAvailable,
     driver: serializeUser(trip.driver, {
       includePlate: options?.includePlate,
+      includePhone: options?.includeDriverPhone,
     }),
     tags: trip.tags,
     comment: trip.comment ?? undefined,

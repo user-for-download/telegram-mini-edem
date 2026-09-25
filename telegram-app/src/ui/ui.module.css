@@ -40,8 +40,12 @@
 
 /* Тело sheet-модалки: скролл 82dvh (как было), верх 12 (= 8 + верх
  * бывшего .stack), низ 40 — под жест закрытия.
- * outline снят: фокус ставится программно на сам скролл-контейнер,
- * кольцо на нём ничего не сообщает (канон AppShell .content). */
+ * Фокус — программный: SheetBody ставит фокус на контейнер при открытии
+ * (tabIndex=-1, вне таб-порядка — точка входа для клавиатуры и
+ * скринридера, дальше работает нативный trap vaul). Кольцо — ТОЛЬКО для
+ * клавиатуры (:focus-visible, канон WCAG 2.4.7): программный фокус
+ * мышью/тачем невидим, с клавиатуры — видимый 2px-индикатор
+ * (тот же токен, что у фокуса звёзд RatingInput). */
 .sheetBody {
   display: flex;
   flex-direction: column;
@@ -50,7 +54,15 @@
     var(--app-sheet-pad-bottom);
   max-height: 82dvh;
   overflow-y: auto;
+}
+
+.sheetBody:focus:not(:focus-visible) {
   outline: none;
+}
+
+.sheetBody:focus-visible {
+  outline: 2px solid var(--tgui--link_color, #2481cc);
+  outline-offset: -2px;
 }
 
 /* То же без боковых отступов: контент сам держит рельс (отзывы). */
@@ -61,7 +73,15 @@
   padding: var(--app-sheet-pad-top) 0 var(--app-sheet-pad-bottom);
   max-height: 82dvh;
   overflow-y: auto;
+}
+
+.sheetBodyEdge:focus:not(:focus-visible) {
   outline: none;
+}
+
+.sheetBodyEdge:focus-visible {
+  outline: 2px solid var(--tgui--link_color, #2481cc);
+  outline-offset: -2px;
 }
 
 /* Тело без скролла: короткая форма обратной связи. */
@@ -79,6 +99,21 @@
   display: flex;
   flex-direction: column;
   gap: var(--app-space-sm);
+}
+
+/* Плотный стек (ритм 8): кнопки диалога, досье (Onboarding,
+ * EditProfileModal — было style={{ gap: 8 }}). Модификатор ПОСЛЕ .stack
+ * в том же модуле: специфичность равная, побеждает порядком —
+ * детерминированно, без !important. */
+.stackGapXs {
+  gap: var(--app-space-xs);
+}
+
+/* Компактный стек (ритм 4): подпись вплотную к кнопке (TripDetails —
+ * статус шаринга; было margin-top:-8px pull-up поверх ритма 12,
+ * т.е. те же 4px, но без отрицательного марджина). */
+.stackGap2xs {
+  gap: var(--app-space-2xs);
 }
 
 /* ── Карточка (ui/Card) ─────────────────────────────────────────────
@@ -138,11 +173,21 @@
 .notice[data-variant="banner"] {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* НЕ space-between: с одним ребёнком он прижимал бы его к краю, оставляя
+   * пустую полосу (разъехавшийся вид). Раскладка «контент слева, хвост
+   * справа» держится правилом ниже: только 2-й+ ребёнок уезжает вправо. */
+  justify-content: flex-start;
   gap: var(--app-space-xs);
   padding: var(--app-space-sm) var(--app-space-md);
   border-radius: var(--app-radius-md);
   font-size: 13px;
+}
+
+/* Хвост баннера вправо — только когда детей ≥ 2 (напр. текст + StatusPill).
+ * :not(:first-child) чинит K7: одиночный ребёнок остаётся слева во всю
+ * ширину и не «разъезжается». */
+.notice[data-variant="banner"] > :last-child:not(:first-child) {
+  margin-left: auto;
 }
 
 .notice[data-variant="banner"][data-tone="danger"] {
@@ -170,13 +215,26 @@
 }
 
 /* ── Конец ленты (ui/FetchMore) ──────────────────────────────────────
- * Якорь автодогрузки — пустой div фиксированной высоты (48px): при
- * схлопывании скелетона вьюпорт не прыгает; overflow-anchor: none —
- * страховка от «прилипания» якоря. Раньше правило копировалось в
- * 4 модулей (.sentinel), теперь живёт здесь. Имя класса сохранено:
- * на него смотрят SSR-тесты (маркер _sentinel_). */
+ * Якорь автодогрузки — нулевого размера, вне потока (absolute): в покое
+ * не занимает места (было min-height 48px + gap ритма = ~60px мёртвой
+ * пустоты в конце каждого списка). IntersectionObserver смотрит точку
+ * на её статической позиции в конце ленты; предзагрузка rootMargin 320px
+ * даёт огромный допуск, fallback-кнопка «Показать ещё» остаётся.
+ * Против прыжка вьюпорта при схлопывании скелетона работает якорь
+ * scrollTop в useInfiniteSentinel, а не высота сентинела.
+ * Имя класса сохранено: на него смотрят SSR-тесты (маркер _sentinel_). */
 .sentinel {
-  min-height: 48px;
+  position: absolute;
+  width: 1px;
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  /* Якорь не должен растягивать скролл-контейнер (было инлайном
+   * в FetchMore — перенесено в токены, U3). */
+  overflow-anchor: none;
+  pointer-events: none;
 }
 
 .fetchMorePlaceholder {

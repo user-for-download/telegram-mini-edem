@@ -27,7 +27,6 @@ import { NotificationsPage } from "@/pages/Notifications/NotificationsPage";
 import { VehicleRoute } from "@/components/Profile/VehicleModal";
 import { TripPage } from "@/pages/Trip/TripPage";
 import { TripHistoryPage } from "@/pages/TripHistory/TripHistoryPage";
-import { Page } from "@/ui/Page";
 import { RideRequestsRoute } from "@/components/Trip/RideRequestsModal";
 import { TripRequestsRoute } from "@/components/Trip/TripRequestsModal";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
@@ -202,14 +201,7 @@ export function AppRouter() {
           />
           <Route path="/ride-requests" element={<RideRequestsRoute />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route
-            path="/profile/history"
-            element={
-              <Page>
-                <TripHistoryPage />
-              </Page>
-            }
-          />
+          <Route path="/profile/history" element={<TripHistoryPage />} />
           <Route path="/profile/edit" element={<EditProfileRoute />} />
           <Route path="/reviews" element={<ReviewsRoute />} />
           <Route path="/settings" element={<SettingsRoute />} />

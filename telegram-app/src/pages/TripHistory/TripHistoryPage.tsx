@@ -5,10 +5,12 @@ import {
   Section,
 } from "@telegram-apps/telegram-ui";
 import { FetchMore } from "@/ui/FetchMore";
+import { Page } from "@/ui/Page";
 
 import { useNavigate } from "react-router-dom";
 import { CarFront, CircleUserRound } from "lucide-react";
 import { QueryState } from "@/components/QueryState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { haptic } from "@/utils/haptics";
 import { dayLabel } from "@/utils/date";
@@ -62,7 +64,9 @@ function historyStatusLabel(item: HistoryItem): string {
 /**
  * История поездок: простые Cell (без карточек).
  * Водитель — иконка машины, пассажир — иконка человечка.
- * Отступы как везде (бока 8, вертикаль 12).
+ * Топ-level страница: корень — Page (кит), состояния — QueryState
+ * (пусто — через EmptyState-обёртку). Отступы как везде (бока 8,
+ * вертикаль 12).
  */
 export function TripHistoryPage() {
   const navigate = useNavigate();
@@ -101,74 +105,76 @@ export function TripHistoryPage() {
   };
 
   return (
-    <QueryState
-      loading={history.isLoading || driverArchive.isLoading}
-      error={history.error ?? driverArchive.error}
-      empty={historyItems.length === 0}
-      emptyText="Здесь появятся завершённые и отменённые поездки."
-      skeleton={<TripCardsSkeleton />}
-      onRetry={() => {
-        void history.refetch();
-        void driverArchive.refetch();
-      }}
-    >
-      {historyItems.length > 0 && (
-        // Как «Популярные направления»: нативный Section — строки идут
-        // сплошняком с hairline-разделителями, без гэпов.
-        <Section>
-          {historyItems.map((item) => {
-            const trip =
-              item.kind === "driving" ? item.trip : item.booking.trip;
-            // Отзыв нужен только пассажиру с canReview — красный counter,
-            // иначе серый бейдж с ценой.
-            const needReview =
-              item.kind === "booking" && item.booking.canReview === true;
-            const status = historyStatusLabel(item);
-            return (
-              <Cell
-                key={item.key}
-                Component="button"
-                type="button"
-                before={
-                  <IconContainer>
-                    {item.kind === "driving" ? (
-                      <CarFront size={22} />
+    <Page>
+      <QueryState
+        loading={history.isLoading || driverArchive.isLoading}
+        error={history.error ?? driverArchive.error}
+        empty={historyItems.length === 0}
+        emptyText={EMPTY_STATES.tripHistory.description}
+        skeleton={<TripCardsSkeleton />}
+        onRetry={() => {
+          void history.refetch();
+          void driverArchive.refetch();
+        }}
+      >
+        {historyItems.length > 0 && (
+          // Как «Популярные направления»: нативный Section — строки идут
+          // сплошняком с hairline-разделителями, без гэпов.
+          <Section>
+            {historyItems.map((item) => {
+              const trip =
+                item.kind === "driving" ? item.trip : item.booking.trip;
+              // Отзыв нужен только пассажиру с canReview — красный counter,
+              // иначе серый бейдж с ценой.
+              const needReview =
+                item.kind === "booking" && item.booking.canReview === true;
+              const status = historyStatusLabel(item);
+              return (
+                <Cell
+                  key={item.key}
+                  Component="button"
+                  type="button"
+                  before={
+                    <IconContainer>
+                      {item.kind === "driving" ? (
+                        <CarFront size={22} />
+                      ) : (
+                        <CircleUserRound size={22} />
+                      )}
+                    </IconContainer>
+                  }
+                  subtitle={`${dayLabel(trip.date)}, ${trip.time} · ${status}`}
+                  after={
+                    needReview ? (
+                      <Badge type="number" mode="critical">
+                        1
+                      </Badge>
                     ) : (
-                      <CircleUserRound size={22} />
-                    )}
-                  </IconContainer>
-                }
-                subtitle={`${dayLabel(trip.date)}, ${trip.time} · ${status}`}
-                after={
-                  needReview ? (
-                    <Badge type="number" mode="critical">
-                      1
-                    </Badge>
-                  ) : (
-                    <span className={styles.price}>{`${trip.price} ₽`}</span>
-                  )
-                }
-                onClick={() => open(trip.id)}
-                aria-label={
-                  needReview
-                    ? `Поездка ${trip.fromCity} — ${trip.toCity}, ${status}, оставьте отзыв`
-                    : `Поездка ${trip.fromCity} — ${trip.toCity}, ${status}`
-                }
-              >
-                {trip.fromCity} → {trip.toCity}
-              </Cell>
-            );
-          })}
-        </Section>
-      )}
-      <FetchMore
-        hasNextPage={driverArchive.hasNextPage}
-        isFetchingNextPage={driverArchive.isFetchingNextPage}
-        fetchNextPage={() => void driverArchive.fetchNextPage()}
-        sentinelRef={archiveSentinelRef}
-        placeholder={<TripCardSkeleton />}
-        placeholderLabel="Загрузка ещё поездок"
-      />
-    </QueryState>
+                      <span className={styles.price}>{`${trip.price} ₽`}</span>
+                    )
+                  }
+                  onClick={() => open(trip.id)}
+                  aria-label={
+                    needReview
+                      ? `Поездка ${trip.fromCity} — ${trip.toCity}, ${status}, оставьте отзыв`
+                      : `Поездка ${trip.fromCity} — ${trip.toCity}, ${status}`
+                  }
+                >
+                  {trip.fromCity} → {trip.toCity}
+                </Cell>
+              );
+            })}
+          </Section>
+        )}
+        <FetchMore
+          hasNextPage={driverArchive.hasNextPage}
+          isFetchingNextPage={driverArchive.isFetchingNextPage}
+          fetchNextPage={() => void driverArchive.fetchNextPage()}
+          sentinelRef={archiveSentinelRef}
+          placeholder={<TripCardSkeleton />}
+          placeholderLabel="Загрузка ещё поездок"
+        />
+      </QueryState>
+    </Page>
   );
 }

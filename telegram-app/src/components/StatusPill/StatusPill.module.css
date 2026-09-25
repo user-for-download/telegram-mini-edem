@@ -8,7 +8,7 @@
   display: inline-block;
   margin-left: 6px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.5;

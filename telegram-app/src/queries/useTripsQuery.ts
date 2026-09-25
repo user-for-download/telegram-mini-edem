@@ -89,6 +89,17 @@ function useInvalidateTrips() {
   return () => queryClient.invalidateQueries({ queryKey: TRIP_KEYS.all });
 }
 
+function useInvalidateTripsAndBookings() {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: TRIP_KEYS.all }),
+      // Сырой ключ вместо BOOKING_KEYS.all: useBookingsQuery импортирует
+      // TRIP_KEYS отсюда, импорт в обратную сторону дал бы цикл.
+      queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+    ]);
+}
+
 export function useCreateTripMutation() {
   const invalidateTrips = useInvalidateTrips();
   return useMutation({
@@ -107,21 +118,17 @@ export function useUpdateTripMutation() {
 }
 
 export function useCancelTripMutation() {
-  const invalidateTrips = useInvalidateTrips();
+  const invalidateTripsAndBookings = useInvalidateTripsAndBookings();
   return useMutation({
     mutationFn: (id: string) => tripsApi.cancelTrip(id),
-    onSuccess: invalidateTrips,
+    onSuccess: invalidateTripsAndBookings,
   });
 }
 
 export function useCompleteTripMutation() {
-  const queryClient = useQueryClient();
+  const invalidateTripsAndBookings = useInvalidateTripsAndBookings();
   return useMutation({
     mutationFn: (id: string) => tripsApi.completeTrip(id),
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: TRIP_KEYS.all }),
-        queryClient.invalidateQueries({ queryKey: ["bookings"] }),
-      ]),
+    onSuccess: invalidateTripsAndBookings,
   });
 }

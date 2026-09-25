@@ -15,7 +15,7 @@ function render(element: ReactNode): string {
 }
 
 describe("AccountStatePage", () => {
-  it("показывает заголовок и описание, main с aria-live polite", () => {
+  it("показывает заголовок и описание, регион с aria-live polite", () => {
     const html = render(
       <AccountStatePage title="Профиль удалён" description="Восстановление невозможно." />,
     );

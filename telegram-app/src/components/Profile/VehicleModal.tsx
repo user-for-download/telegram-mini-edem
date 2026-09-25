@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Caption, Input } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
-import { HINT, PROSE } from "@/ui/classes";
+import { HINT, INFO, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
@@ -13,6 +13,7 @@ import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { haptic } from "@/utils/haptics";
 import { QueryState } from "@/components/QueryState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Card } from "@/ui/Card";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import {
@@ -109,7 +110,7 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
       loading={vehicleQuery.isLoading}
       error={vehicleQuery.error}
       empty={!vehicleQuery.data}
-      emptyText="Не удалось загрузить автомобиль."
+      emptyText={EMPTY_STATES.vehicleEmpty.description}
       onRetry={() => void vehicleQuery.refetch()}
     >
       {vehicleQuery.data && (
@@ -193,7 +194,7 @@ function VehicleForm({
         {(field) => (
           <Input
             {...field}
-            before={<Car size={17} className={styles.info} />}
+            before={<Car size={17} className={INFO} />}
             value={model}
             maxLength={VEHICLE_LIMITS.model}
             placeholder="Skoda Octavia"
@@ -250,7 +251,6 @@ function VehicleForm({
         size="l"
         loading={upsert.isPending}
         onClick={save}
-        className="min-h-11"
       >
         Сохранить автомобиль
       </Button>
@@ -262,7 +262,6 @@ function VehicleForm({
           upsert.reset();
           onDone();
         }}
-        className="min-h-11"
       >
         Отмена
       </Button>

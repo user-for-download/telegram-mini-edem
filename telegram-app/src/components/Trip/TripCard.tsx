@@ -1,4 +1,4 @@
-import { IconButton } from "@telegram-apps/telegram-ui";
+import { IconButton } from "@/ui/IconButton";
 import { Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
@@ -42,10 +42,19 @@ export type TripCardVariant =
       kind: "driving";
       trip: Trip;
       driverRating?: number | null;
-      onShare: (id: string) => void;
       onCancel: (id: string) => void;
       cancelPending: boolean;
     };
+
+/**
+ * Отмена доступна только для отменяемых статусов (active).
+ * Статус в контракте опционален — поездка без статуса считается
+ * активной (легаси-данные), кнопку скрываем только для терминальных
+ * cancelled/completed.
+ */
+function isCancellable(trip: Trip): boolean {
+  return trip.status !== "cancelled" && trip.status !== "completed";
+}
 
 /**
  * Единая карточка поездки (стандарт вкладки): шапка дата — статус — цена,
@@ -54,7 +63,7 @@ export type TripCardVariant =
  * - водитель без заявок: «Вы водитель»;
  * - водитель с заявками: строки заявок с −/+ вместо персоны.
  * Футер — группа у правого края: поделиться + «Отменить бронь»
- * (бронь) / «Отменить поездку» (своя).
+ * (бронь) / «Отменить поездку» (своя, только для отменяемых статусов).
  * В детали ведёт тап по самой карточке (onOpen) — отдельной кнопки нет.
  */
 export function TripCard({ variant }: { variant: TripCardVariant }) {
@@ -98,7 +107,6 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
           <div className={styles.footerEnd}>
             <IconButton
               size="s"
-              mode="plain"
               aria-label="Поделиться поездкой"
               title="Поделиться поездкой"
               onClick={(event) => {
@@ -163,7 +171,6 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
         <div className={styles.footerEnd}>
             <IconButton
               size="s"
-              mode="plain"
               aria-label="Поделиться поездкой"
               title="Поделиться поездкой"
               onClick={(event) => {
@@ -174,17 +181,19 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
             >
               <Share2 size={15} />
             </IconButton>
-            <div className={styles.cancelRight}>
-              <ConfirmPopup
-                label="Отменить поездку"
-                confirmLabel="Отменить поездку"
-                description="Поездка станет недоступна, а пассажиры получат уведомление."
-                pending={cancelPending}
-                destructive
-                actionsEnd
-                onConfirm={() => onCancel(trip.id)}
-              />
-            </div>
+            {isCancellable(trip) && (
+              <div className={styles.cancelRight}>
+                <ConfirmPopup
+                  label="Отменить поездку"
+                  confirmLabel="Отменить поездку"
+                  description="Поездка станет недоступна, а пассажиры получат уведомление."
+                  pending={cancelPending}
+                  destructive
+                  actionsEnd
+                  onConfirm={() => onCancel(trip.id)}
+                />
+              </div>
+            )}
         </div>
       }
     />

@@ -1,20 +1,19 @@
 import { useRef, useState } from "react";
 import {
   Caption,
-  Chip,
-  IconButton,
   Input,
-  Placeholder,
   Section,
-  Spinner,
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
-import { HINT, PROSE } from "@/ui/classes";
+import { BTN_ROW_WRAP, HINT, INFO, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { FieldError } from "@/ui/FieldError";
 import { Button } from "@/ui/Button";
+import { Chip } from "@/ui/Chip";
+import { IconButton } from "@/ui/IconButton";
+import { Loading } from "@/ui/Loading";
 
 import {
   ArrowRightLeft,
@@ -205,12 +204,7 @@ export function CreateTripForm({
   };
 
   if (cities.isLoading || vehicleChecking) {
-    return (
-      <Placeholder>
-        <Spinner size="m" />
-        <>Загружаем города…</>
-      </Placeholder>
-    );
+    return <Loading label="Загружаем города…" />;
   }
 
   // Без автомобиля публиковать нельзя — сервер ответил бы 400 NO_CAR
@@ -284,12 +278,11 @@ export function CreateTripForm({
               <IconButton
                 type="button"
                 size="s"
-                mode="plain"
                 onClick={swapCities}
                 aria-label="Поменять направление"
                 className={styles.swap}
               >
-                <ArrowRightLeft size={14} className={styles.iconInfo} />
+                <ArrowRightLeft size={14} className={INFO} />
               </IconButton>
             </div>
             <Field label="Адрес отправления" id="create-from-address">
@@ -415,7 +408,7 @@ export function CreateTripForm({
                   <IconButton
                     type="button"
                     size="s"
-                    mode="bezeled"
+                    variant="secondary"
                     onClick={stepSeats(-1)}
                     disabled={Number(seats) <= 1}
                     aria-label="Меньше мест"
@@ -434,7 +427,7 @@ export function CreateTripForm({
                   <IconButton
                     type="button"
                     size="s"
-                    mode="bezeled"
+                    variant="secondary"
                     onClick={stepSeats(1)}
                     disabled={Number(seats) >= MAX_SEATS}
                     aria-label="Больше мест"
@@ -515,7 +508,7 @@ export function CreateTripForm({
         >
           <SectionBody>
             <div
-              className={styles.tagChips}
+              className={BTN_ROW_WRAP}
               role="group"
               aria-label="Условия поездки"
             >
@@ -524,10 +517,10 @@ export function CreateTripForm({
                 return (
                   <Chip
                     key={tag}
-                    className={styles.tagChip}
+                    tone="accent"
                     Component="button"
                     type="button"
-                    mode={checked ? "elevated" : "mono"}
+                    variant={checked ? "active" : "quiet"}
                     aria-pressed={checked}
                     onClick={() => toggleTag(tag)}
                   >

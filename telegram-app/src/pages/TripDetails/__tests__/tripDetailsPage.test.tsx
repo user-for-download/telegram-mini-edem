@@ -251,3 +251,49 @@ describe("TripDetailsPage parity", () => {
     expect(render()).toContain("только что заняли");
   });
 });
+
+describe("TripDetailsPage: driver phone (F1)", () => {
+  const DRIVER_WITH_PHONE = { ...DRIVER, phone: "+79001234567" };
+
+  it("confirmed видит активную кнопку с номером", () => {
+    setMocks(
+      makeTrip({
+        driver: DRIVER_WITH_PHONE,
+        myBooking: { id: "b-1", seat: 1, status: "confirmed" },
+      }),
+    );
+    const html = render();
+    expect(html).toContain("Позвонить водителю: +79001234567");
+    expect(html).not.toContain("disabled");
+  });
+
+  it("pending видит disabled-хинт, а не номер", () => {
+    setMocks(
+      makeTrip({
+        driver: DRIVER_WITH_PHONE,
+        myBooking: { id: "b-1", seat: 1, status: "pending" },
+      }),
+    );
+    const html = render();
+    expect(html).toContain("Телефон водителя доступен после подтверждения");
+    expect(html).not.toContain("Позвонить водителю");
+  });
+
+  it("confirmed без номера у водителя — кнопки нет (без вранья)", () => {
+    setMocks(
+      makeTrip({
+        myBooking: { id: "b-1", seat: 1, status: "confirmed" },
+      }),
+    );
+    const html = render();
+    expect(html).not.toContain("Позвонить водителю");
+    expect(html).not.toContain("Телефон водителя доступен");
+  });
+
+  it("посторонний кнопки телефона не видит", () => {
+    setMocks(makeTrip({ driver: DRIVER_WITH_PHONE }));
+    const html = render();
+    expect(html).not.toContain("Позвонить водителю");
+    expect(html).not.toContain("Телефон водителя доступен");
+  });
+});

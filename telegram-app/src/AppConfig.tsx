@@ -24,6 +24,7 @@ import { resolveAppRootPlatform, useDevPlatform } from "@/utils/devPlatform";
 import { useTelegramChromiumFallback } from "@/hooks/useTelegramChromiumFallback";
 import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
+import styles from "./AppConfig.module.css";
 import {
   WsProvider,
   TelegramRealtimeListener,
@@ -69,15 +70,17 @@ function ErrorFallback({ error }: { error: unknown }) {
         : JSON.stringify(error);
   // Чистый HTML: фолбэк живёт СНАРУЖИ AppRoot, TGUI здесь упадёт
   // с «Wrap your app with <AppRoot>» и замаскирует исходную ошибку.
+  // Поэтому raw <button> осознанно (U3: вне скоупа кита), а инлайн-стили
+  // вынесены в AppConfig.module.css (те же значения побайт).
   return (
-    <div style={{ padding: "32px 16px", textAlign: "center" }}>
-      <h1 style={{ fontSize: 20, marginBottom: 8 }}>Что-то пошло не так</h1>
-      <p style={{ opacity: 0.7, marginBottom: 16 }}>
+    <div className={styles.fallback}>
+      <h1 className={styles.fallbackTitle}>Что-то пошло не так</h1>
+      <p className={styles.fallbackText}>
         <code>{message}</code>
       </p>
       <button
         type="button"
-        style={{ padding: "10px 20px", fontSize: 16 }}
+        className={styles.fallbackButton}
         onClick={() => window.location.reload()}
       >
         Обновить

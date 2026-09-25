@@ -1,14 +1,11 @@
 import { memo, useMemo } from "react";
-import {
-  Caption,
-  Placeholder,
-  Spinner,
-  Text,
-} from "@telegram-apps/telegram-ui";
+import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
 import { EmptyState } from "@/ui/EmptyState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { BTN_ROW, GROW, SHRINK, TRUNCATE } from "@/ui/classes";
 import { FetchMore } from "@/ui/FetchMore";
+import { Loading } from "@/ui/Loading";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
 
@@ -207,15 +204,12 @@ export const TripRequestsBody = memo(function TripRequestsBody({
     () => items.filter((booking) => booking.status === "confirmed"),
     [items],
   );
+  // Per-row pending (как в DriverTripRequests): лоадится только
+  // обрабатываемая строка, остальные остаются интерактивными.
+  const actingId = update.isPending ? update.variables?.id : undefined;
 
   if (requests.isLoading) {
-    return (
-      <Placeholder>
-        <span role="status" aria-label="Загрузка">
-          <Spinner size="m" />
-        </span>
-      </Placeholder>
-    );
+    return <Loading />;
   }
 
   if (requests.isError) {
@@ -223,7 +217,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
     return (
       <>
         <OfflineBanner />
-        <Placeholder
+        <EmptyState
           header={forbidden ? "Нет доступа" : "Не удалось загрузить заявки"}
           description={
             forbidden
@@ -251,7 +245,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
           }
         >
           {!isOnline && <p>Проверьте подключение к интернету.</p>}
-        </Placeholder>
+        </EmptyState>
       </>
     );
   }
@@ -265,7 +259,9 @@ export const TripRequestsBody = memo(function TripRequestsBody({
             {bookingErrorMessage(update.error)}
           </Notice>
         )}
-        {!items.length && <EmptyState header="Заявок нет" />}
+        {!items.length && (
+          <EmptyState header={EMPTY_STATES.tripRequestsEmpty.header} />
+        )}
         {pending.length > 0 && (
           <Stack aria-live="polite" aria-label="Ожидают решения">
             <Caption weight="2" Component="span" className={styles.groupLabel}>
@@ -275,7 +271,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
               <PendingBookingCard
                 key={booking.id}
                 booking={booking}
-                pending={update.isPending}
+                pending={actingId === booking.id}
                 onAccept={() => {
                   haptic.light();
                   update.mutate(
@@ -317,7 +313,6 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         />
         <Button
           stretched
-          className="min-h-11"
           onClick={() => navigate("/bookings?segment=driver")}
         >
           К моим поездкам

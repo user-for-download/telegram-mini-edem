@@ -1,0 +1,24 @@
+/* Фолбэк ErrorBoundary (AppConfig.ErrorFallback): живёт СНАРУЖИ AppRoot,
+ * поэтому без UI-кита (tgui упадёт с «Wrap your app with <AppRoot>» и
+ * замаскирует исходную ошибку) — чистый HTML + этот модуль вместо
+ * style={{}}. Значения побайт прежние (инлайн-стили фолбэка). */
+
+.fallback {
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.fallbackTitle {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.fallbackText {
+  opacity: 0.7;
+  margin-bottom: 16px;
+}
+
+.fallbackButton {
+  padding: 10px 20px;
+  font-size: 16px;
+}

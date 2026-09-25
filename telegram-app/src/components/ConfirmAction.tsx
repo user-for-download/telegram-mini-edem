@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { Text } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { Stack } from "@/ui/Stack";
+import styles from "./ConfirmAction.module.css";
 
 
 /**
@@ -73,11 +75,7 @@ export function ConfirmAction({
         disabled={disabled || pending}
         aria-expanded={armed}
         aria-describedby={armed ? descId : undefined}
-        style={
-          destructive
-            ? { color: "var(--tgui--destructive_text_color)" }
-            : undefined
-        }
+        className={destructive ? styles.destructive : undefined}
         onClick={(event) => {
           stop(event);
           setArmed(true);
@@ -86,7 +84,10 @@ export function ConfirmAction({
         {label}
       </Button>
       {armed && (
-        <div className={`flex flex-col gap-2 mt-2${actionsEnd ? " items-end" : ""}`}>
+        <Stack
+          gap="xs"
+          className={actionsEnd ? "mt-2 items-end" : "mt-2"}
+        >
           <Text Component="p" id={descId}>
             {description}
           </Text>
@@ -118,7 +119,7 @@ export function ConfirmAction({
           >
             Назад
           </Button>
-        </div>
+        </Stack>
       )}
     </div>
   );

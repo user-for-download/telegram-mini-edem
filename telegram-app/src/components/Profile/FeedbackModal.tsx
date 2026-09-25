@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from "react";
-import { Button, Caption, Select, Textarea } from "@telegram-apps/telegram-ui";
+import { Caption, Select, Textarea } from "@telegram-apps/telegram-ui";
+import { Button } from "@/ui/Button";
 import { Notice } from "@/ui/Notice";
 import { Field } from "@/ui/Field";
 import { Sheet } from "@/ui/Sheet";
@@ -138,7 +139,6 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
 
       <Button
         size="l"
-        mode="bezeled"
         stretched
         type="submit"
         loading={create.isPending}
@@ -150,7 +150,6 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
 
       <Button
         size="m"
-        mode="bezeled"
         stretched
         type="button"
         onClick={() => {

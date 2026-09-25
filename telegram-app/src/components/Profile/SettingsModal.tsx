@@ -11,6 +11,7 @@ import { Bell, BellRing } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import {
   useProfileNotificationSettingsMutation,
@@ -113,7 +114,7 @@ export function SettingsBody() {
         loading={profile.isLoading}
         error={profile.error}
         empty={!profile.data || enabled === null}
-        emptyText="Не удалось загрузить настройки."
+        emptyText={EMPTY_STATES.settingsEmpty.description}
         onRetry={() => void profile.refetch()}
       >
         <Stack className={styles.stackSettings}>
@@ -131,7 +132,6 @@ export function SettingsBody() {
             <Button
               stretched
               size="l"
-              className="min-h-11"
               loading={save.isPending}
               disabled={save.isPending || enabled === null}
               onClick={() => toggle(!enabled)}
@@ -154,7 +154,6 @@ export function SettingsBody() {
             <Button
               size="m"
               stretched
-              className="min-h-11"
               onClick={() => navigate("/notifications")}
             >
               Открыть уведомления

@@ -23,8 +23,8 @@ export interface FetchMoreProps {
 }
 
 /**
- * Единый конец ленты: якорь автодогрузки (пустой div, min-height 48 —
- * не даёт вьюпорту прыгать при схлопывании скелетона) + скелетон во
+ * Единый конец ленты: якорь автодогрузки (нулевой div вне потока —
+ * места в покое не занимает) + скелетон во время догрузки + кнопка
  * время догрузки + кнопка «Показать ещё» как fallback и для повторной
  * попытки. Раньше этот блок собирался вручную в 6 экранах, а правило
  * `.sentinel/.fetchMore` копировалось в 4 модулях.
@@ -49,7 +49,6 @@ export function FetchMore({
           ref={sentinelRef}
           aria-hidden="true"
           className={styles.sentinel}
-          style={{ overflowAnchor: "none" }}
         />
       )}
       {placeholder && isFetchingNextPage && (

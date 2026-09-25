@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
-import { Chip, Input, Textarea } from "@telegram-apps/telegram-ui";
+import { Input, Textarea } from "@telegram-apps/telegram-ui";
+import { Chip } from "@/ui/Chip";
 import { Notice } from "@/ui/Notice";
-import { BTN_ROW, HINT } from "@/ui/classes";
+import { BTN_ROW, BTN_ROW_WRAP, HINT, INFO, SUCCESS } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Button } from "@/ui/Button";
 
@@ -112,7 +113,7 @@ export function EditTripForm({
           {(field) => (
             <Input
               {...field}
-              before={<MapPin size={17} className={styles.iconInfo} />}
+              before={<MapPin size={17} className={INFO} />}
               value={fromAddress}
               onChange={(event) => setFromAddress(event.target.value)}
               placeholder="Например: м. Тёплый Стан"
@@ -123,7 +124,7 @@ export function EditTripForm({
           {(field) => (
             <Input
               {...field}
-              before={<MapPin size={17} className={styles.iconSuccess} />}
+              before={<MapPin size={17} className={SUCCESS} />}
               value={toAddress}
               onChange={(event) => setToAddress(event.target.value)}
               placeholder="Например: пр-т Ленина"
@@ -198,16 +199,16 @@ export function EditTripForm({
         </div>
         <fieldset>
           <legend>Особенности</legend>
-          <div className={styles.tagChips}>
+          <div className={BTN_ROW_WRAP}>
             {TRIP_TAGS.map((tag) => {
               const checked = tags.includes(tag);
               return (
                 <Chip
                   key={tag}
-                  className={styles.tagChip}
                   Component="button"
                   type="button"
-                  mode={checked ? "elevated" : "mono"}
+                  variant={checked ? "active" : "quiet"}
+                  tone="accent"
                   onClick={() => toggleTag(tag)}
                   aria-pressed={checked}
                 >

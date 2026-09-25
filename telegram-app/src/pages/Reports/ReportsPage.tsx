@@ -2,7 +2,6 @@ import { memo, useRef, useState } from "react";
 import {
   Caption,
   Input,
-  Placeholder,
   Section,
   Select,
   Text,
@@ -10,6 +9,7 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
 import { EmptyState } from "@/ui/EmptyState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { CharCounter } from "@/ui/CharCounter";
@@ -18,6 +18,7 @@ import { Button } from "@/ui/Button";
 import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
 import { REPORT_DESCRIPTION_MAX_LENGTH } from "@edem/contracts";
 import { Card } from "@/ui/Card";
+import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import {
   StatusPill,
   type StatusTone,
@@ -186,12 +187,10 @@ export function ReportsPage() {
   // общей ошибки (паттерн ProfilePage; глобальные случаи закрывает AuthGate).
   if (myReports.error instanceof ApiError && myReports.error.status === 403) {
     return (
-      <Page>
-        <Placeholder
-          header="Аккаунт заблокирован"
-          description="Действие недоступно: аккаунт заблокирован."
-        />
-      </Page>
+      <AccountStatePage
+        title="Аккаунт заблокирован"
+        description="Действие недоступно: аккаунт заблокирован."
+      />
     );
   }
 
@@ -299,7 +298,6 @@ export function ReportsPage() {
             <Button
               stretched
               size="l"
-              className="min-h-11"
               loading={create.isPending}
               disabled={!canSubmit}
               onClick={submit}
@@ -320,8 +318,8 @@ export function ReportsPage() {
             >
               {!myReports.data || myReports.data.length === 0 ? (
                 <EmptyState
-                  header="Вы пока не отправляли жалоб"
-                  description="Жалобы на поездки доступны пассажирам с бронью. На свою поездку жаловаться нельзя."
+                  header={EMPTY_STATES.reportsEmpty.header}
+                  description={EMPTY_STATES.reportsEmpty.description}
                 />
               ) : (
                 <Stack>

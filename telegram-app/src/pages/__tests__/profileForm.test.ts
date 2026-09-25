@@ -20,14 +20,40 @@ describe("validateProfileForm (порт EditProfileModal)", () => {
       "Поле «О себе» не может быть длиннее 500 символов",
     );
   });
+
+  it("принимает корректный телефон, отклоняет мусор", () => {
+    expect(validateProfileForm("Анна", "", "+7 900 123-45-67")).toBeNull();
+    expect(validateProfileForm("Анна", "", "не номер")).toBe(
+      "Телефон: 7–15 цифр, можно с + в начале",
+    );
+    expect(validateProfileForm("Анна", "", "+123")).toBe(
+      "Телефон: 7–15 цифр, можно с + в начале",
+    );
+  });
 });
 
 describe("normalizeProfileForm", () => {
   it("тримит имя и «О себе»", () => {
-    expect(normalizeProfileForm("  Анна  ", "  текст  ")).toEqual({ name: "Анна", about: "текст" });
+    expect(normalizeProfileForm("  Анна  ", "  текст  ")).toEqual({
+      name: "Анна",
+      about: "текст",
+      phone: null,
+    });
   });
 
   it("пустое «О себе» — явный null (backend очищает поле)", () => {
-    expect(normalizeProfileForm("Анна", "   ")).toEqual({ name: "Анна", about: null });
+    expect(normalizeProfileForm("Анна", "   ")).toEqual({
+      name: "Анна",
+      about: null,
+      phone: null,
+    });
+  });
+
+  it("телефон тримится, пустой — null", () => {
+    expect(normalizeProfileForm("Анна", "", "  +79001234567  ")).toEqual({
+      name: "Анна",
+      about: null,
+      phone: "+79001234567",
+    });
   });
 });

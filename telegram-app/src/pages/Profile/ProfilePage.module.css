@@ -3,7 +3,8 @@
  * токены --app-* в src/index.css), поэтому отступы уровней «экран» и
  * «тело секции» здесь не дублируются. Цвета только --tgui--* / --app-*. */
 
-/* Шапка профиля: аватар + имя/рейтинг (было gap-3.5). */
+/* Шапка профиля: аватар + имя/рейтинг. Зазор 14px — вне сетки токенов,
+ * оставлен литералом ради пиксель-паритета (U3: только механизм). */
 .headerRow {
   display: flex;
   align-items: center;
@@ -26,38 +27,27 @@
   white-space: nowrap;
 }
 
-/* Строка рейтинга под именем (было gap-2 mt-1). */
+/* Строка рейтинга под именем (токены: зазор xs, отступ 2xs). */
 .ratingRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-/* Подпись верификации Telegram. */
-.verified {
-  color: var(--app-success);
-}
-
-/* «О себе»: основной цвет текста + межстрочный 1.625 (leading-relaxed). */
-.about {
-  color: var(--tgui--text_color);
-  line-height: 1.625;
+  gap: var(--app-space-xs);
+  margin-top: var(--app-space-2xs);
 }
 
 /* Статистика: три равные колонки над разделителем (было grid-cols-3). */
 .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  padding-top: 8px;
+  gap: var(--app-space-xs);
+  padding-top: var(--app-space-xs);
   border-top: 1px solid var(--tgui--outline);
 }
 
 /* Плитка статистики: поездки/отзывы/рейтинг. */
 .stat {
-  padding: 8px;
-  border-radius: 12px;
+  padding: var(--app-space-xs);
+  border-radius: var(--app-radius-md);
   background: var(--tgui--tertiary_bg_color);
   text-align: center;
 }
@@ -66,19 +56,8 @@
   color: var(--tgui--hint_color);
 }
 
-.statInfo {
-  color: var(--app-info);
-}
-
 .statRating {
   color: var(--app-rating);
-}
-
-/* Колонка строк внутри секции (было gap-2). */
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 /* Иконка строки меню/переключателя: не сжимается (было shrink-0). */
@@ -103,40 +82,10 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 16px;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-sm);
+  border-radius: var(--app-card-radius);
   background: var(--tgui--section_bg_color);
   border: 1px solid var(--tgui--outline);
 }
 
-/* Ошибка деструктивного действия (кит-токен разрушающего цвета). */
-.errorText {
-  color: var(--tg-theme-destructive-text-color);
-}
-
-/* Вкладка «Отзывы»: вертикальная колонка. */
-.reviews {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Плашка пре-модерации: подпись слева, кнопка справа, кегль 12px
- * (было text-xs с line-height 16px). */
-.reviewNotice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 12px;
-  background: var(--tgui--section_bg_color);
-  border: 1px solid var(--tgui--outline);
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.hint {
-  color: var(--tgui--hint_color);
-}

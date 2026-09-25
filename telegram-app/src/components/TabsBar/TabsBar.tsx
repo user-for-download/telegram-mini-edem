@@ -1,4 +1,4 @@
-import { Badge, Tabbar } from "@telegram-apps/telegram-ui";
+import { Badge, Tabbar, Tappable } from "@telegram-apps/telegram-ui";
 import { hapticFeedback } from "@telegram-apps/sdk-react";
 import { Bell, Car, Home, Search, User } from "lucide-react";
 import styles from "./Tabbar.module.css";
@@ -87,14 +87,19 @@ export function TabsBar({
           );
         })}
       </nav>
-      <button
+      {/* Detached-круг поиска — китовая Tappable (Component="button"):
+          статика побайт прежняя (.search), от кита — нативный press/ripple.
+          Tabbar.Item здесь не подходит: у него чипованная подложка иконки
+          и таб-семантика, а круг — отдельное действие дока. */}
+      <Tappable
+        Component="button"
         type="button"
         aria-label="Поиск"
         className={`${styles.search} ${searchSelected ? styles.searchSelected : ""}`}
         onClick={() => go(activeTab, "search", "/trips", onSelect)}
       >
         <Search size={28} strokeWidth={2} />
-      </button>
+      </Tappable>
     </div>
   );
 }

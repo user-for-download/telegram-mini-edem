@@ -163,6 +163,41 @@ describe("TripRequestsBody: состояния запроса", () => {
   });
 });
 
+describe("TripRequestsBody: per-row pending (F6)", () => {
+  it("лоадится только обрабатываемая строка, остальные интерактивны", () => {
+    setMocks(
+      pageWithItems([
+        makeBooking({ id: "b-1" }),
+        makeBooking({
+          id: "b-2",
+          passenger: {
+            id: "u-pass-2",
+            name: "Борис Пассажиров",
+            avatar: "https://t.me/i/userpic/320/pass2.svg",
+          },
+        }),
+      ]),
+      {
+        isPending: true,
+        variables: { id: "b-1", status: "confirmed" },
+      },
+    );
+
+    const html = renderBody();
+    // Только две кнопки acting-строки disabled (Принять/Отклонить b-1).
+    expect(html.match(/disabled=""/g)?.length ?? 0).toBe(2);
+    expect(html).toContain("Борис Пассажиров");
+  });
+
+  it("без мутации disabled нет вовсе", () => {
+    setMocks(
+      pageWithItems([makeBooking({ id: "b-1" }), makeBooking({ id: "b-2" })]),
+    );
+
+    expect(renderBody()).not.toContain("disabled");
+  });
+});
+
 describe("TripRequestsBody: a11y", () => {
   it("секция с именем, live-регионы, таргеты ≥44px", () => {
     setMocks(pageWithItems([makeBooking()]));

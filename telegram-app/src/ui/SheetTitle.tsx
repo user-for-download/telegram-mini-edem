@@ -15,6 +15,10 @@ import styles from "./SheetTitle.module.css";
  * получает в aria-labelledby) + видимый заголовок только на base
  * (на iOS текст уже есть в Modal.Header, дублировать нельзя).
  *
+ * Единственное имя диалога: обе видимые копии заголовка скрыты от
+ * скринридера (здесь — aria-hidden Headline; копия в Modal.Header —
+ * aria-hidden span в Sheet), поэтому h2 — один accessible name без дубля.
+ *
  * Видимые строки заголовков не меняются — правки тестов не требуют.
  */
 export function useSheetTitleId(): string {

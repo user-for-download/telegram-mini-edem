@@ -25,9 +25,15 @@ export interface SheetProps {
  * прячутся внутрь — 9 модалок больше не дублируют обвязку (раньше у
  * каждой был свой `<Modal header aria-labelledby><SheetTitle/></Modal>`).
  *
- * Тело — SheetBody (div со скроллом из --app-sheet-* токенов); гостям
- * шторки остаётся только контент. Контракты прежних SheetBody/SheetTitle
- * сохранены 1:1.
+ * Единственное имя диалога: скрытый h2 SheetTitle (titleId). Видимые
+ * копии заголовка скрыты от скринридера — копия в Modal.Header (рендерится
+ * только на iOS) обёрнута в aria-hidden span, копия Headline на base —
+ * aria-hidden в SheetTitle. title — текстовый заголовок (идёт в
+ * accessible name), интерактивного содержимого в нём быть не должно.
+ *
+ * Тело — SheetBody (div со скроллом из --app-sheet-* токенов + перенос
+ * фокуса при открытии); гостям шторки остаётся только контент. Контракты
+ * прежних SheetBody/SheetTitle сохранены 1:1.
  */
 export function Sheet({
   open,
@@ -44,7 +50,11 @@ export function Sheet({
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      header={<Modal.Header after={headerAfter}>{title}</Modal.Header>}
+      header={
+        <Modal.Header after={headerAfter}>
+          <span aria-hidden="true">{title}</span>
+        </Modal.Header>
+      }
       aria-labelledby={titleId}
     >
       <SheetBody variant={variant}>

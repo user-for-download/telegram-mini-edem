@@ -187,7 +187,7 @@ describe("SearchPage: сентинел (SSR, без IntersectionObserver)", () =
     // Fallback без observer: первая страница отрендерена сразу.
     expect(html).toContain("Вологда");
     expect(html).toContain("Череповец");
-    // Сентинел-якорь: aria-hidden, фиксированная высота.
+    // Сентинел-якорь: aria-hidden, нулевого размера (места не занимает).
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain("_sentinel_");
     // Fallback-кнопка для SSR/без observer и клавиатуры.

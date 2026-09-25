@@ -44,3 +44,17 @@
 .centerText {
   text-align: center;
 }
+
+/* Семантический акцент «информация»: цвет ссылок и иконок-подсказок.
+ * Заменяет локальные копии .iconInfo (CreateTrip/EditTrip/TripModals),
+ * .info (ProfileModals), .statInfo (ProfilePage), .bell (Notifications). */
+.info {
+  color: var(--app-info);
+}
+
+/* Семантический акцент «успех»: подтверждение/зелёный статус.
+ * Заменяет ProfilePage .verified (там именно цвет успеха, не info). */
+.success {
+  color: var(--app-success);
+}
+

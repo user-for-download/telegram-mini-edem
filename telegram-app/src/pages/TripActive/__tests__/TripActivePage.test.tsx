@@ -7,10 +7,22 @@ import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
-const { mockUseMyBookings, mockUseInfiniteMyTrips } = vi.hoisted(() => ({
-  mockUseMyBookings: vi.fn(),
-  mockUseInfiniteMyTrips: vi.fn(),
-}));
+const { mockUseMyBookings, mockUseInfiniteMyTrips, mockUseCancelTrip } =
+  vi.hoisted(() => ({
+    mockUseMyBookings: vi.fn(),
+    mockUseInfiniteMyTrips: vi.fn(),
+    mockUseCancelTrip: vi.fn(
+      (): {
+        mutate: ReturnType<typeof vi.fn>;
+        isPending: boolean;
+        variables: string | undefined;
+      } => ({
+        mutate: vi.fn(),
+        isPending: false,
+        variables: undefined,
+      }),
+    ),
+  }));
 
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: () => ({ data: { rating: 4.9 } }),
@@ -29,7 +41,7 @@ vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
   return {
     ...original,
     useInfiniteMyTripsQuery: mockUseInfiniteMyTrips,
-    useCancelTripMutation: () => ({ mutate: vi.fn(), isPending: false }),
+    useCancelTripMutation: mockUseCancelTrip,
     useCompleteTripMutation: () => ({ mutate: vi.fn(), isPending: false }),
   };
 });
@@ -104,5 +116,59 @@ describe("TripActivePage scope", () => {
     const html = render(<TripActivePage />);
     expect(html).not.toContain("Сокол");
     expect(html).toContain("Череповец");
+  });
+});
+
+describe("TripActivePage per-card cancel pending (F5)", () => {
+  function driverTrip(id: string, toCity: string, departureAt: string) {
+    return {
+      id,
+      status: "active",
+      fromCity: "Вологда",
+      toCity,
+      departureAt,
+      price: 400,
+      seatsAvailable: 2,
+      seatsTotal: 4,
+      pendingRequestsCount: 0,
+      confirmedBookingsCount: 0,
+    };
+  }
+
+  it("отмена поездки водителя pending только на отменяемой карточке", () => {
+    // Arrange
+    mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
+    mockUseCancelTrip.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+      variables: "t-cancel",
+    });
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({
+        data: {
+          pages: [
+            {
+              items: [
+                driverTrip("t-other", "Сокол", "2030-06-01T09:00:00.000Z"),
+                driverTrip("t-cancel", "Череповец", "2030-06-02T09:00:00.000Z"),
+              ],
+            },
+          ],
+        },
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      }),
+    );
+
+    // Act
+    const html = render(<TripActivePage />);
+
+    // Assert
+    expect(html).toContain("Сокол");
+    expect(html).toContain("Череповец");
+    // Обе карточки рендерят кнопку отмены, но disabled — ровно одна.
+    expect(html.match(/Отменить поездку/g) ?? []).toHaveLength(2);
+    expect(html.match(/disabled=""/g) ?? []).toHaveLength(1);
   });
 });

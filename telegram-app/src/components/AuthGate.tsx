@@ -1,5 +1,5 @@
 import { type FC, type PropsWithChildren, useEffect, useState } from "react";
-import { Placeholder, Section, Spinner } from "@telegram-apps/telegram-ui";
+import { Section, Spinner } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 
 import { useAuthStore } from "@/store/useAuthStore";
@@ -7,6 +7,7 @@ import type { User } from "@/types";
 import { apiClient } from "@/api/client";
 import { AccountStatePage, RetryAction } from "@/pages/AccountStatePage/AccountStatePage";
 import { AppealForm } from "@/components/AppealForm";
+import { SectionBody } from "@/ui/SectionBody";
 
 // Пауза перед повторной попыткой после 429: каждое нажатие «Попробовать
 // снова» — это новый POST /auth/telegram, который продлевает rate-limit окно
@@ -158,9 +159,9 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
           description={`Причина: ${banReason || "Причина не указана"}. Вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт.`}
         />
         <Section header="Обжалование блокировки">
-          <div className="flex flex-col gap-3 p-4">
+          <SectionBody>
             <AppealForm />
-          </div>
+          </SectionBody>
         </Section>
       </>
     );
@@ -178,8 +179,8 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
   if (status === "error" || status === "unauthenticated") {
     if (isRateLimited) {
       return (
-        <Placeholder
-          header="Слишком много попыток входа"
+        <AccountStatePage
+          title="Слишком много попыток входа"
           description="Сервер временно ограничил вход (защита от перебора). Подождите немного и попробуйте один раз — повторные нажатия продлевают блокировку."
           action={
             <Button
@@ -222,15 +223,11 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
       );
     }
     return (
-      <Placeholder
-        header="Ошибка авторизации"
+      <AccountStatePage
+        title="Ошибка авторизации"
         description="Не удалось проверить данные авторизации. Проверьте подключение к интернету."
         action={
-          <Button
-            size="l"
-            stretched
-            onClick={() => void bootstrap()}
-          >
+          <Button size="l" stretched onClick={() => void bootstrap()}>
             Попробовать снова
           </Button>
         }

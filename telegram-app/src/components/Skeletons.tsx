@@ -1,4 +1,7 @@
+import type { ReactNode } from "react";
 import { Skeleton } from "@telegram-apps/telegram-ui";
+import { Stack } from "@/ui/Stack";
+import { CARD_PAD, CARD_SURFACE } from "@/ui/classes";
 
 /* Скелетоны списков на tgui Skeleton (tgui.xelene.me, Blocks/Feedback).
  *
@@ -9,6 +12,9 @@ import { Skeleton } from "@telegram-apps/telegram-ui";
  *
  * a11y: список объявляет обёртка (role="status" aria-label="Загрузка"),
  * сами болванки aria-hidden — скринридер слышит одно объявление.
+ * Одиночные болванки (без списка) role="status" НЕ несут: их объявляет
+ * родитель — QueryState skeleton через SkeletonStack или FetchMore
+ * через свой role="status"-контейнер (placeholderLabel).
  */
 
 /** Болванка карточки ленты поиска — зеркало раскладки TripFeedCard:
@@ -18,9 +24,9 @@ export function TripCardSkeleton() {
     <Skeleton
       visible
       aria-hidden="true"
-      className="overflow-hidden rounded-2xl border border-(--tgui--outline)"
+      className={`overflow-hidden ${CARD_SURFACE}`}
     >
-      <div className="flex flex-col gap-3 p-4">
+      <Stack className={CARD_PAD}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1.5">
             <div className="h-4 w-28" />
@@ -43,7 +49,7 @@ export function TripCardSkeleton() {
           </div>
           <div className="h-5 w-28 rounded-full" />
         </div>
-      </div>
+      </Stack>
     </Skeleton>
   );
 }
@@ -55,9 +61,9 @@ export function NotificationCardSkeleton() {
     <Skeleton
       visible
       aria-hidden="true"
-      className="overflow-hidden rounded-2xl border border-(--tgui--outline)"
+      className={`overflow-hidden ${CARD_SURFACE}`}
     >
-      <div className="flex flex-col gap-2 p-4">
+      <Stack gap="xs" className={CARD_PAD}>
         <div className="flex items-center justify-between gap-2">
           <div className="h-4 w-2/5" />
           <div className="h-5 w-16 rounded-full" />
@@ -69,7 +75,7 @@ export function NotificationCardSkeleton() {
           <div className="h-3 w-16" />
           <div className="h-8 w-36 rounded-xl" />
         </div>
-      </div>
+      </Stack>
     </Skeleton>
   );
 }
@@ -81,9 +87,9 @@ export function ReviewCardSkeleton() {
     <Skeleton
       visible
       aria-hidden="true"
-      className="overflow-hidden rounded-2xl border border-(--tgui--outline)"
+      className={`overflow-hidden ${CARD_SURFACE}`}
     >
-      <div className="flex flex-col gap-2 p-3.5">
+      <Stack gap="xs" className={CARD_PAD}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-full" />
@@ -101,7 +107,7 @@ export function ReviewCardSkeleton() {
         <div className="h-3 w-full" />
         <div className="h-3 w-4/5" />
         <div className="h-2.5 w-1/2" />
-      </div>
+      </Stack>
     </Skeleton>
   );
 }
@@ -128,33 +134,50 @@ export function ProfileBarSkeleton() {
   );
 }
 
+/** Общая обёртка стопки болванок (U1): одно role="status"-объявление
+ *  на список вместо трёх копий div-обёртки. Дети — одиночные болванки
+ *  (aria-hidden), ключи ставят вызывающие списки. */
+function SkeletonStack({
+  label = "Загрузка",
+  children,
+}: {
+  label?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Stack role="status" aria-label={label}>
+      {children}
+    </Stack>
+  );
+}
+
 /** Стопка болванок для начальной загрузки списка (QueryState skeleton). */
 export function TripCardsSkeleton({ count = 3 }: { count?: number }) {
   return (
-    <div className="flex flex-col gap-3" role="status" aria-label="Загрузка">
+    <SkeletonStack>
       {Array.from({ length: count }, (_, index) => (
         <TripCardSkeleton key={index} />
       ))}
-    </div>
+    </SkeletonStack>
   );
 }
 
 export function NotificationCardsSkeleton({ count = 3 }: { count?: number }) {
   return (
-    <div className="flex flex-col gap-3" role="status" aria-label="Загрузка">
+    <SkeletonStack>
       {Array.from({ length: count }, (_, index) => (
         <NotificationCardSkeleton key={index} />
       ))}
-    </div>
+    </SkeletonStack>
   );
 }
 
 export function ReviewCardsSkeleton({ count = 3 }: { count?: number }) {
   return (
-    <div className="flex flex-col gap-3" role="status" aria-label="Загрузка">
+    <SkeletonStack>
       {Array.from({ length: count }, (_, index) => (
         <ReviewCardSkeleton key={index} />
       ))}
-    </div>
+    </SkeletonStack>
   );
 }

@@ -2,13 +2,14 @@ import { useMemo } from "react";
 import {
   Caption,
   Link,
-  Placeholder,
   Section,
   Text,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
-import { BTN_ROW, PROSE, SHRINK } from "@/ui/classes";
+import { EmptyState } from "@/ui/EmptyState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
+import { BTN_ROW, INFO, PROSE, SHRINK } from "@/ui/classes";
 import { FetchMore } from "@/ui/FetchMore";
 
 import { BellRing, CheckCheck, Settings2 } from "lucide-react";
@@ -22,6 +23,7 @@ import {
 } from "@/components/Skeletons";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
+import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { ApiError } from "@/api/client";
 import type { Notification } from "@edem/contracts";
@@ -166,16 +168,16 @@ export function NotificationsPage() {
   // общей ошибки (паттерн ProfilePage; глобальные случаи закрывает AuthGate).
   if (inbox.error instanceof ApiError && inbox.error.status === 403) {
     return (
-      <Page>
+      <>
         {/* Таб-страницы без визуального заголовка (как Главная/Поездки/
             Профиль/Поиск — позицию показывает таббар): h1 только для
             скринридера. */}
         <VisuallyHidden Component="h1">Уведомления</VisuallyHidden>
-        <Placeholder
-          header="Аккаунт заблокирован"
+        <AccountStatePage
+          title="Аккаунт заблокирован"
           description="Действие недоступно: аккаунт заблокирован."
         />
-      </Page>
+      </>
     );
   }
 
@@ -196,7 +198,7 @@ export function NotificationsPage() {
           <Section>
             <SectionBody>
               <div className={styles.unreadRow}>
-                <BellRing size={16} className={styles.bell} />
+                <BellRing size={16} className={`${INFO} ${SHRINK}`} />
                 <Text Component="p" aria-live="polite">
                   {unreadCount > 0
                     ? `Непрочитанных: ${unreadCount}.`
@@ -239,15 +241,10 @@ export function NotificationsPage() {
           <Section>
             <SectionBody>
               {items.length === 0 ? (
-                <>
-                  <Text weight="2" Component="p" className={styles.emptyText}>
-                    Пока нет уведомлений
-                  </Text>
-                  <Caption Component="p" className={styles.emptyText}>
-                    Подтверждения брони, отмены и завершение поездок появятся
-                    здесь
-                  </Caption>
-                </>
+                <EmptyState
+                  header={EMPTY_STATES.notificationsEmpty.header}
+                  description={EMPTY_STATES.notificationsEmpty.description}
+                />
               ) : (
                 <>
                   {items.map((notification) => (

@@ -28,6 +28,11 @@ function nextTheme(current: "dark" | "light" | null): "dark" | "light" | null {
  * с любого экрана (браузерный стенд), раскладку не сдвигает.
  * Гейт import.meta.env.DEV возвращает null не в dev — в прод-сборке код
  * выпиливается tree-shaking'ом: прод в Telegram следует за клиентом.
+ *
+ * U3-решение: raw <button> оставлен осознанно — пилюля dev-only
+ * (в прод-бандл не попадает), метрики bespoke (5px 12px, кегль 12px)
+ * не ложатся ни на один размер кита, а зависимость dev-инструмента
+ * от API кита не нужна. Стили — в DevToggles.module.css, style-хаков нет.
  */
 export function DevToggles() {
   if (!import.meta.env.DEV) return null;

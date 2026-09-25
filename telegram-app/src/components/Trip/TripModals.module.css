@@ -68,13 +68,20 @@
   min-height: 44px;
 }
 
-/* Иконочные токены: адрес отправления — синий, прибытия — зелёный,
- * даты/места — приглушённые (было text-(--app-info)/--app-success/hint). */
-.iconInfo {
-  color: var(--app-info);
+/* Досье пассажира (PassengerRequestModal): фон тела — secondary
+ * (было style={{ background }} на List, U3). */
+.dossierList {
+  background: var(--tgui--secondary_bg_color);
 }
 
-.iconSuccess {
-  color: var(--app-success);
+/* Крестик закрытия в шапке досье (было style={{ color }} на X, U3). */
+.modalCloseIcon {
+  color: var(--tgui--plain_foreground);
+}
+
+/* Деструктивное решение в досье («Отказать», было style={{ color }}
+ * на Button, U3): неслойный модуль бьёт слой кита без !important. */
+.declineButton {
+  color: var(--tgui--destructive_text_color);
 }
 

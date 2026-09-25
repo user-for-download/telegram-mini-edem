@@ -21,7 +21,7 @@
   pointer-events: auto;
   padding: 5px 12px;
   border: 2px solid var(--tgui--button_color);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: var(--tgui--bg_color);
   color: var(--tgui--text_color);
   font: inherit;

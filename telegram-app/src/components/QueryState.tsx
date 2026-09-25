@@ -1,9 +1,20 @@
-import { Placeholder, Spinner } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
-
+import { EmptyState } from "@/ui/EmptyState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
+import { Loading } from "@/ui/Loading";
 
 /** Состояния запроса: loading (скелетон списка или спиннер),
- *  error с retry, empty, контент. */
+ *  error с retry, empty, контент.
+ *
+ * Тонкая композиция над ui-китом (U1): error и empty — через `EmptyState`
+ * (он один владеет разметкой Placeholder + кнопки действия), loading —
+ * скелетон из Skeletons.tsx либо спиннер. Своей разметки и словаря здесь
+ * нет: тексты error/empty — записи `EMPTY_STATES.loadError/genericEmpty`
+ * (заголовок empty — `genericEmpty.header`, описание — `emptyText`
+ * экрана), кнопка retry — всегда `ui/Button size="m"` через слот `action`
+ * (до U1 кнопка лежала в `children` Placeholder — это слот визуала,
+ * а не действия).
+ */
 export function QueryState({
   loading,
   error,
@@ -25,35 +36,30 @@ export function QueryState({
   onRetry: () => void;
   children: React.ReactNode;
 }) {
-  if (loading)
-    return (
-      <>
-        {skeleton ?? (
-          <Placeholder>
-            <span role="status" aria-label="Загрузка">
-              <Spinner size="m" />
-            </span>
-          </Placeholder>
-        )}
-      </>
-    );
+  if (loading) {
+    if (skeleton) return <>{skeleton}</>;
+    return <Loading />;
+  }
   if (error) {
     return (
-      <Placeholder
-        header="Не удалось загрузить данные"
-        description="Проверьте соединение и повторите попытку."
-      >
-        <Button size="m" onClick={onRetry}>
-          Повторить
-        </Button>
-      </Placeholder>
+      <EmptyState
+        header={EMPTY_STATES.loadError.header}
+        description={EMPTY_STATES.loadError.description}
+        action={
+          <Button size="m" onClick={onRetry}>
+            Повторить
+          </Button>
+        }
+      />
     );
   }
   if (empty)
     return (
-      <Placeholder header="Пока пусто" description={emptyText}>
-        {emptyAction}
-      </Placeholder>
+      <EmptyState
+        header={EMPTY_STATES.genericEmpty.header}
+        description={emptyText}
+        action={emptyAction}
+      />
     );
   return <>{children}</>;
 }

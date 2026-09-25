@@ -140,9 +140,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
             Политика конфиденциальности
           </Cell>
 
-          <Stack
-            style={{ gap: 8 }}
-          >
+          <Stack gap="xs">
             <Button
               size="l"
               stretched

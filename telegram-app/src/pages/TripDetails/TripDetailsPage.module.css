@@ -96,10 +96,8 @@
   flex-shrink: 0;
 }
 
-/* Статус шаринга: подтягиваем к кнопке (было -mt-2). */
-.pullUp {
-  margin-top: -8px;
-}
+/* Статус шаринга — плотный Stack gap="2xs" в TSX (U3): отдельный
+ * pull-up-класс с margin-top:-8px удалён. */
 
 /* Строка автомобиля: приглушённая поверхность, кегль 12px. */
 .carRow {
@@ -107,17 +105,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: var(--app-radius-md);
   background: var(--tgui--tertiary_bg_color);
   font-size: 12px;
   line-height: 16px;
-}
-
-/* Теги-чипы с переносом. */
-.tagRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 /* Комментарий водителя: поверхность секции + hairline; кегль 12px и
@@ -125,7 +116,7 @@
  * от text-xs). */
 .noteCard {
   padding: 12px;
-  border-radius: 12px;
+  border-radius: var(--app-radius-md);
   background: var(--tgui--section_bg_color);
   border: 1px solid var(--tgui--outline);
   font-size: 12px;

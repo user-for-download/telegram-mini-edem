@@ -21,7 +21,25 @@ import { createNotification } from "../services/notification.service.js";
 const updateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   about: z.string().max(500).nullable().optional(),
+  // Телефон (F1): E.164-ish после нормализации; "" → null (очистка).
+  phone: z.string().max(25).nullable().optional(),
 });
+
+/**
+ * Нормализация телефона: пробелы/дефисы/скобки-out, "" → null.
+ * undefined = поле не прислали (оставить прежнее), false = невалидный
+ * формат (вызывающий отвечает 400).
+ */
+function normalizePhone(
+  value: string | null | undefined,
+): string | null | false | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const digits = trimmed.replace(/[\s\-()]/g, "");
+  return /^\+?\d{7,15}$/.test(digits) ? digits : false;
+}
 
 const carFormSchema = z.object({
   model: z.string().min(1).max(50),
@@ -249,7 +267,7 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
 usersRouter.get("/me", requireUser, async (c) => {
   const user = c.get("user");
 
-  return c.json(serializeUser(user));
+  return c.json(serializeUser(user, { includePhone: true }));
 });
 
 usersRouter.patch(
@@ -274,7 +292,7 @@ usersRouter.patch(
       include: { car: true },
     });
 
-    return c.json(serializeUser(updated));
+    return c.json(serializeUser(updated, { includePhone: true }));
   },
 );
 
@@ -306,7 +324,7 @@ usersRouter.post("/me/onboarding", requireUser, mutationLimiter, async (c) => {
     include: { car: true },
   });
 
-  return c.json(serializeUser(updated));
+  return c.json(serializeUser(updated, { includePhone: true }));
 });
 
 /**
@@ -325,6 +343,14 @@ usersRouter.patch("/me", requireUser, profileUpdateLimiter, async (c) => {
     );
   }
 
+  const phone = normalizePhone(parseResult.data.phone);
+  if (phone === false) {
+    return c.json(
+      { message: "Invalid phone format", errors: { phone: ["Invalid"] } },
+      400,
+    );
+  }
+
   const updated = await db.user.update({
     where: { id: user.id },
     data: {
@@ -333,13 +359,14 @@ usersRouter.patch("/me", requireUser, profileUpdateLimiter, async (c) => {
         parseResult.data.about === undefined
           ? user.about
           : parseResult.data.about,
+      ...(phone === undefined ? {} : { phone }),
     },
     include: {
       car: true,
     },
   });
 
-  return c.json(serializeUser(updated));
+  return c.json(serializeUser(updated, { includePhone: true }));
 });
 
 async function upsertCar(c: Context<AuthEnv>) {
@@ -374,7 +401,7 @@ async function upsertCar(c: Context<AuthEnv>) {
     },
   });
 
-  return c.json(serializeUser(updated));
+  return c.json(serializeUser(updated, { includePhone: true }));
 }
 
 /**
@@ -448,7 +475,7 @@ usersRouter.delete("/me/car", requireUser, profileUpdateLimiter, async (c) => {
     );
   }
 
-  return c.json(serializeUser(updated));
+  return c.json(serializeUser(updated, { includePhone: true }));
 });
 
 /**

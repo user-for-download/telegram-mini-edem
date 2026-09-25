@@ -5,6 +5,7 @@ import { Button } from "@/ui/Button";
 import { popup } from "@telegram-apps/sdk-react";
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { isTelegramMockEnv } from "@/utils/telegram-adapter";
+import styles from "./ConfirmAction.module.css";
 
 /**
  * Confirm-guard через нативный popup клиента (как AlertController
@@ -54,6 +55,13 @@ export function ConfirmPopup({
 
   const stop = (event: MouseEvent) => event.stopPropagation();
 
+  // Деструктивный цвет — классом модуля, не инлайном (канон: цвета только
+  // из токена/модуля; инверсия light/dark — в index.css).
+  const triggerClassName =
+    [className, destructive ? styles.destructive : undefined]
+      .filter(Boolean)
+      .join(" ") || undefined;
+
   // Мок-окружение (dev-браузер): браузер — среда разработки,
   // подтверждения не нужны — кнопка выполняет действие сразу.
   if (isTelegramMockEnv()) {
@@ -63,12 +71,7 @@ export function ConfirmPopup({
         size="s"
         stretched
         disabled={disabled || pending}
-        className={className}
-        style={
-          destructive
-            ? { color: "var(--tgui--destructive_text_color)" }
-            : undefined
-        }
+        className={triggerClassName}
         onClick={(event) => {
           stop(event);
           onConfirm();
@@ -101,12 +104,7 @@ export function ConfirmPopup({
       size="s"
       stretched
       disabled={disabled || pending}
-      className={className}
-      style={
-        destructive
-          ? { color: "var(--tgui--destructive_text_color)" }
-          : undefined
-      }
+      className={triggerClassName}
       onClick={(event) => {
         stop(event);
         void (async () => {

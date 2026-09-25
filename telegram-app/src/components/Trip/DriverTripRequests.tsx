@@ -2,11 +2,11 @@ import {
   Avatar,
   Caption,
   Cell,
-  IconButton,
   Skeleton,
   Subheadline,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 import { Notice } from "@/ui/Notice";
 
 import { Armchair, Check, X } from "lucide-react";
@@ -146,6 +146,9 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
     );
   }
 
+  // F7: пустой список (нет pending на этот tripId — чужой tripId
+  // отфильтрован выше) — null без заголовка/счётчика. Общий запрос
+  // useDriverRequestsQuery shared с Главной, take не увеличиваем.
   if (pending.length === 0) return null;
 
   // Кнопки −/+ гасят всплытие сами. Обёртка с onClick запрещена jsx-a11y.
@@ -187,11 +190,10 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
           after={
             <span className={styles.requestActions}>
               <IconButton
-                mode="plain"
                 size="s"
                 aria-label={`Отклонить заявку ${booking.passenger.name}`}
                 disabled={actingId === booking.id}
-                style={{ color: "var(--tgui--destructive_text_color)" }}
+                className={styles.declineIcon}
                 onClick={(event) => {
                   event.stopPropagation();
                   void askAndAct(booking, "declined");
@@ -200,7 +202,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
                 <X size={18} />
               </IconButton>
               <IconButton
-                mode="bezeled"
+                variant="secondary"
                 size="s"
                 aria-label={`Принять заявку ${booking.passenger.name}`}
                 disabled={actingId === booking.id}

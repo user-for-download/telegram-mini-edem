@@ -16,7 +16,6 @@ import {
   validateProfileForm,
 } from "@/pages/Profile/profileValidation";
 import { Stack } from "@/ui/Stack";
-import styles from "./ProfileModals.module.css";
 
 /**
  * Редактирование профиля — модальная шторка поверх «Профиля»
@@ -72,22 +71,24 @@ export const EditProfileBody = memo(function EditProfileBody({
   const update = useProfileUpdateMutation();
   const [name, setName] = useState(profile.data?.name ?? "");
   const [about, setAbout] = useState(profile.data?.about ?? "");
+  const [phone, setPhone] = useState(profile.data?.phone ?? "");
   const [formError, setFormError] = useState<string | null>(null);
 
   useClosingConfirmation(
     name !== (profile.data?.name ?? "") ||
-      about !== (profile.data?.about ?? ""),
+      about !== (profile.data?.about ?? "") ||
+      phone !== (profile.data?.phone ?? ""),
   );
 
   const save = () => {
-    const error = validateProfileForm(name, about);
+    const error = validateProfileForm(name, about, phone);
     if (error) {
       haptic.error();
       setFormError(error);
       return;
     }
     setFormError(null);
-    update.mutate(normalizeProfileForm(name, about), {
+    update.mutate(normalizeProfileForm(name, about, phone), {
       onSuccess: () => {
         haptic.success();
         toast.show({ text: "Профиль обновлён" });
@@ -144,6 +145,23 @@ export const EditProfileBody = memo(function EditProfileBody({
           />
         )}
       </Field>
+      <Field label="Телефон" id="profile-phone">
+        {(field) => (
+          <Input
+            {...field}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            maxLength={25}
+            placeholder="+7 900 123-45-67"
+            value={phone}
+            onChange={(event) => {
+              setPhone(event.target.value);
+              if (formError) setFormError(null);
+            }}
+          />
+        )}
+      </Field>
       {(formError || update.error) && (
         <Notice tone="danger" variant="text">
           {formError ??
@@ -152,7 +170,7 @@ export const EditProfileBody = memo(function EditProfileBody({
               : "Не удалось сохранить")}
         </Notice>
       )}
-      <Stack style={{ gap: 8 }}>
+      <Stack gap="xs">
         <Button
           stretched
           size="l"

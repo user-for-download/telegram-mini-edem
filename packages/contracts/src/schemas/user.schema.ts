@@ -24,6 +24,9 @@ export const userSchema = z.object({
   onboardingVersion: z.string().nullable().optional(),
   car: carSchema.optional(),
   about: z.string().max(500).optional(),
+  // Телефон (F1): сервер отдаёт только владельцу и подтверждённой
+  // стороне в деталях поездки; отсутствие = скрыт/не указан.
+  phone: z.string().max(25).optional(),
   createdAt: z.string().datetime().optional(),
 });
 

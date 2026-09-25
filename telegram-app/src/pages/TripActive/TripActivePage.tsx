@@ -1,15 +1,16 @@
 import { Notice } from "@/ui/Notice";
 import { FetchMore } from "@/ui/FetchMore";
 import { Button } from "@/ui/Button";
+import { Page } from "@/ui/Page";
 
 import { useNavigate } from "react-router-dom";
 import { TripCard } from "@/components/Trip/TripCard";
 import { QueryState } from "@/components/QueryState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Stack } from "@/ui/Stack";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
-import { shareTrip } from "@/helpers/tripShare";
 import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import {
@@ -22,6 +23,11 @@ import {
 } from "@/queries/useTripsQuery";
 import { useProfileQuery } from "@/queries/profile";
 
+/**
+ * Активные поездки/брони — топ-level страница (корень Page из кита,
+ * состояния через QueryState/EmptyState-обёртку). Вложенных Page нет:
+ * TripPage — лишь совместимость query (?segment=history) без обёртки.
+ */
 export function TripActivePage() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -61,7 +67,7 @@ export function TripActivePage() {
   });
 
   return (
-    <>
+    <Page>
       {mutationError && (
         <Notice tone="danger" variant="text">
           {bookingErrorMessage(mutationError)}
@@ -71,7 +77,7 @@ export function TripActivePage() {
         loading={bookings.isLoading || driverActive.isLoading}
         error={bookings.error ?? driverActive.error}
         empty={activeBookings.length === 0 && activeDriverTrips.length === 0}
-        emptyText="Пока тихо: забронируйте поездку или опубликуйте свой маршрут!"
+        emptyText={EMPTY_STATES.tripActive.description}
         emptyAction={
           <Button
             size="m"
@@ -89,7 +95,7 @@ export function TripActivePage() {
           void driverActive.refetch();
         }}
       >
-      <Stack>
+        <Stack>
         {activeBookings.map((booking) => (
           <TripCard
             key={booking.id}
@@ -116,10 +122,6 @@ export function TripActivePage() {
               kind: "driving",
               trip,
               driverRating: profile.data?.rating ?? null,
-              onShare: (id) => {
-                haptic.light();
-                void shareTrip(id);
-              },
               onCancel: (id) =>
                 cancelTrip.mutate(id, {
                   onSuccess: () => {
@@ -127,7 +129,8 @@ export function TripActivePage() {
                     toast.show({ text: "Поездка отменена" });
                   },
                 }),
-              cancelPending: cancelTrip.isPending,
+              cancelPending:
+                cancelTrip.isPending && cancelTrip.variables === trip.id,
             }}
           />
         ))}
@@ -148,8 +151,8 @@ export function TripActivePage() {
         >
           + Создать поездку
         </Button>
-      </Stack>
-    </QueryState>
-  </>
-);
+        </Stack>
+      </QueryState>
+    </Page>
+  );
 }

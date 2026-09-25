@@ -9,6 +9,7 @@ import {
 
 import { Notice } from "@/ui/Notice";
 import { EmptyState } from "@/ui/EmptyState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Field } from "@/ui/Field";
 import { CharCounter } from "@/ui/CharCounter";
 import { FetchMore } from "@/ui/FetchMore";
@@ -308,8 +309,8 @@ export const ReviewsBody = memo(function ReviewsBody({
         >
           {!my.data || my.data.length === 0 ? (
             <EmptyState
-              header="Вы пока не оставили отзывов"
-              description="Оставьте отзыв о поездке — это поможет другим выбрать маршрут"
+              header={EMPTY_STATES.reviewsMineEmpty.header}
+              description={EMPTY_STATES.reviewsMineEmpty.description}
               action={
                 <Button size="m" onClick={() => pickTab("new")}>
                   Оставить отзыв
@@ -336,8 +337,8 @@ export const ReviewsBody = memo(function ReviewsBody({
         >
           {!selectedTrip ? (
             <EmptyState
-              header="Пока нет поездок для отзыва"
-              description="Когда вы совершите поездку, она появится здесь"
+              header={EMPTY_STATES.reviewsNewEmpty.header}
+              description={EMPTY_STATES.reviewsNewEmpty.description}
             />
           ) : (
             <Card className={styles.card}>
@@ -458,8 +459,8 @@ export const ReviewsBody = memo(function ReviewsBody({
           )}
           {aboutItems.length === 0 ? (
             <EmptyState
-              header="О вас пока нет отзывов"
-              description="После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь"
+              header={EMPTY_STATES.reviewsAboutEmpty.header}
+              description={EMPTY_STATES.reviewsAboutEmpty.description}
             />
           ) : (
             <Stack>

@@ -4,6 +4,7 @@ import { Button } from "@/ui/Button";
 import { Field } from "@/ui/Field";
 import { CharCounter } from "@/ui/CharCounter";
 import { Notice } from "@/ui/Notice";
+import { HINT } from "@/ui/classes";
 
 import { MessageSquareText, Send } from "lucide-react";
 import {
@@ -74,10 +75,7 @@ export function AppealForm() {
           <Input
             {...field}
             before={
-              <MessageSquareText
-                size={16}
-                className="text-(--tgui--hint_color)"
-              />
+              <MessageSquareText size={16} className={HINT} />
             }
             value={subject}
             maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}

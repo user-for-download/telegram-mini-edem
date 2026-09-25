@@ -175,13 +175,17 @@ export async function cleanupRun({ tripId, tripIds = [], peerUserId, feedbackTex
     steps.push(`DELETE FROM "Notification" WHERE "userId" = '${peerUserId}'`);
     steps.push(`DELETE FROM "User" WHERE id = '${peerUserId}'`);
   }
-  // Dev-юзер UI тоже удаляется (анонимизация через UI уже могла пройти —
-  // delete идемпотентен).
-  steps.push(`DELETE FROM "Notification" WHERE "userId" IN (SELECT id FROM "User" WHERE "telegramUserId" = ${DEV_TG_ID})`);
-  steps.push(`DELETE FROM "User" WHERE "telegramUserId" = ${DEV_TG_ID}`);
+  // Dev-юзер UI: шаг delete анонимизирует его (tombstone + каскад по
+  // поездкам/броням). Пользователя НЕ удаляем — на нём висят сид-поездки
+  // (FK), а его отсутствие погасило бы следующий прогон. Вместо удаления
+  // возвращаем identity сида, чтобы rerun стартовал с живого аккаунта.
+  steps.push(
+    `UPDATE "User" SET "deletedAt" = NULL, "name" = 'Dev Telegram', "avatar" = '', "about" = 'Тестовый аккаунт разработчика (dev-стенд).' WHERE "telegramUserId" = ${DEV_TG_ID}`,
+  );
   for (const query of steps) {
     const out = psql(query);
-    if (!out.startsWith("DELETE")) {
+    // UPDATE — реанимация dev-юзера, DELETE — сущности прогона.
+    if (!/^(DELETE|UPDATE)/.test(out)) {
       throw new Error(`cleanup failed: ${query} → ${out}`);
     }
   }

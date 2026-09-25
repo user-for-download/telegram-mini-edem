@@ -2,63 +2,26 @@
  * (миграция папка/компонент). Живёт в деталях поездки и в активном
  * сегменте «Поездок» — отделена от карточки разделителем. Цвета только
  * --tgui--* / --app-*.
- * `.errorText`/`.iconHint`/`.grid2` продублированы с
- * pages/CreateTrip/CreateTripPage.module.css: формы родственные, но листы
- * держим по папкам (не тянем CSS из другого слоя). */
+ * `.grid2` продублирован с pages/CreateTrip/CreateTripPage.module.css:
+ * формы родственные, но листы держим по папкам (не тянем CSS из другого
+ * слоя). Иконочные акценты полей — общие классы INFO/SUCCESS/HINT из
+ * src/ui/classes (локальные .iconInfo/.iconSuccess удалены). */
 
-/* Форма под разделителем: колонка полей с зазором 12px. */
+/* Форма под разделителем: колонка полей с ритмом 12 из токена. Контейнер —
+ * форма/div с разделителем сверху, поэтому Stack (div без border) не
+ * подходит: роль локальная, значения — из --app-space-*. */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 12px;
+  gap: var(--app-space-sm);
+  padding-top: var(--app-space-sm);
   border-top: 1px solid var(--tgui--outline);
 }
-
-/* Иконочные токены полей: «откуда» — синий, «куда» — зелёный, прочие —
- * приглушённые (было text-(--app-info)/--app-success/hint). */
-.iconInfo {
-  color: var(--app-info);
-}
-
-.iconSuccess {
-  color: var(--app-success);
-}
-
 
 /* Два поля в ряд. */
 .grid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--app-space-sm);
 }
 
-
-/* Теги-пилюли особенностей (tgui Chip-кнопки с aria-pressed): флекс-ряд
- * с зазором 8px; фокус клавиатуры виден на пилюле (a11y: native button).
- * Продублировано в pages/Search/SearchPage.module.css и
- * pages/CreateTrip/CreateTripPage.module.css: листы держим по папкам,
- * CSS из другого слоя не тянем (прецедент .errorText/.iconHint/.grid2). */
-.tagChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tagChips .tagChip:focus-within {
-  outline: 2px solid var(--app-info);
-  outline-offset: 2px;
-}
-
-/* Выбранный тег — голубой (переопределение tgui Chip: aria-pressed уже
- * выставляется в DOM; удвоение .tagChip.tagChip вместо !important —
- * канон, неслойный модуль бьёт слой tgui). */
-.tagChip.tagChip[aria-pressed="true"] {
-  background: var(--tgui--button_color, #007aff);
-  border-color: transparent;
-}
-
-.tagChip.tagChip[aria-pressed="true"],
-.tagChip.tagChip[aria-pressed="true"] * {
-  color: var(--tgui--button_text_color, #ffffff);
-}

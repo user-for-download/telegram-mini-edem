@@ -1,18 +1,18 @@
 import { useState } from "react";
 import {
   Caption,
-  Chip,
-  IconButton,
-  Placeholder,
-  Spinner,
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
+import { Chip } from "@/ui/Chip";
 import { Notice } from "@/ui/Notice";
 import { EmptyState } from "@/ui/EmptyState";
-import { GROW, ROW_BETWEEN, TRUNCATE } from "@/ui/classes";
+import { EMPTY_STATES } from "@/ui/emptyStates";
+import { QueryState } from "@/components/QueryState";
+import { BTN_ROW_WRAP, GROW, ROW_BETWEEN, TRUNCATE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 
 import { Phone, Send, ShieldCheck, Star } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -54,6 +54,11 @@ function formatDurationLocal(minutes: number): string {
  * с таймлайном, карточка водителя, шаринг, авто, чипы-теги,
  * комментарий, футер бронирования. Логика (места/комментарий/
  * guards/маски адресов/edit trip) — наша, без изменений.
+ *
+ * Вложенный экран (контент Sheet TripDetailsModal): корня Page нет —
+ * ритм и паддинги даёт SheetBody, двойной List дал бы двойные отступы
+ * и 96px клиренса таббара внутри шторки. Состояния — кит: loading и
+ * error/empty через QueryState/EmptyState, своих плейсхолдеров нет.
  */
 export function TripDetailsPage() {
   const { tripId = "" } = useParams();
@@ -77,9 +82,15 @@ export function TripDetailsPage() {
 
   if (trip.isLoading) {
     return (
-      <Placeholder>
-        <Spinner size="m" />
-      </Placeholder>
+      <QueryState
+        loading
+        error={null}
+        empty={false}
+        emptyText=""
+        onRetry={() => void trip.refetch()}
+      >
+        {null}
+      </QueryState>
     );
   }
   if (trip.isError || !trip.data) {
@@ -91,13 +102,13 @@ export function TripDetailsPage() {
       <>
         <OfflineBanner />
         <EmptyState
-          header="Поездка не найдена"
+          header={EMPTY_STATES.tripNotFound.header}
           description={
             isNotFound
-              ? "Возможно, поездка была удалена или ссылка устарела."
+              ? EMPTY_STATES.tripNotFoundDeleted.description
               : trip.error
                 ? bookingErrorMessage(trip.error)
-                : "Вернитесь к поиску и выберите другую поездку."
+                : EMPTY_STATES.tripNotFoundHint.description
           }
           action={
             <>
@@ -132,6 +143,10 @@ export function TripDetailsPage() {
     !!item.myBooking &&
     item.myBooking.status !== "cancelled" &&
     item.myBooking.status !== "declined";
+  const isConfirmedBooking = item.myBooking?.status === "confirmed";
+  // Телефон водителя (F1): сервер отдаёт его только подтверждённому
+  // пассажиру (и водителю). Pending-заявитель видит disabled-хинт,
+  // посторонние — ничего.
   const canBook =
     !isDriver &&
     isActive &&
@@ -240,40 +255,61 @@ export function TripDetailsPage() {
         <div className={styles.driverActions}>
           <IconButton
             size="m"
-            mode="gray"
+            variant="muted"
             onClick={handleShare}
             aria-label="Поделиться поездкой"
             title="Поделиться поездкой"
           >
             <Send size={16} />
           </IconButton>
-          {hasActiveBooking && (
+          {item.driver.phone && isConfirmedBooking ? (
             <IconButton
               size="m"
-              mode="gray"
-              disabled
-              title="Телефон водителя доступен после подтверждения"
-              aria-label="Телефон водителя доступен после подтверждения"
+              variant="muted"
+              aria-label={`Позвонить водителю: ${item.driver.phone}`}
+              title={item.driver.phone}
+              onClick={() => {
+                hapticFeedback.impactOccurred.ifAvailable("light");
+                window.location.assign(`tel:${item.driver.phone}`);
+              }}
             >
               <Phone size={16} />
             </IconButton>
+          ) : (
+            hasActiveBooking &&
+            !isConfirmedBooking && (
+              <IconButton
+                size="m"
+                variant="muted"
+                disabled
+                title="Телефон водителя доступен после подтверждения"
+                aria-label="Телефон водителя доступен после подтверждения"
+              >
+                <Phone size={16} />
+              </IconButton>
+            )
           )}
         </div>
       </div>
 
-      <Button
-        size="m"
-        stretched
-        before={<Send size={16} />}
-        onClick={handleShare}
-      >
-        Поделиться поездкой с попутчиком в Telegram
-      </Button>
-      {shareStatus && (
-        <Caption Component="p" role="status" className={styles.pullUp}>
-          {shareStatus}
-        </Caption>
-      )}
+      {/* Кнопка + статус — плотный стек (ритм 4px): статус сидит
+          вплотную к кнопке без отрицательного марджина (было .pullUp
+          margin-top:-8px поверх ритма 12 — те же 4px, U3). */}
+      <Stack gap="2xs">
+        <Button
+          size="m"
+          stretched
+          before={<Send size={16} />}
+          onClick={handleShare}
+        >
+          Поделиться поездкой с попутчиком в Telegram
+        </Button>
+        {shareStatus && (
+          <Caption Component="p" role="status">
+            {shareStatus}
+          </Caption>
+        )}
+      </Stack>
 
       {item.driver.car && (
         <div className={styles.carRow}>
@@ -287,11 +323,9 @@ export function TripDetailsPage() {
       )}
 
       {item.tags.length > 0 && (
-        <div className={styles.tagRow}>
+        <div className={BTN_ROW_WRAP}>
           {item.tags.map((tag) => (
-            <Chip key={tag} mode="mono">
-              {tag}
-            </Chip>
+            <Chip key={tag}>{tag}</Chip>
           ))}
         </div>
       )}
@@ -456,19 +490,21 @@ export function TripDetailsPage() {
         item.seatsAvailable <= 0 &&
         !hasActiveBooking && (
           <EmptyState
-            header="Свободных мест нет"
-            description="Попробуйте другую поездку или оставьте запрос попутчика."
+            header={EMPTY_STATES.tripNoSeats.header}
+            description={EMPTY_STATES.tripNoSeats.description}
           />
         )}
       {!isDriver && isActive && departed && (
         <EmptyState
-          header="Поездка уже отправилась"
-          description="Бронирование недоступно. Найдите другую поездку."
+          header={EMPTY_STATES.tripDeparted.header}
+          description={EMPTY_STATES.tripDeparted.description}
         />
       )}
-      {item.status === "cancelled" && <EmptyState header="Поездка отменена" />}
+      {item.status === "cancelled" && (
+        <EmptyState header={EMPTY_STATES.tripCancelled.header} />
+      )}
       {item.status === "completed" && (
-        <EmptyState header="Поездка завершена" />
+        <EmptyState header={EMPTY_STATES.tripCompleted.header} />
       )}
 
       {isDriver && (

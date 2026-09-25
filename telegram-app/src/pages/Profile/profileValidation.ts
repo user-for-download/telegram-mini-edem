@@ -3,7 +3,11 @@
  * mini-app). Отдельный DOM-free модуль, чтобы покрыть unit-тестом без
  * jsdom: страница импортирует, тесты проверяют напрямую.
  */
-export function validateProfileForm(name: string, about: string): string | null {
+export function validateProfileForm(
+  name: string,
+  about: string,
+  phone = "",
+): string | null {
   const trimmedName = name.trim();
   if (trimmedName.length < 2) {
     return "Имя должно содержать минимум 2 символа";
@@ -14,6 +18,13 @@ export function validateProfileForm(name: string, about: string): string | null 
   if (about.trim().length > 500) {
     return "Поле «О себе» не может быть длиннее 500 символов";
   }
+  const trimmedPhone = phone.trim();
+  if (
+    trimmedPhone &&
+    !/^\+?\d{7,15}$/.test(trimmedPhone.replace(/[\s\-()]/g, ""))
+  ) {
+    return "Телефон: 7–15 цифр, можно с + в начале";
+  }
   return null;
 }
 
@@ -21,14 +32,18 @@ export function validateProfileForm(name: string, about: string): string | null 
  * Нормализация перед PATCH /users/me: пустое «О себе» отправляем явным
  * null (бэкенд: undefined = оставить прежнее, null = очистить; схема
  * nullable().optional()). Омиссия поля не давала стереть описание.
+ * Телефон: пустой → null (очистка), иначе как есть (бэкенд нормализует).
  */
 export function normalizeProfileForm(
   name: string,
   about: string,
-): { name: string; about: string | null } {
+  phone = "",
+): { name: string; about: string | null; phone: string | null } {
   const trimmedAbout = about.trim();
+  const trimmedPhone = phone.trim();
   return {
     name: name.trim(),
     about: trimmedAbout || null,
+    phone: trimmedPhone || null,
   };
 }

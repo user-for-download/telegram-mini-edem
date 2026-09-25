@@ -7,6 +7,7 @@ const successSchema = z.object({ success: z.boolean() }).strict();
 export interface ProfileUpdateDto {
   name?: string;
   about?: string | null;
+  phone?: string | null;
 }
 
 /**
