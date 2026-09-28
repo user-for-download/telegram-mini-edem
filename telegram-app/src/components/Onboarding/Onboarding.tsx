@@ -2,13 +2,13 @@ import { type FC, type PropsWithChildren, useRef, useState } from "react";
 import {
   Caption,
   Cell,
-  List,
   Placeholder,
   Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { Notice } from "@/ui/Notice";
+import { Page } from "@/ui/Page";
 
 import { Handshake, Lock, Scale } from "lucide-react";
 import { usersApi } from "@/api/users.api";
@@ -45,11 +45,10 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
   };
 
   return (
-    <List className={styles.list}>
+    <Page variant="hero">
       <Placeholder
         header="Добро пожаловать в «Едем»"
         description="Попутчики для совместных поездок: вы находите друг друга здесь, а дальше — договариваетесь напрямую."
-        className={styles.hero}
       >
         <VisuallyHidden Component="span">Первый вход</VisuallyHidden>
       </Placeholder>
@@ -61,7 +60,6 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
       <Section
         header="Прочитайте перед началом"
         footer="Сервис доступен пользователям старше 14 лет"
-        className={styles.section}
       >
         <Cell
           multiline
@@ -111,6 +109,6 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
       >
         Я согласен
       </Button>
-    </List>
+    </Page>
   );
 };

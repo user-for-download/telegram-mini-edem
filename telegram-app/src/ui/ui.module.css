@@ -27,6 +27,34 @@
   margin-bottom: var(--app-space-sm);
 }
 
+/* Первый экран (Page variant="hero"): лист на всю высоту вьюпорта, группа
+ * детей центрирована по вертикали. Центрирование — auto-полями крайних
+ * детей, а не justify-content: center: при переполнении они схлопываются
+ * в 0, и верх контента не режется.
+ *
+ * Низ — только безопасная врезка (--app-page-pad-bottom-hero): дока таббара
+ * на первом экране нет, а клиренс Page (док + зазор) сдвинул бы центр
+ * группы вверх. Гуттер, верх и ритм наследуются от .page — hero не заводит
+ * второй рельс.
+ *
+ * Селектор идёт ПОСЛЕ .page в том же модуле: специфичность равная, но
+ * padding-bottom после героя побеждает порядком — детерминированно. */
+.pageHero {
+  min-height: var(--tg-viewport-height, 100dvh);
+  display: flex;
+  flex-direction: column;
+  background: var(--tgui--secondary_bg_color);
+  padding-bottom: var(--app-page-pad-bottom-hero);
+}
+
+.pageHero > :first-child {
+  margin-top: auto;
+}
+
+.pageHero > :last-child {
+  margin-bottom: auto;
+}
+
 /* Тело секции: обычный div, НЕ List.
  * Внутри секции List не даёт ничего, кроме ритма (паддинг List мы всё
  * равно перекрываем, а на iOS кит добавляет 10px/18px — ловушка, которую
@@ -112,15 +140,29 @@
 }
 
 /* ── Карточка (ui/Card) ─────────────────────────────────────────────
- * Поверхность байт-в-байт прежняя (рецепт FeedCard, который копировался
- * по ~11 модулям): radius 16, hairline --tgui--outline, shadow-xs,
- * фон --tgui--section_bg_color. Здесь — единственный источник правила.
- * Раскладку (gap/flex/строку) не задаём: её держит вызывающий. */
+ * Поверхность (рецепт FeedCard, который копировался по ~11 модулям):
+ * radius 16, hairline --tgui--outline, shadow-xs, фон
+ * --tgui--section_bg_color и ГАРАНТИЯ полной ширины.
+ *
+ * Гарантия ширины — здесь, а не у потребителя: кит отдаёт Card как
+ * `display: inline-block` (--tgui--tertiary_bg_color / radius 20 / своя
+ * тень), поэтому в обычном блочном родителе (Page/List, Section > div)
+ * карточка схлопывалась бы по контенту. Нейтрализуем ГЕОМЕТРИЕЙ
+ * (width + box-sizing), а не display: `display` в этом правиле перебил бы
+ * модуль потребителя (равная сила селектора → решает порядок инъекции, а
+ * это не контракт). Внутренняя раскладка (display: flex + gap) остаётся
+ * за потребителем. box-sizing вместе с width:100% эквивалентен auto-ширине
+ * блочного бокса — паддинги не вычитаются дважды.
+ *
+ * Все перечисленные отличия от дефолтов кита — в telegram-app/src/ui/README.md
+ * («Реестр отклонений»). */
 .card.card {
   border-radius: var(--app-card-radius);
   border: var(--tgui--border--width, 1px) solid var(--tgui--outline);
   background: var(--tgui--section_bg_color);
   box-shadow: var(--app-card-shadow);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cardDefault {
@@ -237,4 +279,3 @@
 .fieldCounter {
   text-align: right;
 }
-

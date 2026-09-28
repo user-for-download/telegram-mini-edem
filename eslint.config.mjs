@@ -66,4 +66,53 @@ export default tseslint.config(
       jsxA11y.flatConfigs.recommended,
     ],
   },
+  {
+    // Фасад ui/: кит не импортируется напрямую там, где есть наша обёртка.
+    // Только Button/IconButton/Card/List — у них фасад владеет и видом, и
+    // a11y-инвариантами (тап-таргет, accessibility name). Компоновочные
+    // примитивы (Cell, Section, Text, Avatar, Skeleton, Placeholder…)
+    // импортируются из кита напрямую — это осознанно (см.
+    // telegram-app/src/ui/README.md, раздел «Что фасад НЕ закрывает»).
+    files: ["telegram-app/src/**/*.{ts,tsx}"],
+    ignores: ["telegram-app/src/ui/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@telegram-apps/telegram-ui",
+              importNames: ["Button", "IconButton", "Card", "List"],
+              message:
+                "Импортируйте обёртку из @/ui: Button, IconButton, Card, Page (вместо List). Фасад держит единый вид, тап-таргет и доступные имена.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Однонаправленность слоёв: ui/ — низ, он не знает про экраны.
+    files: ["telegram-app/src/ui/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@/pages/*",
+                "@/components/*",
+                "@/queries/*",
+                "@/store/*",
+                "@/providers/*",
+              ],
+              message:
+                "Слой ui/ — самый низ: он не импортирует экраны, компоненты, запросы, сторы и провайдеры (только кит, @/ui/*, @/hooks/*, @/utils/*).",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

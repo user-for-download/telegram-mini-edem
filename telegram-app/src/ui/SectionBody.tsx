@@ -9,9 +9,9 @@ export interface SectionBodyProps {
 /**
  * Тело секции внутри tgui `<Section>`: паддинг 16 и ритм 12 из токенов.
  *
- * Заменяет семь дословных копий `.panel`/`.filtersBody`/`.faqPanel`
+ * Заменяет семь дословных копий локальных `.panel`/`.filtersBody`/`.faqPanel`
  * (Notifications/Support/CreateTrip/Profile/Settings/Reports/Search).
- * Ставится 1:1 вместо `<div className={styles.panel}>` — сам `<Section>`
+ * Ставится 1:1 вместо прежнего `<div className={…panel}>` — сам `<Section>`
  * остаётся китовым (заголовок, подвал, `Divider` между детьми), тело
  * бандлится в ОДИН ребёнок, поэтому лишних разделителей не появляется.
  *

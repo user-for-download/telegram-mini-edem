@@ -32,6 +32,7 @@ vi.mock("@/api/users.api", () => ({
 }));
 
 import { Onboarding } from "@/components/Onboarding/Onboarding";
+import pageStyles from "@/ui/ui.module.css";
 
 function render(element: ReactNode): string {
   return renderToString(<AppRoot platform="base">{element}</AppRoot>);
@@ -88,5 +89,24 @@ describe("Onboarding", () => {
     );
     expect(html).toContain("Добро пожаловать");
     expect(html).toContain("Я согласен");
+  });
+
+  // Регрессия: корень собирался сырым <List> в обход ui/Page, поэтому
+  // платформенный паддинг кита не гасился — на iOS бока 18px, на Android 0.
+  // Теперь гуттер/высота/центрирование — контракт ui/Page variant="hero".
+  it("корень — ui/Page variant=hero на обеих платформах (гуттер не плывёт)", () => {
+    authState.user = { onboardingVersion: null };
+    for (const platform of ["ios", "base"] as const) {
+      const html = renderToString(
+        <AppRoot platform={platform}>
+          <Onboarding>
+            <span>Лента</span>
+          </Onboarding>
+        </AppRoot>,
+      );
+      expect(html).toContain(pageStyles.page);
+      expect(html).toContain(pageStyles.pageHero);
+      expect(html).toContain("Добро пожаловать");
+    }
   });
 });

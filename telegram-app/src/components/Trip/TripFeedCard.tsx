@@ -103,7 +103,7 @@ export function TripFeedCard({ trip }: { trip: Trip }) {
             >
               <span className={TRUNCATE}>{trip.driver.name}</span>
               {trip.driver.isVerified && (
-                <ShieldCheck className={styles.verified} aria-hidden />
+                <ShieldCheck aria-hidden />
               )}
             </Text>
             <Caption Component="div" className={styles.rating}>

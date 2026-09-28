@@ -162,6 +162,11 @@
     var(--app-dock-height) + var(--app-dock-float) + var(--app-page-gap) +
       max(var(--app-safe-bottom), var(--app-dock-gap))
   );
+  /* Первый экран (Page variant="hero", онбординг): дока таббара нет,
+     поэтому низ — только безопасная врезка с минимальным зазором, иначе
+     auto-поля центрирования делят остаток с толстым клиренсом Page и
+     группа уезжает вверх. */
+  --app-page-pad-bottom-hero: max(var(--app-safe-bottom), var(--app-dock-gap));
   /* Тело секции/карточки и sheet-модалка. */
   --app-section-pad: var(--app-space-md);
   --app-sheet-pad-top: var(--app-space-sm);
