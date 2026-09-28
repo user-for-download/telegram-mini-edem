@@ -29,6 +29,10 @@
  * равная — иначе базовое перебьёт синий активный таб. */
 .tabbar :global(.tgui-64cd0db020a9bacf) {
   color: var(--tgui--text_color, var(--tg-theme-text-color, #000));
+  /* Кит даёт боковые паддинги 16px — контентной ширины (71−32=39px)
+   * не хватает даже «Профилю» 10px. Убираем бока, вертикаль не трогаем. */
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .tabbar :global(.tgui-e6658d0b8927f95e) {
@@ -54,12 +58,24 @@
 .tabbar .searchItem:global(.tgui-e6658d0b8927f95e) :global(.tgui-44d48e11585af170) {
   width: 52px;
   height: 52px;
+  min-width: 0;
+  padding: 0;
+  box-sizing: border-box;
   border-radius: 50%;
   background: var(--tgui--button_color, #007aff);
   color: var(--tgui--button_text_color, #fff);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Подписи табов: кит ставит caption1 (13px) — на 360–412px «Уведомления»
+ * и соседи уходят в многоточие. Ужимаем до 10px (скоуп .tabbar, чтобы
+ * прочие caption1 вне таббара не тронуть). Хэш класса из
+ * @telegram-apps/telegram-ui@2.1.13 (pinned) — при bump сверить. */
+.tabbar :global(.tgui-2916d621b0ea5857) {
+  font-size: 10px;
+  line-height: 12px;
 }
 
 .iconWrap {
