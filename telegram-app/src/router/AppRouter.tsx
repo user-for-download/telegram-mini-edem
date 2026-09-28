@@ -51,6 +51,21 @@ const ROOT_ROUTES = new Set([
   "/profile",
 ]);
 
+// Уровень модуля — не пересоздаётся на каждый рендер Shell.
+const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
+  [(p) => p === "/", "Главная"],
+  [(p) => p.startsWith("/trips/my"), "Мои поездки"],
+  [(p) => p.startsWith("/bookings"), "Поездки"],
+  [(p) => p.startsWith("/trips/"), "Поездка"],
+  [(p) => p.startsWith("/trips"), "Поиск"],
+  [(p) => p.startsWith("/notifications"), "Уведомления"],
+  [(p) => p.startsWith("/profile/history"), "История поездок"],
+  [(p) => p.startsWith("/profile/edit"), "Редактирование профиля"],
+  [(p) => p.startsWith("/profile/support"), "Поддержка"],
+  [(p) => p.startsWith("/profile/reports"), "Мои обращения"],
+  [(p) => p.startsWith("/profile"), "Профиль"],
+];
+
 export function Shell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -124,21 +139,6 @@ export function Shell() {
   const go = (to: string) => {
     navigate(to);
   };
-
-  // Вне компонента Shell — не пересоздаётся на каждый рендер
-  const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
-    [(p) => p === "/", "Главная"],
-    [(p) => p.startsWith("/trips/my"), "Мои поездки"],
-    [(p) => p.startsWith("/bookings"), "Поездки"],
-    [(p) => p.startsWith("/trips/"), "Поездка"],
-    [(p) => p.startsWith("/trips"), "Поиск"],
-    [(p) => p.startsWith("/notifications"), "Уведомления"],
-    [(p) => p.startsWith("/profile/history"), "История поездок"],
-    [(p) => p.startsWith("/profile/edit"), "Редактирование профиля"],
-    [(p) => p.startsWith("/profile/support"), "Поддержка"],
-    [(p) => p.startsWith("/profile/reports"), "Мои обращения"],
-    [(p) => p.startsWith("/profile"), "Профиль"],
-  ];
 
   const headerTitle = HEADER_TITLE_RULES.find(([match]) =>
     match(location.pathname),

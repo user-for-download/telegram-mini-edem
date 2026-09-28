@@ -51,9 +51,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
         description="Попутчики для совместных поездок: вы находите друг друга здесь, а дальше — договариваетесь напрямую."
         className={styles.hero}
       >
-        <VisuallyHidden Component="span" id="onboarding-title">
-          Первый вход
-        </VisuallyHidden>
+        <VisuallyHidden Component="span">Первый вход</VisuallyHidden>
       </Placeholder>
       {error && (
         <Notice tone="danger" variant="text">

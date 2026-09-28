@@ -15,7 +15,6 @@
     "@telegram-apps/sdk-react": "^3.3.9",
     "@telegram-apps/telegram-ui": "^2.1.13",
     "lucide-react": "^1.44.0",
-    "motion": "^13.2.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-router-dom": "^7.9.3",

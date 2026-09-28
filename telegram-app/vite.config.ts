@@ -29,6 +29,7 @@ export default defineConfig(({ mode }) => {
       // Для Telegram WebView офлайн не критичен, белый экран — критичен.
     ],
     resolve: {
+      // Один React на весь workspace: dedupe сводит копии к корневой.
       dedupe: ["react", "react-dom"],
       alias: {
         "@": path.resolve(import.meta.dirname, "./src"),
@@ -36,8 +37,6 @@ export default defineConfig(({ mode }) => {
           import.meta.dirname,
           "../packages/contracts/src/index.ts"
         ),
-        "react": path.resolve(import.meta.dirname, "../node_modules/react"),
-        "react-dom": path.resolve(import.meta.dirname, "../node_modules/react-dom"),
       },
     },
     define: {
@@ -72,17 +71,13 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       // Доступ через туннель/домен — иначе Vite блокирует запросы
-      // с незнакомых Host-заголовков. Дефолтный dev-домен зашит,
-      // дополнительные хосты — через VITE_ALLOWED_HOSTS (запятая).
+      // с незнакомых Host-заголовков. Разрешённые хосты — только через
+      // VITE_ALLOWED_HOSTS (список через запятую), в коде ничего не зашито.
       allowedHosts: [
-        ...new Set([
-          "tg-dev.biet.site",
-          "edem-dev.biet.site",
-          ...(env.VITE_ALLOWED_HOSTS
-            ? env.VITE_ALLOWED_HOSTS.split(",").map((h) => h.trim())
-            : []),
-        ].filter(Boolean)),
-      ],
+        ...(env.VITE_ALLOWED_HOSTS
+          ? env.VITE_ALLOWED_HOSTS.split(",").map((h) => h.trim())
+          : []),
+      ].filter(Boolean),
       proxy: {
         "/api": {
           target: apiTarget,
