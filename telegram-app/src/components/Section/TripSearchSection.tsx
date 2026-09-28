@@ -59,9 +59,7 @@ export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
         >
           Найти поездку
         </Button>
-        <div className={HINT}>
-          Достаточно заполнить хотя бы один город
-        </div>
+        <div className={HINT}>Достаточно заполнить хотя бы один город</div>
       </Card>
     </form>
   );

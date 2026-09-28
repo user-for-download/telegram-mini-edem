@@ -23,6 +23,7 @@ import { useAppSettings } from "@/utils/appSettings";
 import { resolveAppRootPlatform, useDevPlatform } from "@/utils/devPlatform";
 import { useTelegramChromiumFallback } from "@/hooks/useTelegramChromiumFallback";
 import { Onboarding } from "@/components/Onboarding/Onboarding";
+import { DevToggles } from "@/components/DevToggles/DevToggles";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import styles from "./AppConfig.module.css";
 import {
@@ -282,6 +283,9 @@ export const AppConfig: FC<PropsWithChildren> = ({ children }) => {
       <ErrorBoundary fallback={ErrorFallback}>
         <AppRoot platform={platform} appearance={appearance}>
           <OfflineBanner />
+          {/* Dev-пилюля платформы/темы — вне Onboarding/роутера, чтобы
+              переключатели были доступны и на экране приветствия. */}
+          <DevToggles />
           <AuthGate>
             <Onboarding>
               <WsProvider>

@@ -150,7 +150,7 @@
   * --app-page-gap. */
   --app-dock-height: 64px;
   --app-dock-gap: 8px;
-  --app-dock-float: 12px;
+  --app-dock-float: 24px;
   --app-page-gap: var(--app-space-lg);
   /* Рельс страницы: бока и верх одинаковы на всех экранах; низ —
   * высота дока + отрыв пилюли + визуальный зазор + нижняя безопасная

@@ -71,10 +71,10 @@ describe("Onboarding", () => {
       </Onboarding>,
     );
     expect(html).toContain("Добро пожаловать");
-    expect(html).toContain("Всё на доверии");
-    expect(html).toContain("Ответственность — на пользователях");
+    expect(html).toContain("Доверие");
+    expect(html).toContain("Ответственность");
     expect(html).toContain("Минимум данных");
-    expect(html).toContain("Я понял");
+    expect(html).toContain("Я согласен");
     expect(html).toContain(styles.accept);
     expect(html).not.toContain("Лента");
   });
@@ -87,6 +87,6 @@ describe("Onboarding", () => {
       </Onboarding>,
     );
     expect(html).toContain("Добро пожаловать");
-    expect(html).toContain("Я понял");
+    expect(html).toContain("Я согласен");
   });
 });

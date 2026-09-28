@@ -83,7 +83,11 @@ export function HomePage() {
         header="Едете на машине?"
         description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы"
         action={
-          <Button size="l" before={<PlusCircle size={16} />} onClick={goToCreate}>
+          <Button
+            size="l"
+            before={<PlusCircle size={16} />}
+            onClick={goToCreate}
+          >
             Создать поездку
           </Button>
         }

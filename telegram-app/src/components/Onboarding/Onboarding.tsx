@@ -7,8 +7,8 @@ import {
   Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
-import { Notice } from "@/ui/Notice";
 import { Button } from "@/ui/Button";
+import { Notice } from "@/ui/Notice";
 
 import { Handshake, Lock, Scale } from "lucide-react";
 import { usersApi } from "@/api/users.api";
@@ -45,79 +45,74 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
   };
 
   return (
-    <main className={styles.root} aria-labelledby="onboarding-title">
-      <List className={styles.list}>
-        <Placeholder
-          header="Добро пожаловать в «Едем»"
-          description="Попутчики для совместных поездок: вы находите друг друга здесь, а дальше — договариваетесь напрямую."
-          className={styles.hero}
+    <List className={styles.list}>
+      <Placeholder
+        header="Добро пожаловать в «Едем»"
+        description="Попутчики для совместных поездок: вы находите друг друга здесь, а дальше — договариваетесь напрямую."
+        className={styles.hero}
+      >
+        <VisuallyHidden Component="span" id="onboarding-title">
+          Первый вход
+        </VisuallyHidden>
+      </Placeholder>
+      {error && (
+        <Notice tone="danger" variant="text">
+          {error}
+        </Notice>
+      )}
+      <Section
+        header="Прочитайте перед началом"
+        footer="Сервис доступен пользователям старше 14 лет"
+        className={styles.section}
+      >
+        <Cell
+          multiline
+          before={<Handshake aria-hidden />}
+          subtitle={
+            <Caption level="1" weight="3">
+              Вы общаетесь, договариваетесь и рассчитываетесь напрямую с другими
+              пользователями — без посредников.
+            </Caption>
+          }
         >
-          <VisuallyHidden Component="span" id="onboarding-title">
-            Первый вход
-          </VisuallyHidden>
-        </Placeholder>
-        {error && (
-          <Notice tone="danger" variant="text">{error}</Notice>
-        )}
-        <Section
-          header="Прочитайте перед началом"
-          footer="Сервис доступен пользователям старше 14 лет"
-          className={styles.section}
+          Доверие
+        </Cell>
+        <Cell
+          multiline
+          before={<Scale aria-hidden />}
+          subtitle={
+            <Caption level="1" weight="3">
+              Сервис не предоставляет юридической защиты и не несёт обязательств
+              по вашим договорённостям.
+            </Caption>
+          }
         >
-          <Cell
-            multiline
-            before={<Handshake aria-hidden />}
-            subtitle={
-              <Caption level="1" weight="3">
-                Вы общаетесь, договариваетесь и рассчитываетесь напрямую
-                с другими пользователями — без посредников.
-              </Caption>
-            }
-          >
-            Всё на доверии
-          </Cell>
-          <Cell
-            multiline
-            before={<Scale aria-hidden />}
-            subtitle={
-              <Caption level="1" weight="3">
-                Сервис не предоставляет юридической защиты и не несёт
-                обязательств по вашим договорённостям.
-              </Caption>
-            }
-          >
-            Ответственность — на пользователях
-          </Cell>
-          <Cell
-            multiline
-            before={<Lock aria-hidden />}
-            subtitle={
-              <Caption level="1" weight="3">
-                Только то, что нужно для поездок: профиль, маршруты и заявки.
-                Переписка и расчёты проходят мимо нас.
-              </Caption>
-            }
-          >
-            Минимум данных
-          </Cell>
-        </Section>
-        <Section
-          footer="Нажимая кнопку, вы подтверждаете, что всё поняли"
-          className={`${styles.section} ${styles.action}`}
+          Ответственность
+        </Cell>
+        <Cell
+          multiline
+          before={<Lock aria-hidden />}
+          subtitle={
+            <Caption level="1" weight="3">
+              Только то, что нужно для поездок: профиль, маршруты и заявки.
+              Переписка и расчёты проходят мимо нас.
+            </Caption>
+          }
         >
-          <Button
-            size="l"
-            variant="white"
-            stretched
-            loading={busy}
-            disabled={busy}
-            onClick={accept}
-            className={styles.accept}
-          >
-            Я понял
-          </Button>
-        </Section>
-      </List>
-    </main>
+          Минимум данных
+        </Cell>
+      </Section>
+      <Button
+        variant="primary"
+        size="l"
+        stretched
+        onClick={accept}
+        loading={busy}
+        disabled={busy}
+        className={styles.accept}
+      >
+        Я согласен
+      </Button>
+    </List>
   );
 };

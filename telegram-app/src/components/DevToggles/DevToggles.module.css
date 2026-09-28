@@ -4,11 +4,16 @@
  * (гейт в DevToggles.tsx), раскладку не сдвигает. Цвета — токены кита. */
 
 .panel {
-  position: absolute;
+  /* fixed вместо absolute: пилюля уехала из .shell (AppShell не рендерится
+   * под онбордингом) на уровень AppRoot — якоря relative больше нет,
+   * зато не уезжает при скролле. */
+  position: fixed;
   top: calc(var(--tg-safe-area-top, 0px) + 8px);
   /* Боковая врезка (landscape): пилюля не наезжает на панели Telegram. */
   right: calc(var(--tg-safe-area-right, 0px) + 12px);
-  z-index: 10;
+  /* Поверх онбординга и любых слоёв кита: инструмент dev-only,
+   * переключать тему/платформу надо прямо на экране приветствия. */
+  z-index: 1000;
   display: flex;
   gap: 6px;
   pointer-events: none;

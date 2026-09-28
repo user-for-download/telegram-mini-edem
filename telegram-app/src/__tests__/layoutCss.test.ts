@@ -33,7 +33,7 @@ describe("каркас: слой TGUI и нижний клиренс", () => {
     expect(indexCss).toContain("--app-safe-bottom:");
     expect(indexCss).toContain("--app-dock-height: 64px;");
     expect(indexCss).toContain("--app-dock-gap: 8px;");
-    expect(indexCss).toContain("--app-dock-float: 12px;");
+    expect(indexCss).toContain("--app-dock-float: 24px;");
     expect(indexCss).toContain("--app-page-pad-bottom: calc(");
   });
 
