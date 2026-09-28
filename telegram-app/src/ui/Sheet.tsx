@@ -35,6 +35,11 @@ const BODY_VARIANTS = {
  * копия Headline на base — aria-hidden. Интерактивного содержимого
  * в заголовке быть не должно.
  *
+ * Modal смонтирован всегда (анимация закрытия не теряется). Хуки
+ * (платформа, фокус) живут в SheetContent: кит кладёт children в
+ * Drawer.Content, который монтируется только при открытии, — закрытая
+ * шторка платформу не читает, SSR не падает.
+ *
  * Тело — div со скроллом из --app-sheet-* токенов; при открытии переносим
  * на него фокус (tabIndex={-1}, вне таб-порядка): точка входа для
  * клавиатуры и скринридера. Дальше — нативный trap vaul (Tab внутри
@@ -47,34 +52,10 @@ export function Sheet({
   variant = "padded",
   children,
 }: SheetProps) {
-  // Закрытая шторка — null: платформа (контекст AppRoot) читается только
-  // в открытом состоянии, SSR закрытых модалок не падает.
-  if (!open) return null;
-  return (
-    <SheetOpen onClose={onClose} title={title} variant={variant}>
-      {children}
-    </SheetOpen>
-  );
-}
-
-function SheetOpen({
-  onClose,
-  title,
-  variant = "padded",
-  children,
-}: Pick<SheetProps, "onClose" | "title" | "variant"> & {
-  children: ReactNode;
-}) {
   const titleId = useId();
-  const platform = usePlatform();
-  const bodyRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    bodyRef.current?.focus({ preventScroll: true });
-  }, []);
-
   return (
     <Modal
-      open
+      open={open}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
@@ -85,27 +66,45 @@ function SheetOpen({
       }
       aria-labelledby={titleId}
     >
-      <div
-        ref={bodyRef}
-        tabIndex={-1}
-        className={BODY_VARIANTS[variant]}
-      >
-        {/* Имя диалога для скринридера — на всех платформах. */}
-        <VisuallyHidden Component="h2" id={titleId}>
-          {title}
-        </VisuallyHidden>
-        {platform !== "ios" && (
-          <Headline
-            Component="p"
-            weight="2"
-            aria-hidden="true"
-            className={titleStyles.title}
-          >
-            {title}
-          </Headline>
-        )}
+      <SheetContent titleId={titleId} title={title} variant={variant}>
         {children}
-      </div>
+      </SheetContent>
     </Modal>
+  );
+}
+
+function SheetContent({
+  titleId,
+  title,
+  variant,
+  children,
+}: Pick<SheetProps, "title" | "variant"> & {
+  titleId: string;
+  children: ReactNode;
+}) {
+  const platform = usePlatform();
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    bodyRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  return (
+    <div ref={bodyRef} tabIndex={-1} className={BODY_VARIANTS[variant ?? "padded"]}>
+      {/* Имя диалога для скринридера — на всех платформах. */}
+      <VisuallyHidden Component="h2" id={titleId}>
+        {title}
+      </VisuallyHidden>
+      {platform !== "ios" && (
+        <Headline
+          Component="p"
+          weight="2"
+          aria-hidden="true"
+          className={titleStyles.title}
+        >
+          {title}
+        </Headline>
+      )}
+      {children}
+    </div>
   );
 }

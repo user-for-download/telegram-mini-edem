@@ -8,8 +8,8 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 import { Sheet } from "../Sheet";
 
 // usePlatform читает внутренний контекст кита; в vitest deep-импорт
-// useAppRootContext резолвится во вторую копию контекста — мокаем
-// платформу (тест про обвязку Sheet, а не про платформу).
+// useAppRootContext даёт вторую копию модуля — мокаем платформу.
+// iOS-ветка — в sheet.ios.test.tsx.
 vi.mock("@/hooks/usePlatform", () => ({ usePlatform: () => "base" }));
 
 function show(title = "Настройки") {

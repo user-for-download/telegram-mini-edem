@@ -55,14 +55,12 @@ export function Button({
   ...restProps
 }: ButtonProps) {
   // Нативный кит: тап-таргет 44px (WCAG 2.5.5 AAA) — только хэш-класс MIN_TARGET
-  // для размеров m/l. Явный MIN_TARGET в className (компактные size="s"
-  // в модалках) тоже считается: data-атрибут ниже — стабильный хук для
-  // SSR-тестов вместо строки класса.
+  // для размеров m/l. Проверка на undefined — для TS (CSS-модули типизированы
+  // как string | undefined).
   const minH = size === "s" ? undefined : MIN_TARGET;
   // Явный MIN_TARGET в className (компактные size="s" в модалках) тоже
   // считается: data-атрибут ниже — стабильный хук для SSR-тестов вместо
-  // строки класса. Проверка на undefined — для TS (CSS-модули типизированы
-  // как string | undefined).
+  // строки класса.
   const hasMinTarget =
     Boolean(minH) ||
     (typeof className === "string" &&
