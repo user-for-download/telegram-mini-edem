@@ -78,8 +78,10 @@ function SheetContent({
   title,
   variant,
   children,
-}: Pick<SheetProps, "title" | "variant"> & {
+}: {
   titleId: string;
+  title: string;
+  variant: NonNullable<SheetProps["variant"]>;
   children: ReactNode;
 }) {
   const platform = usePlatform();
@@ -89,7 +91,7 @@ function SheetContent({
   }, []);
 
   return (
-    <div ref={bodyRef} tabIndex={-1} className={BODY_VARIANTS[variant ?? "padded"]}>
+    <div ref={bodyRef} tabIndex={-1} className={BODY_VARIANTS[variant]}>
       {/* Имя диалога для скринридера — на всех платформах. */}
       <VisuallyHidden Component="h2" id={titleId}>
         {title}
