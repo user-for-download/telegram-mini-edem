@@ -5,7 +5,7 @@ import layoutStyles from "./layout.module.css";
 /**
  * Классы поверхности карточки для НЕстандартных контейнеров.
  *
- * Статичные карточки — через `ui/Card` (нативный TguiCard, Batch4).
+ * Статичные карточки — через `ui/Card` (нативный TguiCard).
  * Здесь — исключение для контейнеров, которые не могут быть article:
  * интерактивная `Tappable` ленты (button) и Skeleton-болванки.
  * Рецепт на tgui-токенах (ui.module.css .card), визуал legacy.
@@ -16,13 +16,9 @@ export const CARD_SURFACE = styles.card;
 /** Паддинг карточки 16 (default). */
 export const CARD_PAD = styles.cardDefault;
 
-/** Паддинг карточки 12 (compact). */
-export const CARD_PAD_COMPACT = styles.cardCompact;
-
 /* ── Текст (ui/text): одна роль — одно правило ────────────────────────
  * Расслабленный абзац, подпись-подсказка, центрирование. Заменяют
- * копии .prose/.proseText/.hintProse/.hint/.iconHint/.centerText
- * по модулям (см. ui/text.module.css). */
+ * копии .prose/.proseText/.hint/.iconHint (см. ui/text.module.css). */
 
 /** Расслабленный абзац (line-height 1.625). */
 export const PROSE = textStyles.prose;
@@ -30,14 +26,8 @@ export const PROSE = textStyles.prose;
 /** Тот же абзац основным цветом текста. */
 export const PROSE_TEXT = textStyles.proseText;
 
-/** Подпись-подсказка с межстрочным 1.625. */
-export const HINT_PROSE = textStyles.hintProse;
-
 /** Приглушённая подпись/иконка (цвет подсказки). */
 export const HINT = textStyles.hint;
-
-/** Центрированный текст пустого состояния. */
-export const CENTER_TEXT = textStyles.centerText;
 
 /** Семантический акцент «информация» (--app-info): иконки/ссылки. */
 export const INFO = textStyles.info;
@@ -71,7 +61,7 @@ export const ROW_BETWEEN = layoutStyles.rowBetween;
 /** Visually hidden label for screen readers (нативный TGUI-паттерн). */
 export const VISUALLY_HIDDEN = textStyles.visuallyHidden;
 
-/** Minimum 44px tap-target height (нативный хэш-класс, WCAG 2.5.8). */
+/** Minimum 44px tap-target height (нативный хэш-класс, WCAG 2.5.5 AAA). */
 export const MIN_TARGET = textStyles.minTarget;
 
 /** Loading pulse animation (нативная, disabled under prefers-reduced-motion). */

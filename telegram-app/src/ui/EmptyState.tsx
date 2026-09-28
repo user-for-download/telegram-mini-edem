@@ -12,7 +12,7 @@ import { Placeholder } from "@telegram-apps/telegram-ui";
  * `ui/Button size="m"` (тап-таргет 44px встроен).
  *
  * Тексты. Пустые состояния («нет данных») берутся из единого словаря
- * `ui/emptyStates` (U4): экраны передают `EMPTY_STATES.<key>.*`,
+ * `ui/emptyStates`: экраны передают `EMPTY_STATES.<key>.*`,
  * литералы для них в экранах запрещены. В СЛОВАРЬ намеренно НЕ входят
  * учётные/маркетинговые тексты — они передаются литералом: баны и
  * удаление (AuthGate, AccountStatePage), онбординг (Onboarding) и
@@ -32,7 +32,7 @@ export function EmptyState({
 }: {
   header: string;
   description?: string;
-  /** Кнопка действия (обычно ui/Button size=\"m\"). */
+  /** Кнопка действия (обычно ui/Button size="m"). */
   action?: ReactNode;
   /**
    * Слот под заголовком (1:1 слоту китового Placeholder). Нужен

@@ -1,5 +1,5 @@
 // Тесты Button (TGUI-native): data-tap-target="44" для m/l (тап-таргет 44px,
-// WCAG 2.5.8), size="s" — компактный, без навязанного min-h. SSR renderToString,
+// WCAG 2.5.5), size="s" — компактный, без навязанного min-h. SSR renderToString,
 // паттерн ui/__tests__/notice.test.tsx.
 import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";

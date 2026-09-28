@@ -16,7 +16,7 @@ export function Loading({ label }: { label?: string }) {
       <span role="status" aria-label="Загрузка">
         <Spinner size="m" />
       </span>
-      {label && <>{label}</>}
+      {label}
     </Placeholder>
   );
 }

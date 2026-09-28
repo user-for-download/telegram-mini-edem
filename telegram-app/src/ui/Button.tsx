@@ -34,9 +34,9 @@ export interface ButtonProps
 }
 
 /**
- * Единая кнопка приложения (сессия .tmp/sessions/2026-09-23-ui-common-kit).
+ * Единая кнопка приложения.
  *
- * Гарантия тап-таргета: MIN_TARGET (44px, WCAG 2.5.8) ставится для
+ * Гарантия тап-таргета: MIN_TARGET (44px, WCAG 2.5.5 AAA) ставится для
  * размеров m/l — раньше это делали руками в 6 файлах (21 место).
  * `size="s"` — компактный контекст (чипы, строки заявок): min-h не
  * навязываем, высота нативная у кита (~36px).
@@ -54,17 +54,20 @@ export function Button({
   className,
   ...restProps
 }: ButtonProps) {
-  // Нативный кит: тап-таргет 44px (WCAG 2.5.8) — только хэш-класс MIN_TARGET
+  // Нативный кит: тап-таргет 44px (WCAG 2.5.5 AAA) — только хэш-класс MIN_TARGET
   // для размеров m/l. Явный MIN_TARGET в className (компактные size="s"
   // в модалках) тоже считается: data-атрибут ниже — стабильный хук для
   // SSR-тестов вместо строки класса.
   const minH = size === "s" ? undefined : MIN_TARGET;
-  const hasExplicitMinTarget =
-    typeof className === "string" &&
-    typeof MIN_TARGET === "string" &&
-    MIN_TARGET.length > 0 &&
-    className.includes(MIN_TARGET);
-  const hasMinTarget = Boolean(minH) || hasExplicitMinTarget;
+  // Явный MIN_TARGET в className (компактные size="s" в модалках) тоже
+  // считается: data-атрибут ниже — стабильный хук для SSR-тестов вместо
+  // строки класса. Проверка на undefined — для TS (CSS-модули типизированы
+  // как string | undefined).
+  const hasMinTarget =
+    Boolean(minH) ||
+    (typeof className === "string" &&
+      MIN_TARGET !== undefined &&
+      className.includes(MIN_TARGET));
   return (
     <TguiButton
       mode={MODES[variant]}

@@ -41,12 +41,12 @@
 
 /* Тело sheet-модалки: скролл 82dvh (как было), верх 12 (= 8 + верх
  * бывшего .stack), низ 40 — под жест закрытия.
- * Фокус — программный: SheetBody ставит фокус на контейнер при открытии
+ * Фокус — программный: тело ставит фокус на контейнер при открытии
  * (tabIndex=-1, вне таб-порядка — точка входа для клавиатуры и
  * скринридера, дальше работает нативный trap vaul). Кольцо — ТОЛЬКО для
  * клавиатуры (:focus-visible, канон WCAG 2.4.7): программный фокус
- * мышью/тачем невидим, с клавиатуры — видимый 2px-индикатор
- * (тот же токен, что у фокуса звёзд RatingInput). */
+ * мышью/тачем невидим, с клавиатуры — видимый 2px-индикатор.
+ * Токен кольца единый с Chip: --app-info. */
 .sheetBody {
   display: flex;
   flex-direction: column;
@@ -55,15 +55,6 @@
     var(--app-sheet-pad-bottom);
   max-height: 82dvh;
   overflow-y: auto;
-}
-
-.sheetBody:focus:not(:focus-visible) {
-  outline: none;
-}
-
-.sheetBody:focus-visible {
-  outline: 2px solid var(--tgui--link_color, #2481cc);
-  outline-offset: -2px;
 }
 
 /* То же без боковых отступов: контент сам держит рельс (отзывы). */
@@ -76,15 +67,6 @@
   overflow-y: auto;
 }
 
-.sheetBodyEdge:focus:not(:focus-visible) {
-  outline: none;
-}
-
-.sheetBodyEdge:focus-visible {
-  outline: 2px solid var(--tgui--link_color, #2481cc);
-  outline-offset: -2px;
-}
-
 /* Тело без скролла: короткая форма обратной связи. */
 .sheetBodyStatic {
   display: flex;
@@ -92,6 +74,18 @@
   gap: var(--app-space-sm);
   padding: var(--app-sheet-pad-top) var(--app-page-gutter)
     var(--app-sheet-pad-bottom);
+}
+
+/* Фокус-правила общие для скроллящихся тел (static фокус не берёт). */
+.sheetBody:focus:not(:focus-visible),
+.sheetBodyEdge:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.sheetBody:focus-visible,
+.sheetBodyEdge:focus-visible {
+  outline: 2px solid var(--app-info);
+  outline-offset: -2px;
 }
 
 /* Стек: тот же ритм 12 из токена, что у тела секции и sheet.
@@ -131,10 +125,6 @@
 
 .cardDefault {
   padding: var(--app-card-pad);
-}
-
-.cardCompact {
-  padding: var(--app-space-sm);
 }
 
 .cardFlush {
@@ -185,7 +175,7 @@
 }
 
 /* Хвост баннера вправо — только когда детей ≥ 2 (напр. текст + StatusPill).
- * :not(:first-child) чинит K7: одиночный ребёнок остаётся слева во всю
+ * :not(:first-child): одиночный ребёнок остаётся слева во всю
  * ширину и не «разъезжается». */
 .notice[data-variant="banner"] > :last-child:not(:first-child) {
   margin-left: auto;
@@ -232,8 +222,7 @@
   padding: 0;
   margin: 0;
   overflow: hidden;
-  /* Якорь не должен растягивать скролл-контейнер (было инлайном
-   * в FetchMore — перенесено в токены, U3). */
+  /* Якорь не должен растягивать скролл-контейнер. */
   overflow-anchor: none;
   pointer-events: none;
 }

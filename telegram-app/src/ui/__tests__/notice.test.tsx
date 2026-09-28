@@ -1,9 +1,8 @@
-// Тесты Notice (K2+K7) без @testing-library/react (не установлен):
-// react-dom/server renderToString — паттерн
+// Тесты Notice: SSR renderToString — паттерн
 // telegram-app/src/components/__tests__/statusPill.test.tsx.
 // Проверяется только обёртка (тэг ↔ variant, tone → role/data-атрибуты,
 // className, текст); внутренности ui.module.css не тестируем, кроме
-// регрессии K7 (banner без space-between — сырой текст модуля).
+// регрессии (banner без space-between — сырой текст модуля).
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,7 +50,7 @@ describe("Notice", () => {
     expect(html).not.toContain('role="alert"');
   });
 
-  it("banner/card render <div>, never <p> (K2: честный DOM-узел под ref)", () => {
+  it("banner/card render <div>, never <p> (честный DOM-узел под ref)", () => {
     const banner = renderToString(
       <Notice variant="banner" tone="success">
         <span>Текст</span>
@@ -72,7 +71,7 @@ describe("Notice", () => {
     expect(card).toContain('data-variant="card"');
   });
 
-  it("banner renders a single child without spreading (K7)", () => {
+  it("banner renders a single child without spreading", () => {
     const html = renderToString(
       <Notice variant="banner" tone="success">
         <span>Один ребёнок</span>
@@ -83,7 +82,7 @@ describe("Notice", () => {
     // Порядок/состав детей не меняется — раскладку держит CSS (см. ниже).
   });
 
-  it("banner CSS has no space-between (K7 regression)", () => {
+  it("banner CSS has no space-between (регрессия)", () => {
     const bannerRule = cssText.match(
       /\.notice\[data-variant="banner"\]\s*\{[^}]*\}/,
     )?.[0];

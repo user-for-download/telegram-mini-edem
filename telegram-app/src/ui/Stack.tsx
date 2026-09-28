@@ -12,9 +12,7 @@ export interface StackProps extends HTMLAttributes<HTMLDivElement> {
   /**
    * Ритм стека из токенов --app-space-*: "sm" (12, по умолчанию) —
    * обычный ритм страниц/секций; "xs" (8) — плотные кнопки диалога;
-   * "2xs" (4) — подпись вплотную к кнопке. Заменяет style={{ gap: N }}
-   * (U3: Onboarding, EditProfileModal) и margin-pull-up поверх ритма
-   * (U3: TripDetails — статус шаринга).
+   * "2xs" (4) — подпись вплотную к кнопке. Заменяет style={{ gap: N }}.
    */
   gap?: StackGap;
 }
