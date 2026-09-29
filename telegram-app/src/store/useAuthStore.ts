@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getRawInitData, purgeLaunchParamsCache } from "@/utils/telegram-adapter";
+import { log } from "@/utils/log";
 import type { User } from "@/types";
 import { authApi } from "@/api/auth.api";
 import { ApiError, apiClient } from "@/api/client";
@@ -135,7 +136,7 @@ function applyBanned(
 }
 
 function applyDeleted(set: (state: Partial<AuthState>) => void) {
-  console.log("[Auth] Account is deleted");
+  log("[Auth] Account is deleted");
   apiClient.setSession(null);
   set({
     status: "deleted",
@@ -225,7 +226,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       try {
-        console.log("[Auth] Refreshing session...");
+        log("[Auth] Refreshing session...");
 
         // Локальная подписка на обновлённые токены: стор обновляет session
         // сам и не зависит от подписки гейта (её может не быть, если гейт
@@ -301,14 +302,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (isHidden) {
       if (state.status === "authenticated") {
-        console.log("[Auth] App going to background");
+        log("[Auth] App going to background");
         set({ status: "background" });
       }
       return;
     }
 
     if (state.status === "background") {
-      console.log("[Auth] App restored from background, validating session...");
+      log("[Auth] App restored from background, validating session...");
 
       if (!state.session) {
         set({ status: "unauthenticated", user: null, session: null });
@@ -325,7 +326,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   clearSession: async (reason) => {
-    console.log(`[Auth] Clearing session. Reason: ${reason}`);
+    log(`[Auth] Clearing session. Reason: ${reason}`);
 
     // In-flight refresh не должен воскресить сессию после логаута.
     apiClient.invalidatePendingRefresh();

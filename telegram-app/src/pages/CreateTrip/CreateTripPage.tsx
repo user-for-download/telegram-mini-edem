@@ -41,10 +41,9 @@ import { useCreateTripMutation } from "@/queries/useTripsQuery";
 import { useVehicleQuery } from "@/queries/vehicle";
 import { VehicleModal } from "@/components/Profile/VehicleModal";
 import { validateCreateTripDraft } from "@/helpers/createTripForm";
+import { useTripForm } from "./useTripForm";
 import { MAX_SEATS, type TripTag } from "@edem/contracts";
 import styles from "./CreateTripPage.module.css";
-
-const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString();
 
 /**
  * Создание поездки — отдельная страница (роут /trips/my/new).
@@ -100,17 +99,29 @@ export function CreateTripForm({
   }, [vehicleChecking, hasCar]);
   const closeVehicle = () => setVehicleOpen(false);
   useModalBack(closeVehicle, vehicleOpen);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [fromAddress, setFromAddress] = useState("");
-  const [toAddress, setToAddress] = useState("");
-  const [date, setDate] = useState(tomorrow().slice(0, 16));
-  const [durationHours, setDurationHours] = useState("1");
-  const [distanceKm, setDistanceKm] = useState("");
-  const [price, setPrice] = useState("500");
-  const [seats, setSeats] = useState("1");
-  const [comment, setComment] = useState("");
-  const [tags, setTags] = useState<TripTag[]>([]);
+  // Поля формы — в useTripForm (useReducer + isDirty); UI-флаги ниже —
+  // в useState.
+  const {
+    form: {
+      from,
+      to,
+      fromAddress,
+      toAddress,
+      date,
+      durationHours,
+      distanceKm,
+      price,
+      seats,
+      comment,
+      tags,
+    },
+    draft,
+    isDirty,
+    setField,
+    swapCities: swapFormCities,
+    toggleTag: toggleFormTag,
+    stepSeats: stepFormSeats,
+  } = useTripForm();
   const [validationError, setValidationError] = useState<string | null>(null);
   /** id невалидного поля для status="error" и скролла (валидатор отдаёт field). */
   const [errorField, setErrorField] = useState<string | null>(null);
@@ -124,21 +135,9 @@ export function CreateTripForm({
   };
 
   // Несохранённый черновик — Telegram спросит подтверждение закрытия.
-  // Сравниваем с начальными значениями (см. useState выше): любое
-  // отклонение — черновик.
-  useClosingConfirmation(
-    from !== "" ||
-      to !== "" ||
-      fromAddress !== "" ||
-      toAddress !== "" ||
-      date !== tomorrow().slice(0, 16) ||
-      durationHours !== "1" ||
-      distanceKm !== "" ||
-      price !== "500" ||
-      seats !== "1" ||
-      comment !== "" ||
-      tags.length > 0,
-  );
+  // isDirty сравнивает форму с начальными значениями (см. useTripForm):
+  // любое отклонение — черновик.
+  useClosingConfirmation(isDirty);
 
   // Вертикальный свайп вниз не должен сворачивать мини-апп при скролле формы.
   useDisableVerticalSwipe();
@@ -146,31 +145,20 @@ export function CreateTripForm({
   const swapCities = () => {
     haptic.selection();
     touch();
-    setFrom(to);
-    setTo(from);
-    setFromAddress(toAddress);
-    setToAddress(fromAddress);
+    swapFormCities();
   };
 
   const toggleTag = (tag: TripTag) => {
     haptic.selection();
     touch();
-    setTags((prev) =>
-      prev.includes(tag)
-        ? prev.filter((item) => item !== tag)
-        : [...prev, tag].slice(0, 6),
-    );
+    toggleFormTag(tag);
   };
 
   /** Степпер мест: целое 1..MAX_SEATS, ручной ввод исключён. */
   const stepSeats = (delta: 1 | -1) => () => {
     haptic.selection();
     touch();
-    setSeats((prev) => {
-      const next = Number(prev);
-      const base = Number.isFinite(next) ? Math.trunc(next) : 1;
-      return String(Math.min(MAX_SEATS, Math.max(1, base + delta)));
-    });
+    stepFormSeats(delta);
   };
 
   /** Скролл к невалидному полю, иначе — к блоку общей ошибки. */
@@ -187,22 +175,7 @@ export function CreateTripForm({
   const submit = () => {
     setValidationError(null);
     setErrorField(null);
-    const validation = validateCreateTripDraft(
-      {
-        fromName: from,
-        toName: to,
-        fromAddress,
-        toAddress,
-        date,
-        durationHours,
-        distanceKm,
-        price,
-        seats,
-        tags,
-        comment,
-      },
-      cities.data,
-    );
+    const validation = validateCreateTripDraft(draft, cities.data);
     if (!validation.ok) {
       setValidationError(validation.error);
       setErrorField(validation.field);
@@ -273,7 +246,7 @@ export function CreateTripForm({
                 status={errorField === "create-from" ? "error" : undefined}
                 onSelect={(name) => {
                   touch();
-                  setFrom(name);
+                  setField("from", name);
                 }}
               />
               <FieldError
@@ -288,7 +261,7 @@ export function CreateTripForm({
                 status={errorField === "create-to" ? "error" : undefined}
                 onSelect={(name) => {
                   touch();
-                  setTo(name);
+                  setField("to", name);
                 }}
               />
               <FieldError
@@ -318,7 +291,7 @@ export function CreateTripForm({
                     }
                     onChange={(event) => {
                       touch();
-                      setFromAddress(event.target.value);
+                      setField("fromAddress", event.target.value);
                     }}
                     placeholder="Точка встречи"
                   />
@@ -346,7 +319,7 @@ export function CreateTripForm({
                     }
                     onChange={(event) => {
                       touch();
-                      setToAddress(event.target.value);
+                      setField("toAddress", event.target.value);
                     }}
                     placeholder="Точка прибытия"
                   />
@@ -376,7 +349,7 @@ export function CreateTripForm({
                     status={errorField === "create-date" ? "error" : undefined}
                     onChange={(event) => {
                       touch();
-                      setDate(event.target.value);
+                      setField("date", event.target.value);
                     }}
                   />
                   <FieldError
@@ -405,7 +378,7 @@ export function CreateTripForm({
                       }
                       onChange={(event) => {
                         touch();
-                        setPrice(event.target.value);
+                        setField("price", event.target.value);
                       }}
                     />
                     <FieldError
@@ -475,7 +448,7 @@ export function CreateTripForm({
                       }
                       onChange={(event) => {
                         touch();
-                        setDistanceKm(event.target.value);
+                        setField("distanceKm", event.target.value);
                       }}
                       placeholder="180"
                     />
@@ -504,7 +477,7 @@ export function CreateTripForm({
                       }
                       onChange={(event) => {
                         touch();
-                        setDurationHours(event.target.value);
+                        setField("durationHours", event.target.value);
                       }}
                     />
                     <FieldError
@@ -559,7 +532,7 @@ export function CreateTripForm({
                 status={errorField === "create-comment" ? "error" : undefined}
                 onChange={(event) => {
                   touch();
-                  setComment(event.target.value);
+                  setField("comment", event.target.value);
                 }}
               />
               <FieldError
