@@ -1,5 +1,6 @@
 import type { ZodType } from "zod";
 import { authResponseSchema, type AuthResponse } from "@edem/contracts";
+import { MiniEmitter } from "./emitter";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
@@ -60,6 +61,15 @@ type TokenUpdateListener = (tokens: TokenUpdate) => void;
 type BannedListener = (banReason: string | null) => void;
 type DeletedListener = () => void;
 
+type ApiClientEvents = {
+  tokenUpdate: [tokens: TokenUpdate];
+  sessionExpired: [];
+  banned: [banReason: string | null];
+  deleted: [];
+  refreshStart: [];
+  refreshEnd: [result: RefreshResult];
+};
+
 /**
  * 403 удалённого аккаунта (тот же код FORBIDDEN, что у бана — бэкенд
  * различает только текстом; та же конвенция, что isDeletedError в сторе
@@ -73,12 +83,7 @@ export class ApiClient {
   private refreshTokenValue: string | null = null;
   private refreshPromise: Promise<RefreshResult> | null = null;
   private refreshGeneration = 0;
-  private tokenListeners: Set<TokenUpdateListener> = new Set();
-  private sessionExpiredListeners: Set<() => void> = new Set();
-  private bannedListeners: Set<BannedListener> = new Set();
-  private deletedListeners: Set<DeletedListener> = new Set();
-  private refreshStartListeners: Set<() => void> = new Set();
-  private refreshEndListeners: Set<(result: RefreshResult) => void> = new Set();
+  private emitter = new MiniEmitter<ApiClientEvents>("ApiClient");
 
   setToken(token: string | null) {
     this.token = token;
@@ -102,18 +107,11 @@ export class ApiClient {
    * Возвращает функцию отписки.
    */
   onTokenUpdate(listener: TokenUpdateListener): () => void {
-    this.tokenListeners.add(listener);
-    return () => this.tokenListeners.delete(listener);
+    return this.emitter.on("tokenUpdate", listener);
   }
 
   private emitTokenUpdate(tokens: TokenUpdate) {
-    this.tokenListeners.forEach((listener) => {
-      try {
-        listener(tokens);
-      } catch (err) {
-        console.error("[ApiClient] tokenUpdate listener error:", err);
-      }
-    });
+    this.emitter.emit("tokenUpdate", tokens);
   }
 
   /**
@@ -122,12 +120,11 @@ export class ApiClient {
    * навсегда застревает с мёртвыми токенами.
    */
   onSessionExpired(listener: () => void): () => void {
-    this.sessionExpiredListeners.add(listener);
-    return () => this.sessionExpiredListeners.delete(listener);
+    return this.emitter.on("sessionExpired", listener);
   }
 
   private emitSessionExpired() {
-    this.sessionExpiredListeners.forEach((listener) => listener());
+    this.emitter.emit("sessionExpired");
   }
 
   /**
@@ -136,20 +133,11 @@ export class ApiClient {
    * без ожидания повторного bootstrap.
    */
   onBanned(listener: BannedListener): () => void {
-    this.bannedListeners.add(listener);
-    return () => {
-      this.bannedListeners.delete(listener);
-    };
+    return this.emitter.on("banned", listener);
   }
 
   private emitBanned(banReason: string | null) {
-    this.bannedListeners.forEach((listener) => {
-      try {
-        listener(banReason);
-      } catch (err) {
-        console.error("[ApiClient] banned listener error:", err);
-      }
-    });
+    this.emitter.emit("banned", banReason);
   }
 
   /**
@@ -159,20 +147,11 @@ export class ApiClient {
    * плашку бана через emitBanned ниже.
    */
   onDeleted(listener: DeletedListener): () => void {
-    this.deletedListeners.add(listener);
-    return () => {
-      this.deletedListeners.delete(listener);
-    };
+    return this.emitter.on("deleted", listener);
   }
 
   private emitDeleted() {
-    this.deletedListeners.forEach((listener) => {
-      try {
-        listener();
-      } catch (err) {
-        console.error("[ApiClient] deleted listener error:", err);
-      }
-    });
+    this.emitter.emit("deleted");
   }
 
   /**
@@ -186,10 +165,7 @@ export class ApiClient {
    * Подписка на начало refresh. Возвращает функцию отписки.
    */
   onRefreshStart(listener: () => void): () => void {
-    this.refreshStartListeners.add(listener);
-    return () => {
-      this.refreshStartListeners.delete(listener);
-    };
+    return this.emitter.on("refreshStart", listener);
   }
 
   /**
@@ -197,30 +173,15 @@ export class ApiClient {
    * Вызывается ОДИН раз на refresh — только у инициатора.
    */
   onRefreshEnd(listener: (result: RefreshResult) => void): () => void {
-    this.refreshEndListeners.add(listener);
-    return () => {
-      this.refreshEndListeners.delete(listener);
-    };
+    return this.emitter.on("refreshEnd", listener);
   }
 
   private emitRefreshStart(): void {
-    this.refreshStartListeners.forEach((listener) => {
-      try {
-        listener();
-      } catch (err) {
-        console.error("[ApiClient] refreshStart listener error:", err);
-      }
-    });
+    this.emitter.emit("refreshStart");
   }
 
   private emitRefreshEnd(result: RefreshResult): void {
-    this.refreshEndListeners.forEach((listener) => {
-      try {
-        listener(result);
-      } catch (err) {
-        console.error("[ApiClient] refreshEnd listener error:", err);
-      }
-    });
+    this.emitter.emit("refreshEnd", result);
   }
 
   /**
@@ -294,13 +255,16 @@ export class ApiClient {
   }
 
   private async doFetch(endpoint: string, options: RequestInit): Promise<Response> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...(options.headers as Record<string, string>),
-    };
+    // Сливаем через Headers: принимает plain-объект, массив пар и сам
+    // Headers (спред `...headers` у Headers-объекта давал бы `{}` —
+    // заголовки вызывающего молча терялись).
+    const headers = new Headers({ "Content-Type": "application/json" });
+    new Headers(options.headers).forEach((value, key) => {
+      headers.set(key, value);
+    });
 
     if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
+      headers.set("Authorization", `Bearer ${this.token}`);
     }
 
     const controller = new AbortController();
