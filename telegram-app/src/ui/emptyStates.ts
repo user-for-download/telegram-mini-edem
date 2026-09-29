@@ -99,7 +99,7 @@ export const EMPTY_STATES = {
     description:
       "Оставьте отзыв о поездке — это поможет другим выбрать маршрут",
   },
-  /** Отзывы: нет поездок для отзыва (ReviewsModal, ReviewsPage). */
+  /** Отзывы: нет поездок для отзыва (ReviewsModal). */
   reviewsNewEmpty: {
     header: "Пока нет поездок для отзыва",
     description: "Когда вы совершите поездку, она появится здесь",
@@ -132,7 +132,7 @@ export const EMPTY_STATES = {
     header: "Пока пусто",
     description: "Не удалось загрузить профиль.",
   },
-  /** Настройки не загрузились (SettingsPage/SettingsModal → emptyText). */
+  /** Настройки не загрузились (SettingsModal → emptyText). */
   settingsEmpty: {
     header: "Пока пусто",
     description: "Не удалось загрузить настройки.",

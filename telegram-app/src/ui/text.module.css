@@ -10,7 +10,7 @@
  * Исключение осознанно локальное, сюда не тянем. */
 
 /* Расслабленный абзац: межстрочный 1.625 (leading-relaxed).
- * Заменяет копии .prose (Reports/Settings/CreateTrip/Support ×4),
+ * Заменяет копии .prose (Reports/CreateTrip/Support ×3),
  * ProfileModals .prose, Notifications .note, ReviewCard .body,
  * ProfileModals .proseText (без цвета — см. ниже). */
 .prose {
@@ -46,7 +46,7 @@
 }
 
 
-/* -- Нативные a11y/interactive классы TGUI-приложения -- */
+/* -- a11y/interactive классы приложения (рецепты совпадают с китовыми) -- */
 
 /* Visually hidden label, still announced by screen readers (WCAG pattern).
  * Нативный класс приложения для label формы (ui/Field, CityPicker, CitySelect). */
@@ -63,13 +63,13 @@
 }
 
 /* Minimum tap-target height 44px (WCAG 2.5.5 AAA).
- * Нативный хэш-класс: ui/Button ставит его для размеров m/l. */
+ * Класс приложения: ui/Button ставит его для размеров m/l. */
 .minTarget {
   min-height: 44px;
 }
 
 /* Loading placeholder pulse (avatar before entering viewport).
- * Нативная анимация приложения; disabled under prefers-reduced-motion. */
+ * Анимация приложения; disabled under prefers-reduced-motion. */
 @keyframes pulseSoft {
   0%,
   100% {

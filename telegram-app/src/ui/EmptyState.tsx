@@ -20,9 +20,8 @@ import { Placeholder } from "@telegram-apps/telegram-ui";
  * Сами формулировки НЕ меняем: SSR-тесты ищут строки.
  *
  * НЕ покрывает: loading-спиннеры и error-retry (это QueryState/Loading),
- *  досье пассажира (там Placeholder несёт Breadcrumbs-описание —
- *  другая роль), Onboarding-приветствие (там VisuallyHidden-заголовок
- *  для a11y — другая роль).
+ *  Onboarding-приветствие (там VisuallyHidden-заголовок для a11y —
+ *  другая роль).
  */
 export function EmptyState({
   header,

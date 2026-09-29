@@ -6,7 +6,7 @@
  * слой tgui без !important.
  *
  * Исключения осознанно локальные, сюда НЕ тянем:
- * - TripCards .rowInfo (ряд с min-width:0, прицел под заявки);
+ * - TripModals .rowInfo (ряд с min-width:0, прицел под заявки);
  * - TripCards .requestSkeleton* (зеркало requestCell под Skeleton-overlay);
  * - TripDetails .nameRow (ряд с gap 6 под имя+значок);
  * - ProfilePage .flexText (flex-рост + min-width:0).
@@ -36,9 +36,7 @@
 }
 
 /* Ряд кнопок действия (зазор 8px).
- * Заменяет .btnRow (TripModals, EditTripForm, RideRequestsModal).
- * Профиль .actions — колонка (flex-direction:column), НЕ этот ряд:
- * она мигрирует на Stack (см. ниже, колонка с ритмом 8 — локально). */
+ * Заменяет .btnRow (TripModals, EditTripForm, RideRequestsModal). */
 .btnRow {
   display: flex;
   gap: var(--app-space-xs);

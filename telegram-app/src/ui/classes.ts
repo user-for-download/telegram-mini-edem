@@ -58,11 +58,11 @@ export const BTN_ROW_WRAP = layoutStyles.btnRowWrap;
 /** Ряд space-between с зазором 8px. */
 export const ROW_BETWEEN = layoutStyles.rowBetween;
 
-/** Visually hidden label for screen readers (нативный TGUI-паттерн). */
+/** Visually hidden label for screen readers (рецепт как у TGUI VisuallyHidden). */
 export const VISUALLY_HIDDEN = textStyles.visuallyHidden;
 
-/** Minimum 44px tap-target height (нативный хэш-класс, WCAG 2.5.5 AAA). */
+/** Minimum 44px tap-target height (класс приложения, WCAG 2.5.5 AAA). */
 export const MIN_TARGET = textStyles.minTarget;
 
-/** Loading pulse animation (нативная, disabled under prefers-reduced-motion). */
+/** Loading pulse animation (анимация приложения, disabled under prefers-reduced-motion). */
 export const PULSE = textStyles.pulse;
