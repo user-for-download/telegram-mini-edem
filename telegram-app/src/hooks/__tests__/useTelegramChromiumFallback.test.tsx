@@ -28,7 +28,7 @@ let mockFullscreen: boolean;
 let mockSafeTop: number;
 let mockContentTop: number;
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   useSignal: (signal: () => unknown) => signal(),
   useLaunchParams: () => ({ tgWebAppPlatform: mockPlatform }),
   requestContentSafeAreaInsets: { ifAvailable: mockRequestContent },

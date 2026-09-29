@@ -17,7 +17,7 @@ import { IconButton } from "@/ui/IconButton";
 import { Phone, Send, ShieldCheck, Star } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { hapticFeedback } from "@telegram-apps/sdk-react";
+import { hapticFeedback } from "@tma.js/sdk-react";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { EditTripForm } from "@/components/Trip/EditTripForm";

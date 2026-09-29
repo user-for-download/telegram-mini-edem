@@ -1,4 +1,4 @@
-import { emitEvent, isTMA, mockTelegramEnv } from "@telegram-apps/sdk-react";
+import { emitEvent, isTMA, mockTelegramEnv } from "@tma.js/sdk-react";
 import { markTelegramMockEnv } from "@/utils/telegram-adapter";
 
 // Мок Telegram-окружения для разработки в обычном браузере (вне Telegram).

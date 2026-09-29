@@ -5,7 +5,7 @@ import {
   useLaunchParams,
   useSignal,
   viewport,
-} from "@telegram-apps/sdk-react";
+} from "@tma.js/sdk-react";
 
 /**
  * Компенсация нулевой/заниженной верхней врезки во фуллскрине на iOS.

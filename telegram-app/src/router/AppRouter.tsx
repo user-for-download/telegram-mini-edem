@@ -8,7 +8,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { backButton, useLaunchParams } from "@telegram-apps/sdk-react";
+import { backButton, useLaunchParams } from "@tma.js/sdk-react";
 import {
   AppBottomBar,
   type AppTabId,

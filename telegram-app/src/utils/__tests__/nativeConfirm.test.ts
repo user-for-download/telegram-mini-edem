@@ -8,7 +8,7 @@ const { mockShow, mockIsAvailable } = vi.hoisted(() => ({
 
 // Мокаем SDK целиком: popup.show — управляемый мок,
 // isTelegramMockEnv — через window-флаг (markTelegramMockEnv).
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   miniApp: { ready: { ifAvailable: vi.fn() } },
   openTelegramLink: { ifAvailable: vi.fn(), isAvailable: () => true },
   popup: { show: Object.assign(mockShow, { isAvailable: mockIsAvailable }) },
@@ -16,7 +16,7 @@ vi.mock("@telegram-apps/sdk-react", () => ({
   shareURL: { ifAvailable: vi.fn(), isAvailable: () => true },
 }));
 
-import { popup } from "@telegram-apps/sdk-react";
+import { popup } from "@tma.js/sdk-react";
 import {
   isTelegramMockEnv,
   markTelegramMockEnv,

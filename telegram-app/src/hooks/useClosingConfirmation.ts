@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import {
   disableClosingConfirmation,
   enableClosingConfirmation,
-} from "@telegram-apps/sdk-react";
+} from "@tma.js/sdk-react";
 
 /**
  * Подтверждение закрытия при несохранённых данных (официальная дока:

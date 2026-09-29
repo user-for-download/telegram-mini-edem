@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   hapticFeedback: {
     selectionChanged: { ifAvailable: vi.fn() },
   },

@@ -57,7 +57,7 @@ vi.mock("@/api/client", () => ({
   },
 }));
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   hapticFeedback: { notificationOccurred: { ifAvailable: mockHaptic } },
   retrieveRawInitData: vi.fn(),
 }));

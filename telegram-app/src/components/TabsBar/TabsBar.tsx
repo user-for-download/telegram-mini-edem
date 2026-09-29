@@ -1,5 +1,5 @@
 import { Badge, Tabbar } from "@telegram-apps/telegram-ui";
-import { hapticFeedback } from "@telegram-apps/sdk-react";
+import { hapticFeedback } from "@tma.js/sdk-react";
 import { Bell, Car, Home, Search, User } from "lucide-react";
 import styles from "./Tabbar.module.css";
 

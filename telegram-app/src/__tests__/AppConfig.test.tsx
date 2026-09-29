@@ -27,7 +27,7 @@ let mockTgDark: boolean;
 let mockClientBg: string | undefined;
 let mockThemeOverride: "dark" | "light" | null;
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   useSignal: (signal: () => unknown) => signal(),
   miniApp: { isDark: () => mockTgDark },
   themeParams: {

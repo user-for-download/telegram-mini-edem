@@ -3,7 +3,7 @@
 // не влияет — прямой импорт styles.css убран (был единственным местом).
 import ReactDOM from "react-dom/client";
 import { StrictMode } from "react";
-import { retrieveLaunchParams } from "@telegram-apps/sdk-react";
+import { retrieveLaunchParams } from "@tma.js/sdk-react";
 
 import { EnvUnsupported } from "@/components/EnvUnsupported.tsx";
 import { init } from "@/init.ts";

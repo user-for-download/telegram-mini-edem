@@ -13,7 +13,7 @@ import {
   settingsButton,
   expandViewport,
   mountClosingBehavior,
-} from "@telegram-apps/sdk-react";
+} from "@tma.js/sdk-react";
 
 /**
  * Инициализация Telegram SDK (паттерн reactjs-template, скоуп @telegram-apps).

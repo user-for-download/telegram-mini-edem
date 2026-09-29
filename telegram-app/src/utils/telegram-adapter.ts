@@ -4,11 +4,11 @@ import {
   popup,
   retrieveRawInitData,
   shareURL,
-} from "@telegram-apps/sdk-react";
+} from "@tma.js/sdk-react";
 
 /**
  * Единая граница с Telegram SDK для UI-кода (язык utils/telegram.ts
- * примера, поверх @telegram-apps/sdk-react 3.3.x): весь прямой доступ
+ * примера, поверх @tma.js/sdk-react 3.3.x): весь прямой доступ
  * к SDK — только здесь, остальной код использует эти функции и остаётся
  * тестируемым без Telegram-клиента.
  *

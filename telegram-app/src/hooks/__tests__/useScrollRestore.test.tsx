@@ -13,7 +13,7 @@ beforeEach(() => {
   clearScrollPositions();
 });
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   backButton: {
     onClick: vi.fn(),
     offClick: vi.fn(),

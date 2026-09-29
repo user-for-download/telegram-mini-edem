@@ -7,12 +7,12 @@ import {
   useLaunchParams,
   useSignal,
   viewport,
-} from "@telegram-apps/sdk-react";
+} from "@tma.js/sdk-react";
 import {
   setMiniAppBackgroundColor,
   setMiniAppBottomBarColor,
   setMiniAppHeaderColor,
-} from "@telegram-apps/sdk-react";
+} from "@tma.js/sdk-react";
 import type { ThemeOverride } from "@/utils/appSettings";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "@/components/ErrorBoundary";

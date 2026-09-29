@@ -1,4 +1,4 @@
-import { hapticFeedback } from "@telegram-apps/sdk-react";
+import { hapticFeedback } from "@tma.js/sdk-react";
 import { isSoundEnabled } from "@/utils/appSettings";
 
 /**
