@@ -12,13 +12,15 @@ try {
   const pre = page.getByRole("button", { name: "Принять и продолжить" });
   await pre.waitFor({ state: "visible", timeout: 8000 });
   await pre.click();
-} catch {}
+} catch {
+  // предшаг необязателен: если кнопки нет, идём дальше
+}
 await page.getByLabel("Город отправления").waitFor({ timeout: 30000 });
 await page.getByLabel("Город отправления").fill(CITY);
 try {
   await page.getByText(CITY, { exact: true }).first().waitFor({ timeout: 10000 });
   console.log("DROPDOWN OK");
-} catch (e) {
+} catch {
   console.log("DROPDOWN FAIL");
   const all = await page.evaluate(() => document.body.innerText.slice(0, 500));
   console.log("BODY:", JSON.stringify(all));
