@@ -4,11 +4,10 @@ import { logger } from "../logger.js";
 import { wsManager } from "../ws/manager.js";
 import { logBusinessEvent } from "../logger/business.js";
 import { createNotification } from "../services/notification.service.js";
+import { PENDING_BOOKING_TTL_MS } from "../bookings/shared.js";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const TRIP_WORKER_BATCH_SIZE = 100;
-// NB: PENDING_BOOKING_TTL_MS живёт в bookings/index.ts (там используется);
-// дубликат здесь был мёртвым.
 
 interface ExpiredTrip {
   id: string;
@@ -30,7 +29,7 @@ interface ExpiredTrip {
  * транзакции каждой поездки.
  */
 export async function processExpiredTrips() {
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const cutoff = new Date(Date.now() - PENDING_BOOKING_TTL_MS);
   let processedCount = 0;
   let lastId: string | null = null;
 
