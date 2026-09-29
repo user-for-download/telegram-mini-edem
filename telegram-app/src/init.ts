@@ -37,7 +37,7 @@ export function toSnakeThemeParams(
 }
 
 /**
- * Инициализация Telegram SDK (паттерн reactjs-template, скоуп @telegram-apps).
+ * Инициализация Telegram SDK (паттерн reactjs-template, скоуп @tma.js).
  *
  * Порядок важен:
  * 1. setDebug + initSDK() — чтение launch params из WebView.

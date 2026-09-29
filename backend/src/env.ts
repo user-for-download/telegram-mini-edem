@@ -144,7 +144,7 @@ export const env = {
 
   /**
    * Токен Telegram-бота (выдаёт @BotFather). Нужен для серверной
-   * валидации initData Telegram Mini Apps (HMAC-SHA256, @telegram-apps/
+   * валидации initData Telegram Mini Apps (HMAC-SHA256, @tma.js/
    * init-data-node). Опционален: пустое значение = Telegram-auth выключен
    * (POST /auth/telegram отвечает 503). В dev/test при ALLOW_DEV_AUTH
    * без токена работает dev-bypass

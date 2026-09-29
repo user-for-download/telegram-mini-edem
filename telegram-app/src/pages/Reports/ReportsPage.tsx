@@ -121,7 +121,8 @@ export function ReportsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   // Черновик формы — dirty для нативного подтверждения ухода со страницы
-  // (enableClosingConfirmation, пока targetId/description не пусты).
+  // (closingBehavior.enableConfirmation через useClosingConfirmation,
+  // пока targetId/description не пусты).
   useClosingConfirmation(targetId !== "" || description !== "");
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
   // второй клик до ре-рендера не отправит второй запрос (защита от двойного сабмита).

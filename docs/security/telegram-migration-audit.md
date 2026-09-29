@@ -11,7 +11,7 @@ with owner/expiry below). One medium-adjacent test-gap fixed by new automated te
 
 | Severity | Check | File:line | What's wrong | Fix direction |
 |---|---|---|---|---|
-| — | initData HMAC/TTL | `backend/src/auth/telegramSign.ts:124-126` | — | `validate()` from `@telegram-apps/init-data-node` with `expiresIn: TG_INIT_DATA_TTL_SECONDS` (default 3600); typed errors → 401, unknown → logged + 401 fail-closed (`:127-143`) |
+| — | initData HMAC/TTL | `backend/src/auth/telegramSign.ts:124-126` | — | `validate()` from `@tma.js/init-data-node` with `expiresIn: TG_INIT_DATA_TTL_SECONDS` (default 3600); typed errors → 401, unknown → logged + 401 fail-closed (`:127-143`) |
 | — | Exact dev-hash match | `backend/src/auth/telegramSign.ts:103` | — | `params.get("hash") !== DEV_HASH` strict `===`; comment documents why not `includes()` (`:46-49`) |
 | — | Dev-bypass gates | `backend/src/auth/telegramSign.ts:101` | — | Requires `!TELEGRAM_BOT_TOKEN && ALLOW_DEV_AUTH && !isProduction`; production unreachable (`ALLOW_DEV_AUTH` forced false in prod, `env.ts:199-203`) |
 | — | Route 503 when unconfigured | `backend/src/auth/index.ts:228-233` | — | No token + no dev-auth → 503 (not 401), no session churn |

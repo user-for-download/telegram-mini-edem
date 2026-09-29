@@ -30,9 +30,10 @@ if (import.meta.env.DEV) {
     } as const;
     const noInsets = { left: 0, top: 0, bottom: 0, right: 0 } as const;
 
-    mockTelegramEnv({      // .d.ts 3.0.23: onEvent получает объект { name, params }
-      // (кортеж [method] был в @telegram-apps 3.3.x — с ним method всегда
-      // undefined и мок в dev-браузере молча не отвечал бы).
+    // .d.ts 3.0.23: onEvent получает объект { name, params }
+    // (кортеж [method] был в @telegram-apps 3.3.x — с ним method всегда
+    // undefined и мок в dev-браузере молча не отвечал бы).
+    mockTelegramEnv({
       onEvent(event) {
         // Обработчики методов платформы:
         // https://docs.telegram-mini-apps.com/platform/methods
@@ -72,7 +73,7 @@ if (import.meta.env.DEV) {
           new URLSearchParams([
             ["auth_date", ((new Date().getTime() / 1000) | 0).toString()],
             ["hash", "dev-hash"],
-            // SDK 3.3.x требует поле signature в init data (валидация схемы
+            // SDK 3.0.23 требует поле signature в init data (валидация схемы
             // launch params; реальное значение — Ed25519-подпись Telegram
             // для third-party валидации). Бэкенд dev-bypass его игнорирует.
             ["signature", "dev-signature"],
