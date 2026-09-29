@@ -67,4 +67,40 @@ describe("TripStandardCard", () => {
     expect(html).toContain("Активна");
     expect(html).not.toContain("undefined");
   });
+
+  it("passengers заданы — вместо рейтинга аватарстак с «+N»", () => {
+    const html = render(
+      <TripStandardCard
+        {...TRIP}
+        headerStatus={<StatusPill tone="info">Свободно 1</StatusPill>}
+        person={{
+          name: "Вы водитель",
+          subtitle: "Пассажиры: 4",
+          passengers: [
+            { id: "p1", name: "Иван", avatar: "https://t.me/1.png" },
+            { id: "p2", name: "Пётр", avatar: "https://t.me/2.png" },
+            { id: "p3", name: "Анна", avatar: "https://t.me/3.png" },
+            { id: "p4", name: "Олег", avatar: "https://t.me/4.png" },
+          ],
+        }}
+        onOpen={() => {}}
+      />,
+    );
+    expect(html).toContain("Пассажиры: Иван, Пётр, Анна, Олег");
+    expect(html).toContain("+1");
+    expect(html).not.toContain("Рейтинг");
+  });
+
+  it("passengers пустой — рейтинг не подставляется вместо стека", () => {
+    const html = render(
+      <TripStandardCard
+        {...TRIP}
+        headerStatus={<StatusPill tone="info">Свободно 1</StatusPill>}
+        person={{ name: "Вы водитель", subtitle: "Пассажиры: 0", passengers: [] }}
+        onOpen={() => {}}
+      />,
+    );
+    expect(html).not.toContain('aria-label="Пассажиры:');
+    expect(html).not.toContain("Рейтинг");
+  });
 });

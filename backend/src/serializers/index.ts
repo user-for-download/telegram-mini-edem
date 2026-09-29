@@ -115,6 +115,25 @@ export function serializeUser(
   };
 }
 
+/**
+ * Краткая карточка пассажира для аватарстака водителя (см. tripSchema
+ * `passengers`). Дублирует только id/name/avatar — полный профиль не нужен.
+ * Удалённый пользователь подменяется плейсхолдером, как в serializeUser.
+ */
+export function serializeTripPassenger(user: {
+  id: string;
+  name: string;
+  avatar: string | null;
+  deletedAt: Date | null;
+}) {
+  const isDeleted = Boolean(user.deletedAt);
+  return {
+    id: user.id,
+    name: isDeleted ? "Удалённый пользователь" : user.name,
+    avatar: isDeleted ? DEFAULT_AVATAR_URL : user.avatar || DEFAULT_AVATAR_URL,
+  };
+}
+
 export function serializePublicUser(user: UserWithCar) {
   return {
     id: user.id,
@@ -141,6 +160,8 @@ export function serializeTrip(
     bookedSeats?: number[];
     pendingRequestsCount?: number;
     confirmedBookingsCount?: number;
+    // Подтверждённые пассажиры — только для /trips/my (водитель).
+    passengers?: ReturnType<typeof serializeTripPassenger>[];
     myBooking?: {
       id: string;
       seat: number;
@@ -184,6 +205,7 @@ export function serializeTrip(
     bookedSeats: options?.bookedSeats ?? [],
     pendingRequestsCount: options?.pendingRequestsCount,
     confirmedBookingsCount: options?.confirmedBookingsCount,
+    passengers: options?.passengers,
     myBooking: options?.myBooking
       ? {
           id: options.myBooking.id,

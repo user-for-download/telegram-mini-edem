@@ -1,7 +1,10 @@
 import { IconButton } from "@/ui/IconButton";
 import { Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
+import {
+  StatusPill,
+  type StatusTone,
+} from "@/components/StatusPill/StatusPill";
 import { TripStandardCard } from "@/components/Section/TripStandardCard";
 import { DriverTripRequests } from "@/components/Trip/DriverTripRequests";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
@@ -41,7 +44,6 @@ export type TripCardVariant =
   | {
       kind: "driving";
       trip: Trip;
-      driverRating?: number | null;
       onCancel: (id: string) => void;
       cancelPending: boolean;
     };
@@ -137,7 +139,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
     );
   }
 
-  const { trip, driverRating, onCancel, cancelPending } = variant;
+  const { trip, onCancel, cancelPending } = variant;
   const status = tripStatusLabel(trip);
   const pending = trip.pendingRequestsCount ?? 0;
   // Футер одинаковый для обеих ролей: поделиться + отмена у правого края.
@@ -155,7 +157,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
       person={{
         name: "Вы водитель",
         subtitle: `Пассажиры: ${trip.confirmedBookingsCount ?? trip.seatsTotal - trip.seatsAvailable}`,
-        rating: driverRating ?? null,
+        passengers: trip.passengers ?? [],
       }}
       // Есть активные заявки — вместо «Вы водитель» строки заявок с −/+.
       personOverride={
@@ -166,34 +168,34 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
         navigate(`/trips/${id}`);
       }}
       footer={
-          // Группа действий у правого края: поделиться + отмена.
-          // Всплытие гасят сами кнопки — обёртка с onClick запрещена jsx-a11y.
+        // Группа действий у правого края: поделиться + отмена.
+        // Всплытие гасят сами кнопки — обёртка с onClick запрещена jsx-a11y.
         <div className={styles.footerEnd}>
-            <IconButton
-              size="s"
-              aria-label="Поделиться поездкой"
-              title="Поделиться поездкой"
-              onClick={(event) => {
-                event.stopPropagation();
-                haptic.light();
-                void shareTrip(trip.id);
-              }}
-            >
-              <Share2 size={15} />
-            </IconButton>
-            {isCancellable(trip) && (
-              <div className={styles.cancelRight}>
-                <ConfirmPopup
-                  label="Отменить поездку"
-                  confirmLabel="Отменить поездку"
-                  description="Поездка станет недоступна, а пассажиры получат уведомление."
-                  pending={cancelPending}
-                  destructive
-                  actionsEnd
-                  onConfirm={() => onCancel(trip.id)}
-                />
-              </div>
-            )}
+          <IconButton
+            size="s"
+            aria-label="Поделиться поездкой"
+            title="Поделиться поездкой"
+            onClick={(event) => {
+              event.stopPropagation();
+              haptic.light();
+              void shareTrip(trip.id);
+            }}
+          >
+            <Share2 size={15} />
+          </IconButton>
+          {isCancellable(trip) && (
+            <div className={styles.cancelRight}>
+              <ConfirmPopup
+                label="Отменить поездку"
+                confirmLabel="Отменить поездку"
+                description="Поездка станет недоступна, а пассажиры получат уведомление."
+                pending={cancelPending}
+                destructive
+                actionsEnd
+                onConfirm={() => onCancel(trip.id)}
+              />
+            </div>
+          )}
         </div>
       }
     />

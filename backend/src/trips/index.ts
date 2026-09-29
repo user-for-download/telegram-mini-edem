@@ -13,7 +13,10 @@ import { env } from "../env.js";
 import { logger } from "../logger.js";
 import { requireUser, type AuthUser } from "../auth/middleware.js";
 import { optionalAuth } from "../auth/optionalMiddleware.js";
-import { serializeTrip } from "../serializers/index.js";
+import {
+  serializeTrip,
+  serializeTripPassenger,
+} from "../serializers/index.js";
 import {
   publicReadLimiter,
   mutationLimiter,
@@ -370,12 +373,23 @@ tripsRouter.get("/my", requireUser, async (c) => {
       tripId: true,
       seat: true,
       status: true,
+      // Только для аватарстака подтверждённых пассажиров у водителя.
+      passenger: {
+        select: { id: true, name: true, avatar: true, deletedAt: true },
+      },
+    },
+    orderBy: {
+      seat: "asc",
     },
   });
 
   const bookedSeatsMap = new Map<string, number[]>();
   const pendingCountMap = new Map<string, number>();
   const confirmedCountMap = new Map<string, number>();
+  const passengersMap = new Map<
+    string,
+    ReturnType<typeof serializeTripPassenger>[]
+  >();
 
   for (const booking of bookings) {
     if (booking.status === "pending") {
@@ -390,6 +404,9 @@ tripsRouter.get("/my", requireUser, async (c) => {
         booking.tripId,
         (confirmedCountMap.get(booking.tripId) ?? 0) + 1,
       );
+      const passengers = passengersMap.get(booking.tripId) ?? [];
+      passengers.push(serializeTripPassenger(booking.passenger));
+      passengersMap.set(booking.tripId, passengers);
     }
 
     if (booking.status === "pending" || booking.status === "confirmed") {
@@ -405,6 +422,7 @@ tripsRouter.get("/my", requireUser, async (c) => {
         bookedSeats: bookedSeatsMap.get(trip.id) ?? [],
         pendingRequestsCount: pendingCountMap.get(trip.id) ?? 0,
         confirmedBookingsCount: confirmedCountMap.get(trip.id) ?? 0,
+        passengers: passengersMap.get(trip.id) ?? [],
       }),
     ),
     pagination: {

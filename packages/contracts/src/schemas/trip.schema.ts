@@ -39,6 +39,19 @@ export const myBookingSchema = z.object({
 
 export type MyBooking = z.infer<typeof myBookingSchema>;
 
+/**
+ * Краткая карточка участника поездки для «аватарстака» водителя.
+ * Полный `userSchema` тут избыточен (рейтинг/отзывы/машина не нужны),
+ * а платформенные поля наружу не отдаются.
+ */
+export const tripPassengerSchema = userSchema.pick({
+  id: true,
+  name: true,
+  avatar: true,
+});
+
+export type TripPassenger = z.infer<typeof tripPassengerSchema>;
+
 export const tripSchema = z.object({
   id: z.string(),
   fromCity: z.string().min(1),
@@ -66,6 +79,9 @@ export const tripSchema = z.object({
   status: tripStatusSchema.optional(),
 
   bookedSeats: z.array(z.number().int().min(1)).optional(),
+  // Подтверждённые пассажиры (id, name, avatar) — только для своих поездок
+  // водителя (/trips/my), в публичных ответах отсутствует.
+  passengers: z.array(tripPassengerSchema).optional(),
   pendingRequestsCount: z.number().int().min(0).optional(),
   confirmedBookingsCount: z.number().int().min(0).optional(),
   myBooking: myBookingSchema.nullable().optional(),

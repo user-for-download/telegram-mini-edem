@@ -25,7 +25,6 @@ import {
   useCancelTripMutation,
   useInfiniteMyTripsQuery,
 } from "@/queries/useTripsQuery";
-import { useProfileQuery } from "@/queries/profile";
 import styles from "./TripActivePage.module.css";
 
 type TripSegment = "all" | "driver" | "passenger";
@@ -72,7 +71,6 @@ export function TripActivePage() {
 
   const bookings = useMyBookingsQuery();
   const driverActive = useInfiniteMyTripsQuery({ status: "active" });
-  const profile = useProfileQuery();
   const cancelBooking = useCancelBookingMutation();
   const cancelTrip = useCancelTripMutation();
 
@@ -148,7 +146,6 @@ export function TripActivePage() {
       variant={{
         kind: "driving",
         trip,
-        driverRating: profile.data?.rating ?? null,
         onCancel: onCancelTrip,
         cancelPending: cancelTripPending(trip.id),
       }}

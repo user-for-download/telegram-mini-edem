@@ -6,9 +6,11 @@ import {
   Headline,
   Subheadline,
 } from "@telegram-apps/telegram-ui";
+import type { TripPassenger } from "@edem/contracts";
 import { ArrowDown, Calendar, CarFront, MapPin } from "lucide-react";
 import { formatRelativeDeparture } from "@/utils/bookingSplit";
 import { RatingPill } from "@/components/RatingPill";
+import { AvatarStack } from "@/components/Trip/AvatarStack";
 import { Card } from "@/ui/Card";
 import styles from "./TripStandardCard.module.css";
 
@@ -18,6 +20,12 @@ export interface TripStandardPerson {
   rating?: number | null;
   subtitle: string;
   showCarIcon?: boolean;
+  /**
+   * Подтверждённые пассажиры. Если поле задано (даже пустое) — вместо
+   * рейтинга справа рисуется аватарстак. Нужно карточке водителя: свой
+   * рейтинг ему не интересен, а пассажиры — да.
+   */
+  passengers?: TripPassenger[];
 }
 
 export interface TripStandardCardProps {
@@ -122,7 +130,13 @@ export function TripStandardCard({
               </span>
             </Caption>
           }
-          after={<RatingPill size="s" value={person.rating ?? null} />}
+          after={
+            person.passengers !== undefined ? (
+              <AvatarStack users={person.passengers} />
+            ) : (
+              <RatingPill size="s" value={person.rating ?? null} />
+            )
+          }
         >
           <Subheadline level="2" Component="p" weight="1">
             {person.name}

@@ -55,7 +55,6 @@ function renderDriving(trip: Trip): string {
       variant={{
         kind: "driving",
         trip,
-        driverRating: 5,
         onCancel: () => {},
         cancelPending: false,
       }}
@@ -115,7 +114,6 @@ describe("TripCard driving cancel guard", () => {
         variant={{
           kind: "driving",
           trip: makeTrip({ status: "active" }),
-          driverRating: null,
           onCancel,
           cancelPending: false,
         }}
@@ -124,6 +122,25 @@ describe("TripCard driving cancel guard", () => {
     // SSR: триггер попапа с label отрендерен, onCancel — только по клику.
     expect(html).toContain("Отменить поездку");
     expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("водителю показываем аватарстак пассажиров, а не свой рейтинг", () => {
+    const html = renderDriving(
+      makeTrip({
+        passengers: [
+          { id: "p-1", name: "Иван", avatar: "https://t.me/1.png" },
+          { id: "p-2", name: "Пётр", avatar: "https://t.me/2.png" },
+        ],
+      }),
+    );
+    expect(html).toContain("Пассажиры: Иван, Пётр");
+    expect(html).not.toContain("Рейтинг");
+  });
+
+  it("без подтверждённых пассажиров блок справа пуст", () => {
+    const html = renderDriving(makeTrip({ passengers: [] }));
+    expect(html).not.toContain('aria-label="Пассажиры:');
+    expect(html).not.toContain("Рейтинг");
   });
 });
 
