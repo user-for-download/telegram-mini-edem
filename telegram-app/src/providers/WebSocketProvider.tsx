@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { hapticFeedback } from "@telegram-apps/sdk-react";
+import { hapticFeedback } from "@tma.js/sdk-react";
 import { Snackbar } from "@telegram-apps/telegram-ui";
 import { wsServerEventSchema, type WsServerEvent } from "@edem/contracts";
 import { apiClient } from "@/api/client";

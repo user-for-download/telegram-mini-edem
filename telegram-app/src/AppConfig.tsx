@@ -7,12 +7,7 @@ import {
   useLaunchParams,
   useSignal,
   viewport,
-} from "@telegram-apps/sdk-react";
-import {
-  setMiniAppBackgroundColor,
-  setMiniAppBottomBarColor,
-  setMiniAppHeaderColor,
-} from "@telegram-apps/sdk-react";
+} from "@tma.js/sdk-react";
 import type { ThemeOverride } from "@/utils/appSettings";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -195,7 +190,7 @@ export function useTelegramAppearance(): "dark" | "light" {
   const tgDark = useSignal(miniApp.isDark);
   // Hex фона темы клиента: сигнал реактивен на theme_changed (включая
   // кастомные темы), в отличие от разового themeParams.state().
-  const clientBgColor = useSignal(themeParams.backgroundColor);
+  const clientBgColor = useSignal(themeParams.bgColor);
   const { themeOverride } = useAppSettings();
   const isDark = themeOverride ? themeOverride === "dark" : tgDark;
   // Фактический фон приложения: локальный оверрайд важнее темы клиента.
@@ -219,9 +214,9 @@ export function useTelegramAppearance(): "dark" | "light" {
     // надписи пилюль «Закрыть»/⌄/••• — фактически невидимые. Ветка hex
     // выбирает .Black/.White по lightness переданного цвета, т.е. даёт
     // корректный контраст на любом фоне (тёмная тема — светлый статус-бар).
-    setMiniAppHeaderColor.ifAvailable(bgHex);
-    setMiniAppBackgroundColor.ifAvailable(bgHex);
-    setMiniAppBottomBarColor.ifAvailable("secondary_bg_color");
+    miniApp.setHeaderColor.ifAvailable(bgHex);
+    miniApp.setBgColor.ifAvailable(bgHex);
+    miniApp.setBottomBarColor.ifAvailable("secondary_bg_color");
   }, [isDark, themeOverride, bgHex]);
   return isDark ? "dark" : "light";
 }

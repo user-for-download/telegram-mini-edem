@@ -4,11 +4,11 @@ import {
   popup,
   retrieveRawInitData,
   shareURL,
-} from "@telegram-apps/sdk-react";
+} from "@tma.js/sdk-react";
 
 /**
  * Единая граница с Telegram SDK для UI-кода (язык utils/telegram.ts
- * примера, поверх @telegram-apps/sdk-react 3.3.x): весь прямой доступ
+ * примера, поверх @tma.js/sdk-react 3.3.x): весь прямой доступ
  * к SDK — только здесь, остальной код использует эти функции и остаётся
  * тестируемым без Telegram-клиента.
  *
@@ -35,17 +35,20 @@ export function getRawInitData(): string | undefined {
 }
 
 /**
- * Пурж SDK-кэша launch params с сырой initData
- * (sessionStorage["tapps/launchParams"] — пишет bridge при инициализации,
- * сам не чистит; «материал сессии» иначе переживает logout в табе).
- * Ключ проверен по исходникам: toolkit `w()`/`T()` — sessionStorage +
- * префикс `tapps/`, bridge `R = "launchParams"`. Best-effort, SSR-safe:
- * ошибки игнорируем, сессия уже очищена вызывающим. Вызывается из
- * markAccountDeleted и clearSession стора.
+ * Пурж SDK-кэша launch params с сырой initData (пишет bridge при
+ * инициализации, сам не чистит; «материал сессии» иначе переживает logout
+ * в табе). Best-effort, SSR-safe: ошибки игнорируем, сессия уже очищена
+ * вызывающим. Вызывается из markAccountDeleted и clearSession стора.
+ *
+ * Ключ проверен по исходникам @tma.js: toolkit `setStorageValue` пишет
+ * `sessionStorage["n" + key]`, bridge `launchParams` — итог `nlaunchParams`
+ * (старая линейка @telegram-apps писала `tapps/launchParams`). Чистим оба,
+ * чтобы не пережить logout ни на новом, ни на закэшированном клиенте.
  */
 export function purgeLaunchParamsCache(): void {
   try {
     if (typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem("nlaunchParams");
       sessionStorage.removeItem("tapps/launchParams");
     }
   } catch {

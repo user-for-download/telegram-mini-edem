@@ -24,7 +24,7 @@ import {
   TriangleAlert,
   Volume2,
 } from "lucide-react";
-import { miniApp, useSignal } from "@telegram-apps/sdk-react";
+import { miniApp, useSignal } from "@tma.js/sdk-react";
 import { useNavigate } from "react-router-dom";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { QueryState } from "@/components/QueryState";

@@ -3,7 +3,7 @@
 // не влияет — прямой импорт styles.css убран (был единственным местом).
 import ReactDOM from "react-dom/client";
 import { StrictMode } from "react";
-import { retrieveLaunchParams } from "@telegram-apps/sdk-react";
+import { retrieveLaunchParams } from "@tma.js/sdk-react";
 
 import { EnvUnsupported } from "@/components/EnvUnsupported.tsx";
 import { init } from "@/init.ts";
@@ -21,6 +21,11 @@ try {
   const launchParams = retrieveLaunchParams();
   const { tgWebAppPlatform: platform } = launchParams;
 
+  // READY-ORDER INVARIANT (tma-sdk-04): init → render(<App/>) → effect(ready).
+  // Скелетон Telegram должен гаснуть только после первой отрисовки:
+  // signalAppReady() живёт в useEffect App (после маунта) и НЕ должен
+  // переезжать сюда (до/рядом с await init) — иначе скелетон погаснет
+  // поверх пустого WebView. Порядок ниже не менять.
   await init({
     debug: import.meta.env.DEV,
     mockForMacOS: platform === "macos",

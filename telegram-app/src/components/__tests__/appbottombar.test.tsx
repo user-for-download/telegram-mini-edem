@@ -8,7 +8,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   backButton: {
     onClick: vi.fn(),
     offClick: vi.fn(),

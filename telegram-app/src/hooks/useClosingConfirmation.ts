@@ -1,20 +1,17 @@
 import { useEffect } from "react";
-import {
-  disableClosingConfirmation,
-  enableClosingConfirmation,
-} from "@telegram-apps/sdk-react";
+import { closingBehavior } from "@tma.js/sdk-react";
 
 /**
  * Подтверждение закрытия при несохранённых данных (официальная дока:
- * enableClosingConfirmation пока форма грязная). SSR-safe — эффекты
+ * closingBehavior.enableConfirmation пока форма грязная). SSR-safe — эффекты
  * в renderToString не выполняются. Cleanup всегда снимает флаг.
  */
 export function useClosingConfirmation(dirty: boolean): void {
   useEffect(() => {
-    if (dirty) enableClosingConfirmation.ifAvailable();
-    else disableClosingConfirmation.ifAvailable();
+    if (dirty) closingBehavior.enableConfirmation.ifAvailable();
+    else closingBehavior.disableConfirmation.ifAvailable();
     return () => {
-      disableClosingConfirmation.ifAvailable();
+      closingBehavior.disableConfirmation.ifAvailable();
     };
   }, [dirty]);
 }

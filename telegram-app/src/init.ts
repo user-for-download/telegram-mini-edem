@@ -5,15 +5,36 @@ import {
   viewport,
   init as initSDK,
   mockTelegramEnv,
-  type ThemeParams,
+  type ThemeParamsType,
+  type RGB,
   retrieveLaunchParams,
   emitEvent,
   miniApp,
   backButton,
   settingsButton,
-  expandViewport,
-  mountClosingBehavior,
-} from "@telegram-apps/sdk-react";
+  closingBehavior,
+  swipeBehavior,
+} from "@tma.js/sdk-react";
+
+/**
+ * Нормализация темы к snake_case для payload `theme_changed`.
+ *
+ * Сверено с .d.ts + рантаймом 3.0.23: `themeParams.state()` хранит ключи
+ * как есть (геттеры читают `bg_color` и т.д.), `tgWebAppThemeParams`
+ * из launch params — тоже snake_case, пример из docs шлёт их как есть.
+ * То есть для текущих источников проход идемпотентен; конвертер страхует
+ * от camelCase-источника (так отдавал `state()` в @telegram-apps 3.3.x):
+ * без него emitEvent ушёл бы с неверными ключами и тема не применилась бы.
+ */
+export function toSnakeThemeParams(
+  tp: Record<string, RGB | undefined>,
+): ThemeParamsType {
+  const out: Record<string, RGB | undefined> = {};
+  for (const [key, value] of Object.entries(tp)) {
+    out[key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)] = value;
+  }
+  return out;
+}
 
 /**
  * Инициализация Telegram SDK (паттерн reactjs-template, скоуп @telegram-apps).
@@ -37,21 +58,25 @@ export async function init(options: {
   if (options.mockForMacOS) {
     let firstThemeSent = false;
     mockTelegramEnv({
-      // onEvent в SDK 3.3.x принимает кортеж [method, payload]
-      // (в @tma.js 3.0.x из шаблона был объект { name }).
-      onEvent([method], next) {
-        if (method === "web_app_request_theme") {
-          let tp: ThemeParams;
-          if (firstThemeSent) {
-            tp = themeParams.state();
-          } else {
-            firstThemeSent = true;
-            tp = retrieveLaunchParams().tgWebAppThemeParams;
-          }
-          return emitEvent("theme_changed", { theme_params: tp });
+      // .d.ts 3.0.23 (mockTelegramEnv.d.ts): onEvent получает ОБЪЕКТ
+      // { name, params } + next (пример из docs: event.name).
+      // Кортеж [method] был в @telegram-apps 3.3.x — с ним method всегда
+      // undefined и ни одна ветка не срабатывает.
+      onEvent(event, next) {
+        if (event.name === "web_app_request_theme") {
+          // Оба источника уже snake_case (см. toSnakeThemeParams):
+          // state() хранит ключи как пришли в theme_changed,
+          // tgWebAppThemeParams — как пришли в launch params.
+          const raw = firstThemeSent
+            ? themeParams.state()
+            : retrieveLaunchParams().tgWebAppThemeParams;
+          firstThemeSent = true;
+          return emitEvent("theme_changed", {
+            theme_params: toSnakeThemeParams(raw),
+          });
         }
 
-        if (method === "web_app_request_safe_area") {
+        if (event.name === "web_app_request_safe_area") {
           return emitEvent("safe_area_changed", {
             left: 0,
             top: 0,
@@ -64,8 +89,8 @@ export async function init(options: {
         // как с safe_area): подтверждаем текущее состояние без отказа —
         // иначе watchFullscreen засчитает fullscreen_failed.
         if (
-          method === "web_app_request_fullscreen" ||
-          method === "web_app_request_exit_fullscreen"
+          event.name === "web_app_request_fullscreen" ||
+          event.name === "web_app_request_exit_fullscreen"
         ) {
           const webApp = (
             window as unknown as {
@@ -83,26 +108,26 @@ export async function init(options: {
   }
 
   // Mount всех используемых компонентов.
-  // ВАЖНО (SDK 3.3.x): каждый mount() вызывается РОВНО ОДИН РАЗ —
-  // повторный вызов во время in-flight монтажа бросает
-  // "component is already mounting". miniApp.mount() внутри себя
-  // монтирует themeParams, поэтому явный themeParams.mount() НЕ вызываем
-  // (в @tma.js 3.0.x из шаблона этой зависимости не было).
+  // ВАЖНО (3.0.23, docs features/mini-app): mount() СИНХРОНЕН (mountSync
+  // удалён, BetterPromise остался только у viewport.mount), каждый
+  // вызывается РОВНО ОДИН РАЗ. themeParams — ПЕРВЫМ: miniApp при
+  // монтировании читает значения темы (bgColorRgb и др. требуют
+  // смонтированный themeParams). bindCssVars() — после mount своего
+  // компонента.
   backButton.mount.ifAvailable();
   settingsButton.mount.ifAvailable();
-  mountClosingBehavior.ifAvailable();
+  closingBehavior.mount.ifAvailable();
+  // Свайп-поведение монтируем всегда (форма/шторка сами отключат
+  // вертикальный свайп через useDisableVerticalSwipe и вернут обратно).
+  swipeBehavior.mount.ifAvailable();
   initData.restore();
 
+  if (themeParams.mount.isAvailable()) {
+    themeParams.mount();
+    themeParams.bindCssVars();
+  }
   if (miniApp.mount.isAvailable()) {
-    // mount() асинхронен: резолвится ПОСЛЕ внутреннего монтажа themeParams.
-    // bindCssVars() требует смонтированный компонент — ждём (в 3.0.x из
-    // шаблона mount был синхронным, await не требовался).
-    await miniApp.mount();
-    themeParams.bindCssVars();
-  } else if (themeParams.mount.isAvailable()) {
-    // miniApp недоступен, но тема доступна — монтируем напрямую.
-    await themeParams.mount();
-    themeParams.bindCssVars();
+    miniApp.mount();
   }
 
   if (viewport.mount.isAvailable()) {
@@ -116,5 +141,5 @@ export async function init(options: {
 
   // Раскрываем на всю высоту (официальная дока: без expand приложение
   // может открыться в пол-экрана через кнопку меню/инлайн).
-  expandViewport.ifAvailable();
+  viewport.expand.ifAvailable();
 }

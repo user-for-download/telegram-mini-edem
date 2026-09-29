@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent } from "react";
-import { settingsButton } from "@telegram-apps/sdk-react";
+import { settingsButton } from "@tma.js/sdk-react";
 
 /**
  * Нативная кнопка настроек Telegram (язык примера edem-telegram-mini-app):

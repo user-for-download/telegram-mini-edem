@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { MemoryRouter } from "react-router-dom";
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   hapticFeedback: {
     selectionChanged: { ifAvailable: vi.fn() },
     impactOccurred: { ifAvailable: vi.fn() },

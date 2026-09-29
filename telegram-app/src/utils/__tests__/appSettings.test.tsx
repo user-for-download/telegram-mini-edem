@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   hapticFeedback: {
     impactOccurred: { ifAvailable: vi.fn() },
     notificationOccurred: { ifAvailable: vi.fn() },
@@ -70,7 +70,7 @@ describe("appSettings store", () => {
 
 describe("haptics gate", () => {
   it("выключенный звук глушит haptic", async () => {
-    const sdk = await import("@telegram-apps/sdk-react");
+    const sdk = await import("@tma.js/sdk-react");
     const selection = vi.mocked(sdk.hapticFeedback.selectionChanged.ifAvailable);
     const { haptic } = await import("@/utils/haptics");
     haptic.selection();

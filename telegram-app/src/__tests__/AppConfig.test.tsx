@@ -27,16 +27,18 @@ let mockTgDark: boolean;
 let mockClientBg: string | undefined;
 let mockThemeOverride: "dark" | "light" | null;
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   useSignal: (signal: () => unknown) => signal(),
-  miniApp: { isDark: () => mockTgDark },
+  miniApp: {
+    isDark: () => mockTgDark,
+    setHeaderColor: { ifAvailable: mockHeader },
+    setBgColor: { ifAvailable: mockBackground },
+    setBottomBarColor: { ifAvailable: mockBottomBar },
+  },
   themeParams: {
-    backgroundColor: () => mockClientBg,
+    bgColor: () => mockClientBg,
     state: () => ({}),
   },
-  setMiniAppHeaderColor: { ifAvailable: mockHeader },
-  setMiniAppBackgroundColor: { ifAvailable: mockBackground },
-  setMiniAppBottomBarColor: { ifAvailable: mockBottomBar },
 }));
 
 vi.mock("@/utils/appSettings", () => ({

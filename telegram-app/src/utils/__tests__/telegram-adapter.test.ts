@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Граница SDK мокается целиком: адаптер тестируется без Telegram-клиента.
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   retrieveRawInitData: vi.fn(),
   miniApp: { ready: { ifAvailable: vi.fn() } },
   shareURL: { ifAvailable: vi.fn(), isAvailable: () => true },
@@ -13,7 +13,7 @@ import {
   openTelegramLink,
   retrieveRawInitData,
   shareURL,
-} from "@telegram-apps/sdk-react";
+} from "@tma.js/sdk-react";
 import {
   buildTelegramChatUrl,
   buildTelegramShareLink,

@@ -5,9 +5,9 @@
 // user.id без дефолта), fail-closed без токена, initData без user.
 //
 // env/logger замоканы (паттерн vkSign.test.ts) — сетевых вызовов нет;
-// криптография пакета @telegram-apps/init-data-node — настоящая.
+// криптография пакета @tma.js/init-data-node — настоящая.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { sign } from "@telegram-apps/init-data-node";
+import { sign } from "@tma.js/init-data-node";
 
 const envMocks = vi.hoisted(() => ({
   NODE_ENV: "test",

@@ -1,7 +1,7 @@
 // backend/src/auth/telegramSign.ts
 // Проверка подписи Telegram Mini Apps initData.
 //
-// Алгоритм (платформа Telegram, @telegram-apps/init-data-node):
+// Алгоритм (платформа Telegram, @tma.js/init-data-node):
 // 1. initData — query-params строка (user, auth_date, query_id, hash).
 // 2. HMAC-SHA256 секретным ключом бота (пары bot_token:secret через
 //    хеш "WebAppData") по канонической строке отсортированных пар
@@ -12,13 +12,13 @@
 // Mini App и может предъявляться повторно в пределах TTL (перезапуск,
 // догрузка). Свежесть ограничена окном expiresIn (анти-replay).
 import {
-  isAuthDateInvalidError,
-  isExpiredError,
-  isSignatureInvalidError,
-  isSignatureMissingError,
+  AuthDateInvalidError,
+  ExpiredError,
+  SignatureInvalidError,
+  SignatureMissingError,
   parse,
   validate,
-} from "@telegram-apps/init-data-node";
+} from "@tma.js/init-data-node";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
 
@@ -128,10 +128,10 @@ export function verifyTelegramInitData(
     // Нетипизированная ошибка — инфраструктура: логируем и тоже 401
     // (fail-closed, но видим проблему в мониторинге).
     const known =
-      isSignatureInvalidError(error) ||
-      isSignatureMissingError(error) ||
-      isAuthDateInvalidError(error) ||
-      isExpiredError(error);
+      SignatureInvalidError.is(error) ||
+      SignatureMissingError.is(error) ||
+      AuthDateInvalidError.is(error) ||
+      ExpiredError.is(error);
     if (!known) {
       logger.error(
         { err: error },

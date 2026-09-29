@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { MouseEvent } from "react";
 
 import { Button } from "@/ui/Button";
-import { popup } from "@telegram-apps/sdk-react";
+import { popup } from "@tma.js/sdk-react";
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { isTelegramMockEnv } from "@/utils/telegram-adapter";
 import styles from "./ConfirmAction.module.css";

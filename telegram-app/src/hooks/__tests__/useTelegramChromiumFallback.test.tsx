@@ -12,31 +12,36 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *
  * Паттерн WebSocketProvider.test.tsx: react-dom/client + act, без
  * testing-library. SDK-модуль замокан: useSignal читает замыкания
- * теста, инвессы — vi.fn с семантикой ifAvailable (undefined при
- * недоступности). Порог читается через getComputedStyle — jsdom
- * возвращает пустую строку, срабатывает фолбэк 88px (константа хука).
+ * теста, врезки — объектные сигналы 3.0.x (safeAreaInsets/
+ * contentSafeAreaInsets), request — vi.fn с семантикой fire-and-forget
+ * (возвращает { catch } — ошибки гасятся, как старый ifAvailable).
+ * Порог читается через getComputedStyle — jsdom возвращает пустую
+ * строку, срабатывает фолбэк 88px (константа хука).
  */
 
-const { mockRequestContent, mockRequestSafe } = vi.hoisted(() => ({
-  mockRequestContent: vi.fn(),
-  mockRequestSafe: vi.fn(),
+const { mockRequest } = vi.hoisted(() => ({
+  mockRequest: vi.fn(),
 }));
 
 /** Состояние «клиента», читаемое моком SDK (меняется тестом напрямую). */
 let mockPlatform: string;
 let mockFullscreen: boolean;
-let mockSafeTop: number;
-let mockContentTop: number;
+let mockSafeInsets: { top: number; bottom: number; left: number; right: number };
+let mockContentInsets: {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};
 
-vi.mock("@telegram-apps/sdk-react", () => ({
+vi.mock("@tma.js/sdk-react", () => ({
   useSignal: (signal: () => unknown) => signal(),
   useLaunchParams: () => ({ tgWebAppPlatform: mockPlatform }),
-  requestContentSafeAreaInsets: { ifAvailable: mockRequestContent },
-  requestSafeAreaInsets: { ifAvailable: mockRequestSafe },
+  request: mockRequest,
   viewport: {
     isFullscreen: () => mockFullscreen,
-    safeAreaInsetTop: () => mockSafeTop,
-    contentSafeAreaInsetTop: () => mockContentTop,
+    safeAreaInsets: () => mockSafeInsets,
+    contentSafeAreaInsets: () => mockContentInsets,
   },
 }));
 
@@ -57,10 +62,11 @@ describe("useTelegramChromiumFallback", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRequest.mockReturnValue({ catch: vi.fn() });
     mockPlatform = "ios";
     mockFullscreen = true;
-    mockSafeTop = 0;
-    mockContentTop = 0;
+    mockSafeInsets = { top: 0, bottom: 0, left: 0, right: 0 };
+    mockContentInsets = { top: 0, bottom: 0, left: 0, right: 0 };
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -80,23 +86,41 @@ describe("useTelegramChromiumFallback", () => {
     });
   }
 
-  it("iOS-фуллскрин с нулевыми врезками: ставит floor и пинает клиента", () => {
+  it("iOS-фуллскрин с нулевыми врезками: ставит floor и пинает клиента через request()", () => {
     renderHost();
 
     expect(
       document.documentElement.style.getPropertyValue(OVERRIDE)
     ).toBe("var(--tg-telegram-chromium-height)");
-    expect(mockRequestContent).toHaveBeenCalledTimes(1);
-    expect(mockRequestSafe).toHaveBeenCalledTimes(1);
+    expect(mockRequest).toHaveBeenCalledTimes(2);
+    expect(mockRequest).toHaveBeenCalledWith(
+      "web_app_request_safe_area",
+      "safe_area_changed"
+    );
+    expect(mockRequest).toHaveBeenCalledWith(
+      "web_app_request_content_safe_area",
+      "content_safe_area_changed"
+    );
   });
 
   it("честная врезка >= порога: floor не ставится, пингов нет", () => {
-    mockContentTop = 96;
+    mockContentInsets = { top: 96, bottom: 0, left: 0, right: 0 };
     renderHost();
 
     expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe("");
-    expect(mockRequestContent).not.toHaveBeenCalled();
-    expect(mockRequestSafe).not.toHaveBeenCalled();
+    expect(mockRequest).not.toHaveBeenCalled();
+  });
+
+  it("читает top из объектных сигналов: боковые/нижняя врезки floor не снимают", () => {
+    // Только left/right/bottom ненулевые — верх всё ещё под хромом.
+    mockSafeInsets = { top: 0, bottom: 34, left: 10, right: 10 };
+    mockContentInsets = { top: 0, bottom: 34, left: 10, right: 10 };
+    renderHost();
+
+    expect(
+      document.documentElement.style.getPropertyValue(OVERRIDE)
+    ).toBe("var(--tg-telegram-chromium-height)");
+    expect(mockRequest).toHaveBeenCalledTimes(2);
   });
 
   it("врезка пришла позже: floor снимается, повторных пингов нет", () => {
@@ -106,12 +130,11 @@ describe("useTelegramChromiumFallback", () => {
     ).toBe("var(--tg-telegram-chromium-height)");
 
     // Ответ клиента на пинок: сигналы обновились → хук снял floor.
-    mockContentTop = 96;
+    mockContentInsets = { top: 96, bottom: 0, left: 0, right: 0 };
     renderHost();
 
     expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe("");
-    expect(mockRequestContent).toHaveBeenCalledTimes(1);
-    expect(mockRequestSafe).toHaveBeenCalledTimes(1);
+    expect(mockRequest).toHaveBeenCalledTimes(2);
   });
 
   it("не-фуллскрин: floor снимается и не ставится заново", () => {
@@ -120,7 +143,7 @@ describe("useTelegramChromiumFallback", () => {
     renderHost();
 
     expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe("");
-    expect(mockRequestContent).not.toHaveBeenCalled();
+    expect(mockRequest).not.toHaveBeenCalled();
   });
 
   it("не-iOS платформа во фуллскрине: floor не ставится", () => {
@@ -128,6 +151,6 @@ describe("useTelegramChromiumFallback", () => {
     renderHost();
 
     expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe("");
-    expect(mockRequestContent).not.toHaveBeenCalled();
+    expect(mockRequest).not.toHaveBeenCalled();
   });
 });

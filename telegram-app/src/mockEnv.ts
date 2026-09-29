@@ -1,4 +1,4 @@
-import { emitEvent, isTMA, mockTelegramEnv } from "@telegram-apps/sdk-react";
+import { emitEvent, isTMA, mockTelegramEnv } from "@tma.js/sdk-react";
 import { markTelegramMockEnv } from "@/utils/telegram-adapter";
 
 // Мок Telegram-окружения для разработки в обычном браузере (вне Telegram).
@@ -30,14 +30,16 @@ if (import.meta.env.DEV) {
     } as const;
     const noInsets = { left: 0, top: 0, bottom: 0, right: 0 } as const;
 
-    mockTelegramEnv({      // onEvent в SDK 3.3.x принимает кортеж [method, payload].
-      onEvent([method]) {
+    mockTelegramEnv({      // .d.ts 3.0.23: onEvent получает объект { name, params }
+      // (кортеж [method] был в @telegram-apps 3.3.x — с ним method всегда
+      // undefined и мок в dev-браузере молча не отвечал бы).
+      onEvent(event) {
         // Обработчики методов платформы:
         // https://docs.telegram-mini-apps.com/platform/methods
-        if (method === "web_app_request_theme") {
+        if (event.name === "web_app_request_theme") {
           return emitEvent("theme_changed", { theme_params: themeParams });
         }
-        if (method === "web_app_request_viewport") {
+        if (event.name === "web_app_request_viewport") {
           return emitEvent("viewport_changed", {
             height: window.innerHeight,
             width: window.innerWidth,
@@ -45,21 +47,21 @@ if (import.meta.env.DEV) {
             is_state_stable: true,
           });
         }
-        if (method === "web_app_request_content_safe_area") {
+        if (event.name === "web_app_request_content_safe_area") {
           return emitEvent("content_safe_area_changed", noInsets);
         }
-        if (method === "web_app_request_safe_area") {
+        if (event.name === "web_app_request_safe_area") {
           return emitEvent("safe_area_changed", noInsets);
         }
         // Фуллскрин (Bot API 8.0): в dev-стенде клиент «подтверждает»
         // фуллскрин (в реальном Telegram приложение заходит уже в
-        // фуллскрине), выход — соответственно сбрасывает.
+        // фулскрине), выход — соответственно сбрасывает.
         if (
-          method === "web_app_request_fullscreen" ||
-          method === "web_app_request_exit_fullscreen"
+          event.name === "web_app_request_fullscreen" ||
+          event.name === "web_app_request_exit_fullscreen"
         ) {
           return emitEvent("fullscreen_changed", {
-            is_fullscreen: method === "web_app_request_fullscreen",
+            is_fullscreen: event.name === "web_app_request_fullscreen",
           });
         }
       },
