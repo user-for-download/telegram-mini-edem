@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import {
-  requestContentSafeAreaInsets,
-  requestSafeAreaInsets,
+  request,
   useLaunchParams,
   useSignal,
   viewport,
@@ -19,18 +18,18 @@ import {
  * Вдобавок после fullscreen_changed врезка может применяться с задержкой
  * до секунд (#704): даже честный клиент временами отдаёт 0.
  *
- * Решение: пока активен фуллскрин на iOS-клиенте и клиентская врезка
- * (max(safeAreaInsetTop, contentSafeAreaInsetTop) — сигналы, т.е. только
- * данные клиента, без нашего же оверрайда) ниже порога хрома Telegram
+  * Решение: пока активен фуллскрин на iOS-клиенте и клиентская врезка
+  * (max(safeAreaInsets.top, contentSafeAreaInsets.top) — сигналы, т.е.
+  * только данные клиента, без нашего же оверрайда) ниже порога хрома Telegram
  * (--tg-telegram-chromium-height из index.css, по умолчанию 88px),
  * выставляем на documentElement токен --tg-safe-area-top-min — третье
  * слагаемое max() в --tg-safe-area-top (index.css). Отдельный токен, а не
  * перезапись SDK-переменной: клиент шлёт viewport-события и в момент
  * фуллскрина, и переписал бы наш оверрайд обратно в 0.
  *
- * Параллельно пинаем клиента requestContentSafeAreaInsets()/
- * requestSafeAreaInsets() (ifAvailable: macOS/браузер молча пропустят):
- * если врезка просто задержалась (#704), ответ обновит сигналы, условие
+  * Параллельно пинаем клиента request('web_app_request_safe_area',
+  * 'safe_area_changed') / request('web_app_request_content_safe_area', ...):
+  * если врезка просто задержалась (#704), ответ обновит сигналы, условие
  * «ниже порога» развалится и компенсация снимется сама, без мигания
  * (пол downwards: floor → честное значение ≥ порога).
  *
@@ -67,11 +66,40 @@ function useIosClient(): boolean {
   }
 }
 
+/**
+ * Пинок клиента перечитать врезки.
+ *
+ * Статические requestSafeAreaInsets/requestContentSafeAreaInsets удалены
+ * в 3.0.x (migration guide: «use the SDK's request function») — шлём
+ * запросы напрямую: ответы safe_area_changed/content_safe_area_changed
+ * обновят сигналы viewport, повторный прогон эффекта снимет floor сам.
+ * Ошибки гасим — эквивалент старого .ifAvailable(): macOS/браузер,
+ * не отвечающие на safe-area, молча пропускаются, floor остаётся
+ * до размонтирования (семантика «--tg-safe-area-top не в 0» сохранена:
+ * хук только ставит floor-токен или снимает его, чужие значения не трогает).
+ */
+function nudgeClient(): void {
+  try {
+    request("web_app_request_safe_area", "safe_area_changed").catch(() => {});
+    request(
+      "web_app_request_content_safe_area",
+      "content_safe_area_changed",
+    ).catch(() => {});
+  } catch {
+    // ignore: клиент без safe-area — floor остаётся до размонтирования
+  }
+}
+
 export function useTelegramChromiumFallback(): void {
   const isFullscreen = useSignal(viewport.isFullscreen);
-  const safeTop = useSignal(viewport.safeAreaInsetTop);
-  const contentTop = useSignal(viewport.contentSafeAreaInsetTop);
+  // Объектные сигналы 3.0.x (docs features/viewport): числовые
+  // safeAreaInsetTop/contentSafeAreaInsetTop — производные от них
+  // (safeAreaInsets()["top"]), семантика замера та же.
+  const safeArea = useSignal(viewport.safeAreaInsets);
+  const contentSafeArea = useSignal(viewport.contentSafeAreaInsets);
   const isIos = useIosClient();
+  const safeTop = safeArea?.top ?? 0;
+  const contentTop = contentSafeArea?.top ?? 0;
 
   useEffect(() => {
     const rootStyle = document.documentElement.style;
@@ -95,8 +123,7 @@ export function useTelegramChromiumFallback(): void {
     rootStyle.setProperty(OVERRIDE_TOKEN, `var(${THRESHOLD_VAR})`);
     // Пинок клиента: врезка могла задержаться после fullscreen_changed
     // (#704). Ответы обновят сигналы → повторный прогон снимет floor.
-    requestContentSafeAreaInsets.ifAvailable();
-    requestSafeAreaInsets.ifAvailable();
+    nudgeClient();
     return cleanup;
   }, [isFullscreen, isIos, safeTop, contentTop]);
 }

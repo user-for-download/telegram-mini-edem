@@ -59,7 +59,7 @@ describe("nativeConfirm", () => {
     mockedShow.mockResolvedValueOnce("confirm");
     await expect(nativeConfirm(OPTS)).resolves.toBe(true);
 
-    mockedShow.mockResolvedValueOnce(null);
+    mockedShow.mockResolvedValueOnce(undefined);
     await expect(nativeConfirm(OPTS)).resolves.toBe(false);
 
     mockedShow.mockResolvedValueOnce("cancel");
