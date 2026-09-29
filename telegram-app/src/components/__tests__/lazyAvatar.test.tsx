@@ -1,4 +1,6 @@
-// SSR-тесты P1 LazyAvatar + внедрение в TripFeedCard/ReviewCard/заявки.
+// SSR-тесты P1 LazyAvatar + внедрение в ReviewCard/заявки.
+// TripFeedCard теперь — тонкая обёртка эталона TripStandardCard (нативный
+// Avatar кита), здесь остаётся smoke на её публичный контракт.
 // Паттерн tripRequestsModal.test.tsx: renderToString, моки хуков через
 // vi.hoisted, без testing-library. Эффекты в renderToString не выполняются,
 // поэтому: без IntersectionObserver LazyAvatar сразу показывает контент
@@ -203,7 +205,7 @@ describe("LazyAvatar SSR: happy/edge", () => {
 });
 
 describe("LazyAvatar в карточках SSR", () => {
-  it("TripFeedCard: имя водителя, src аватара и контракт карточки не сломаны", () => {
+  it("TripFeedCard: имя водителя, src аватара и контракт эталона не сломаны", () => {
     withoutObserver();
 
     const html = renderToString(
@@ -218,10 +220,9 @@ describe("LazyAvatar в карточках SSR", () => {
     expect(html).toContain(AVATAR_SRC);
     expect(html).toContain("Москва");
     expect(html).toContain("Тула");
-    // Эталон SearchTab: вся карточка — кнопка, время → прибытие.
-    expect(html).toContain("<button");
-    expect(html).toContain("10:00");
-    expect(html).toContain("12:00");
+    // Эталон TripStandardCard: раскладка шапка-маршрут-персона. Без
+    // футера-действий карточка — кнопка (клавиатура/AT), не <article>.
+    expect(html).toContain('role="button"');
     expect(html).toContain("Осталось мест:");
   });
 

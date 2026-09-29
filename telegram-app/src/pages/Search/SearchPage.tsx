@@ -63,7 +63,7 @@ function presetFromParams(params: URLSearchParams): SearchFormState {
  * сегменты дат, сворачиваемый drawer фильтров (цена + теги). Пустые
  * фильтры — общая лента (бэкенд скрывает уехавшие: departureAt > now).
  * Стиль фильтров — SearchPage.module.css (миграция папка/компонент),
- * лента — TripFeedCard (поверхность — ui/Card).
+ * лента — TripFeedCard (тонкая обёртка над эталоном TripStandardCard).
  */
 export function SearchPage() {
   const [searchParams] = useSearchParams();

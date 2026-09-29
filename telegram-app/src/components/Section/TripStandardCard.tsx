@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import {
   Avatar,
   Caption,
@@ -67,11 +67,28 @@ export function TripStandardCard({
   footer,
   onOpen,
 }: TripStandardCardProps) {
+  // Без футера в карточке нет своих кнопок — тогда она сама является
+  // кнопкой (клавиатура/AT). Со слотом действий открытие только мышью/
+  // тапом: role=button с вложенными кнопками недопустим (nested interactive).
+  const asButton = footer === undefined;
+  const open = () => onOpen(tripId);
+  const onKeyDown = asButton
+    ? (event: KeyboardEvent<HTMLElement>) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open();
+        }
+      }
+    : undefined;
+
   return (
     <Card
       variant="flush"
       className={styles.card}
-      onClick={() => onOpen(tripId)}
+      onClick={open}
+      role={asButton ? "button" : undefined}
+      tabIndex={asButton ? 0 : undefined}
+      onKeyDown={onKeyDown}
     >
       <div className={styles.head}>
         <span className={styles.when}>

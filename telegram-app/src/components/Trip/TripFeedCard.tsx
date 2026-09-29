@@ -1,142 +1,59 @@
-import {
-  Baby,
-  Cigarette,
-  CigaretteOff,
-  Luggage,
-  PawPrint,
-  ShieldCheck,
-  Star,
-  VolumeX,
-} from "lucide-react";
-import type { Trip, TripTag } from "@edem/contracts";
 import { useNavigate } from "react-router-dom";
-import { Caption, Tappable, Text } from "@telegram-apps/telegram-ui";
-import { StatusPill } from "@/components/StatusPill/StatusPill";
-import { dayLabel, formatArrivalTime, formatDuration } from "@/utils/date";
+import type { Trip } from "@edem/contracts";
+import {
+  StatusPill,
+  type StatusTone,
+} from "@/components/StatusPill/StatusPill";
+import { TripStandardCard } from "@/components/Section/TripStandardCard";
 import { haptic } from "@/utils/haptics";
-import { LazyAvatar } from "@/components/LazyAvatar";
-import { CARD_PAD, CARD_SURFACE, HINT, TRUNCATE } from "@/ui/classes";
-import styles from "./TripFeedCard.module.css";
 
-/** Иконки для очевидных тегов (язык примера); остальные теги не
- *  иконизируем — их видно в деталях поездки. */
-const TAG_ICONS: Partial<Record<TripTag, { Icon: typeof Luggage }>> = {
-  "Можно с животными": { Icon: PawPrint },
-  "Есть багаж": { Icon: Luggage },
-  "Не курить": { Icon: CigaretteOff },
-  "Можно курить": { Icon: Cigarette },
-  "Можно с детьми": { Icon: Baby },
-  "Тихая поездка": { Icon: VolumeX },
-};
+/** Пилюля мест для публичной ленты: занятость — единственный «статус». */
+function seatsLabel(trip: Trip): { label: string; tone: StatusTone } {
+  if (trip.seatsAvailable === 0) return { label: "Мест нет", tone: "danger" };
+  return {
+    label: `Осталось мест: ${trip.seatsAvailable}`,
+    tone: trip.seatsAvailable <= 1 ? "warning" : "success",
+  };
+}
 
 /**
- * Карточка поездки в ленте поиска (переименована из TripCard: имя
- * занято единой карточкой вкладки «Поездки»). Язык SearchTab эталона:
- * вся карточка кликабельна (нативный button, без отдельной кнопки
- * «Подробнее»), время → прибытие, маршрут + цена, адреса, водитель,
- * компактная цветная пилюля мест и иконки тегов.
- * Поверхность — рецепт FeedCard, но в module.css (миграция
- * папка/компонент); раскладка внутри — tgui-типографика.
+ * Карточка поездки в ленте поиска — тонкая обёртка над эталоном
+ * TripStandardCard (вкладка «Поездки»): раскладка, маршрут и персона
+ * общие, отличается только наполнение публичного ответа (пилюля мест
+ * вместо статуса брони, водитель вместо персоны роли).
+ *
+ * TODO: вернуть иконки тегов и шильд верификации водителя, когда
+ * TripStandardCard получит отдельные слоты под них. Пока — осознанно
+ * не переносим (унификация важнее).
  */
 export function TripFeedCard({ trip }: { trip: Trip }) {
   const navigate = useNavigate();
-  const fewSeats = trip.seatsAvailable <= 1;
-  const duration = formatDuration(trip.durationMinutes);
-  const arrival = formatArrivalTime(trip.time, trip.durationMinutes);
+  const seats = seatsLabel(trip);
+  const car = trip.driver.car
+    ? `${trip.driver.car.model} · ${trip.driver.car.color}`
+    : "Водитель";
 
   return (
-    <Tappable
-      Component="button"
-      type="button"
-      onClick={() => {
-        haptic.light();
-        navigate(`/trips/${trip.id}`);
+    <TripStandardCard
+      tripId={trip.id}
+      fromCity={trip.fromCity}
+      toCity={trip.toCity}
+      fromAddress={trip.fromAddress}
+      toAddress={trip.toAddress}
+      departureAt={trip.departureAt}
+      price={trip.price}
+      headerStatus={<StatusPill tone={seats.tone}>{seats.label}</StatusPill>}
+      person={{
+        name: trip.driver.name,
+        avatar: trip.driver.avatar,
+        rating: trip.driver.rating,
+        subtitle: car,
+        showCarIcon: Boolean(trip.driver.car),
       }}
-      className={`${CARD_SURFACE} ${CARD_PAD} ${styles.card}`}
-    >
-      <div className={styles.topRow}>
-        <div className={styles.routeCol}>
-          <div className={styles.when}>
-            <Text weight="2" Component="span">
-              {trip.time}
-            </Text>
-            {duration && <Caption Component="span">({duration})</Caption>}
-            {arrival && <Caption Component="span">→ {arrival}</Caption>}
-          </div>
-          <Text weight="2" Component="div" className={styles.cities}>
-            {trip.fromCity} → {trip.toCity}
-          </Text>
-          <Caption Component="div">{dayLabel(trip.date)}</Caption>
-        </div>
-        <div className={styles.priceCol}>
-          <Text weight="2" Component="div">
-            {trip.price} ₽
-          </Text>
-          <Caption className={HINT}>за место</Caption>
-        </div>
-      </div>
-
-      {(trip.fromAddress || trip.toAddress) && (
-        <Caption Component="div" className={styles.addresses}>
-          {trip.fromAddress && (
-            <div className={TRUNCATE}>Посадка: {trip.fromAddress}</div>
-          )}
-          {trip.toAddress && (
-            <div className={TRUNCATE}>Высадка: {trip.toAddress}</div>
-          )}
-        </Caption>
-      )}
-
-      <div className={styles.footer}>
-        <div className={styles.driver}>
-          <LazyAvatar
-            size={40}
-            src={trip.driver.avatar}
-            acronym={trip.driver.name.slice(0, 1).toUpperCase()}
-            alt={trip.driver.name}
-          />
-          <div className={styles.driverBody}>
-            <Text
-              weight="2"
-              Component="div"
-              className={styles.driverName}
-            >
-              <span className={TRUNCATE}>{trip.driver.name}</span>
-              {trip.driver.isVerified && (
-                <ShieldCheck aria-hidden />
-              )}
-            </Text>
-            <Caption Component="div" className={styles.rating}>
-              <Star className={styles.star} aria-hidden />
-              <span>{trip.driver.rating.toFixed(1)}</span>
-            </Caption>
-          </div>
-        </div>
-
-        <div className={styles.side}>
-          <StatusPill
-            tone={
-              trip.seatsAvailable === 0
-                ? "danger"
-                : fewSeats
-                  ? "warning"
-                  : "success"
-            }
-          >
-            {trip.seatsAvailable === 0
-              ? "Мест нет"
-              : `Осталось мест: ${trip.seatsAvailable}`}
-          </StatusPill>
-          {trip.tags.length > 0 && (
-            <div className={styles.tags}>
-              {trip.tags.flatMap((tag) => {
-                const entry = TAG_ICONS[tag];
-                return entry ? [<entry.Icon key={tag} size={13} />] : [];
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    </Tappable>
+      onOpen={(id) => {
+        haptic.light();
+        navigate(`/trips/${id}`);
+      }}
+    />
   );
 }

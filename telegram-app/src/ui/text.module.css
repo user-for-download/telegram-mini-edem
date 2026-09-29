@@ -25,7 +25,7 @@
 }
 
 /* Приглушённая подпись/иконка (цвет подсказки, без интерлиньяжа).
- * Заменяет копии .hint (ProfileModals, TripFeedCard, ProfilePage),
+ * Заменяет копии .hint (ProfileModals, ProfilePage),
  * .iconHint (TripModals ×2 правила, EditTripForm, CreateTrip),
  * .hintIcon (Support), VehicleModal .hint. */
 .hint {

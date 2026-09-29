@@ -13,7 +13,7 @@
  */
 
 /* Обрезка в одну строку (было truncate).
- * Заменяет копии .truncate (TripModals, TripCards, TripFeedCard,
+ * Заменяет копии .truncate (TripModals, TripCards,
  * TripDetails, ProfilePage — там ещё display:block для span). */
 .truncate {
   overflow: hidden;

@@ -122,9 +122,9 @@ describe("Skeletons", () => {
     // Маркер на болванку: семантический класс первой строки каждой карточки
     // (канон: Skeletons.module.css вместо tailwind h-4 w-28).
     const tripDefault = render(<TripCardsSkeleton />);
-    expect(tripDefault.match(/lineTime/g)?.length).toBe(3);
+    expect(tripDefault.match(/standardHead/g)?.length).toBe(3);
     const tripTwo = render(<TripCardsSkeleton count={2} />);
-    expect(tripTwo.match(/lineTime/g)?.length).toBe(2);
+    expect(tripTwo.match(/standardHead/g)?.length).toBe(2);
 
     const notif = render(<NotificationCardsSkeleton count={2} />);
     expect(notif.match(/lineNotifTitle/g)?.length).toBe(2);

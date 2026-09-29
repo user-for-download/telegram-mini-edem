@@ -17,8 +17,8 @@ import styles from "./Skeletons.module.css";
  * через свой role="status"-контейнер (placeholderLabel).
  */
 
-/** Болванка карточки ленты поиска — зеркало раскладки TripFeedCard:
- * время/маршрут/цена, адреса, водитель с аватаром и пилюля мест. */
+/** Болванка карточки поездки — зеркало эталона TripStandardCard:
+ * шапка дата/статус/цена, вертикальный маршрут, строка персоны. */
 export function TripCardSkeleton() {
   return (
     <Skeleton
@@ -26,30 +26,24 @@ export function TripCardSkeleton() {
       aria-hidden="true"
       className={`${styles.cardSkeleton} ${CARD_SURFACE}`}
     >
-      <Stack className={CARD_PAD}>
-        <div className={styles.topRow}>
-          <div className={styles.routeCol}>
-            <div className={styles.lineTime} />
-            <div className={styles.lineCities} />
-            <div className={styles.lineSub} />
-          </div>
-          <div className={styles.priceCol}>
-            <div className={styles.linePrice} />
-            <div className={styles.lineUnit} />
-          </div>
-        </div>
-        <div className={styles.lineAddress} />
-        <div className={styles.footer}>
-          <div className={styles.driverInfo}>
-            <div className={styles.avatarCircle} />
-            <div className={styles.driverLines}>
-              <div className={styles.lineDriverName} />
-              <div className={styles.lineDriverRating} />
-            </div>
-          </div>
+      <div className={`${CARD_PAD} ${styles.standardSkeleton}`}>
+        <div className={styles.standardHead}>
+          <div className={styles.lineDate} />
           <div className={styles.seatsPill} />
+          <div className={styles.linePrice} />
         </div>
-      </Stack>
+        <div className={styles.standardRoute}>
+          <div className={styles.lineCities} />
+          <div className={styles.lineSub} />
+        </div>
+        <div className={styles.standardPerson}>
+          <div className={styles.avatarCircle} />
+          <div className={styles.driverLines}>
+            <div className={styles.lineDriverName} />
+            <div className={styles.lineDriverRating} />
+          </div>
+        </div>
+      </div>
     </Skeleton>
   );
 }

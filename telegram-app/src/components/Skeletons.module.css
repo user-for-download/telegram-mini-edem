@@ -6,39 +6,35 @@
   overflow: hidden;
 }
 
-.topRow {
+/* Болванка карточки поездки — зеркало TripStandardCard. */
+.standardSkeleton {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.standardHead {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--app-space-sm);
 }
 
-.routeCol {
+.standardRoute {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--app-space-xs);
 }
 
-.priceCol {
+.standardPerson {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  align-items: center;
+  gap: var(--app-space-sm);
 }
 
 .linePrice {
   height: 16px;
   width: 56px;
-}
-
-.lineUnit {
-  height: 12px;
-  width: 48px;
-}
-
-.lineTime {
-  height: 16px;
-  width: 112px;
 }
 
 .lineCities {
@@ -49,26 +45,6 @@
 .lineSub {
   height: 12px;
   width: 80px;
-}
-
-.lineAddress {
-  height: 12px;
-  width: 40%;
-}
-
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--app-space-xs);
-  border-top: var(--tgui--border--width, 1px) solid var(--tgui--outline);
-  padding-top: var(--app-space-xs);
-}
-
-.driverInfo {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-xs);
 }
 
 .driverLines {
