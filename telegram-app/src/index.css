@@ -100,21 +100,6 @@
   --tg-viewport-height: 100dvh;
   --tg-viewport-stable-height: 100dvh;
 
-  /* Semantic status tokens (single source of truth instead of ad-hoc
-     colors scattered across components). These sit on top of the
-     tgui palette and are re-tuned for the dark theme below, so every status
-     color adapts automatically together with --tgui--* variables.
-     Класс `dark` на documentElement тогглит AppConfig из темы Telegram
-     (miniApp.isDark) — tgui вешает свой хэшированный dark-класс, на который
-     извне опереться нельзя. */
-  --app-success: #167a3f;
-  --app-success-bg: rgba(22, 122, 63, 0.12);
-  --app-warning: #8a5c06;
-  --app-warning-bg: rgba(138, 92, 6, 0.14);
-  --app-danger: #b32626;
-  --app-danger-bg: rgba(179, 38, 38, 0.12);
-  --app-info: var(--tgui--link_color);
-  --app-info-bg: var(--tgui--secondary_fill);
   --app-purple: #7c5cd6;
   --app-purple-bg: rgba(124, 92, 214, 0.12);
   --app-indigo: #4f5fd6;
@@ -181,13 +166,42 @@
   --app-radius-pill: 999px;
 }
 
+/* Семантические цветовые токены живут на САМОМ элементе AppRoot (класс
+   `.app-theme` навешивает AppConfig), а не на :root. Причина: они ссылаются
+   на --tgui--*, а те определены на theme-классе кита, который tgui вешает
+   именно на AppRoot. Значение var() в кастомном свойстве резолвится там,
+   где свойство ОБЪЯВЛЕНО, поэтому на :root ссылки на --tgui--* невалидны и
+   --app-* не наследуются (симптом: «любой статус — серый/чёрный текст»).
+   Единственный источник цвета — палитра TG UI, поэтому светлая/тёмная тема
+   Telegram переключается вместе с --tgui--* автоматически.
+     success → --tgui--green (палитра кита),
+     warning → --tgui--hint_color (нейтраль: pending = не акцент),
+     danger  → --tgui--destructive_text_color,
+     info    → --tgui--link_color.
+   Фоны — color-mix из тех же токенов (--tgui--destructive_background в
+   тёмной теме почти прозрачен, поэтому берём text-вариант). */
+.app-theme {
+  --app-success: var(--tgui--green);
+  --app-success-bg: color-mix(in srgb, var(--tgui--green) 15%, transparent);
+  --app-warning: var(--tgui--hint_color);
+  --app-warning-bg: color-mix(
+    in srgb,
+    var(--tgui--hint_color) 15%,
+    transparent
+  );
+  --app-danger: var(--tgui--destructive_text_color);
+  --app-danger-bg: color-mix(
+    in srgb,
+    var(--tgui--destructive_text_color) 12%,
+    transparent
+  );
+  --app-info: var(--tgui--link_color);
+  --app-info-bg: var(--tgui--secondary_fill);
+}
+
 .dark {
-  --app-success: #3ecf72;
-  --app-success-bg: rgba(62, 207, 114, 0.16);
-  --app-warning: #f0a93b;
-  --app-warning-bg: rgba(240, 169, 59, 0.16);
-  --app-danger: #f27272;
-  --app-danger-bg: rgba(242, 114, 114, 0.16);
+  /* success/warning/danger/info берутся из --tgui--* и адаптируются темой
+     сами; здесь остаются только роли без китового токена. */
   --app-purple: #a78bfa;
   --app-purple-bg: rgba(167, 139, 250, 0.18);
   --app-indigo: #8b93f5;
@@ -205,7 +219,7 @@ body,
 body {
   margin: 0;
   padding: 0;
-/* Вне колонки приложения (десктоп) — нейтральный фон, сама колонка
+  /* Вне колонки приложения (десктоп) — нейтральный фон, сама колонка
    задана через --tgui--bg_color в AppShell
    (components/AppShell/AppShell.module.css). */
   background: var(--tgui--secondary_bg_color, var(--tg-theme-bg-color, #fff));

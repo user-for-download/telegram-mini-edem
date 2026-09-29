@@ -1,19 +1,16 @@
-/* Статус-пилюля: inline-пилюля поверх текста карточек (поиск, поездки,
- * жалобы, поддержка). Цвета только из --app-* токенов index.css — тема
- * light/dark переключается там, дублировать палитру здесь не нужно.
- * Смысл всегда дублируется текстом, не только цветом (a11y: color + text).
- * Обычный селектор без удвоения: пилюля — свой span без конкуренции
- * со специфичностью кита, !important не используем. */
+/* Статус-пилюля = нативный Badge кита: его геометрию и типографику
+ * (radius 20, высота 20, padding 0 5px, Caption 13/600) не дублируем —
+ * приходит из кита. Здесь только:
+ *  - сброс китового margin (0 6px → как раньше, 6px слева);
+ *  - запрет переноса для длинных подписей;
+ *  - 4 тона из --app-* токенов (index.css → палитра кита:
+ *    --tgui--green/link/destructive, warning — --tgui--hint_color).
+ * Селектор с [data-tone] (0,2,0) побеждает китовый mode-класс (0,1,0);
+ * модуль неслойный → бьёт @layer tgui без !important.
+ * Смысл всегда дублируется текстом, не только цветом (a11y: color + text). */
 .pill {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 2px 8px;
-  border-radius: var(--app-radius-pill);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.5;
+  margin: 0 0 0 6px;
   white-space: nowrap;
-  vertical-align: baseline;
 }
 
 .pill[data-tone="warning"] {

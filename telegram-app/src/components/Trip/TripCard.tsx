@@ -30,8 +30,11 @@ function tripStatusLabel(trip: Trip): { label: string; tone: StatusTone } {
   if (pending > 0) return { label: `Заявки: ${pending}`, tone: "warning" };
   const confirmed = trip.confirmedBookingsCount ?? 0;
   if (confirmed > 0)
-    return { label: `Забронировано: ${confirmed}`, tone: "success" };
-  return { label: `Свободно: ${trip.seatsAvailable}`, tone: "info" };
+    return {
+      label: `Забронировано: ${confirmed}/${trip.seatsTotal}`,
+      tone: "info",
+    };
+  return { label: `Свободно: ${trip.seatsAvailable}`, tone: "success" };
 }
 
 export type TripCardVariant =

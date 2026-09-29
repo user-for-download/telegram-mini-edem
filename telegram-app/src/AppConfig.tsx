@@ -276,7 +276,11 @@ export const AppConfig: FC<PropsWithChildren> = ({ children }) => {
     <QueryClientProvider client={queryClient}>
       {/* ErrorBoundary — самый внешний рубеж, fallback без UI-кита. */}
       <ErrorBoundary fallback={ErrorFallback}>
-        <AppRoot platform={platform} appearance={appearance}>
+        <AppRoot
+          platform={platform}
+          appearance={appearance}
+          className="app-theme"
+        >
           <OfflineBanner />
           {/* Dev-пилюля платформы/темы — вне Onboarding/роутера, чтобы
               переключатели были доступны и на экране приветствия. */}
