@@ -71,7 +71,10 @@ location / {
 ## 4. Rollout order (when approved)
 
 1. Snapshot + manifest (`scripts/migrate-vk-to-telegram.mjs` dry-run).
-2. Deploy with Telegram env (§1) + proxy (§2).
+2. Deploy with Telegram env (§1) + proxy (§2). Rebuild the stand with
+   `sh scripts/prod-rebuild.sh` — it polls `GET /health/ready` (migrations
+   run on boot) instead of a fixed sleep, and any red check exits non-zero.
+   `--clean` for a base-image/platform change, `--smoke` to run step 3 inline.
 3. Smoke 6/6 (`scripts/smoke-telegram-deployment.mjs` with `TG_HOST`).
 4. Observe against `telegram-go-no-go.md` thresholds for the window.
 5. Record GO (proceed) or NO-GO (rollback via

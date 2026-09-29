@@ -106,6 +106,15 @@ docker compose stop backend    # остановить контейнер бэк�
 docker exec -it telegram-mini-edem-backend-1 node --import tsx prisma/seed.ts
 ```
 
+Для прод-пересборки используйте `scripts/prod-rebuild.sh`: инкрементальный Docker-кэш, ожидание `/health/ready` опросом (а не `sleep`), и любая красная проверка валит скрипт (`exit 1`) с диагностикой.
+```bash
+sh scripts/prod-rebuild.sh            # build + recreate + health (инкрементально)
+sh scripts/prod-rebuild.sh --no-build # только пересоздать контейнеры (смена .env/лимитов)
+sh scripts/prod-rebuild.sh --clean    # prune + build --no-cache (смена базы/платформы)
+sh scripts/prod-rebuild.sh --smoke    # + scripts/smoke-telegram-deployment.mjs
+```
+`TG_HOST` для Host-проверки берётся из `TELEGRAM_HOSTS` (окружение или `.env`), переопределяется `TG_HOST=...`; таймаут готовности — `HEALTH_TIMEOUT` (дефолт 90с).
+
 ### Сборка приложения (включая общий пакет)
 ```bash
 npm run build          # contracts → backend → telegram-app → webapp
@@ -281,7 +290,7 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 
 ## 🛠 Технологии
 
-- **Frontend**: React 19, telegram-ui, Zustand, TanStack Query, react-router, Vite 8, Sentry
+- **Frontend**: React 19, @tma.js/sdk-react (+ @tma.js/init-data-node на бэкенде), telegram-ui, Zustand, TanStack Query, react-router, Vite 8, Sentry
 - **Админ-панель**: React 19, Vite 8, Tailwind CSS 4, shadcn/ui, TanStack Router + Query, lucide-react, sonner
 - **Backend**: Hono, Node.js 22, Prisma ORM, PostgreSQL, jose (JWT), Zod, pino, @sentry/node, isomorphic-dompurify
 - **Монорепозиторий**: npm workspaces, TypeScript, Vitest, ESLint (конфиг `eslint.config.mjs`)
@@ -354,7 +363,7 @@ Paginated endpoints проверяют ответы shared Zod-схемами и
    ```bash
    NODE_ENV=production PORT=3000 npm start
    ```
-   Или через Docker: `docker compose up -d --build` (backend на :3000, админ-панель webapp на :3014, миграции применяются при старте).
+   Или через Docker: `docker compose up -d --build` (backend на :3000, админ-панель webapp на :3014, миграции применяются при старте). Для повторного деплоя — `sh scripts/prod-rebuild.sh` (см. «Запуск в Docker»).
 
 Полный чеклист релиза — в [`docs/deployment/telegram-staging-checklist.md`](docs/deployment/telegram-staging-checklist.md).
 

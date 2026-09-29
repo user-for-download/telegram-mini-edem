@@ -9,10 +9,15 @@
 
 ## Deploy
 
-1. Build and validate the image: `docker build -f backend/Dockerfile -t edem-backend:release .`.
-2. Apply migrations through the normal backend startup procedure.
-3. Verify `/health/ready`, API routes, admin cookie session, SPA fallback and WebSocket upgrade through the public proxy.
-4. Run `node e2e/telegram-parity.mjs` against the release environment.
+1. Standard rebuild: `sh scripts/prod-rebuild.sh` — builds backend+webapp,
+   recreates containers and polls `/health/ready` (migrations run on boot);
+   any red check exits non-zero. `--smoke` also runs
+   `scripts/smoke-telegram-deployment.mjs`; `--clean` on a base-image/platform
+   change; `--no-build` for `.env`-only changes.
+2. Or build the image explicitly: `docker build -f backend/Dockerfile -t edem-backend:release .`.
+3. Apply migrations through the normal backend startup procedure.
+4. Verify `/health/ready`, API routes, admin cookie session, SPA fallback and WebSocket upgrade through the public proxy.
+5. Run `node e2e/telegram-parity.mjs` against the release environment.
 
 ## Rollback
 

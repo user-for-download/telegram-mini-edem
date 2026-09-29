@@ -32,11 +32,18 @@ Optional (дефолты покрывают):
 
 ## 3. Deploy & verify
 
-- [ ] `docker compose up -d db backend` (webapp-админка — по желанию)
+- [ ] `sh scripts/prod-rebuild.sh` — build backend+webapp, recreate,
+      опрос `GET /health/ready` → 200 (не `sleep`); красная проверка = exit 1
+      с `docker compose ps` + логами. Опции: `--no-build` (смена `.env`),
+      `--clean` (prune + `--no-cache`), `--smoke` (шаг ниже автоматически).
+      `TG_HOST` берётся из `TELEGRAM_HOSTS`; `HEALTH_TIMEOUT` (дефолт 90с).
+- [ ] Или вручную: `docker compose up -d db backend`
+      (webapp-админка — по желанию)
 - [ ] `docker compose ps`: `db` healthy, `backend` healthy
       (healthcheck: `GET /health/ready` → 200)
 - [ ] Smoke:
       `BACKEND_URL=http://<staging>:3000 TG_HOST=<telegram-host> node scripts/smoke-telegram-deployment.mjs`
+      (или `sh scripts/prod-rebuild.sh --no-build --smoke`)
       Ожидается 6/6: live, ready, TG-ассеты по Host, auth-shape,
       VK-отсутствие (404 на `/auth/vk`), WS upgrade + 4401-timeout
 - [ ] Ручная проверка: открыть Mini App в Telegram (dev — через mockEnv
