@@ -37,7 +37,7 @@ export interface FieldProps
  * Поле формы: visually-hidden лейбл + контрол (Input/Textarea/Select кита)
  * + опциональная ошибка, связанная через aria-describedby.
  *
- * Почему visually-hidden, а не kit-`header`: в kите header рисует FormInputTitle
+ * Почему visually-hidden, а не kit-`header`: в ките header рисует FormInputTitle
  * ВНЕ <label> и только на platform === 'base' (на iOS текста нет вообще,
  * см. FormInput.js) — на видимом заголовке держать доступное имя нельзя.
  * Наши label+htmlFor дают имя на всех платформах.

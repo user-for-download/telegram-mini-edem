@@ -2,6 +2,6 @@
  * tgui Modal.Header рендерит текст только на iOS. На iOS SheetTitle
  * не рендерится вовсе (см. компонент), дублирования нет. */
 .title {
-  padding: 12px 16px 4px;
+  padding: var(--app-space-sm) var(--app-page-gutter) var(--app-space-2xs);
   text-align: center;
 }
