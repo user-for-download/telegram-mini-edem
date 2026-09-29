@@ -5,7 +5,10 @@ import { AppRouter } from "@/router/AppRouter";
 
 export default function App() {
   useEffect(() => {
-    // Сигнал WebView: контент готов к показу (убирает loading-скелетон Telegram).
+    // READY-ORDER INVARIANT (tma-sdk-04): сигнал WebView (убирает
+    // loading-скелетон Telegram) — только после первой отрисовки.
+    // Вызов должен оставаться в этом post-mount эффекте: main.tsx делает
+    // init → render, ready — здесь. Не переносить к await init().
     signalAppReady();
   }, []);
 
