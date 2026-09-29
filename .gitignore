@@ -30,3 +30,6 @@ dump/
 fix/
 opencode.json
 run_workflow.sh
+
+# Agent skills (local installs, full permissions) — never commit
+.agents/
