@@ -15,6 +15,7 @@ import { hapticFeedback } from "@tma.js/sdk-react";
 import { Snackbar } from "@telegram-apps/telegram-ui";
 import { wsServerEventSchema, type WsServerEvent } from "@edem/contracts";
 import { apiClient } from "@/api/client";
+import toastStyles from "@/components/Toast/Toast.module.css";
 import { useAuthStore } from "@/store/useAuthStore";
 import { TRIP_KEYS } from "@/queries/useTripsQuery";
 import { BOOKING_KEYS } from "@/queries/useBookingsQuery";
@@ -584,6 +585,7 @@ export const TelegramRealtimeListener: FC = () => {
         (notice): ReactNode => (
           <Snackbar
             key={notice.key}
+            className={toastStyles.snackbar}
             description={notice.subtitle}
             duration={4000}
             onClose={() => dismissNotice(notice.key)}

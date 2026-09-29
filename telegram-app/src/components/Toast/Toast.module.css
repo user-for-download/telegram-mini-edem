@@ -1,23 +1,37 @@
-/* Глобальный toast-фидбек (tgui Snackbar): сверху по центру
- * (низ перекрывался таббаром). Отступ сверху учитывает safe-area
- * Телеграма. Удвоенный селектор против каскада кита, без !important.
+/* Глобальный snackbar-фидбек (tgui Snackbar): снизу по центру, НАД
+ * парящим доком таббара (раньше висел сверху). Удвоенный селектор против
+ * каскада кита, без !important.
  *
  * Нюанс: Snackbar рисуется через RootRenderer-портал со своим
- * fixed-bottom (bottom/left/right вките) — обёртка его не двигает,
+ * fixed-bottom (bottom/left/right в ките) — обёртка его не двигает,
  * поэтому класс вешаем прямо на Snackbar. Центрируем через
- * left/right 0 + margin auto: transform кита (анимация translate3d
- * появления/закрытия) не трогаем. */
+ * left/right + margin auto: transform кита (анимация translate3d
+ * появления снизу/закрытия вниз) не трогаем. */
 
 .snackbar.snackbar {
-  /* Фуллскрин: тост под статус-баром и плавающими кнопками Telegram. */
-  top: calc(var(--tg-safe-area-top, 0px) + 12px);
-  bottom: auto;
-  left: 10px;
-  right: 10px;
+  /* Верх дока таббара = высота пилюли + отрыв от низа + нижняя safe-area.
+     Тот же расчёт, что у клиренса Page (--app-page-pad-bottom), плюс
+     --app-dock-gap зазора, чтобы тост не лип к пилюле. */
+  top: auto;
+  bottom: calc(
+    var(--app-dock-height) + var(--app-dock-float) +
+      max(var(--app-safe-bottom), var(--app-dock-gap)) + var(--app-dock-gap)
+  );
+  left: max(10px, var(--tg-safe-area-left, 0px));
+  right: max(10px, var(--tg-safe-area-right, 0px));
   margin-left: auto;
   margin-right: auto;
   max-width: 460px;
   /* Выше sticky-шапки (z-2) и модальных оверлеев кита (overlay=3):
      тост транзиентный (3.2с), фидбек обязан быть виден. */
   z-index: 50;
+}
+
+/* Стандартная высота тела снекбара. Китовое тело (tgui: Caption 20px +
+ * паддинги 10px) даёт 40px — приплюснутый однострочный тост. 48px —
+ * высота нативного тоста Telegram; контент кита уже центрирован
+ * (align-items:center), поэтому растёт только тело. Таргетим прямой
+ * div — это внутреннее тело Snackbar (см. Snackbar.js кита). */
+.snackbar.snackbar > div {
+  min-height: 48px;
 }

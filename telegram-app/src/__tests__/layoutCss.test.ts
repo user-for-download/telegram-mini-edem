@@ -19,6 +19,7 @@ const readCss = (relativePath: string): string =>
 const indexCss = readCss("../index.css");
 const pageCss = readCss("../ui/ui.module.css");
 const tabbarCss = readCss("../components/TabsBar/Tabbar.module.css");
+const toastCss = readCss("../components/Toast/Toast.module.css");
 
 /** Тело правила по селектору (сопоставление точное, классы хэшированы). */
 const ruleBody = (css: string, selector: string): string =>
@@ -34,7 +35,10 @@ function walkSource(dir: string, acc: string[] = []): string[] {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (entry.name !== "__tests__") walkSource(full, acc);
-    } else if (/\.tsx?$/.test(entry.name) && !/\.(test|spec)\.tsx?$/.test(entry.name)) {
+    } else if (
+      /\.tsx?$/.test(entry.name) &&
+      !/\.(test|spec)\.tsx?$/.test(entry.name)
+    ) {
       acc.push(full);
     }
   }
@@ -70,6 +74,16 @@ describe("каркас: слой TGUI и нижний клиренс", () => {
   it("Tailwind не возвращается в telegram-app", () => {
     expect(indexCss).not.toContain('@import "tailwindcss"');
     expect(indexCss).not.toContain("@tailwindcss");
+  });
+
+  it("снекбар снизу над доком таббара и со стандартной высотой", () => {
+    const snackbar = ruleBody(toastCss, ".snackbar.snackbar");
+    expect(snackbar).toContain("top: auto");
+    expect(snackbar).toContain("var(--app-dock-height)");
+    expect(snackbar).toContain("var(--app-dock-float)");
+    expect(ruleBody(toastCss, ".snackbar.snackbar > div")).toContain(
+      "min-height: 48px",
+    );
   });
 });
 
