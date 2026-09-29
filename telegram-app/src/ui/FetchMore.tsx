@@ -44,14 +44,14 @@ export function FetchMore({
   if (!hasNextPage) return null;
   return (
     <>
-      {sentinelRef && (
+      {sentinelRef ? (
         <div
           ref={sentinelRef}
           aria-hidden="true"
           className={styles.sentinel}
         />
-      )}
-      {placeholder && isFetchingNextPage && (
+      ) : null}
+      {placeholder && isFetchingNextPage ? (
         <div
           role="status"
           aria-label={placeholderLabel ?? "Загрузка ещё записей"}
@@ -59,7 +59,7 @@ export function FetchMore({
         >
           {placeholder}
         </div>
-      )}
+      ) : null}
       <Button
         stretched
         loading={isFetchingNextPage}

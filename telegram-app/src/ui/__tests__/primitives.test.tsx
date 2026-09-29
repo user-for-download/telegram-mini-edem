@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { CharCounter } from "@/ui/CharCounter";
 import { FetchMore } from "@/ui/FetchMore";
 import { Loading } from "@/ui/Loading";
+import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
 import { Stack } from "@/ui/Stack";
 import uiStyles from "@/ui/ui.module.css";
@@ -44,12 +45,40 @@ describe("Stack: ритм из токенов, gap-модификаторы", ()
   });
 });
 
+describe("Page: корень экрана, пропсы прокидываются", () => {
+  it("scroll — .page без hero, доп. пропсы/ref уходят на List", () => {
+    const html = render(
+      <Page id="root" data-x="1">
+        a
+      </Page>,
+    );
+    expect(html).toContain(uiStyles.page);
+    expect(html).not.toContain(uiStyles.pageHero);
+    expect(html).toContain('id="root"');
+    expect(html).toContain('data-x="1"');
+  });
+
+  it("hero добавляет .pageHero", () => {
+    expect(render(<Page variant="hero">a</Page>)).toContain(uiStyles.pageHero);
+  });
+});
+
 describe("SectionBody", () => {
   it("базовый .sectionBody, className мержится", () => {
     const html = render(<SectionBody className="foo">тело</SectionBody>);
     expect(html).toContain(uiStyles.sectionBody);
     expect(html).toContain("foo");
     expect(html).toContain("тело");
+  });
+
+  it("стандартные пропсы div прокидываются", () => {
+    const html = render(
+      <SectionBody id="body" aria-busy="true">
+        тело
+      </SectionBody>,
+    );
+    expect(html).toContain('id="body"');
+    expect(html).toContain('aria-busy="true"');
   });
 });
 

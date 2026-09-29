@@ -1,9 +1,8 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import styles from "./ui.module.css";
 
-export interface SectionBodyProps {
+export interface SectionBodyProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
-  className?: string;
 }
 
 /**
@@ -19,10 +18,20 @@ export interface SectionBodyProps {
  * платформенный паддинг (iOS 10px/18px), который всё равно перекрывается,
  * и подменял бы наш токен ритма китовым значением. List — только корень
  * экрана (см. Page).
+ *
+ * Пропсы обычного div (`id`, `aria-*`, `data-*`, `ref`) прокидываются как
+ * есть — как у ui/Stack и ui/Notice.
  */
-export function SectionBody({ children, className }: SectionBodyProps) {
+export function SectionBody({
+  children,
+  className,
+  ...rest
+}: SectionBodyProps) {
   return (
-    <div className={className ? `${styles.sectionBody} ${className}` : styles.sectionBody}>
+    <div
+      className={[styles.sectionBody, className].filter(Boolean).join(" ")}
+      {...rest}
+    >
       {children}
     </div>
   );

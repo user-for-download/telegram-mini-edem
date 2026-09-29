@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { List } from "@telegram-apps/telegram-ui";
 import styles from "./ui.module.css";
 
 export type PageVariant = "scroll" | "hero";
 
-export interface PageProps {
+export interface PageProps
+  extends Omit<ComponentProps<typeof List>, "children" | "className"> {
   /**
    * Блоки экрана. Вертикальный ритм между ними даёт кит
    * (`List > :not(:last-child) { margin-bottom: 12px }`) — свой gap не
@@ -41,8 +42,16 @@ export interface PageProps {
  * - низ — `--app-page-pad-bottom` (высота дока таббара + зазор + нижняя
  *   safe-area): владеется ТОЛЬКО здесь, AppShell.content клиренс не
  *   дублирует, иначе получалось 192px.
+ *
+ * Прочие пропсы китового `List` (`id`, `aria-*`, `data-*`, `ref`) —
+ * прокидываются как есть: корень экрана ведёт себя как обычный элемент.
  */
-export function Page({ children, className, variant = "scroll" }: PageProps) {
+export function Page({
+  children,
+  className,
+  variant = "scroll",
+  ...rest
+}: PageProps) {
   const classes = [
     styles.page,
     variant === "hero" ? styles.pageHero : undefined,
@@ -50,5 +59,9 @@ export function Page({ children, className, variant = "scroll" }: PageProps) {
   ]
     .filter(Boolean)
     .join(" ");
-  return <List className={classes}>{children}</List>;
+  return (
+    <List className={classes} {...rest}>
+      {children}
+    </List>
+  );
 }
