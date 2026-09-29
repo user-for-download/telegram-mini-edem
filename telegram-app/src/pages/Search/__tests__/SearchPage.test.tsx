@@ -40,10 +40,26 @@ function queryState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function infiniteState(items: unknown[], overrides: Record<string, unknown> = {}) {
+function infiniteState(
+  items: unknown[],
+  overrides: Record<string, unknown> = {},
+) {
   return {
     ...queryState(),
-    data: { pages: [{ items, pagination: { hasMore: false } }] },
+    data: {
+      pages: [
+        {
+          items,
+          pagination: {
+            hasMore: false,
+            page: 1,
+            limit: 20,
+            total: items.length,
+            totalPages: 1,
+          },
+        },
+      ],
+    },
     fetchNextPage: vi.fn(),
     hasNextPage: false,
     isFetchingNextPage: false,

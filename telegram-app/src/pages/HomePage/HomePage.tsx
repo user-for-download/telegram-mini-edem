@@ -32,13 +32,14 @@ export function HomePage() {
     const params = new URLSearchParams();
     if (from?.trim()) params.set("from", from.trim());
     if (to?.trim()) params.set("to", to.trim());
-    navigate(`/trips?${params.toString()}`);
+    const query = params.toString();
+    navigate(query ? `/trips?${query}` : "/trips");
   };
 
   const goToCreate = () => {
     haptic.light();
     // Авто уже известно: есть — сразу на форму; нет — шторка здесь же.
-    // Пока профиль грузится — идём на форму: гейт там сам откроет шторку.
+    // Пока авто грузится — идём на форму: гейт там сам откроет шторку.
     if (vehicleReady && !hasCar) {
       setPendingCreate(true);
       setVehicleOpen(true);

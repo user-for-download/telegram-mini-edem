@@ -237,7 +237,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
               <Button
                 variant="outline"
                 stretched
-                onClick={() => navigate("/bookings?segment=driver")}
+                onClick={() => navigate("/bookings?segment=driving")}
               >
                 К моим поездкам
               </Button>
@@ -313,7 +313,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         />
         <Button
           stretched
-          onClick={() => navigate("/bookings?segment=driver")}
+          onClick={() => navigate("/bookings?segment=driving")}
         >
           К моим поездкам
         </Button>

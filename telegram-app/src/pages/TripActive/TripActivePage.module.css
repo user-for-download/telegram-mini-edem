@@ -1,0 +1,7 @@
+/* Строка чипов-сегментов (driving/bookings/requests): как на SearchPage.
+ * position НЕ sticky. Внешних отступов нет — ритм даёт Page. */
+.chipRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

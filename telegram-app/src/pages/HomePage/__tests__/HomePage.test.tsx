@@ -1,5 +1,5 @@
-// Рендер-тесты главной: экспресс-поиск (нативные Select-дропдауны),
-// профиль-бар с рейтингом (Badge), баннер ближайшей активной брони (Banner),
+// Рендер-тесты главной: профиль-бар с рейтингом, сводка-счётчики
+// (InlineButtons + Badge), экспресс-поиск (нативные Select-дропдауны),
 // CTA водителю (Placeholder), популярные направления. Паттерн
 // tripsPages.test.tsx (SSR, без testing-library).
 // Данные — только через замокированные queries (profile/bookings),
@@ -132,18 +132,21 @@ describe("HomePage", () => {
     expect(html).toContain("активных: 0");
   });
 
-  it("сводка: активные поездки за рулём — кнопка «Поездки»", () => {
+  it("сводка: активные поездки за рулём — кнопка «Поездки» (total, не длина страниц)", () => {
     mockUseMyTrips.mockReturnValue(
       queryState({
         data: {
           pages: [
             {
+              // Один item при total 25: счётчик обязан показать total,
+              // а не длину загруженной страницы (P0: ownTrips.length врал).
               items: [
                 makeTrip({
                   id: "t-own",
                   departureAt: new Date(Date.now() + 3_600_000).toISOString(),
                 }),
               ],
+              pagination: { total: 25, hasMore: true },
             },
           ],
         },
@@ -151,7 +154,7 @@ describe("HomePage", () => {
     );
     const html = render(<HomePage />);
     expect(html).toContain("Поездки");
-    expect(html).toContain("активных: 1");
+    expect(html).toContain("активных: 25");
     // Остальные плашки на месте с нулями.
     expect(html).toContain("Брони");
     expect(html).toContain("Заявки");
@@ -189,7 +192,29 @@ describe("HomePage", () => {
     expect(html).toContain("Брони");
   });
 
-  it("сводка скрыта при загрузке (без мигания)", () => {
+  it("сводка: три плашки с aria-label целей (сегменты driving/bookings/requests)", () => {
+    // InlineButtons едет через onClick → navigate: URL в SSR-строке нет,
+    // поэтому проверяем различимые aria-label трёх кнопок, а сами URL —
+    // юнит-тестом навигации ниже (клик → navigate c нужным сегментом).
+    const html = render(<HomePage />);
+    expect(html).toContain("Ваши поездки, активных:");
+    expect(html).toContain("Ваши брони, подтверждено:");
+    expect(html).toContain("Заявки пассажиров, новых:");
+  });
+
+  it("ошибка сводки — один Notice с «Повторить», а не нули", () => {
+    // queryState по умолчанию isError:false — ошибку задаём парой
+    // error + isError, как в реальных useQuery при падении запроса.
+    mockUseMyBookings.mockReturnValue(
+      queryState({ error: new Error("network down"), isError: true }),
+    );
+    const html = render(<HomePage />);
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("Повторить");
+    expect(html).not.toContain("активных: 0");
+  });
+
+  it("сводка при загрузке — скелетон той же высоты (без CLS-прыжка)", () => {
     mockUseMyBookings.mockReturnValue(queryState({ isLoading: true }));
     mockUseMyTrips.mockReturnValue(
       queryState({
@@ -200,6 +225,7 @@ describe("HomePage", () => {
       }),
     );
     const html = render(<HomePage />);
+    expect(html).toContain('aria-label="Загрузка сводки"');
     expect(html).not.toContain("Поездки");
     expect(html).not.toContain("Брони");
     expect(html).not.toContain("Заявки");

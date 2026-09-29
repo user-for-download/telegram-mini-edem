@@ -59,7 +59,7 @@ export function isCriticalNotification(type: string): boolean {
  * (честно null, не выдуманный маршрут).
  */
 export const NOTIFICATION_ROUTES: Readonly<Record<string, string>> = {
-  booking_created: "/bookings?segment=driver",
+  booking_created: "/bookings?segment=requests",
   booking_status_changed: "/bookings",
   trip_cancelled: "/bookings",
   trip_status_changed: "/profile/history",

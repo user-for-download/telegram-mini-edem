@@ -17,3 +17,26 @@
   right: -14px;
   pointer-events: none;
 }
+
+/* Скелетон сводки (CLS): три серые болванки ≈ высоте InlineButtons.Item.
+ * Без внешних отступов — ритм даёт корень экрана (ui/Page).
+ * Токены только --tgui--* и --app-*; литералов цветов/радиусов нет. */
+.skeletonRow {
+  display: flex;
+  gap: var(--app-space-xs);
+}
+
+.skeletonTile {
+  flex: 1;
+  min-height: 64px;
+  border-radius: var(--app-radius-md);
+  background: var(--tgui--secondary_bg_color);
+}
+
+/* Ошибка сводки: один Notice + «Повторить», без внешних отступов. */
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--app-space-xs);
+}

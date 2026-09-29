@@ -1,28 +1,33 @@
 // Регресс: завершённая поездка с confirmed-бронью (scope history)
 // не попадает в «Активные», хотя статус брони активный.
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
-const { mockUseMyBookings, mockUseInfiniteMyTrips, mockUseCancelTrip } =
-  vi.hoisted(() => ({
-    mockUseMyBookings: vi.fn(),
-    mockUseInfiniteMyTrips: vi.fn(),
-    mockUseCancelTrip: vi.fn(
-      (): {
-        mutate: ReturnType<typeof vi.fn>;
-        isPending: boolean;
-        variables: string | undefined;
-      } => ({
-        mutate: vi.fn(),
-        isPending: false,
-        variables: undefined,
-      }),
-    ),
-  }));
+const {
+  mockUseMyBookings,
+  mockUseInfiniteMyTrips,
+  mockUseCancelTrip,
+  mockUseDriverRequests,
+} = vi.hoisted(() => ({
+  mockUseMyBookings: vi.fn(),
+  mockUseInfiniteMyTrips: vi.fn(),
+  mockUseDriverRequests: vi.fn(),
+  mockUseCancelTrip: vi.fn(
+    (): {
+      mutate: ReturnType<typeof vi.fn>;
+      isPending: boolean;
+      variables: string | undefined;
+    } => ({
+      mutate: vi.fn(),
+      isPending: false,
+      variables: undefined,
+    }),
+  ),
+}));
 
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: () => ({ data: { rating: 4.9 } }),
@@ -30,6 +35,7 @@ vi.mock("@/queries/profile", () => ({
 
 vi.mock("@/queries/useBookingsQuery", () => ({
   useMyBookingsQuery: mockUseMyBookings,
+  useDriverRequestsQuery: mockUseDriverRequests,
   useCancelBookingMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useTripBookingsQuery: () => ({ data: { pages: [] } }),
   useUpdateBookingStatusMutation: () => ({ mutate: vi.fn(), isPending: false }),
@@ -59,15 +65,21 @@ function queryState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function render(element: ReactNode): string {
+function render(element: ReactNode, url = "/bookings"): string {
   return renderToString(
     <AppRoot platform="base">
-      <MemoryRouter initialEntries={["/bookings"]}>
+      <MemoryRouter initialEntries={[url]}>
         <ToastProvider>{element}</ToastProvider>
       </MemoryRouter>
     </AppRoot>,
   );
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
+  mockUseDriverRequests.mockReturnValue(queryState({ data: [] }));
+});
 
 describe("TripActivePage scope", () => {
   it("confirmed-брони scope history (уехавшие/завершённые) скрыты", () => {
@@ -113,9 +125,12 @@ describe("TripActivePage scope", () => {
         isFetchingNextPage: false,
       }),
     );
-    const html = render(<TripActivePage />);
+    // Сегмент брони: активная бронь видна, scope history — нет.
+    const html = render(<TripActivePage />, "/bookings?segment=bookings");
     expect(html).not.toContain("Сокол");
     expect(html).toContain("Череповец");
+    // Чип «Мои брони» показывает счётчик активных.
+    expect(html).toContain("Мои брони (1)");
   });
 });
 

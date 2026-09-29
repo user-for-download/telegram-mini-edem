@@ -301,7 +301,7 @@ export function SearchPage() {
         </Section>
 
         <div className={styles.resultsBar}>
-          <Caption weight="2">Найдено поездок: {items.length}</Caption>
+          <Caption weight="2">Найдено поездок: {trips.data?.pages[0]?.pagination.total ?? items.length}</Caption>
           <Caption Component="span">Цены без комиссии</Caption>
         </div>
 

@@ -15,7 +15,7 @@ const KNOWN_ROUTES = new Set([
   "/trips",
   "/trips/my/new",
   "/bookings",
-  "/bookings?segment=driver",
+  "/bookings?segment=driving",
   "/profile",
   "/profile/history",
   "/reviews",
@@ -55,7 +55,7 @@ describe("START_PARAM_ROUTES (контракт)", () => {
   it("ведёт на существующие маршруты AppRouter", () => {
     expect(START_PARAM_ROUTES["bookings"]).toBe("/bookings");
     expect(START_PARAM_ROUTES["history"]).toBe("/profile/history");
-    expect(START_PARAM_ROUTES["my_trips"]).toBe("/bookings?segment=driver");
+    expect(START_PARAM_ROUTES["my_trips"]).toBe("/bookings?segment=driving");
     expect(START_PARAM_ROUTES["profile"]).toBe("/profile");
     expect(START_PARAM_ROUTES["reviews"]).toBe("/reviews");
     expect(START_PARAM_ROUTES["support"]).toBe("/profile/support");
@@ -82,7 +82,7 @@ describe("resolveStartParamRoute", () => {
     expect(resolveStartParamRoute("profile")).toBe("/profile");
     expect(resolveStartParamRoute("reviews")).toBe("/reviews");
     expect(resolveStartParamRoute("support")).toBe("/profile/support");
-    expect(resolveStartParamRoute("my_trips")).toBe("/bookings?segment=driver");
+    expect(resolveStartParamRoute("my_trips")).toBe("/bookings?segment=driving");
     expect(resolveStartParamRoute("notifications")).toBe("/notifications");
     expect(resolveStartParamRoute("settings")).toBe("/settings");
     expect(resolveStartParamRoute("search")).toBe("/trips");

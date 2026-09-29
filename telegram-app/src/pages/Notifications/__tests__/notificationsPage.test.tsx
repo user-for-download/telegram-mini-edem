@@ -104,7 +104,8 @@ describe("notificationRoute / isCriticalNotification (контракт parity)",
     expect(notificationRoute("booking_status_changed")).toBe("/bookings");
     expect(notificationRoute("trip_cancelled")).toBe("/bookings");
     expect(notificationRoute("trip_status_changed")).toBe("/profile/history");
-    expect(notificationRoute("booking_created")).toBe("/bookings?segment=driver");
+    // booking_created — новая заявка водителю → сегмент «Заявки».
+    expect(notificationRoute("booking_created")).toBe("/bookings?segment=requests");
     expect(notificationRoute("review_approved")).toBe("/reviews");
     expect(notificationRoute("feedback_replied")).toBe("/profile/support");
   });

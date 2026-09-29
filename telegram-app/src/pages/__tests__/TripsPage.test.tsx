@@ -134,12 +134,19 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 }
 
 describe("TripPage: только активные, без табов", () => {
-  it("дефолт — активные и ссылка на историю в пустом состоянии", () => {
+  it("дефолт — сегмент «За рулём», пустота только driving", () => {
     const html = render(<TripPage />);
     expect(html).not.toContain("Активные");
-    // Пусто везде → подсказка с двумя путями + кнопка истории.
+    // Чипы трёх сегментов на месте; пустота — только driving.
+    expect(html).toContain("За рулём");
+    expect(html).toContain("Мои брони");
+    expect(html).toContain("Заявки");
+    // Пусто в driving → подсказка + кнопка истории.
     expect(html).toContain("Пока тихо");
     expect(html).toContain("История поездок");
+    // Чужие сегменты не протекают в driving.
+    expect(html).not.toContain("Активных запросов нет");
+    expect(html).not.toContain("Заявок нет");
   });
 
   it("?segment=history — редирект на /profile/history (контента нет)", () => {
@@ -149,12 +156,32 @@ describe("TripPage: только активные, без табов", () => {
     expect(html).not.toContain("Здесь появятся завершённые и отменённые поездки.");
   });
 
-  it("легаси ?segment=driver ведёт в «Активные»", () => {
+  it("легаси ?segment=driver нормализуется в «За рулём»", () => {
     mockUseInfiniteMyTrips.mockReturnValue(
       infiniteState([makeTrip({ pendingRequestsCount: 0 })]),
     );
     const html = render(<TripPage />, "/bookings?segment=driver");
+    // Сегмент driver — легаси-алиас driving (без редиректа): контент
+    // «За рулём», чип активен.
     expect(html).toContain("Вы водитель");
+    expect(html).toContain("За рулём");
+  });
+
+  it("канонические сегменты: driving/bookings/requests + чистый /bookings", () => {
+    mockUseInfiniteMyTrips.mockReturnValue(
+      infiniteState([makeTrip({ pendingRequestsCount: 0 })]),
+    );
+    for (const url of [
+      "/bookings",
+      "/bookings?segment=driving",
+      "/bookings?segment=bookings",
+      "/bookings?segment=requests",
+    ]) {
+      const html = render(<TripPage />, url);
+      expect(html).toContain("За рулём");
+      expect(html).toContain("Мои брони");
+      expect(html).toContain("Заявки");
+    }
   });
 });
 

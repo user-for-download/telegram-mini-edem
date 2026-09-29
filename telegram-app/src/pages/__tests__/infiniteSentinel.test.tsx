@@ -22,6 +22,7 @@ const {
   mockUseInbox,
   mockUseMarkRead,
   mockUseMarkAll,
+  mockUseDriverRequests,
 } = vi.hoisted(() => ({
   mockUseInfiniteTrips: vi.fn(),
   mockUseInfiniteMyTrips: vi.fn(),
@@ -33,6 +34,7 @@ const {
   mockUseInbox: vi.fn(),
   mockUseMarkRead: vi.fn(),
   mockUseMarkAll: vi.fn(),
+  mockUseDriverRequests: vi.fn(),
 }));
 
 vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
@@ -53,6 +55,7 @@ vi.mock("@/queries/useBookingsQuery", () => ({
   useCancelBookingMutation: mockUseCancelBooking,
   useTripBookingsQuery: vi.fn(),
   useUpdateBookingStatusMutation: vi.fn(),
+  useDriverRequestsQuery: mockUseDriverRequests,
 }));
 
 vi.mock("@/queries/useNotificationsQuery", () => ({
@@ -176,6 +179,7 @@ beforeEach(() => {
   mockUseInbox.mockReturnValue(inboxInfinite([]));
   mockUseMarkRead.mockReturnValue(mutation());
   mockUseMarkAll.mockReturnValue(mutation());
+  mockUseDriverRequests.mockReturnValue(baseQuery({ data: [] }));
 });
 
 describe("SearchPage: сентинел (SSR, без IntersectionObserver)", () => {
@@ -237,7 +241,7 @@ describe("TripPage (active): сентинел (SSR, без IntersectionObserver)
     mockUseInfiniteMyTrips.mockReturnValue(
       tripsInfinite([makeTrip()], { hasNextPage: true }),
     );
-    const html = render(<TripPage />, "/bookings?segment=driver");
+    const html = render(<TripPage />, "/bookings?segment=driving");
     expect(html).toContain("Вы водитель");
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain("_sentinel_");
@@ -248,7 +252,7 @@ describe("TripPage (active): сентинел (SSR, без IntersectionObserver)
     mockUseInfiniteMyTrips.mockReturnValue(
       tripsInfinite([makeTrip()], { hasNextPage: false }),
     );
-    const html = render(<TripPage />, "/bookings?segment=driver");
+    const html = render(<TripPage />, "/bookings?segment=driving");
     expect(html).toContain("Вы водитель");
     expect(html).not.toContain("_sentinel_");
     expect(html).not.toContain("Показать ещё");
@@ -261,7 +265,7 @@ describe("TripPage (active): сентинел (SSR, без IntersectionObserver)
         isFetchingNextPage: true,
       }),
     );
-    const html = render(<TripPage />, "/bookings?segment=driver");
+    const html = render(<TripPage />, "/bookings?segment=driving");
     expect(html).toContain('aria-label="Загрузка ещё поездок"');
   });
 });

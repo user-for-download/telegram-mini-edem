@@ -148,14 +148,17 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 }
 
 describe("TripPage parity", () => {
-  it("только активные, без табов; пусто — ссылка на историю", () => {
+  it("дефолт — сегмент «За рулём», пусто — ссылка на историю", () => {
     mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
     mockUseHistory.mockReturnValue(queryState({ data: [] }));
     mockUseCancelBooking.mockReturnValue(mutation());
     const html = render(<TripPage />);
+    // Чипы трёх сегментов вверху; табов больше нет.
     expect(html).not.toContain("Активные");
-    expect(html).not.toContain("За рулём");
-    // Пусто везде → подсказка с двумя путями + кнопка истории.
+    expect(html).toContain("За рулём");
+    expect(html).toContain("Мои брони");
+    expect(html).toContain("Заявки");
+    // Пусто в driving → подсказка + кнопка истории.
     expect(html).toContain("Пока тихо");
     expect(html).toContain("История поездок");
   });
@@ -175,7 +178,7 @@ describe("TripPage parity", () => {
     );
     mockUseHistory.mockReturnValue(queryState({ data: [] }));
     mockUseCancelBooking.mockReturnValue(mutation());
-    const html = render(<TripPage />);
+    const html = render(<TripPage />, "/bookings?segment=bookings");
     expect(html).toContain("Отменить");
     expect(html).toContain("На рассмотрении");
     expect(html).toContain("место №2");
@@ -201,7 +204,7 @@ describe("TripPage parity", () => {
       }),
     );
     // Активные (легаси-сегмент игнорируется).
-    const html = render(<TripPage />, "/bookings?segment=driver");
+    const html = render(<TripPage />, "/bookings?segment=driving");
     expect(html).toContain("Заявки: 2");
     // Заявки — строки с −/+ вместо «Вы водитель».
     expect(html).toContain("Пётр");
