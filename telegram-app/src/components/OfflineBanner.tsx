@@ -5,6 +5,10 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 /**
  * Предупреждение о stale-данных и подтверждение восстановления
  * соединения (role=status, aria-live). Нативный Banner type="inline".
+ *
+ * Один глобальный экземпляр — в AppConfig (покрывает все страницы).
+ * Локальные копии — ТОЛЬКО внутри Sheet-шторок (портал перекрывает
+ * глобальный баннер). На страницах не дублировать.
  */
 export function OfflineBanner() {
   const { isOnline, wasOffline } = useOnlineStatus();

@@ -28,7 +28,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
 import { CityPickerField } from "@/components/CityPicker/CityPickerField";
-import { OfflineBanner } from "@/components/OfflineBanner";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
@@ -230,7 +229,6 @@ export function CreateTripForm({
   if (!vehicleQuery.error && !hasCar) {
     return (
       <>
-        <OfflineBanner />
         <Page>
           <Section header="Нужен автомобиль">
             <SectionBody>
@@ -258,7 +256,6 @@ export function CreateTripForm({
 
   return (
     <>
-      <OfflineBanner />
       <Page>
         <Section header="Маршрут">
           <SectionBody>

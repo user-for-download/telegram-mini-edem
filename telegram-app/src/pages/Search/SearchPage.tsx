@@ -23,7 +23,6 @@ import {
   X,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { OfflineBanner } from "@/components/OfflineBanner";
 import { QueryState } from "@/components/QueryState";
 import { TripCardsSkeleton } from "@/components/Skeletons";
 import { TripFeedCard } from "@/components/Trip/TripFeedCard";
@@ -133,7 +132,6 @@ export function SearchPage() {
 
   return (
     <>
-      <OfflineBanner />
       <Page>
         {/* Фильтр: поверхность — Section, заголовок — нативный.
             Чипы-действия — первой строкой тела (рядом с заголовком

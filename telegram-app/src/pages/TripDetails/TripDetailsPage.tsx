@@ -23,7 +23,6 @@ import { useToast } from "@/components/Toast/ToastProvider";
 import { EditTripForm } from "@/components/Trip/EditTripForm";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { ApiError } from "@/api/client";
-import { OfflineBanner } from "@/components/OfflineBanner";
 import { Stack } from "@/ui/Stack";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
@@ -100,7 +99,6 @@ export function TripDetailsPage() {
       trip.error instanceof ApiError && trip.error.status === 404;
     return (
       <>
-        <OfflineBanner />
         <EmptyState
           header={EMPTY_STATES.tripNotFound.header}
           description={
@@ -188,8 +186,6 @@ export function TripDetailsPage() {
 
   return (
     <Stack>
-      <OfflineBanner />
-
       {hasActiveBooking && item.myBooking && (
         <Notice tone="success" variant="banner">
           <div>
