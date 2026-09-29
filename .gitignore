@@ -16,8 +16,11 @@ backend/logs/
 backend/.env
 !backend/.env.test
 # Канонический lockfile: package-lock.json. Установка — npm ci везде
-# (CI, Dockerfile). bun.lock удалён: два lockfile = дрейф графа зависимостей
+# (CI, Dockerfile). Менеджер пакетов — только npm: bun.lock/bun.lockb
+# игнорируем и не коммитим — два lockfile = дрейф графа зависимостей
 # между CI и прод-образами (audit: reproducible dependency installation).
+bun.lock
+bun.lockb
 *.db
 *.db-journal
 .opencode/
