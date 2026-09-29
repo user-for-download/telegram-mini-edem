@@ -31,6 +31,7 @@ const { sdk } = vi.hoisted(() => {
       settingsMount: mkCallableMount(),
       closingMount: mkCallableMount(),
       swipeMount: mkCallableMount(),
+      swipeDisableVertical: mkCallableMount(),
       initDataRestore: vi.fn(),
       viewportMount: mkCallableMount(),
       viewportBind: vi.fn(),
@@ -54,7 +55,10 @@ vi.mock("@tma.js/sdk-react", () => ({
   backButton: { mount: sdk.backMount },
   settingsButton: { mount: sdk.settingsMount },
   closingBehavior: { mount: sdk.closingMount },
-  swipeBehavior: { mount: sdk.swipeMount },
+  swipeBehavior: {
+    mount: sdk.swipeMount,
+    disableVertical: sdk.swipeDisableVertical,
+  },
   initData: { restore: sdk.initDataRestore },
   viewport: {
     mount: sdk.viewportMount,
@@ -177,5 +181,17 @@ describe("init macOS-mock onEvent (объектная форма)", () => {
     expect(mMount).toBeGreaterThanOrEqual(0);
     expect(tMount).toBeLessThan(tBind as number);
     expect(tBind).toBeLessThan(mMount as number);
+  });
+
+  it("отключает вертикальный свайп глобально после mount", async () => {
+    await init({ debug: false, mockForMacOS: false });
+
+    expect(sdk.swipeMount.ifAvailable).toHaveBeenCalledTimes(1);
+    expect(sdk.swipeDisableVertical.ifAvailable).toHaveBeenCalledTimes(1);
+    expect(
+      sdk.swipeMount.ifAvailable.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      sdk.swipeDisableVertical.ifAvailable.mock.invocationCallOrder[0] as number,
+    );
   });
 });

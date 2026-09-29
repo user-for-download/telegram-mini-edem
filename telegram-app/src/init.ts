@@ -117,9 +117,13 @@ export async function init(options: {
   backButton.mount.ifAvailable();
   settingsButton.mount.ifAvailable();
   closingBehavior.mount.ifAvailable();
-  // Свайп-поведение монтируем всегда (форма/шторка сами отключат
-  // вертикальный свайп через useDisableVerticalSwipe и вернут обратно).
+  // Свайп-поведение (docs features/swipe-behavior): mount → disableVertical.
+  // Отключаем вертикальный свайп во ВСЁМ приложении, а не только на формах:
+  // апп полноэкранный со своим скроллом, иначе свайп вниз при скролле
+  // сворачивает/закрывает мини-апп. Состояние хранит сам клиент; обратно
+  // включаем только явным enableVertical (у нас его нет).
   swipeBehavior.mount.ifAvailable();
+  swipeBehavior.disableVertical.ifAvailable();
   initData.restore();
 
   if (themeParams.mount.isAvailable()) {
