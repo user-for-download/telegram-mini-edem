@@ -1,7 +1,6 @@
 import { useState, type SubmitEvent } from "react";
 
 import { Button } from "@/ui/Button";
-import { HINT } from "@/ui/classes";
 import { Search } from "lucide-react";
 import { CitySelectField } from "@/components/CitySelect/CitySelectField";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
@@ -59,7 +58,6 @@ export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
         >
           Найти поездку
         </Button>
-        <div className={HINT}>Достаточно заполнить хотя бы один город</div>
       </Card>
     </form>
   );

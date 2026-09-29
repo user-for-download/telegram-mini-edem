@@ -2,8 +2,10 @@ import type { ComponentProps, ReactNode } from "react";
 import { Card as TguiCard } from "@telegram-apps/telegram-ui";
 import styles from "./ui.module.css";
 
-export interface CardProps
-  extends Omit<ComponentProps<typeof TguiCard>, "type"> {
+export interface CardProps extends Omit<
+  ComponentProps<typeof TguiCard>,
+  "type"
+> {
   /**
    * default — паддинг 16 (основная поверхность лент и секций);
    * flush — 0 (тело держит раскладку само).
@@ -44,7 +46,9 @@ function CardRoot({
   return (
     <TguiCard
       type="plain"
-      className={[variantClass, className].filter(Boolean).join(" ") || undefined}
+      className={
+        [variantClass, className].filter(Boolean).join(" ") || undefined
+      }
       {...restProps}
     >
       {children}

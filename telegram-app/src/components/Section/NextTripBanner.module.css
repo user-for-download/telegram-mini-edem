@@ -1,0 +1,7 @@
+/* Баннер ближайшей поездки (NextTripBanner): во всю ширину рельса —
+ * сбрасываем боковые margin кита (base 16px / iOS 20px) — и верхний
+ * отступ 30px как у карточки поиска (TripSearchSection).
+ * Удвоенный селектор — канон репозитория (.searchCard, .card.card). */
+.banner.banner {
+  margin: 30px 0 0;
+}

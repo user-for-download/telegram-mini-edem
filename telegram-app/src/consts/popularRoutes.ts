@@ -4,7 +4,7 @@ export interface PopularRoute {
   from: string;
   to: string;
 }
-
+// TODO: пока для теста так. Потом будем вычислять на сервере разв 30 дней
 export const POPULAR_ROUTES: readonly PopularRoute[] = [
   { from: "Вологда", to: "Череповец" },
   { from: "Вологда", to: "Сокол" },
