@@ -11,8 +11,7 @@ import {
   miniApp,
   backButton,
   settingsButton,
-  expandViewport,
-  mountClosingBehavior,
+  closingBehavior,
 } from "@tma.js/sdk-react";
 
 /**
@@ -90,7 +89,7 @@ export async function init(options: {
   // (в @tma.js 3.0.x из шаблона этой зависимости не было).
   backButton.mount.ifAvailable();
   settingsButton.mount.ifAvailable();
-  mountClosingBehavior.ifAvailable();
+  closingBehavior.mount.ifAvailable();
   initData.restore();
 
   if (miniApp.mount.isAvailable()) {
@@ -116,5 +115,5 @@ export async function init(options: {
 
   // Раскрываем на всю высоту (официальная дока: без expand приложение
   // может открыться в пол-экрана через кнопку меню/инлайн).
-  expandViewport.ifAvailable();
+  viewport.expand.ifAvailable();
 }
