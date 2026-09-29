@@ -30,6 +30,7 @@ const { sdk } = vi.hoisted(() => {
       backMount: mkCallableMount(),
       settingsMount: mkCallableMount(),
       closingMount: mkCallableMount(),
+      swipeMount: mkCallableMount(),
       initDataRestore: vi.fn(),
       viewportMount: mkCallableMount(),
       viewportBind: vi.fn(),
@@ -53,6 +54,7 @@ vi.mock("@tma.js/sdk-react", () => ({
   backButton: { mount: sdk.backMount },
   settingsButton: { mount: sdk.settingsMount },
   closingBehavior: { mount: sdk.closingMount },
+  swipeBehavior: { mount: sdk.swipeMount },
   initData: { restore: sdk.initDataRestore },
   viewport: {
     mount: sdk.viewportMount,

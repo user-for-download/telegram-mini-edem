@@ -13,6 +13,7 @@ import {
   backButton,
   settingsButton,
   closingBehavior,
+  swipeBehavior,
 } from "@tma.js/sdk-react";
 
 /**
@@ -116,6 +117,9 @@ export async function init(options: {
   backButton.mount.ifAvailable();
   settingsButton.mount.ifAvailable();
   closingBehavior.mount.ifAvailable();
+  // Свайп-поведение монтируем всегда (форма/шторка сами отключат
+  // вертикальный свайп через useDisableVerticalSwipe и вернут обратно).
+  swipeBehavior.mount.ifAvailable();
   initData.restore();
 
   if (themeParams.mount.isAvailable()) {

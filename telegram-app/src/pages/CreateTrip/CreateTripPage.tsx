@@ -34,6 +34,7 @@ import { SectionBody } from "@/ui/SectionBody";
 import { TRIP_TAGS } from "@/consts/tags";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useDisableVerticalSwipe } from "@/hooks/useDisableVerticalSwipe";
 import { useModalBack } from "@/utils/modalBack";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useCreateTripMutation } from "@/queries/useTripsQuery";
@@ -138,6 +139,9 @@ export function CreateTripForm({
       comment !== "" ||
       tags.length > 0,
   );
+
+  // Вертикальный свайп вниз не должен сворачивать мини-апп при скролле формы.
+  useDisableVerticalSwipe();
 
   const swapCities = () => {
     haptic.selection();
