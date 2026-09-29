@@ -125,12 +125,131 @@ describe("TripActivePage scope", () => {
         isFetchingNextPage: false,
       }),
     );
-    // Сегмент брони: активная бронь видна, scope history — нет.
-    const html = render(<TripActivePage />, "/bookings?segment=bookings");
+    // Сегмент пассажира: активная бронь видна, scope history — нет.
+    const html = render(<TripActivePage />, "/bookings?segment=passenger");
     expect(html).not.toContain("Сокол");
     expect(html).toContain("Череповец");
-    // Чип «Мои брони» показывает счётчик активных.
-    expect(html).toContain("Мои брони (1)");
+    // Бейджи без счётчиков.
+    expect(html).toContain("Пассажир");
+    expect(html).not.toContain("Пассажир (");
+  });
+
+  it("legacy ?segment=bookings открывается как Пассажир", () => {
+    mockUseMyBookings.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "b-now",
+            seat: 1,
+            status: "confirmed",
+            scope: "active",
+            trip: {
+              id: "t-now",
+              fromCity: "Вологда",
+              toCity: "Череповец",
+              departureAt: "2030-06-01T09:00:00.000Z",
+              price: 450,
+              driver: { name: "Александр" },
+            },
+          },
+        ],
+      }),
+    );
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({
+        data: { pages: [] },
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      }),
+    );
+    const html = render(<TripActivePage />, "/bookings?segment=bookings");
+    expect(html).toContain("Череповец");
+  });
+
+  it("Все: поездки и брони одним списком, бейдж Водитель — только с заявками", () => {
+    mockUseMyBookings.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "b-now",
+            seat: 1,
+            status: "confirmed",
+            scope: "active",
+            trip: {
+              id: "t-now",
+              fromCity: "Вологда",
+              toCity: "Череповец",
+              departureAt: "2030-06-01T09:00:00.000Z",
+              price: 450,
+              driver: { name: "Александр" },
+            },
+          },
+        ],
+      }),
+    );
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({
+        data: {
+          pages: [
+            {
+              items: [
+                {
+                  id: "t-drive",
+                  status: "active",
+                  fromCity: "Вологда",
+                  toCity: "Сокол",
+                  departureAt: "2030-06-02T09:00:00.000Z",
+                  price: 400,
+                  seatsAvailable: 2,
+                  seatsTotal: 4,
+                  pendingRequestsCount: 3,
+                  confirmedBookingsCount: 0,
+                },
+              ],
+            },
+          ],
+        },
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      }),
+    );
+    const html = render(<TripActivePage />);
+    expect(html).toContain("Череповец");
+    expect(html).toContain("Сокол");
+    expect(html).toContain("Все");
+    expect(html).toContain("Водитель");
+    // Водитель: поездка с заявками видна.
+    const driverHtml = render(<TripActivePage />, "/bookings?segment=driver");
+    expect(driverHtml).toContain("Сокол");
+    expect(driverHtml).not.toContain("Череповец");
+  });
+
+  it("Водитель без заявок: условие снято, видны все поездки", () => {
+    mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
+    const plain = {
+      id: "t-plain",
+      status: "active",
+      fromCity: "Вологда",
+      toCity: "Грязовец",
+      departureAt: "2030-06-02T09:00:00.000Z",
+      price: 400,
+      seatsAvailable: 2,
+      seatsTotal: 4,
+      pendingRequestsCount: 0,
+      confirmedBookingsCount: 0,
+    };
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({
+        data: { pages: [{ items: [plain] }] },
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      }),
+    );
+    const html = render(<TripActivePage />, "/bookings?segment=driver");
+    expect(html).toContain("Грязовец");
   });
 });
 

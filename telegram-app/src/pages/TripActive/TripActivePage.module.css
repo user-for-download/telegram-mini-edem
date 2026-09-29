@@ -1,7 +1,65 @@
-/* Строка чипов-сегментов (driving/bookings/requests): как на SearchPage.
- * position НЕ sticky. Внешних отступов нет — ритм даёт Page. */
+/* Строка поиска (один общий фильтр по откуда/куда, как в кошельке)
+ * и ряд чипов-сегментов (all/driver/passenger). Внешних отступов нет —
+ * ритм даёт Page. */
+.searchRow {
+  display: flex;
+  align-items: center;
+}
+
+/* Обёртка кита — единственный ребёнок flex-ряда: без flex-grow она
+ * сжимается по контенту, поле не во всю ширину. */
+.searchRow.searchRow > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Поле поиска залито серым (у кита инпут прозрачный — не видно).
+ * Внешняя обёртка FormInput на base красит белый фон и бока 22px
+ * (tgui-8ca5…) — гасим, иначе поле не во всю ширину. Хэш из
+ * @telegram-apps/telegram-ui@2.1.13 (pinned) — при bump сверить
+ * в dist/styles.css. Неслойный модуль бьёт слой tgui без !important. */
+.searchField.searchField {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--tgui--tertiary_bg_color);
+  border-radius: var(--app-radius-pill);
+}
+
+.searchField.searchField :global(.tgui-8ca550c2fc85eff5) {
+  background: transparent;
+  padding: 0;
+}
+
 .chipRow {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Бейджи-фильтры в стиле кошелька: неактивный — просто текст без фона
+ * (сброс заливки mono/elevated кита), активный — голубая пилюля.
+ * Неслойный модуль бьёт слой tgui без !important. */
+.filter.filter {
+  background: transparent;
+  box-shadow: none;
+  color: var(--tgui--hint_color);
+}
+
+/* Текст красит вложенный h6 кита (plain_foreground явно) — дублируем
+ * цвет на потомков, приём как у .accent в ui/Chip.module.css. */
+.filter.filter,
+.filter.filter * {
+  color: var(--tgui--hint_color);
+}
+
+.filterActive.filterActive {
+  background: var(--tgui--secondary_fill);
+  box-shadow: none;
+  border-radius: var(--app-radius-pill);
+  font-weight: 600;
+}
+
+.filterActive.filterActive,
+.filterActive.filterActive * {
+  color: var(--tgui--link_color);
 }

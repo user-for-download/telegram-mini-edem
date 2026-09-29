@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { Notice } from "@/ui/Notice";
 import { FetchMore } from "@/ui/FetchMore";
 import { Button } from "@/ui/Button";
 import { Chip } from "@/ui/Chip";
 import { Page } from "@/ui/Page";
+import { Input } from "@telegram-apps/telegram-ui";
+import { Search as SearchIcon } from "lucide-react";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { TripCard } from "@/components/Trip/TripCard";
-import { DriverTripRequests } from "@/components/Trip/DriverTripRequests";
 import { QueryState } from "@/components/QueryState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Stack } from "@/ui/Stack";
@@ -17,7 +19,6 @@ import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import {
   useCancelBookingMutation,
-  useDriverRequestsQuery,
   useMyBookingsQuery,
 } from "@/queries/useBookingsQuery";
 import {
@@ -27,53 +28,50 @@ import {
 import { useProfileQuery } from "@/queries/profile";
 import styles from "./TripActivePage.module.css";
 
-type TripSegment = "driving" | "bookings" | "requests";
+type TripSegment = "all" | "driver" | "passenger";
 
 /**
- * Нормализация ?segment: driving ← {driving, driver (legacy), active
- * (legacy)}; bookings ← {bookings}; requests ← {requests}; всё остальное
- * (включая history — он редиректится в TripPage, но дефолтно) → driving.
- * Не редирект, а нормализация отображения: легаси-ссылки остаются
- * валидными (?segment=driver показывает driving).
+ * Нормализация ?segment: all ← {all, driving, driver (legacy), active
+ * (legacy), всё остальное}; passenger ← {passenger, bookings (legacy)};
+ * driver ← {driver, requests (legacy)}. Не редирект, а нормализация
+ * отображения: легаси-ссылки остаются валидными.
  */
 function normalizeSegment(raw: string | null): TripSegment {
-  if (raw === "bookings") return "bookings";
-  if (raw === "requests") return "requests";
-  return "driving";
+  if (raw === "passenger" || raw === "bookings") return "passenger";
+  if (raw === "driver" || raw === "requests") return "driver";
+  return "all";
+}
+
+const timeOf = (departureAt?: string): number =>
+  departureAt ? Date.parse(departureAt) : 0;
+
+function matchesQuery(fromCity: string, toCity: string, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (q === "") return true;
+  return (
+    fromCity.toLowerCase().includes(q) || toCity.toLowerCase().includes(q)
+  );
 }
 
 /**
- * Активные поездки/брони — топ-level страница (корень Page один,
- * состояния через QueryState/EmptyState-обёртку). Вложенных Page нет:
- * TripPage — лишь совместимость query (?segment=history) без обёртки.
- * Вверху — три чипа-сегмента (как на SearchPage, .chipRow локален,
- * position НЕ sticky): «За рулём» (дефолт, канонический URL — чистый
- * /bookings), «Мои брони», «Заявки». Клик: haptic.selection() +
- * setSearchParams (driving → чистый /bookings, replace).
+ * Активные поездки/брони в стиле кошелька: сверху строка поиска
+ * «Откуда → Куда» (живой клиентский фильтр по загруженным спискам),
+ * ниже бейджи Все / Водитель / Пассажир (без счётчиков).
  *
- * Счётчики — текстом в скобках («Заявки (3)», ноль не показываем):
- * Badge в after кита-чипа не используем (риск SSR/стилей), чипы кита
- * короткие. driving — pages[0].pagination.total ?? длина загруженного
- * (бэкенд отдаёт total честно); bookings — activeBookings.length;
- * requests — сумма pendingRequestsCount по всем activeDriverTrips
- * (точный счётчик бэкенда, а не длина /driver: общий запрос обрезан
- * take 50, строки могут обрезаться — см. DriverTripRequests).
- *
- * QueryState считается ПО СЕГМЕНТУ: driving — driverActive (+ FetchMore),
- * bookings — bookings, requests — driverRequests (+ driverActive для списка
- * поездок: строки DriverTripRequests строятся по поездкам с
- * pendingRequestsCount > 0; empty = totalPending === 0). Скелетон везде —
- * TripCardsSkeleton. Кнопки «Найти/Создать» — только в driving.
+ * Все — поездки за рулём и брони одним списком по дате отправления;
+ * Водитель — только поездки с заявками (заявки уже развёрнуты внутри
+ * TripCard, отдельный сегмент не нужен); Пассажир — брони.
+ * Канонический URL — чистый /bookings (= Все).
  */
 export function TripActivePage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const segment = normalizeSegment(searchParams.get("segment"));
+  const [query, setQuery] = useState("");
 
   const bookings = useMyBookingsQuery();
   const driverActive = useInfiniteMyTripsQuery({ status: "active" });
-  const driverRequests = useDriverRequestsQuery();
   const profile = useProfileQuery();
   const cancelBooking = useCancelBookingMutation();
   const cancelTrip = useCancelTripMutation();
@@ -87,53 +85,85 @@ export function TripActivePage() {
     .filter(
       (booking) =>
         (booking.status === "pending" || booking.status === "confirmed") &&
-        booking.scope !== "history",
+        booking.scope !== "history" &&
+        matchesQuery(booking.trip.fromCity, booking.trip.toCity, query),
     )
-    .sort((a, b) => {
-      const aTime = a.trip.departureAt ? Date.parse(a.trip.departureAt) : 0;
-      const bTime = b.trip.departureAt ? Date.parse(b.trip.departureAt) : 0;
-      return aTime - bTime;
-    });
+    .sort((a, b) => timeOf(a.trip.departureAt) - timeOf(b.trip.departureAt));
 
   const activeDriverTrips =
     driverActive.data?.pages.flatMap((page) => page.items) ?? [];
-
-  const firstPageTotal = (
-    driverActive.data?.pages[0]?.pagination as unknown as {
-      total?: unknown;
-    } | undefined
-  )?.total;
-  const drivingTotal =
-    typeof firstPageTotal === "number"
-      ? firstPageTotal
-      : activeDriverTrips.length;
-  const requestsTotal = activeDriverTrips.reduce(
-    (sum, trip) => sum + (trip.pendingRequestsCount ?? 0),
-    0,
+  const driverTrips = activeDriverTrips
+    .filter((trip) => matchesQuery(trip.fromCity, trip.toCity, query))
+    .sort((a, b) => timeOf(a.departureAt) - timeOf(b.departureAt));
+  const driverWithRequests = driverTrips.filter(
+    (trip) => (trip.pendingRequestsCount ?? 0) > 0,
   );
-
-  const withCount = (label: string, count: number): string =>
-    count > 0 ? `${label} (${count})` : label;
+  // Заявок нигде нет — условие снимаем, показываем все поездки водителя,
+  // иначе вкладка необъяснимо пуста.
+  const driverList =
+    driverWithRequests.length > 0 ? driverWithRequests : driverTrips;
 
   const selectSegment = (next: TripSegment) => {
     haptic.selection();
-    setSearchParams(
-      next === "driving" ? {} : { segment: next },
-      { replace: true },
-    );
+    setSearchParams(next === "all" ? {} : { segment: next }, {
+      replace: true,
+    });
   };
 
   const segmentChip = (id: TripSegment, label: string) => (
     <Chip
       key={id}
-      Component="button"
       type="button"
       variant={segment === id ? "active" : "quiet"}
       aria-pressed={segment === id}
       onClick={() => selectSegment(id)}
+      className={segment === id ? styles.filterActive : styles.filter}
     >
       {label}
     </Chip>
+  );
+
+  const onCancelBooking = (id: string) =>
+    cancelBooking.mutate(id, {
+      onSuccess: () => {
+        haptic.success();
+        toast.show({ text: "Бронь поездки отменена" });
+      },
+    });
+  const onCancelTrip = (id: string) =>
+    cancelTrip.mutate(id, {
+      onSuccess: () => {
+        haptic.warning();
+        toast.show({ text: "Поездка отменена" });
+      },
+    });
+  const cancelBookingPending = (id: string) =>
+    cancelBooking.isPending && cancelBooking.variables === id;
+  const cancelTripPending = (id: string) =>
+    cancelTrip.isPending && cancelTrip.variables === id;
+
+  const renderDriving = (trip: (typeof driverTrips)[number]) => (
+    <TripCard
+      key={`d-${trip.id}`}
+      variant={{
+        kind: "driving",
+        trip,
+        driverRating: profile.data?.rating ?? null,
+        onCancel: onCancelTrip,
+        cancelPending: cancelTripPending(trip.id),
+      }}
+    />
+  );
+  const renderBooking = (booking: (typeof activeBookings)[number]) => (
+    <TripCard
+      key={`b-${booking.id}`}
+      variant={{
+        kind: "booking",
+        booking,
+        onCancel: onCancelBooking,
+        cancelPending: cancelBookingPending(booking.id),
+      }}
+    />
   );
 
   const activeSentinelRef = useInfiniteSentinel({
@@ -144,6 +174,24 @@ export function TripActivePage() {
     },
   });
 
+  const searching = query.trim() !== "";
+  // Все: поездки и брони одним списком по дате отправления.
+  const allCards = [
+    ...driverTrips.map((trip) => ({
+      time: timeOf(trip.departureAt),
+      node: renderDriving(trip),
+    })),
+    ...activeBookings.map((booking) => ({
+      time: timeOf(booking.trip.departureAt),
+      node: renderBooking(booking),
+    })),
+  ].sort((a, b) => a.time - b.time);
+
+  const emptyHeader = searching ? EMPTY_STATES.searchNoResults.header : undefined;
+  const emptyText = searching
+    ? EMPTY_STATES.searchNoResults.description
+    : EMPTY_STATES.tripActive.description;
+
   return (
     <Page>
       {mutationError && (
@@ -151,91 +199,68 @@ export function TripActivePage() {
           {bookingErrorMessage(mutationError)}
         </Notice>
       )}
-      <div className={styles.chipRow}>
-        {segmentChip("driving", withCount("За рулём", drivingTotal))}
-        {segmentChip("bookings", withCount("Мои брони", activeBookings.length))}
-        {segmentChip("requests", withCount("Заявки", requestsTotal))}
+      <div className={styles.searchRow}>
+        <Input
+          id="bookings-search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Поиск"
+          before={<SearchIcon size={17} aria-hidden />}
+          aria-label="Поиск по откуда и куда"
+          className={styles.searchField}
+        />
       </div>
-      {segment === "bookings" ? (
+      <div className={styles.chipRow}>
+        {segmentChip("all", "Все")}
+        {segmentChip("driver", "Водитель")}
+        {segmentChip("passenger", "Пассажир")}
+      </div>
+      {segment === "passenger" ? (
         <QueryState
           loading={bookings.isLoading}
           error={bookings.error}
           empty={activeBookings.length === 0}
-          emptyText={EMPTY_STATES.tripActive.description}
+          emptyHeader={emptyHeader}
+          emptyText={emptyText}
           emptyAction={
-            <Button
-              size="m"
-              onClick={() => {
-                haptic.light();
-                navigate("/profile/history");
-              }}
-            >
-              История поездок
-            </Button>
+            !searching ? (
+              <Button
+                size="m"
+                onClick={() => {
+                  haptic.light();
+                  navigate("/profile/history");
+                }}
+              >
+                История поездок
+              </Button>
+            ) : undefined
           }
           skeleton={<TripCardsSkeleton />}
           onRetry={() => {
             void bookings.refetch();
           }}
         >
-          <Stack>
-            {activeBookings.map((booking) => (
-              <TripCard
-                key={booking.id}
-                variant={{
-                  kind: "booking",
-                  booking,
-                  onCancel: (id) =>
-                    cancelBooking.mutate(id, {
-                      onSuccess: () => {
-                        haptic.success();
-                        toast.show({ text: "Бронь поездки отменена" });
-                      },
-                    }),
-                  cancelPending:
-                    cancelBooking.isPending &&
-                    cancelBooking.variables === booking.id,
-                }}
-              />
-            ))}
-          </Stack>
+          <Stack>{activeBookings.map(renderBooking)}</Stack>
         </QueryState>
-      ) : segment === "requests" ? (
-        <QueryState
-          loading={driverRequests.isLoading || driverActive.isLoading}
-          error={driverRequests.error ?? driverActive.error}
-          empty={requestsTotal === 0}
-          emptyText={EMPTY_STATES.tripRequestsEmpty.header}
-          skeleton={<TripCardsSkeleton />}
-          onRetry={() => {
-            void driverRequests.refetch();
-            void driverActive.refetch();
-          }}
-        >
-          <Stack>
-            {activeDriverTrips
-              .filter((trip) => (trip.pendingRequestsCount ?? 0) > 0)
-              .map((trip) => (
-                <DriverTripRequests key={trip.id} tripId={trip.id} />
-              ))}
-          </Stack>
-        </QueryState>
-      ) : (
+      ) : segment === "driver" ? (
         <QueryState
           loading={driverActive.isLoading}
           error={driverActive.error}
-          empty={activeDriverTrips.length === 0}
-          emptyText={EMPTY_STATES.tripActive.description}
+          empty={driverList.length === 0}
+          emptyHeader={emptyHeader}
+          emptyText={emptyText}
           emptyAction={
-            <Button
-              size="m"
-              onClick={() => {
-                haptic.light();
-                navigate("/profile/history");
-              }}
-            >
-              История поездок
-            </Button>
+            !searching ? (
+              <Button
+                size="m"
+                onClick={() => {
+                  haptic.light();
+                  navigate("/profile/history");
+                }}
+              >
+                История поездок
+              </Button>
+            ) : undefined
           }
           skeleton={<TripCardsSkeleton />}
           onRetry={() => {
@@ -243,25 +268,45 @@ export function TripActivePage() {
           }}
         >
           <Stack>
-            {activeDriverTrips.map((trip) => (
-              <TripCard
-                key={trip.id}
-                variant={{
-                  kind: "driving",
-                  trip,
-                  driverRating: profile.data?.rating ?? null,
-                  onCancel: (id) =>
-                    cancelTrip.mutate(id, {
-                      onSuccess: () => {
-                        haptic.warning();
-                        toast.show({ text: "Поездка отменена" });
-                      },
-                    }),
-                  cancelPending:
-                    cancelTrip.isPending && cancelTrip.variables === trip.id,
+            {driverList.map(renderDriving)}
+            <FetchMore
+              hasNextPage={driverActive.hasNextPage}
+              isFetchingNextPage={driverActive.isFetchingNextPage}
+              fetchNextPage={() => void driverActive.fetchNextPage()}
+              sentinelRef={activeSentinelRef}
+              placeholder={<TripCardSkeleton />}
+              placeholderLabel="Загрузка ещё поездок"
+            />
+          </Stack>
+        </QueryState>
+      ) : (
+        <QueryState
+          loading={driverActive.isLoading || bookings.isLoading}
+          error={driverActive.error ?? bookings.error}
+          empty={allCards.length === 0}
+          emptyHeader={emptyHeader}
+          emptyText={emptyText}
+          emptyAction={
+            !searching ? (
+              <Button
+                size="m"
+                onClick={() => {
+                  haptic.light();
+                  navigate("/profile/history");
                 }}
-              />
-            ))}
+              >
+                История поездок
+              </Button>
+            ) : undefined
+          }
+          skeleton={<TripCardsSkeleton />}
+          onRetry={() => {
+            void driverActive.refetch();
+            void bookings.refetch();
+          }}
+        >
+          <Stack>
+            {allCards.map((card) => card.node)}
             <FetchMore
               hasNextPage={driverActive.hasNextPage}
               isFetchingNextPage={driverActive.isFetchingNextPage}

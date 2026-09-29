@@ -20,6 +20,7 @@ export function QueryState({
   error,
   empty,
   emptyText,
+  emptyHeader,
   emptyAction,
   skeleton,
   onRetry,
@@ -29,6 +30,8 @@ export function QueryState({
   error: unknown;
   empty: boolean;
   emptyText: string;
+  /** Заголовок empty-ветки; по умолчанию `genericEmpty.header`. */
+  emptyHeader?: string;
   /** Действие под пустым состоянием (например, ссылка на историю). */
   emptyAction?: React.ReactNode;
   /** Скелетон tgui Skeleton для списков; без него — Spinner. */
@@ -56,7 +59,7 @@ export function QueryState({
   if (empty)
     return (
       <EmptyState
-        header={EMPTY_STATES.genericEmpty.header}
+        header={emptyHeader ?? EMPTY_STATES.genericEmpty.header}
         description={emptyText}
         action={emptyAction}
       />

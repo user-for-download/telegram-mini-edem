@@ -148,17 +148,18 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 }
 
 describe("TripPage parity", () => {
-  it("дефолт — сегмент «За рулём», пусто — ссылка на историю", () => {
+  it("дефолт — сегмент «Все», пусто — ссылка на историю", () => {
     mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
     mockUseHistory.mockReturnValue(queryState({ data: [] }));
     mockUseCancelBooking.mockReturnValue(mutation());
     const html = render(<TripPage />);
-    // Чипы трёх сегментов вверху; табов больше нет.
+    // Поиск + чипы трёх сегментов вверху; табов больше нет.
     expect(html).not.toContain("Активные");
-    expect(html).toContain("За рулём");
-    expect(html).toContain("Мои брони");
-    expect(html).toContain("Заявки");
-    // Пусто в driving → подсказка + кнопка истории.
+    expect(html).toContain("Поиск");
+    expect(html).toContain("Все");
+    expect(html).toContain("Водитель");
+    expect(html).toContain("Пассажир");
+    // Пусто → подсказка + кнопка истории.
     expect(html).toContain("Пока тихо");
     expect(html).toContain("История поездок");
   });

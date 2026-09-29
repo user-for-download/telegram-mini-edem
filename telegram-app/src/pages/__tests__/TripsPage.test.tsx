@@ -134,19 +134,19 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 }
 
 describe("TripPage: только активные, без табов", () => {
-  it("дефолт — сегмент «За рулём», пустота только driving", () => {
+  it("дефолт — сегмент «Все», пустота + кнопка истории", () => {
     const html = render(<TripPage />);
     expect(html).not.toContain("Активные");
-    // Чипы трёх сегментов на месте; пустота — только driving.
-    expect(html).toContain("За рулём");
-    expect(html).toContain("Мои брони");
-    expect(html).toContain("Заявки");
-    // Пусто в driving → подсказка + кнопка истории.
+    // Поиск + чипы трёх сегментов на месте, без счётчиков.
+    expect(html).toContain("Поиск");
+    expect(html).toContain("Все");
+    expect(html).toContain("Водитель");
+    expect(html).toContain("Пассажир");
+    expect(html).not.toContain("За рулём");
+    expect(html).not.toContain("Мои брони");
+    // Пусто → подсказка + кнопка истории.
     expect(html).toContain("Пока тихо");
     expect(html).toContain("История поездок");
-    // Чужие сегменты не протекают в driving.
-    expect(html).not.toContain("Активных запросов нет");
-    expect(html).not.toContain("Заявок нет");
   });
 
   it("?segment=history — редирект на /profile/history (контента нет)", () => {
@@ -156,31 +156,34 @@ describe("TripPage: только активные, без табов", () => {
     expect(html).not.toContain("Здесь появятся завершённые и отменённые поездки.");
   });
 
-  it("легаси ?segment=driver нормализуется в «За рулём»", () => {
+  it("легаси ?segment=driver нормализуется в «Водитель»", () => {
     mockUseInfiniteMyTrips.mockReturnValue(
       infiniteState([makeTrip({ pendingRequestsCount: 0 })]),
     );
     const html = render(<TripPage />, "/bookings?segment=driver");
-    // Сегмент driver — легаси-алиас driving (без редиректа): контент
-    // «За рулём», чип активен.
+    // Сегмент driver — поездки водителя (без редиректа): контент
+    // driving-карточки, чип активен.
     expect(html).toContain("Вы водитель");
-    expect(html).toContain("За рулём");
+    expect(html).toContain("Водитель");
   });
 
-  it("канонические сегменты: driving/bookings/requests + чистый /bookings", () => {
+  it("канонические сегменты: all/driver/passenger + легаси + чистый /bookings", () => {
     mockUseInfiniteMyTrips.mockReturnValue(
       infiniteState([makeTrip({ pendingRequestsCount: 0 })]),
     );
     for (const url of [
       "/bookings",
+      "/bookings?segment=all",
+      "/bookings?segment=driver",
+      "/bookings?segment=passenger",
       "/bookings?segment=driving",
       "/bookings?segment=bookings",
       "/bookings?segment=requests",
     ]) {
       const html = render(<TripPage />, url);
-      expect(html).toContain("За рулём");
-      expect(html).toContain("Мои брони");
-      expect(html).toContain("Заявки");
+      expect(html).toContain("Все");
+      expect(html).toContain("Водитель");
+      expect(html).toContain("Пассажир");
     }
   });
 });
@@ -240,7 +243,6 @@ describe("TripPage driver", () => {
     expect(html).toContain("Отменить");
     expect(html).not.toContain("Управление поездкой");
     expect(html).not.toContain("Завершить");
-    expect(html).toContain("+ Создать поездку");
   });
 
   it("поездка водителя без заявок: «Вы водитель»", () => {
