@@ -90,6 +90,17 @@ export function createHarness() {
   return { results, runStep, watchPage, collectRejections, verdict };
 }
 
+/** Текущая версия онбординга (bump — в telegram-app/src/onboarding/version.ts). */
+export function onboardingVersion() {
+  const src = fs.readFileSync(
+    path.join(__dirname, "..", "telegram-app", "src", "onboarding", "version.ts"),
+    "utf-8",
+  );
+  const match = /ONBOARDING_VERSION\s*=\s*"([^"]+)"/.exec(src);
+  if (!match) throw new Error("onboarding version not found");
+  return match[1];
+}
+
 /** Dev-initData формата dev-bypass (формат backend dev-mock-auth). */
 export function devInitData(tgId, firstName = "E2E") {
   return new URLSearchParams([
@@ -163,6 +174,13 @@ export function checkPrereqs() {
 /** Чистка сущностей прогона (идемпотентна). Неудача валит прогон. */
 export async function cleanupRun({ tripId, tripIds = [], peerUserId, feedbackTexts = [] }) {
   const steps = [];
+  // Реанимация dev-юзера ПЕРВОЙ: delete-шаг сносит identity, онбординг
+  // и машину, а удаление peer-сущностей ниже может упасть на сиротах
+  // убитого прогона (FK Trip_driverId) — будущие прогоны травиться
+  // не должны. Пользователя НЕ удаляем: на нём висят сид-поездки (FK).
+  steps.push(
+    `UPDATE "User" SET "deletedAt" = NULL, "name" = 'Dev Telegram', "avatar" = '', "about" = 'Тестовый аккаунт разработчика (dev-стенд).', "onboardingVersion" = '${onboardingVersion()}', "consentAcceptedAt" = NOW() WHERE "telegramUserId" = ${DEV_TG_ID}`,
+  );
   for (const id of [tripId, ...tripIds].filter(Boolean)) {
     steps.push(`DELETE FROM "Review" WHERE "tripId" = '${id}'`);
     steps.push(`DELETE FROM "Booking" WHERE "tripId" = '${id}'`);
@@ -172,16 +190,18 @@ export async function cleanupRun({ tripId, tripIds = [], peerUserId, feedbackTex
     steps.push(`DELETE FROM "Feedback" WHERE "text" = '${text}'`);
   }
   if (peerUserId) {
+    // Поездки контрагента — по водителю, а не только известные id:
+    // сироты убитого прогона иначе роняют DELETE User по FK.
+    steps.push(
+      `DELETE FROM "Review" WHERE "tripId" IN (SELECT "id" FROM "Trip" WHERE "driverId" = '${peerUserId}')`,
+    );
+    steps.push(
+      `DELETE FROM "Booking" WHERE "tripId" IN (SELECT "id" FROM "Trip" WHERE "driverId" = '${peerUserId}')`,
+    );
+    steps.push(`DELETE FROM "Trip" WHERE "driverId" = '${peerUserId}'`);
     steps.push(`DELETE FROM "Notification" WHERE "userId" = '${peerUserId}'`);
     steps.push(`DELETE FROM "User" WHERE id = '${peerUserId}'`);
   }
-  // Dev-юзер UI: шаг delete анонимизирует его (tombstone + каскад по
-  // поездкам/броням). Пользователя НЕ удаляем — на нём висят сид-поездки
-  // (FK), а его отсутствие погасило бы следующий прогон. Вместо удаления
-  // возвращаем identity сида, чтобы rerun стартовал с живого аккаунта.
-  steps.push(
-    `UPDATE "User" SET "deletedAt" = NULL, "name" = 'Dev Telegram', "avatar" = '', "about" = 'Тестовый аккаунт разработчика (dev-стенд).' WHERE "telegramUserId" = ${DEV_TG_ID}`,
-  );
   for (const query of steps) {
     const out = psql(query);
     // UPDATE — реанимация dev-юзера, DELETE — сущности прогона.

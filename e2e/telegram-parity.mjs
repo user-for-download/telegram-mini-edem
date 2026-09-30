@@ -38,6 +38,11 @@ ensureShotsDir();
 checkPrereqs();
 const { runStep, watchPage, collectRejections, verdict } = createHarness();
 
+// Города — ДО запуска браузера: справочник городов кэшируется клиентом
+// (useAllCitiesQuery, staleTime Infinity), и сид после первого рендера
+// любой страницы с городами в дропдаун уже не попадает.
+const { fromId: seedFromId, toId: seedToId } = seedCities();
+
 let tripId = "";
 let peerTripId = "";
 let peerUserId = "";
@@ -69,16 +74,19 @@ async function diagnose(page, name) {
 /** Города справочника напрямую в БД (для UI-датиста). Возвращает id. */
 function seedCities() {
   const norm = (s) => s.trim().toLowerCase();
-  // INSERT..RETURNING печатает значение + тег «INSERT 0 1» — берём первую строку.
-  const firstLine = (output) => output.split("\n")[0].trim();
-  const fromId = firstLine(psql(
-    `INSERT INTO "City" ("id", "name", "nameNormalized", "createdAt", "updatedAt") VALUES (gen_random_uuid(), '${CITY_FROM}', '${norm(CITY_FROM)}', NOW(), NOW()) RETURNING "id"`,
-  ));
-  const toId = firstLine(psql(
-    `INSERT INTO "City" ("id", "name", "nameNormalized", "createdAt", "updatedAt") VALUES (gen_random_uuid(), '${CITY_TO}', '${norm(CITY_TO)}', NOW(), NOW()) RETURNING "id"`,
-  ));
-  if (!fromId || !toId) throw new Error("city seed failed");
-  return { fromId, toId };
+  // Идемпотентно: остаток прошлого упавшего прогона не валит сид
+  // (nameNormalized @unique) — добираем id селектом.
+  const ensure = (name) => {
+    psql(
+      `INSERT INTO "City" ("id", "name", "nameNormalized", "createdAt", "updatedAt") VALUES (gen_random_uuid(), '${name}', '${norm(name)}', NOW(), NOW()) ON CONFLICT ("nameNormalized") DO NOTHING`,
+    );
+    const id = psql(`SELECT "id" FROM "City" WHERE "name" = '${name}'`)
+      .split("\n")[0]
+      .trim();
+    if (!id) throw new Error("city seed failed");
+    return id;
+  };
+  return { fromId: ensure(CITY_FROM), toId: ensure(CITY_TO) };
 }
 
 function deleteCities() {
@@ -105,7 +113,7 @@ try {
   await runStep("prereq: TG-front отдаёт приложение", async () => {
     await hashUrl(page, "/trips");
     // На чистой БД первым встречает онбординг-гейт — принимаем сразу здесь.
-    const preAccept = page.getByRole("button", { name: "Принять и продолжить" });
+    const preAccept = page.getByRole("button", { name: "Я согласен" });
     try {
       await preAccept.waitFor({ state: "visible", timeout: 10000 });
       await preAccept.click();
@@ -119,7 +127,7 @@ try {
   await runStep("auth: dev-вход, профиль Dev Telegram", async () => {
     await hashUrl(page, "/profile");
     // Онбординг — гейт поверх всех роутов: сначала принимаем его.
-    const acceptBtn = page.getByRole("button", { name: "Принять и продолжить" });
+    const acceptBtn = page.getByRole("button", { name: "Я согласен" });
     try {
       await acceptBtn.waitFor({ state: "visible", timeout: 15000 });
       await acceptBtn.click();
@@ -143,7 +151,6 @@ try {
     psql(
       `INSERT INTO "Car" ("id", "userId", "model", "color") VALUES (gen_random_uuid(), '${driverUserId}', 'Lada Vesta', 'белый') ON CONFLICT ("userId") DO NOTHING`,
     );
-    const { fromId, toId } = seedCities();
     const peer = await tgApiLogin(PEER_TG_ID, "Peer");
     peerUserId = peer.userId;
     peerToken = peer.accessToken;
@@ -161,8 +168,8 @@ try {
         fromAddress: "пл. Ленина",
         toCity: CITY_TO,
         toAddress: "ул. Советская",
-        fromCityId: fromId,
-        toCityId: toId,
+        fromCityId: seedFromId,
+        toCityId: seedToId,
         departureAt: dep,
         durationMinutes: 150,
         distanceKm: 180,
@@ -179,10 +186,13 @@ try {
     await hashUrl(page, "/trips/my/new");
     // Multiselect: печатаем и кликаем ячейку дропдауна по точному тексту
     // (у опций tgui нет role=option — только у выбранных чипов).
+    // force: строка опции покрыта state-layer кита (absolute inset-0,
+    // всплытие клика штатное) — строгий хит-таргет Playwright её не берёт,
+    // реальный тап пользователя работает. Клик настоящий, по координатам.
     await page.getByLabel("Город отправления").fill(CITY_FROM);
-    await page.getByText(CITY_FROM, { exact: true }).first().click();
+    await page.getByText(CITY_FROM, { exact: true }).first().click({ force: true });
     await page.getByLabel("Город назначения").fill(CITY_TO);
-    await page.getByText(CITY_TO, { exact: true }).first().click();
+    await page.getByText(CITY_TO, { exact: true }).first().click({ force: true });
     // datetime-local: формат YYYY-MM-DDTHH:mm.
     const dep = new Date(Date.now() + 86400e3);
     const pad = (n) => String(n).padStart(2, "0");

@@ -90,9 +90,12 @@ function attachFakeWsServer(context) {
     if (VERBOSE) console.log(`  [ws] connection #${index}: ${conn.url}`);
 
     route.onMessage((message) => {
+      // Playwright ≥1.62: сырая строка/Buffer, а не WebSocketFrame с .text().
+      const text =
+        typeof message === "string" ? message : Buffer.from(message).toString("utf-8");
       let frame;
       try {
-        frame = JSON.parse(message.text());
+        frame = JSON.parse(text);
       } catch {
         conn.frames.push({ malformed: true });
         return;
@@ -149,14 +152,14 @@ try {
   await step("авторизация dev-bypass + онбординг", async () => {
     await page.goto(`${TG_BASE}/`, { waitUntil: "commit" });
     // Свежий dev-юзер 9800001 может упереться в онбординг: принимаем условия.
-    const accept = page.getByRole("button", { name: "Принять и продолжить" });
+    const accept = page.getByRole("button", { name: "Я согласен" });
     try {
       await accept.waitFor({ timeout: 8000 });
       await accept.click();
     } catch {
       // Онбординг уже принят ранее — идём дальше.
     }
-    await page.getByText("Поиск").first().waitFor({ timeout: 20000 });
+    await page.getByLabel("Поиск").first().waitFor({ timeout: 20000 });
     return "authenticated";
   });
 

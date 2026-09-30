@@ -58,6 +58,13 @@ raise `TG_AUTH_RATE_MAX` on the dev backend.
   loudly. `page.reload()` tests real server resync (not cache).
 - Mobile leg resizes the viewport in the same context (a new context would
   burn the shared `/auth/telegram` IP budget on re-bootstrap).
+- City seeding happens before browser launch: the city directory is cached
+  client-side (`useAllCitiesQuery`, `staleTime: Infinity`), so seeding after
+  the first render never reaches the dropdown. Seed is idempotent
+  (`ON CONFLICT (nameNormalized) DO NOTHING` + SELECT id).
+- Multiselect option clicks use `force: true`: tgui covers option rows with
+  its own state-layer (`absolute inset-0`, real taps bubble fine), which
+  Playwright's strict hit-target check rejects.
 
 ## Test Flow (`telegram-parity.mjs` runSteps in order)
 
