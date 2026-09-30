@@ -66,6 +66,28 @@ export function positiveIntEnv(name: string, fallback: number): number {
 }
 
 /**
+ * Telegram chat id для алертов: у групп id отрицательный, поэтому
+ * positiveIntEnv не подходит. Пусто = алерты выключены (только лог).
+ */
+export function chatIdEnv(name: string): number | undefined {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") {
+    return undefined;
+  }
+
+  if (!/^-?\d+$/.test(raw)) {
+    throw new Error(`[env] ${name} must be an integer.`);
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed === 0) {
+    throw new Error(`[env] ${name} must be an integer.`);
+  }
+
+  return parsed;
+}
+
+/**
  * Явный allowlist пользователей, которым разрешены dev mock-токены
  * (DEV_AUTH_USER_ALLOWLIST: comma-separated user id).
  *
@@ -186,6 +208,24 @@ export const env = {
    * продолжают создаваться. Дефолт true — доставка включена.
    */
   TELEGRAM_DELIVERY_ENABLED: boolEnv("TELEGRAM_DELIVERY_ENABLED", true),
+
+  /**
+   * Канал отчётов о клиентских ошибках (POST /api/v1/client-errors).
+   * CLIENT_ERRORS_ENABLED=false — тела принимаются и логируются, но
+   * алерты в Telegram не отправляются. ERROR_ALERT_CHAT_ID — личный
+   * чат или группа (id группы отрицательный); пусто = алерты выключены,
+   * работает только pino-лог.
+   */
+  CLIENT_ERRORS_ENABLED: boolEnv("CLIENT_ERRORS_ENABLED", true),
+  ERROR_ALERT_CHAT_ID: chatIdEnv("ERROR_ALERT_CHAT_ID"),
+  CLIENT_ERRORS_RATE_WINDOW_MS: positiveIntEnv(
+    "CLIENT_ERRORS_RATE_WINDOW_MS",
+    60 * 1000,
+  ),
+  CLIENT_ERRORS_RATE_MAX: positiveIntEnv(
+    "CLIENT_ERRORS_RATE_MAX",
+    devRateMax(10),
+  ),
 
   /**
    * Секрет Telegram-бота для webhook (bot-api-approval-package §4.2):
