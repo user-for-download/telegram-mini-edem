@@ -4,14 +4,14 @@
  * рельс страницы даёт корень экрана (ui/Page, токены --app-*). */
 .searchCard.searchCard {
   display: block;
-  padding: 20px 16px;
+  padding: 20px var(--app-space-md);
   margin-top: 30px;
 }
 
 .fields {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--app-space-sm);
 }
 
 .submit {

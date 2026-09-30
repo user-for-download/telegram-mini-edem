@@ -8,8 +8,10 @@
  * Исключения осознанно локальные, сюда НЕ тянем:
  * - TripModals .rowInfo (ряд с min-width:0, прицел под заявки);
  * - TripCards .requestSkeleton* (зеркало requestCell под Skeleton-overlay);
- * - TripDetails .nameRow (ряд с gap 6 под имя+значок);
- * - ProfilePage .flexText (flex-рост + min-width:0).
+ * - TripDetails .nameRow (ряд с gap 6 под имя+значок).
+ *
+ * ProfilePage .flexText удалён (2026-09-30): это был дубль GROW 1:1 —
+ * страница берёт GROW/TRUNCATE из @/ui/classes.
  */
 
 /* Обрезка в одну строку (было truncate).

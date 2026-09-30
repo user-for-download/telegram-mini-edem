@@ -160,3 +160,23 @@ describe("SearchPage query states", () => {
     expect(html).toContain("Повторить");
   });
 });
+
+// P0 (2026-09-30): у полей города не было доступного имени — только
+// placeholder (китовый header рисуется лишь на base и на iOS не читается).
+// Имя задано через aria-label (паттерн TripActivePage:206), id сохранён
+// для e2e (#search-from использует telegram-parity.mjs).
+describe("SearchPage a11y", () => {
+  it("поля городов имеют доступное имя на всех платформах", () => {
+    mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
+    const html = render(<SearchPage />);
+    expect(html).toContain('aria-label="Откуда"');
+    expect(html).toContain('aria-label="Куда"');
+  });
+
+  it("id полей сохранены (контракт e2e #search-from / #search-to)", () => {
+    mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
+    const html = render(<SearchPage />);
+    expect(html).toContain('id="search-from"');
+    expect(html).toContain('id="search-to"');
+  });
+});

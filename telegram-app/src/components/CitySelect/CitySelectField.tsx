@@ -1,6 +1,6 @@
 import { Select } from "@telegram-apps/telegram-ui";
 import { haptic } from "@/utils/haptics";
-import { VISUALLY_HIDDEN } from "@/ui/classes";
+import { Field } from "@/ui/Field";
 import type { PickerCity } from "@/components/CityPicker/CityPickerField";
 import styles from "./CitySelectField.module.css";
 
@@ -37,32 +37,33 @@ export function CitySelectField({
 }: CitySelectFieldProps) {
   const selectedId = cities?.find((city) => city.name === value)?.id ?? "";
 
+  // Подпись: Field даёт скрытый label (имя для скринридера на всех
+  // платформах) и header на контрол — видимую подпись base; связка
+  // htmlFor+id держит e2e getByLabel (канон вместо локальной копии).
   return (
-    <div className={styles.field}>
-      <label htmlFor={id} className={VISUALLY_HIDDEN}>
-        {label}
-      </label>
-      <Select
-        id={id}
-        header={label}
-        value={selectedId}
-        onChange={(event) => {
-          haptic.selection();
-          const pickedId = event.target.value;
-          onSelect(cities?.find((city) => city.id === pickedId)?.name ?? "");
-        }}
-      >
-        <option value="" disabled hidden>
-          {placeholder}
-        </option>
-        {cities
-          ?.filter((city) => !exclude || city.name !== exclude)
-          .map((city) => (
-            <option key={city.id} value={city.id}>
-              {city.name}
-            </option>
-          ))}
-      </Select>
-    </div>
+    <Field label={label} id={id} className={styles.field}>
+      {(field) => (
+        <Select
+          {...field}
+          value={selectedId}
+          onChange={(event) => {
+            haptic.selection();
+            const pickedId = event.target.value;
+            onSelect(cities?.find((city) => city.id === pickedId)?.name ?? "");
+          }}
+        >
+          <option value="" disabled hidden>
+            {placeholder}
+          </option>
+          {cities
+            ?.filter((city) => !exclude || city.name !== exclude)
+            .map((city) => (
+              <option key={city.id} value={city.id}>
+                {city.name}
+              </option>
+            ))}
+        </Select>
+      )}
+    </Field>
   );
 }

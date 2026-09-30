@@ -8,7 +8,7 @@
 .unreadRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 
@@ -27,7 +27,7 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Шапка карточки: заголовок + пилюля (Новое/Важное). */
@@ -35,7 +35,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Пилюля в шапке не сжимается. */
@@ -53,8 +53,8 @@
 .cardFoot {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-top: 4px;
+  gap: var(--app-space-sm);
+  padding-top: var(--app-space-2xs);
   border-top: 1px solid var(--tgui--outline);
 }
 

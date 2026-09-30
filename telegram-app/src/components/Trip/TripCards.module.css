@@ -8,7 +8,7 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Отмена у правого края футера (поделиться — слева): обёртка едет
@@ -40,7 +40,7 @@
 .requestActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Кнопка «Отклонить» в строке заявки: деструктивный цвет кита
@@ -56,7 +56,7 @@
 .requestSkeletonRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--app-space-sm);
   padding: 5px 0;
 }
 
@@ -94,7 +94,7 @@
 .seat {
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--app-space-2xs);
 }
 
 .seat.seat > svg {

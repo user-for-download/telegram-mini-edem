@@ -40,7 +40,7 @@
 .stepper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-xs);
   max-width: calc(6 / 7 * 100%);
 }
 

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Input, Multiselect } from "@telegram-apps/telegram-ui";
 import { MapPin } from "lucide-react";
 import { haptic } from "@/utils/haptics";
-import { VISUALLY_HIDDEN } from "@/ui/classes";
+import { Field } from "@/ui/Field";
 import styles from "./CityPickerField.module.css";
 
 export interface PickerCity {
@@ -88,49 +88,45 @@ export function CityPickerField({
   // placeholder/value на plain Input: тексты и связи для тестов те же.
   if (typeof document === "undefined") {
     return (
-      <div className={styles.field}>
-        <label htmlFor={id} className={VISUALLY_HIDDEN}>
-          {label}
-        </label>
-        <Input
-          id={id}
-          header={label}
-          before={<MapPin size={17} className={styles.pinInput} />}
-          value={value}
-          placeholder={placeholder}
-          status={status}
-          readOnly
-        />
-      </div>
+      <Field label={label} id={id} className={styles.field}>
+        {(field) => (
+          <Input
+            {...field}
+            before={<MapPin size={17} className={styles.pinInput} />}
+            value={value}
+            placeholder={placeholder}
+            status={status}
+            readOnly
+          />
+        )}
+      </Field>
     );
   }
 
+  // Подпись: Field даёт скрытый label (имя для скринридера на всех
+  // платформах) и header на контрол — видимую подпись base (на iOS её нет);
+  // связка htmlFor+id держит e2e getByLabel (канон вместо локальной копии).
   return (
-    <div className={styles.field}>
-      {/* Видимую подпись рисует сам Multiselect через header (стандарт tgui);
-          внешний label — только visually-hidden: header на iOS не рендерится
-          (нужен скринридерам), а связка htmlFor+id держит e2e getByLabel. */}
-      <label htmlFor={id} className={VISUALLY_HIDDEN}>
-        {label}
-      </label>
-      <Multiselect
-        id={id}
-        header={label}
-        before={<MapPin size={17} className={styles.pinSelect} />}
-        options={options}
-        value={selected}
-        onChange={(picked) => {
-          haptic.selection();
-          onSelect(cityNameFromPicked(cities, picked.slice(-1)));
-        }}
-        placeholder={placeholder}
-        // status отдаём только на ошибку: "default" глушил бы нативный
-        // focused-стиль при открытом дропдауне (controlledStatus внутри).
-        status={status === "error" ? "error" : undefined}
-        creatable={false}
-        closeDropdownAfterSelect
-        emptyText="Нет таких городов в справочнике"
-      />
-    </div>
+    <Field label={label} id={id} className={styles.field}>
+      {(field) => (
+        <Multiselect
+          {...field}
+          before={<MapPin size={17} className={styles.pinSelect} />}
+          options={options}
+          value={selected}
+          onChange={(picked) => {
+            haptic.selection();
+            onSelect(cityNameFromPicked(cities, picked.slice(-1)));
+          }}
+          placeholder={placeholder}
+          // status отдаём только на ошибку: "default" глушил бы нативный
+          // focused-стиль при открытом дропдауне (controlledStatus внутри).
+          status={status === "error" ? "error" : undefined}
+          creatable={false}
+          closeDropdownAfterSelect
+          emptyText="Нет таких городов в справочнике"
+        />
+      )}
+    </Field>
   );
 }

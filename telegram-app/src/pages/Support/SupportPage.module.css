@@ -14,7 +14,7 @@
 
 /* Заголовок «Ответ поддержки» над текстом (было pt-1). */
 .replyTitle {
-  padding-top: 4px;
+  padding-top: var(--app-space-2xs);
 }
 
 

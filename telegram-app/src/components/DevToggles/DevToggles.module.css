@@ -24,7 +24,7 @@
  * поверх любого контента (иначе dev-инструмент теряется на фоне). */
 .devButton {
   pointer-events: auto;
-  padding: 5px 12px;
+  padding: 5px var(--app-space-sm);
   border: 2px solid var(--tgui--button_color);
   border-radius: var(--app-radius-pill);
   background: var(--tgui--bg_color);

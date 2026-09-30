@@ -115,12 +115,15 @@ function makeProfile(overrides: Record<string, unknown> = {}) {
 }
 
 describe("ProfilePage header", () => {
-  it("шапка с рейтингом, статистикой и верификацией", () => {
+  it("шапка с рейтингом и статистикой", () => {
     mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
     const html = render(<ProfilePage />);
     expect(html).toContain("Александр");
     expect(html).toContain("4.9");
-    expect(html).toContain("Telegram верифицирован");
+    // Значок «Telegram верифицирован» и счётчик отзывов в бейдже убраны
+    // осознанно (UI-правка 2026-09-30): бейдж показывает только оценку.
+    expect(html).not.toContain("Telegram верифицирован");
+    expect(html).not.toContain("4.9 (12)");
     expect(html).toContain("Поездок");
     expect(html).toContain("42");
     expect(html).toContain("Редактировать профиль");

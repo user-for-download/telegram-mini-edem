@@ -9,7 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 4px;
+  padding: 0 var(--app-space-2xs);
 }
 
 /* Чипы-действия («Ищу попутку», «Фильтры»). */
@@ -42,11 +42,11 @@
 
 /* Панель открытых фильтров: цена + теги. */
 .filtersPanel {
-  padding-top: 8px;
+  padding-top: var(--app-space-xs);
   border-top: 1px solid var(--tgui--outline);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--app-space-sm);
 }
 
 .priceHead {
@@ -62,7 +62,7 @@
 .tagsCol {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Обёртка догрузки: вертикальная колонка болванок. */

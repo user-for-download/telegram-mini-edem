@@ -11,20 +11,14 @@
   gap: 14px;
 }
 
-/* Текстовая колонка, которая обязана ужиматься (было flex-1 min-w-0):
- * без нулевой базы и min-width:0 длинное имя распирает шапку. */
-.flexText {
-  flex: 1 1 0%;
-  min-width: 0;
-}
+/* Текстовая колонка, которая обязана ужиматься — рецепт GROW из
+ * @/ui/classes (было локальное .flexText, дубль 1:1). */
 
-/* Обрезка в одну строку (было block truncate): display:block нужен
- * span/caption-вариантам tgui-типографики. */
-.truncate {
+/* Обрезка в одну строку: рецепт — TRUNCATE из @/ui/classes; здесь только
+ * блочный display для span/caption-вариантов tgui-типографики (в TRUNCATE
+ * его нет осознанно — он иначе ломал бы флекс-раскладки). */
+.truncateBlock {
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Строка рейтинга под именем (токены: зазор xs, отступ 2xs). */

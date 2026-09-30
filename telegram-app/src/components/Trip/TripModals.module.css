@@ -15,7 +15,7 @@
 
 /* Заголовок группы заявок («Ожидают решения (N)»): кегль с бока 4px. */
 .groupLabel {
-  padding: 0 4px;
+  padding: 0 var(--app-space-2xs);
 }
 
 /* Карточка: раскладка поверх ui/Card (поверхность и паддинг 16 — у Card),
@@ -23,7 +23,7 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--app-space-sm);
 }
 
 /* Карточка-строка: та же поверхность, но шапка и статус в одну линию
@@ -32,7 +32,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Шапка карточки: заголовок слева, статус справа. */
@@ -40,14 +40,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Строка «аватар + имя»: ужимается, текст не распирает карточку. */
 .rowInfo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-xs);
   min-width: 0;
 }
 
@@ -55,7 +55,7 @@
 .grid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--app-space-sm);
 }
 
 /* Обёртка ConfirmAction: сама не участвует в раскладке (было contents),

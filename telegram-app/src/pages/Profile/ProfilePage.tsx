@@ -35,7 +35,7 @@ import { SectionBody } from "@/ui/SectionBody";
 import { Stack } from "@/ui/Stack";
 import { FetchMore } from "@/ui/FetchMore";
 import { Notice } from "@/ui/Notice";
-import { HINT, INFO, PROSE_TEXT, SUCCESS } from "@/ui/classes";
+import { GROW, HINT, INFO, PROSE_TEXT, TRUNCATE } from "@/ui/classes";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { ApiError } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -53,6 +53,10 @@ import {
 import { haptic } from "@/utils/haptics";
 import { useModalBack } from "@/utils/modalBack";
 import styles from "./ProfilePage.module.css";
+
+/** Обрезка в одну строку + блочный display (span/caption-типографика tgui).
+ * ellipsis-рецепт — канонный TRUNCATE из @/ui/classes, block — локальный. */
+const TRUNCATE_BLOCK = `${TRUNCATE} ${styles.truncateBlock}`;
 
 type ProfileSubtab = "settings" | "reviews";
 
@@ -81,12 +85,7 @@ function MenuRow({
       aria-label={label}
       onClick={onClick}
       before={<span className={styles.icon}>{icon}</span>}
-      after={
-        <ChevronRight
-          size={16}
-          className={styles.chevron}
-        />
-      }
+      after={<ChevronRight size={16} className={styles.chevron} />}
       subtitle={subtitle}
       className={styles.menuCell}
     >
@@ -117,11 +116,11 @@ function SwitchRow({
   return (
     <div className={styles.switchRow}>
       <span className={styles.icon}>{icon}</span>
-      <span className={styles.flexText}>
-        <Text Component="span" className={styles.truncate}>
+      <span className={GROW}>
+        <Text Component="span" className={TRUNCATE_BLOCK}>
           {title}
         </Text>
-        <Caption Component="span" className={styles.truncate}>
+        <Caption Component="span" className={TRUNCATE_BLOCK}>
           {subtitle}
         </Caption>
       </span>
@@ -234,18 +233,15 @@ export function ProfilePage() {
                       .slice(0, 2)
                       .toUpperCase()}
                   />
-                  <div className={styles.flexText}>
-                    <Headline weight="2" className={styles.truncate}>
+                  <div className={GROW}>
+                    <Headline weight="2" className={TRUNCATE_BLOCK}>
                       {profile.data.name}
                     </Headline>
                     <div className={styles.ratingRow}>
                       <Badge type="number" mode="secondary" large>
                         <Star size={11} />
-                        <span>{`${profile.data.rating.toFixed(1)} (${profile.data.reviewsCount})`}</span>
+                        <span>{`${profile.data.rating.toFixed(1)}`}</span>
                       </Badge>
-                      <Caption weight="2" className={SUCCESS}>
-                        Telegram верифицирован
-                      </Caption>
                     </div>
                   </div>
                 </div>
@@ -261,10 +257,7 @@ export function ProfilePage() {
                     <Text weight="2" Component="div">
                       {profile.data.tripsCount}
                     </Text>
-                    <Caption
-                      Component="div"
-                      className={styles.statLabel}
-                    >
+                    <Caption Component="div" className={styles.statLabel}>
                       Поездок
                     </Caption>
                   </div>
@@ -272,10 +265,7 @@ export function ProfilePage() {
                     <Text weight="2" Component="div" className={INFO}>
                       {profile.data.reviewsCount}
                     </Text>
-                    <Caption
-                      Component="div"
-                      className={styles.statLabel}
-                    >
+                    <Caption Component="div" className={styles.statLabel}>
                       Отзывов
                     </Caption>
                   </div>
@@ -287,10 +277,7 @@ export function ProfilePage() {
                     >
                       {profile.data.rating.toFixed(1)}
                     </Text>
-                    <Caption
-                      Component="div"
-                      className={styles.statLabel}
-                    >
+                    <Caption Component="div" className={styles.statLabel}>
                       Рейтинг
                     </Caption>
                   </div>
@@ -504,10 +491,7 @@ export function ProfilePage() {
                   <span className={HINT}>
                     Все отзывы проходят пре-модерацию
                   </span>
-                  <Button
-                    size="s"
-                    onClick={() => navigate("/reviews")}
-                  >
+                  <Button size="s" onClick={() => navigate("/reviews")}>
                     Оставить отзыв
                   </Button>
                 </Notice>

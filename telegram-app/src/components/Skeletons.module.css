@@ -50,7 +50,7 @@
 .driverLines {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--app-space-2xs);
 }
 
 .lineDriverName {
@@ -146,7 +146,7 @@
 .authorLines {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--app-space-2xs);
 }
 
 .lineAuthorName {

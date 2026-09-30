@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 8px;
+  padding: 2px var(--app-space-xs);
   border-radius: var(--app-radius-pill);
   background: var(--tgui--secondary_bg_color, rgba(127, 127, 127, 0.12));
   color: var(--tgui--text_color, inherit);

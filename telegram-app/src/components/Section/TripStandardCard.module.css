@@ -14,7 +14,7 @@
   /* Внешние отступы задаёт лента (padding + gap), у карточки их нет;
      паддинг тоже нулевой (flush) — внутренние блоки держат 16px сами. */
   margin: 0;
-  padding: 4px 0;
+  padding: var(--app-space-2xs) 0;
   cursor: pointer;
 }
 
@@ -23,15 +23,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 2px 16px 0;
+  gap: var(--app-space-sm);
+  padding: 2px var(--app-space-md) 0;
 }
 
 /* Дата с иконкой-календарём. */
 .when {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--app-space-2xs);
   color: var(--tgui--hint_color);
   white-space: nowrap;
 }
@@ -60,13 +60,13 @@
 .route {
   display: flex;
   flex-direction: column;
-  padding: 6px 16px 2px;
+  padding: 6px var(--app-space-md) 2px;
 }
 
 /* Один пункт маршрута: рельса слева, текст справа. */
 .stop {
   display: flex;
-  gap: 12px;
+  gap: var(--app-space-sm);
 }
 
 /* Рельса: точка сверху, сегмент линии тянется до низа пункта.
@@ -124,7 +124,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding-bottom: 4px;
+  padding-bottom: var(--app-space-2xs);
 }
 
 /* У последнего пункта нижний отступ не нужен (линия там не рисуется). */
@@ -149,7 +149,7 @@
 .car {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--app-space-2xs);
 }
 
 /* Персона: убираем китовые отступы средней колонки (padding 16px 0, gap 2px).
@@ -167,8 +167,8 @@
 .footer {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 4px 16px 12px;
-  padding-top: 12px;
+  gap: var(--app-space-xs);
+  margin: var(--app-space-2xs) var(--app-space-md) var(--app-space-sm);
+  padding-top: var(--app-space-sm);
   border-top: var(--tgui--border--width, 1px) solid var(--tgui--outline);
 }

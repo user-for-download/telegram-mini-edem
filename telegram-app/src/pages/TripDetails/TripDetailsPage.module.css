@@ -21,7 +21,7 @@
 .routeCard {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--app-space-sm);
   padding: var(--app-card-pad);
   border-radius: var(--app-card-radius);
   background: var(--tgui--tertiary_bg_color);
@@ -34,7 +34,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--app-space-xs);
   padding: var(--app-card-pad);
   border-radius: var(--app-card-radius);
   background: var(--tgui--section_bg_color);
@@ -45,12 +45,7 @@
 .driverRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-/* Блок имени/подписи: нулевая min-width даёт работать ellipsis. */
-.grow {
+  gap: var(--app-space-sm);
   min-width: 0;
 }
 
@@ -59,13 +54,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-/* Обрезка в одну строку (было truncate). */
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Значок верификации: синий штрих + заливка фона, не сжимается. */
@@ -79,7 +67,7 @@
 .ratingRow {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--app-space-2xs);
 }
 
 /* Звезда рейтинга: штрих и заливка одним токеном. */
@@ -104,7 +92,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
+  padding: var(--app-space-sm);
   border-radius: var(--app-radius-md);
   background: var(--tgui--tertiary_bg_color);
   font-size: 12px;
@@ -115,7 +103,7 @@
  * межстрочный 1.625 (в Tailwind leading-relaxed перебивает line-height
  * от text-xs). */
 .noteCard {
-  padding: 12px;
+  padding: var(--app-space-sm);
   border-radius: var(--app-radius-md);
   background: var(--tgui--section_bg_color);
   border: 1px solid var(--tgui--outline);
@@ -134,8 +122,8 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 8px;
+  gap: var(--app-space-xs);
+  padding-top: var(--app-space-xs);
   border-top: 1px solid var(--tgui--outline);
 }
 
@@ -143,20 +131,20 @@
 .sectionLoose {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 8px;
+  gap: var(--app-space-sm);
+  padding-top: var(--app-space-xs);
   border-top: 1px solid var(--tgui--outline);
 }
 
 /* Подзаголовок «Место» над сеткой мест (было mb-2). */
 .subtitle {
-  margin-bottom: 8px;
+  margin-bottom: var(--app-space-xs);
 }
 
 /* Сетка кнопок выбора места. */
 .seatGrid {
   display: grid;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Строка «цена — оплата водителю» (было py-1). */
@@ -164,7 +152,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 0;
+  padding: var(--app-space-2xs) 0;
 }
 
 /* Правая подпись строки цены (было text-right). */

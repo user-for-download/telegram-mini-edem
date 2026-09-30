@@ -12,13 +12,13 @@
 /* Маркер в before-слоте Input (SSR-ветка): синий, отступ 4px под
  * внутренние паддинги Input. */
 .pinInput {
-  margin-left: 4px;
+  margin-left: var(--app-space-2xs);
   color: var(--app-info, inherit);
 }
 
 /* Маркер в before-слоте Multiselect: синий, отступ 8px под
  * внутренние паддинги Multiselect. */
 .pinSelect {
-  margin-left: 8px;
+  margin-left: var(--app-space-xs);
   color: var(--app-info, inherit);
 }

@@ -8,7 +8,7 @@
 .root {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Шапка: автор слева, звёзды справа (было justify-between gap-2). */
@@ -16,14 +16,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--app-space-xs);
 }
 
 /* Автор: аватар + имя/дата, сжимается (было items-center gap-2 min-w-0). */
 .author {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-xs);
   min-width: 0;
 }
 
@@ -61,8 +61,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding-top: 4px;
+  gap: var(--app-space-xs);
+  padding-top: var(--app-space-2xs);
   border-top: 1px solid var(--tgui--outline);
 }
 

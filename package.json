@@ -38,6 +38,7 @@
     "lint:eslint:webapp": "eslint webapp",
     "lint:eslint:contracts": "eslint packages/contracts",
     "format:check": "node scripts/format-check.mjs",
+    "token:check": "node scripts/token-lint.mjs",
     "bundle:check": "node scripts/check-bundle.mjs",
     "load:test": "node scripts/load-test.mjs"
   },

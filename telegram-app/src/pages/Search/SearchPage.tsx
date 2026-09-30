@@ -165,6 +165,7 @@ export function SearchPage() {
             <div className={styles.cityFields}>
               <Input
                 id="search-from"
+                aria-label="Откуда"
                 before={<MapPin size={17} className={INFO} />}
                 after={
                   form.fromCity ? (
@@ -184,6 +185,7 @@ export function SearchPage() {
               />
               <Input
                 id="search-to"
+                aria-label="Куда"
                 before={<MapPin size={17} className={SUCCESS} />}
                 after={
                   form.toCity ? (
