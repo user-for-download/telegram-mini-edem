@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, toIsoDate } from "@/utils/date";
+import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
 
 const NOW = new Date(2026, 8, 10, 15, 0, 0); // четверг 2026-09-10
 
@@ -66,5 +66,19 @@ describe("formatArrivalTime", () => {
   it("returns empty string for invalid input", () => {
     expect(formatArrivalTime("", 60)).toBe("");
     expect(formatArrivalTime("10:00", 0)).toBe("");
+  });
+});
+
+describe("toLocalDateTimeInputValue", () => {
+  it("formats local wall time for datetime-local (not UTC)", () => {
+    expect(toLocalDateTimeInputValue(new Date(2026, 8, 10, 15, 4, 0))).toBe(
+      "2026-09-10T15:04",
+    );
+  });
+
+  it("round-trips through datetime-local parsing", () => {
+    const original = new Date(2026, 8, 10, 15, 4, 0);
+    const parsed = new Date(toLocalDateTimeInputValue(original));
+    expect(parsed.getTime()).toBe(original.getTime());
   });
 });

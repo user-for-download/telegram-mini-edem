@@ -1,8 +1,10 @@
 import { useMemo, useReducer, useState } from "react";
 import { MAX_SEATS, type TripTag } from "@edem/contracts";
 import type { CreateTripDraft } from "@/helpers/createTripForm";
+import { toLocalDateTimeInputValue } from "@/utils/date";
 
-const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString();
+const tomorrow = () =>
+  toLocalDateTimeInputValue(new Date(Date.now() + 86_400_000));
 
 /**
  * Состояние формы создания поездки (10 полей). Ключи совпадают с

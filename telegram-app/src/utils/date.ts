@@ -16,6 +16,16 @@ export function toIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Локальное время для <input type="datetime-local"> ("YYYY-MM-DDTHH:mm").
+ * toISOString() здесь нельзя: он даёт UTC, а поле ждёт локальное —
+ * в Москве дефолт уезжал на 3 часа назад.
+ */
+export function toLocalDateTimeInputValue(date: Date): string {
+  const pad = (value: number): string => String(value).padStart(2, "0");
+  return `${toIsoDate(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
