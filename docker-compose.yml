@@ -63,6 +63,10 @@ services:
       TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-}
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
       SENTRY_DSN: ${SENTRY_DSN:-}
+      # Канал отчётов об ошибках в Telegram-группу (client-error-reporting):
+      # kill-switch (дефолт true) и id группы (отрицательный; пусто = только лог).
+      CLIENT_ERRORS_ENABLED: ${CLIENT_ERRORS_ENABLED:-true}
+      ERROR_ALERT_CHAT_ID: ${ERROR_ALERT_CHAT_ID:-}
       ALLOW_DEV_AUTH: "false"
       APP_VERSION: ${APP_VERSION:-0.1.0}
       # Rate limits (дефолты совпадают с backend/src/env.ts)
