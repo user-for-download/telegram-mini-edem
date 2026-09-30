@@ -61,6 +61,15 @@ describe("isNoiseError — фильтр шума", () => {
     expect(isNoiseError(abort)).toBe(true);
   });
 
+  it("режет сетевой шум нестабильных сетей", () => {
+    expect(isNoiseError(new TypeError("Failed to fetch"))).toBe(true);
+    expect(isNoiseError(new TypeError("Load failed"))).toBe(true);
+    expect(
+      isNoiseError(new Error("NetworkError when attempting to fetch resource.")),
+    ).toBe(true);
+    expect(isNoiseError(new Error("Network request failed"))).toBe(true);
+  });
+
   it("режет ожидаемые ApiError 4xx, пропускает 5xx и обычные ошибки", () => {
     expect(isNoiseError(new ApiError("not found", "NOT_FOUND", 404))).toBe(
       true,
@@ -82,6 +91,17 @@ describe("reportError — отправка", () => {
     const payload = lastBeaconPayload();
     expect(payload.kind).toBe("error");
     expect(payload.route).toBe("/");
+  });
+
+  it("route берётся из location.hash (HashRouter), а не из pathname", () => {
+    window.location.hash = `#/search-${Date.now()}`;
+    try {
+      reportError(new Error(`hash-route-${Date.now()}`));
+      const payload = lastBeaconPayload();
+      expect(payload.route).toBe(window.location.hash.slice(1));
+    } finally {
+      window.location.hash = "";
+    }
   });
 
   it("sendBeacon=false → fallback fetch с keepalive", () => {

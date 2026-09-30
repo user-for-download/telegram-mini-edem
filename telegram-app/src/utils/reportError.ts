@@ -55,6 +55,15 @@ export function isNoiseError(error: unknown): boolean {
   const message = errorMessage(error);
   if (!message || message === "Script error.") return true;
   if (message.includes("ResizeObserver loop")) return true;
+  // Нестабильная сеть (мобильные клиенты): fetch в Safari/Firefox/Chrome.
+  if (
+    message.includes("Failed to fetch") ||
+    message.includes("Load failed") ||
+    message.includes("NetworkError") ||
+    message.includes("Network request failed")
+  ) {
+    return true;
+  }
   const stack = errorStack(error) ?? "";
   if (
     stack.includes("chrome-extension://") ||
@@ -78,6 +87,13 @@ export function isNoiseError(error: unknown): boolean {
     return true;
   }
   return false;
+}
+
+function currentRoute(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  // HashRouter: pathname всегда "/", реальный маршрут — в location.hash.
+  const hash = window.location.hash.replace(/^#/, "");
+  return hash || window.location.pathname;
 }
 
 function truncate(value: string | undefined, max: number): string | undefined {
@@ -106,11 +122,7 @@ export function reportError(error: unknown, extra: ReportExtra = {}): void {
     message: truncate(message, 500),
     stack: truncate(errorStack(error), 4000),
     componentStack: truncate(extra.componentStack, 1000),
-    route: truncate(
-      extra.route ??
-        (typeof window !== "undefined" ? window.location.pathname : undefined),
-      200,
-    ),
+    route: truncate(extra.route ?? currentRoute(), 200),
     release: truncate(
       typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : undefined,
       40,
