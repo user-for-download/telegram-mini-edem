@@ -247,10 +247,18 @@ try {
   });
 
   await runStep("notifications: inbox показывает новую заявку", async () => {
+    // Тап по баннеру: непрочитанную помечает прочитанной и уходит по маршруту
+    // заявки (кнопок в карточке нет — паттерн NotificationBanner).
     await hashUrl(page, "/notifications");
     await page.getByText("Новая заявка").first().waitFor({ timeout: 30000 });
-    await page.getByRole("button", { name: "Отметить прочитанным" }).first().click();
-    await page.getByText("Новая заявка").first().waitFor({ timeout: 15000 });
+    const banner = page.getByRole("button", { name: /Новая заявка/ }).first();
+    await banner.click();
+    // Уход со страницы доказывает markRead+навигацию: ждём заявки водителя.
+    await page.getByText("Заявки").first().waitFor({ timeout: 15000 });
+    await shot(page, "notification-read");
+    // Возврат: заявка прочитана — в «Новых» её больше нет.
+    await hashUrl(page, "/notifications");
+    await page.getByText("Пока нет уведомлений").first().waitFor({ timeout: 15000 });
     return "booking_created read";
   });
 

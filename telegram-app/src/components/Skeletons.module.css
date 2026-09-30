@@ -75,23 +75,27 @@
   border-radius: var(--app-radius-pill);
 }
 
-/* Болванка уведомления */
-.notifHead {
+/* Болванка уведомления — зеркало NotificationCard (Banner inline). */
+.notifBanner {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--app-space-xs);
+  gap: var(--app-space-sm);
+}
+
+.notifBefore {
+  height: 40px;
+  width: 40px;
+  flex-shrink: 0;
+  border-radius: var(--app-radius-md);
+}
+
+.notifLines {
+  flex: 1 1 0%;
+  min-width: 0;
 }
 
 .lineNotifTitle {
   height: 16px;
   width: 40%;
-}
-
-.notifPill {
-  height: 20px;
-  width: 64px;
-  border-radius: var(--app-radius-pill);
 }
 
 .lineFull {
@@ -108,19 +112,12 @@
   display: flex;
   align-items: center;
   gap: var(--app-space-sm);
-  border-top: var(--tgui--border--width, 1px) solid var(--tgui--outline);
   padding-top: var(--app-space-xs);
 }
 
 .lineDate {
   height: 12px;
   width: 64px;
-}
-
-.notifActionBtn {
-  height: 32px;
-  width: 144px;
-  border-radius: var(--app-radius-md);
 }
 
 /* Болванка отзыва */

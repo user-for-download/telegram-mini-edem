@@ -116,11 +116,21 @@ export const EMPTY_STATES = {
     description:
       "После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь.",
   },
-  /** Уведомления пусты (NotificationsPage). */
+  /** Уведомления пусты (NotificationsPage, сегмент «Новые»). */
   notificationsEmpty: {
     header: "Пока нет уведомлений",
     description:
       "Подтверждения брони, отмены и завершение поездок появятся здесь",
+  },
+  /** Уведомлений водителя нет (NotificationsPage, сегмент «Водитель»). */
+  notificationsDriverEmpty: {
+    header: "Нет уведомлений водителя",
+    description: "Заявки пассажиров и совпадения запросов появятся здесь",
+  },
+  /** Уведомлений пассажира нет (NotificationsPage, сегмент «Пассажир»). */
+  notificationsPassengerEmpty: {
+    header: "Нет уведомлений пассажира",
+    description: "Подтверждения, отмены и изменения поездок появятся здесь",
   },
   /** Обращения в поддержку пусты (SupportPage). */
   supportEmpty: {

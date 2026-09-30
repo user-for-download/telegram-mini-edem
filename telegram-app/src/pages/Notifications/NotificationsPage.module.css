@@ -18,44 +18,68 @@
   flex-grow: 1;
 }
 
+/* Ряд сегментов (зеркало TripActivePage.chipRow: Новые / Водитель /
+ * Пассажир). gap 6px — off-scale осознанно, ради визуального единства
+ * с поездками (token-lint пропускает off-scale). */
+.chipRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Бейджи-фильтры в стиле кошелька: неактивный — просто текст без фона
+ * (сброс заливки mono/elevated кита), активный — голубая пилюля.
+ * Неслойный модуль бьёт слой tgui без !important. */
+.filter.filter {
+  background: transparent;
+  box-shadow: none;
+  color: var(--tgui--hint_color);
+}
+
+/* Текст красит вложенный h6 кита (plain_foreground явно) — дублируем
+ * цвет на потомков, приём как у .accent в ui/Chip.module.css. */
+.filter.filter,
+.filter.filter * {
+  color: var(--tgui--hint_color);
+}
+
+.filterActive.filterActive {
+  background: var(--tgui--secondary_fill);
+  box-shadow: none;
+  border-radius: var(--app-radius-pill);
+  font-weight: 600;
+}
+
+.filterActive.filterActive,
+.filterActive.filterActive * {
+  color: var(--tgui--link_color);
+}
+
 /* Пустое состояние: центрированные тексты на поверхности Section. */
 .emptyText {
   text-align: center;
 }
 
-/* Карточка уведомления: раскладка поверх ui/Card (паддинг 16 даёт Card). */
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-space-xs);
+/* Баннер уведомления (inline) во всю ширину рельса SectionBody:
+ * гасим боковые margin кита (base 16px / iOS 20px — как NextTripBanner).
+ * Удвоенный селектор — канон репозитория (NextTripBanner, .card.card). */
+.banner.banner {
+  margin-left: 0;
+  margin-right: 0;
 }
 
-/* Шапка карточки: заголовок + пилюля (Новое/Важное). */
-.cardHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--app-space-xs);
+/* Иконка типа уведомления: декоративна (aria-hidden), смысл дублирует
+ * callout текстом. Цвета только --tgui--*. */
+.icon-critical {
+  color: var(--tgui--destructive_text_color);
 }
 
-/* Пилюля в шапке не сжимается. */
-.pill {
-  flex-shrink: 0;
+.icon-request {
+  color: var(--tgui--link_color);
 }
 
-/* Тело уведомления: межстрочный 1.625 + перенос длинных слов. */
-.body {
-  line-height: 1.625;
-  overflow-wrap: anywhere;
-}
-
-/* Подвал карточки: Открыть/Отметить над разделителем (pt-1). */
-.cardFoot {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-sm);
-  padding-top: var(--app-space-2xs);
-  border-top: 1px solid var(--tgui--outline);
+.icon-feedback {
+  color: var(--tgui--hint_color);
 }
 
 /* Якорь автодогрузки: скрыт от скринридера, высота 48px держит скролл. */

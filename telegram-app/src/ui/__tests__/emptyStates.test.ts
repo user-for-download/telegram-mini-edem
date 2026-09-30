@@ -24,7 +24,9 @@ describe("EMPTY_STATES: словарь зафиксирован 1:1", () => {
       [
         "genericEmpty",
         "loadError",
+        "notificationsDriverEmpty",
         "notificationsEmpty",
+        "notificationsPassengerEmpty",
         "profileEmpty",
         "profileReviewsEmpty",
         "reportsEmpty",
@@ -131,6 +133,18 @@ describe("EMPTY_STATES: словарь зафиксирован 1:1", () => {
     );
     expect(EMPTY_STATES.notificationsEmpty.description).toBe(
       "Подтверждения брони, отмены и завершение поездок появятся здесь",
+    );
+    expect(EMPTY_STATES.notificationsDriverEmpty.header).toBe(
+      "Нет уведомлений водителя",
+    );
+    expect(EMPTY_STATES.notificationsDriverEmpty.description).toBe(
+      "Заявки пассажиров и совпадения запросов появятся здесь",
+    );
+    expect(EMPTY_STATES.notificationsPassengerEmpty.header).toBe(
+      "Нет уведомлений пассажира",
+    );
+    expect(EMPTY_STATES.notificationsPassengerEmpty.description).toBe(
+      "Подтверждения, отмены и изменения поездок появятся здесь",
     );
     expect(EMPTY_STATES.supportEmpty.header).toBe(
       "У вас пока нет обращений",

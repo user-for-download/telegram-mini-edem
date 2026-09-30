@@ -48,8 +48,8 @@ export function TripCardSkeleton() {
   );
 }
 
-/** Болванка уведомления — зеркало NotificationCard:
- * заголовок + статус-пилюля, текст, дата, футер со ссылкой/кнопкой. */
+/** Болванка уведомления — зеркало NotificationBanner (Banner inline, без
+ * кнопок: before-блок иконки, строки callout/header/subheader/description). */
 export function NotificationCardSkeleton() {
   return (
     <Skeleton
@@ -57,19 +57,16 @@ export function NotificationCardSkeleton() {
       aria-hidden="true"
       className={`${styles.cardSkeleton} ${CARD_SURFACE}`}
     >
-      <Stack gap="xs" className={CARD_PAD}>
-        <div className={styles.notifHead}>
+      <div className={`${CARD_PAD} ${styles.notifBanner}`}>
+        <div className={styles.notifBefore} />
+        <Stack gap="xs" className={styles.notifLines}>
+          <div className={styles.lineSub} />
           <div className={styles.lineNotifTitle} />
-          <div className={styles.notifPill} />
-        </div>
-        <div className={styles.lineFull} />
-        <div className={styles.line60} />
-        <div className={styles.lineSub} />
-        <div className={styles.notifFooter}>
-          <div className={styles.lineDate} />
-          <div className={styles.notifActionBtn} />
-        </div>
-      </Stack>
+          <div className={styles.lineSub} />
+          <div className={styles.lineFull} />
+          <div className={styles.line60} />
+        </Stack>
+      </div>
     </Skeleton>
   );
 }

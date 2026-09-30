@@ -26,7 +26,11 @@ vi.mock("@/queries/useNotificationsQuery", () => ({
 
 import {
   NotificationsPage,
+  DRIVER_NOTIFICATION_TYPES,
+  PASSENGER_NOTIFICATION_TYPES,
   isCriticalNotification,
+  normalizeNotifSegment,
+  notifSegmentOf,
   notificationRoute,
 } from "@/pages/Notifications/NotificationsPage";
 
@@ -67,14 +71,18 @@ function setMocks(inbox: Record<string, unknown> = {}) {
   mockUseMarkAll.mockReturnValue(mutationState());
 }
 
-function renderPage(): string {
+function renderPageAt(url = "/"): string {
   return renderToString(
     <AppRoot platform="base">
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[url]}>
         <NotificationsPage />
       </MemoryRouter>
     </AppRoot>,
   );
+}
+
+function renderPage(): string {
+  return renderPageAt("/");
 }
 
 const pageWithItems = (items: Array<Record<string, unknown>>, unreadCount = items.length) => ({
@@ -140,7 +148,7 @@ describe("NotificationsPage: шапка и контракт", () => {
 });
 
 describe("NotificationsPage: карточки", () => {
-  it("критичная — бейдж «Важное», некритичная непрочитанная — «Новое»", () => {
+  it("критичная — callout «Важное», некритичная непрочитанная — «Новое»", () => {
     setMocks(
       pageWithItems([
         makeNotification({ id: "n-1", type: "booking_status_changed" }),
@@ -152,9 +160,41 @@ describe("NotificationsPage: карточки", () => {
 
     expect(html).toContain("Важное");
     expect(html).toContain("Новое");
+    // callout читается раньше заголовка (статус над title): видимый header —
+    // последнее вхождение title (первое — aria-label баннера в атрибутах).
+    expect(html.indexOf("Важное")).toBeLessThan(html.lastIndexOf("Бронь подтверждена"));
+    expect(html.indexOf("Новое")).toBeLessThan(html.lastIndexOf("Новая заявка"));
   });
 
-  it("deep-link ведёт на раздел события; у неизвестного типа ссылки нет", () => {
+  it("прочитанная некритичная — без callout; иконка декоративна", () => {
+    setMocks(
+      pageWithItems([
+        makeNotification({
+          id: "n-1",
+          type: "booking_created",
+          isRead: true,
+          title: "Прочитанная заявка",
+        }),
+        makeNotification({
+          id: "n-2",
+          type: "feedback_replied",
+          isRead: true,
+          title: "Прочитанный ответ",
+        }),
+      ], 0),
+    );
+
+    // Прочитанные не в «Новых» — смотрим в ролевом сегменте.
+    const html = renderPageAt("/notifications?segment=driver");
+
+    expect(html).toContain("Прочитанная заявка");
+    expect(html).not.toContain("Новое");
+    expect(html).not.toContain("Важное");
+    // Иконка before декоративна: смысл дублирует callout текстом.
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  it("тап по баннеру ведёт на раздел события; у неизвестного типа — только прочтение", () => {
     setMocks(
       pageWithItems([
         makeNotification({ id: "n-1", type: "booking_status_changed" }),
@@ -164,25 +204,35 @@ describe("NotificationsPage: карточки", () => {
 
     const html = renderPage();
 
-    expect(html).toContain('href="#/bookings"');
-    expect(html).toContain('href="#/profile/support"');
+    // Баннер — кнопка: имя содержит title + действие (кнопок «Открыть» больше нет).
+    expect(html).toContain('aria-label="Бронь подтверждена. Отметить прочитанным и открыть"');
+    expect(html).toContain('aria-label="Ответ поддержки. Отметить прочитанным и открыть"');
+    expect(html).toContain('data-testid="notification-banner-n-1"');
+    expect(html).not.toContain("Открыть</");
+    expect(html).not.toContain("Отметить прочитанным</");
 
     setMocks(pageWithItems([makeNotification({ id: "n-x", type: "something_future" })]));
-    expect(renderPage()).not.toContain("Открыть");
+    const unknown = renderPage();
+    expect(unknown).toContain('aria-label="Бронь подтверждена. Отметить прочитанным"');
+    expect(unknown).not.toContain("Открыть");
   });
 
-  it("непрочитанная — кнопка «Отметить прочитанным»; прочитанная — без неё", () => {
+  it("прочитанная с маршрутом — «Открыть»; без маршрута и прочитанная — не кнопка", () => {
     setMocks(
       pageWithItems([
-        makeNotification({ id: "n-1", isRead: false }),
-        makeNotification({ id: "n-2", isRead: true, title: "Старое" }),
-      ]),
+        makeNotification({ id: "n-1", isRead: true }),
+        makeNotification({ id: "n-2", isRead: true, type: "something_future", title: "Старое" }),
+      ], 0),
     );
 
-    const html = renderPage();
+    // Прочитанные — в ролевом сегменте («Новые» показывают только unread).
+    const html = renderPageAt("/notifications?segment=passenger");
 
-    expect(html).toContain("Отметить прочитанным");
-    expect(html).toContain("Старое");
+    expect(html).toContain('aria-label="Бронь подтверждена. Открыть"');
+    expect(html).not.toContain("Старое");
+    // Только один role=button: прочитанная без маршрута и не в карте — статична.
+    expect(html.match(/role="button"/g)?.length ?? 0).toBe(1);
+    expect(html).not.toContain("Отметить прочитанным");
   });
 
   it("пагинация: кнопка «Показать ещё» при следующей странице", () => {
@@ -200,6 +250,88 @@ describe("NotificationsPage: карточки", () => {
     const html = renderPage();
 
     expect(html).toContain("Пока нет уведомлений");
+  });
+});
+
+describe("NotificationsPage: сегменты", () => {
+  it("normalizeNotifSegment: driver/passenger, остальное — unread", () => {
+    expect(normalizeNotifSegment("driver")).toBe("driver");
+    expect(normalizeNotifSegment("passenger")).toBe("passenger");
+    expect(normalizeNotifSegment(null)).toBe("unread");
+    expect(normalizeNotifSegment("unread")).toBe("unread");
+    expect(normalizeNotifSegment("all")).toBe("unread");
+    expect(normalizeNotifSegment("requests")).toBe("unread");
+    expect(normalizeNotifSegment("")).toBe("unread");
+  });
+
+  it("карта type→role: водительские, пассажирские, нейтраль — нигде", () => {
+    expect(notifSegmentOf("booking_created")).toBe("driver");
+    expect(notifSegmentOf("ride_request_match")).toBe("driver");
+    expect(notifSegmentOf("booking_status_changed")).toBe("passenger");
+    expect(notifSegmentOf("trip_cancelled")).toBe("passenger");
+    expect(notifSegmentOf("trip_status_changed")).toBe("passenger");
+    expect(notifSegmentOf("trip_details_changed")).toBe("passenger");
+    expect(notifSegmentOf("review_approved")).toBeNull();
+    expect(notifSegmentOf("feedback_replied")).toBeNull();
+    expect(notifSegmentOf("something_future")).toBeNull();
+    // Карты не пересекаются.
+    for (const type of DRIVER_NOTIFICATION_TYPES) {
+      expect(PASSENGER_NOTIFICATION_TYPES.has(type)).toBe(false);
+    }
+  });
+
+  it("«Новые» — только непрочитанные всех типов (нейтраль не теряется)", () => {
+    setMocks(
+      pageWithItems([
+        makeNotification({ id: "n-1", type: "booking_created" }),
+        makeNotification({ id: "n-2", type: "booking_created", isRead: true, title: "Прочитанная заявка" }),
+        makeNotification({ id: "n-3", type: "feedback_replied", title: "Ответ поддержки" }),
+      ]),
+    );
+
+    const html = renderPageAt("/notifications");
+
+    expect(html).toContain("Бронь подтверждена");
+    expect(html).toContain("Ответ поддержки");
+    expect(html).not.toContain("Прочитанная заявка");
+  });
+
+  it("ролевые сегменты фильтруют по карте, включая прочитанные", () => {
+    const items = [
+      makeNotification({ id: "n-1", type: "booking_created", title: "Заявка водителя" }),
+      makeNotification({ id: "n-2", type: "booking_status_changed", isRead: true, title: "Статус пассажира" }),
+      makeNotification({ id: "n-3", type: "review_approved", title: "Отзыв принят" }),
+    ];
+    setMocks(pageWithItems(items));
+
+    const driver = renderPageAt("/notifications?segment=driver");
+    expect(driver).toContain("Заявка водителя");
+    expect(driver).not.toContain("Статус пассажира");
+    expect(driver).not.toContain("Отзыв принят");
+
+    const passenger = renderPageAt("/notifications?segment=passenger");
+    expect(passenger).toContain("Статус пассажира");
+    expect(passenger).not.toContain("Заявка водителя");
+    expect(passenger).not.toContain("Отзыв принят");
+  });
+
+  it("пустые сегменты — свои тексты; чипы с aria-pressed", () => {
+    setMocks(pageWithItems([makeNotification({ id: "n-1", type: "booking_created", title: "Заявка водителя" })]));
+
+    const driver = renderPageAt("/notifications?segment=driver");
+    expect(driver).toContain("Заявка водителя");
+    expect(driver).toContain('aria-pressed="true"');
+
+    // В пассажирском та же заявка не видна — свой empty-текст.
+    const passenger = renderPageAt("/notifications?segment=passenger");
+    expect(passenger).toContain("Нет уведомлений пассажира");
+    expect(passenger).toContain("Подтверждения, отмены и изменения поездок появятся здесь");
+
+    // Пустой инбокс в водительском — свой empty-текст.
+    setMocks(pageWithItems([]));
+    const emptyDriver = renderPageAt("/notifications?segment=driver");
+    expect(emptyDriver).toContain("Нет уведомлений водителя");
+    expect(emptyDriver).toContain("Заявки пассажиров и совпадения запросов появятся здесь");
   });
 });
 
