@@ -65,10 +65,25 @@ export function isStackFrameLine(line: string): boolean {
 }
 
 /**
+ * Нормализация маршрута для отпечатка: UUID и числовые сегменты
+ * (ID поездок в hash-маршрутах) заменяются на :id — иначе одна и та же
+ * ошибка с разных ID даёт разные отпечатки и съедает часовой бюджет.
+ * В тексте алерта маршрут остаётся как есть.
+ */
+export function normalizeRouteForFingerprint(route: string): string {
+  return route
+    .replace(
+      /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g,
+      ":id",
+    )
+    .replace(/\/\d+(?=\/|$)/g, "/:id");
+}
+
+/**
  * Отпечаток: kind + message + первый кадр стека (без номеров строк
- * и колонок) + route. Первая строка V8-стека — заголовок ошибки, а не
- * кадр, поэтому пропускаем её через isStackFrameLine; иначе — первая
- * непустая строка.
+ * и колонок) + нормализованный route. Первая строка V8-стека —
+ * заголовок ошибки, а не кадр, поэтому пропускаем её через
+ * isStackFrameLine; иначе — первая непустая строка.
  */
 export function fingerprintClientError(
   kind: string,
@@ -83,7 +98,9 @@ export function fingerprintClientError(
   const firstFrame =
     lines.find((line) => isStackFrameLine(line)) ?? lines[0] ?? "";
   return createHash("sha1")
-    .update(`${kind}\n${message}\n${firstFrame}\n${route ?? ""}`)
+    .update(
+      `${kind}\n${message}\n${firstFrame}\n${normalizeRouteForFingerprint(route ?? "")}`,
+    )
     .digest("hex");
 }
 

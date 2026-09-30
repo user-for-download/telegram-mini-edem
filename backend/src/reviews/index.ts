@@ -385,6 +385,7 @@ reviewsRouter.get("/user/:userId", publicReadLimiter, async (c) => {
       { issues: validation.error.issues, userId },
       "reviews_pagination_response_validation_failed"
     );
+    reportServerError(validation.error, c.req.method, c.req.path);
     return c.json(
       { code: ERROR_CODES.INTERNAL_ERROR, message: "Invalid reviews response" },
       500

@@ -21,6 +21,7 @@ import { z } from "zod";
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
+import { reportServerError } from "../client-errors/index.js";
 import { tokensEqual } from "../utils/timingSafeEqual.js";
 
 export const botRouter = new Hono();
@@ -112,6 +113,8 @@ botRouter.post("/webhook/:secret", async (c) => {
     // Ошибка БД: 500 — Telegram ретраит апдейт позже (это желаемое
     // поведение для фиксации согласия).
     logger.error({ err: error, command }, "bot_webhook_db_error");
+    // Путь без :secret — секрет вебхука не должен уходить в алерт.
+    reportServerError(error, c.req.method, "/bot/webhook");
     return c.json({ ok: false }, 500);
   }
 

@@ -7,6 +7,7 @@ import {
 import { db } from "../db.js";
 import type { AuthEnv } from "../auth/middleware.js";
 import { logger } from "../logger.js";
+import { reportServerError } from "../client-errors/index.js";
 import {
   serializeBooking,
   serializeUser,
@@ -324,6 +325,7 @@ queriesRouter.get("/driver", async (c) => {
       { issues: validation.error.issues },
       "driver_bookings_response_validation_failed",
     );
+    reportServerError(validation.error, c.req.method, c.req.path);
     return c.json({ message: "Internal response validation failed" }, 500);
   }
 
@@ -405,6 +407,7 @@ queriesRouter.get("/trip/:tripId", async (c) => {
       { issues: validation.error.issues, tripId },
       "bookings_pagination_response_validation_failed",
     );
+    reportServerError(validation.error, c.req.method, c.req.path);
     return c.json({ message: "Internal response validation failed" }, 500);
   }
 

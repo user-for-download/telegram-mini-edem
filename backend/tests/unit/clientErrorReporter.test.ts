@@ -89,6 +89,26 @@ describe("fingerprintClientError", () => {
     ).not.toBe(fingerprintClientError("error", "boom", stack, "GET /b"));
   });
 
+  it("UUID и числовые ID в route не плодят отпечатки", () => {
+    const stack = "Error: boom\n    at App (a.js:10:5)";
+    const a = fingerprintClientError(
+      "error",
+      "boom",
+      stack,
+      "/trips/11111111-1111-4111-8111-111111111111",
+    );
+    const b = fingerprintClientError(
+      "error",
+      "boom",
+      stack,
+      "/trips/22222222-2222-4222-8222-222222222222",
+    );
+    expect(a).toBe(b);
+    expect(
+      fingerprintClientError("error", "boom", stack, "/trips/123"),
+    ).toBe(fingerprintClientError("error", "boom", stack, "/trips/456"));
+  });
+
   it("различает разные сообщения и kind", () => {
     const a = fingerprintClientError("error", "boom");
     expect(fingerprintClientError("error", "other")).not.toBe(a);
