@@ -1,9 +1,23 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { Text } from "@telegram-apps/telegram-ui";
-import { Button } from "@/ui/Button";
+import { Button, type ButtonVariant } from "@/ui/Button";
 import { Stack } from "@/ui/Stack";
 import styles from "./ConfirmAction.module.css";
+
+/**
+ * Режимы кита для кнопки-триггера — все 5 из ui/Button (MODES):
+ * filled/bezeled/plain/outline/white. Маппинг на variant кнопки 1:1.
+ */
+export const CONFIRM_MODE_VARIANT = {
+  filled: "primary",
+  bezeled: "secondary",
+  plain: "ghost",
+  outline: "outline",
+  white: "white",
+} as const satisfies Record<string, ButtonVariant>;
+
+export type ConfirmMode = keyof typeof CONFIRM_MODE_VARIANT;
 
 
 /**
@@ -35,7 +49,7 @@ export function ConfirmAction({
   confirmLabel: string;
   description: string;
   pending?: boolean;
-  mode?: "bezeled" | "plain";
+  mode?: ConfirmMode;
   disabled?: boolean;
   destructive?: boolean;
   actionsEnd?: boolean;
@@ -68,8 +82,9 @@ export function ConfirmAction({
       <Button
         ref={triggerRef}
         // Наш ui/Button говорит на языке variant; публичный mode-параметр
-        // ConfirmAction оставлен совместимым с прежними вызовами (bezeled|plain).
-        variant={mode === "plain" ? "ghost" : "secondary"}
+        // ConfirmAction оставлен совместимым с прежними вызовами
+        // (все режимы кита: filled/bezeled/plain/outline/white).
+        variant={CONFIRM_MODE_VARIANT[mode]}
         size="s"
         stretched
         disabled={disabled || pending}

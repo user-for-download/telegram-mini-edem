@@ -3,7 +3,7 @@ import type { MouseEvent } from "react";
 
 import { Button } from "@/ui/Button";
 import { popup } from "@tma.js/sdk-react";
-import { ConfirmAction } from "@/components/ConfirmAction";
+import { ConfirmAction, CONFIRM_MODE_VARIANT, type ConfirmMode } from "@/components/ConfirmAction";
 import { isTelegramMockEnv } from "@/utils/telegram-adapter";
 import styles from "./ConfirmAction.module.css";
 
@@ -23,8 +23,9 @@ import styles from "./ConfirmAction.module.css";
  * Cancel + destructive/default confirm. Закрытие без выбора (null) —
  * отмена. Popup закрывается по тапу: pending мутации держит disabled
  * на триггере, дабл-сабмит гасится вызывающим кодом через pending.
- * mode (bezeled|plain, китовый) СОВМЕСТИМ: внутри маппится на variant
- * ui/Button (secondary|ghost) — вызывающие код не меняли.
+ * mode (все режимы кита: filled/bezeled/plain/outline/white)
+ * СОВМЕСТИМ: внутри маппится на variant ui/Button через
+ * CONFIRM_MODE_VARIANT — вызывающие код не меняли.
  */
 export function ConfirmPopup({
   label,
@@ -42,7 +43,7 @@ export function ConfirmPopup({
   confirmLabel: string;
   description: string;
   pending?: boolean;
-  mode?: "bezeled" | "plain";
+  mode?: ConfirmMode;
   disabled?: boolean;
   destructive?: boolean;
   /** Инлайн-фолбэк: кнопки панели к правому краю (см. ConfirmAction). */
@@ -67,7 +68,7 @@ export function ConfirmPopup({
   if (isTelegramMockEnv()) {
     return (
       <Button
-        variant={mode === "plain" ? "ghost" : "secondary"}
+        variant={CONFIRM_MODE_VARIANT[mode]}
         size="s"
         stretched
         disabled={disabled || pending}
@@ -100,7 +101,7 @@ export function ConfirmPopup({
 
   return (
     <Button
-      variant={mode === "plain" ? "ghost" : "secondary"}
+      variant={CONFIRM_MODE_VARIANT[mode]}
       size="s"
       stretched
       disabled={disabled || pending}
