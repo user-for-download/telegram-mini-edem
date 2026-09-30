@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { bodyLimit } from "hono/body-limit";
@@ -296,9 +297,11 @@ if (env.isProduction) {
 }
 
 /**
- * Глобальная обработка ошибок.
+ * Глобальная обработка ошибок. Вынесена в экспортируемую функцию,
+ * чтобы путь server-error можно было прогнать тестом (публичный
+ * эндпоинт kind "server" отклоняет — и это правильно).
  */
-app.onError((error, c) => {
+export function handleUnhandledError(error: Error, c: Context) {
   logger.error(
     {
       err: error,
@@ -319,4 +322,6 @@ app.onError((error, c) => {
     { code: ERROR_CODES.INTERNAL_ERROR, message: "Internal server error" },
     500
   );
-});
+}
+
+app.onError(handleUnhandledError);
