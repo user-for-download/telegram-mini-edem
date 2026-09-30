@@ -250,7 +250,7 @@ try {
     try {
       await page.getByText("Подтверждён").first().waitFor({ timeout: 60000 });
     } catch (e) {
-      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "refresh")}`);
+      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "refresh")}`, { cause: e });
     }
     return "resync ok";
   });
@@ -283,7 +283,7 @@ try {
     try {
       await finishButtons.first().click({ timeout: 30000 });
     } catch (e) {
-      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "complete-list")}`);
+      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "complete-list")}`, { cause: e });
     }
     await page
       .getByText("Поездка будет перенесена в архив")

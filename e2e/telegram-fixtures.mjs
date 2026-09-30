@@ -126,7 +126,7 @@ export async function api(path, { method = "GET", token, body } = {}) {
   try {
     parsed = text ? JSON.parse(text) : null;
   } catch {
-    parsed = null;
+    // Не-JSON тело: parsed остаётся null.
   }
   if (!res.ok) {
     throw new Error(`API ${method} ${path}: HTTP ${res.status} ${text.slice(0, 200)}`);

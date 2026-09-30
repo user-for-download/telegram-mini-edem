@@ -208,7 +208,7 @@ try {
       await page.getByText("Управление поездкой").first().waitFor({ timeout: 15000 });
       await page.getByText(CITY_FROM).filter({ visible: true }).first().waitFor({ timeout: 15000 });
     } catch (e) {
-      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "create-trip")}`);
+      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "create-trip")}`, { cause: e });
     }
     const created = await api(`/trips/${tripId}`, { token: peerToken });
     if (created.price !== PRICE) {
@@ -253,7 +253,7 @@ try {
     try {
       await page.getByText("Подтверждён").first().waitFor({ timeout: 60000 });
     } catch (e) {
-      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "refresh")}`);
+      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "refresh")}`, { cause: e });
     }
     return "resync ok";
   });
@@ -288,7 +288,7 @@ try {
         .getByRole("button", { name: "Завершить поездку" })
         .click({ timeout: 30000 });
     } catch (e) {
-      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "complete-details")}`);
+      throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "complete-details")}`, { cause: e });
     }
     // После завершения детали показывают терминальный экран статуса.
     await page.getByText("Поездка завершена").first().waitFor({ timeout: 30000 });

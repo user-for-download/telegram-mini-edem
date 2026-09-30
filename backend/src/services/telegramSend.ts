@@ -108,7 +108,7 @@ async function proxyPost(
         const chunks: Buffer[] = [];
         res.on("data", (c: Buffer) => chunks.push(c));
         res.on("end", () => {
-          let parsed: unknown = null;
+          let parsed: unknown;
           try {
             parsed = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
           } catch {
