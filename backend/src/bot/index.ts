@@ -31,13 +31,19 @@ const botUpdateSchema = z.object({
   message: z
     .object({
       from: z.object({ id: z.number().int() }).passthrough(),
-      chat: z.object({ id: z.number().int() }).passthrough(),
+      chat: z
+        .object({ id: z.number().int(), type: z.string().optional() })
+        .passthrough(),
       text: z.string().max(512).optional(),
     })
     .optional(),
   edited_message: z
     .object({
       from: z.object({ id: z.number().int() }).passthrough(),
+      chat: z
+        .object({ id: z.number().int(), type: z.string().optional() })
+        .passthrough()
+        .optional(),
       text: z.string().max(512).optional(),
     })
     .optional(),
@@ -81,6 +87,15 @@ botRouter.post("/webhook/:secret", async (c) => {
 
   if (command !== "start" && command !== "stop") {
     // Чужие команды/сообщения игнорируем молча (200 = без ретраев).
+    return c.json({ ok: true });
+  }
+
+  // /start и /stop — только в личке: в группах и каналах бот на
+  // команды не реагирует (согласие ставится только владельцу чата).
+  // edited_message чата не несёт — такие команды тоже игнорируем.
+  const chatType =
+    message && "chat" in message ? message.chat?.type : undefined;
+  if (chatType !== "private") {
     return c.json({ ok: true });
   }
 

@@ -69,7 +69,7 @@ async function webhookStart(tgId: bigint): Promise<Response> {
     body: JSON.stringify({
       message: {
         from: { id: Number(tgId) },
-        chat: { id: Number(tgId) },
+        chat: { id: Number(tgId), type: "private" },
         text: "/start",
       },
     }),
@@ -83,7 +83,7 @@ async function webhookStop(tgId: bigint): Promise<Response> {
     body: JSON.stringify({
       message: {
         from: { id: Number(tgId) },
-        chat: { id: Number(tgId) },
+        chat: { id: Number(tgId), type: "private" },
         text: "/stop",
       },
     }),

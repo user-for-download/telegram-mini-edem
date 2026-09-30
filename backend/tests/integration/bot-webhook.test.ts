@@ -81,7 +81,7 @@ describe("POST /bot/webhook/:secret — /start", () => {
       body: JSON.stringify({
         message: {
           from: { id: Number(tgId), is_bot: false },
-          chat: { id: Number(tgId) },
+          chat: { id: Number(tgId), type: "private" },
           text: "/start",
         },
       }),
@@ -99,7 +99,7 @@ describe("POST /bot/webhook/:secret — /start", () => {
       body: JSON.stringify({
         message: {
           from: { id: 123456789 },
-          chat: { id: 123456789 },
+          chat: { id: 123456789, type: "private" },
           text: "/start",
         },
       }),
@@ -121,7 +121,7 @@ describe("POST /bot/webhook/:secret — /start", () => {
       body: JSON.stringify({
         message: {
           from: { id: Number(tgId) },
-          chat: { id: Number(tgId) },
+          chat: { id: Number(tgId), type: "private" },
           text: "/start notify",
         },
       }),
@@ -147,7 +147,7 @@ describe("POST /bot/webhook/:secret — /stop", () => {
       body: JSON.stringify({
         message: {
           from: { id: Number(tgId) },
-          chat: { id: Number(tgId) },
+          chat: { id: Number(tgId), type: "private" },
           text: "/stop",
         },
       }),
@@ -178,7 +178,7 @@ describe("POST /bot/webhook/:secret — шумовые апдейты", () => {
       body: JSON.stringify({
         message: {
           from: { id: Number(tgId) },
-          chat: { id: Number(tgId) },
+          chat: { id: Number(tgId), type: "private" },
           text: "/help",
         },
       }),
@@ -200,7 +200,11 @@ describe("POST /bot/webhook/:secret — шумовые апдейты", () => {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify({
-        edited_message: { from: { id: Number(tgId) }, text: "/stop" },
+        edited_message: {
+          from: { id: Number(tgId) },
+          chat: { id: Number(tgId), type: "private" },
+          text: "/stop",
+        },
       }),
     });
 
@@ -216,5 +220,27 @@ describe("POST /bot/webhook/:secret — шумовые апдейты", () => {
       body: JSON.stringify({ callback_query: { id: "1", data: "x" } }),
     });
     expect(res.status).toBe(200);
+  });
+
+  it("/start и /stop из группы игнорируются (только личка)", async () => {
+    const { tgId } = await createTelegramUser();
+
+    for (const text of ["/start", "/stop"]) {
+      const res = await app.request(URL(SECRET), {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: JSON.stringify({
+          message: {
+            from: { id: Number(tgId) },
+            chat: { id: -100555, type: "supergroup" },
+            text,
+          },
+        }),
+      });
+      expect(res.status).toBe(200);
+    }
+
+    const user = await db.user.findFirst({ where: { telegramUserId: tgId } });
+    expect(user?.tgChatJoinedAt).toBeNull();
   });
 });
