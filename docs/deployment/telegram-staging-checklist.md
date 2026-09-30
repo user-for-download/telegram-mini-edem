@@ -54,7 +54,7 @@ Optional (дефолты покрывают):
 - [ ] Логи: stdout → json-file с ротацией 10m×3 (якорь `x-logging` в compose).
       Тела сообщений, токены, initData не логируются (аудит 18).
 - [ ] Метрики: `METRICS_TOKEN` задан, `/metrics` доступен сборщику.
-- [ ] Sentry: `SENTRY_DSN` задан (backend + `VITE_SENTRY_DSN` на сборке фронта).
+- [ ] Sentry: `SENTRY_DSN` задан (backend; фронт-Sentry удалён — клиентские ошибки идут через `POST /api/v1/client-errors` в Telegram-группу, см. `ERROR_ALERT_CHAT_ID`).
 - [ ] Бэкап: `backend/scripts/backup.sh` по cron (verify + retention 14 дней).
 - [ ] Откат: предыдущий образ + `pg_restore` снапшота (см. runbook §3).
 

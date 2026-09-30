@@ -19,6 +19,8 @@ TG_NOTIFICATION_DEDUPE_WINDOW_MS=60000
 ADMIN_TOKEN=<generated, or empty to close admin>
 METRICS_TOKEN=<generated>
 SENTRY_DSN=<backend project DSN>
+CLIENT_ERRORS_ENABLED=true
+ERROR_ALERT_CHAT_ID=<telegram group chat id, negative; empty = log only>
 APP_VERSION=<release tag>
 ALLOW_DEV_AUTH=false                            # compose hardcodes; never override in prod
 TRUST_PROXY=true                                # §2, mandatory behind proxy
@@ -29,7 +31,6 @@ Build-time (telegram-app bundle):
 
 ```dotenv
 VITE_API_URL=https://<tg-prod-host>/api/v1   # or empty for same-origin
-VITE_SENTRY_DSN=<frontend project DSN, or empty>
 ```
 
 ## 2. Reverse proxy (mandatory settings)
