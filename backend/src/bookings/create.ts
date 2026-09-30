@@ -9,6 +9,7 @@ import {
 import { db } from "../db.js";
 import type { AuthEnv } from "../auth/middleware.js";
 import { logger } from "../logger.js";
+import { reportServerError } from "../client-errors/index.js";
 import { serializeBooking } from "../serializers/index.js";
 import {
   mutationLimiter,
@@ -392,6 +393,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
       },
       "booking_create_failed",
     );
+    reportServerError(error, c.req.method, c.req.path);
 
     return c.json({ message: "Internal server error" }, 500);
   }

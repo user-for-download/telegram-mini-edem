@@ -19,7 +19,10 @@ Telegram-группу при настроенном `ERROR_ALERT_CHAT_ID`. `@sen
 (`packages/contracts`): `kind` = `error | unhandledrejection | boundary`;
 `message` ≤ 500, `stack` ≤ 4000, `componentStack` ≤ 1000, `route` ≤ 200,
 `release` ≤ 40 (релиз — `__APP_VERSION__` из сборки, отдельной
-`VITE_RELEASE` нет). User-Agent берётся на сервере из заголовка.
+`VITE_RELEASE` нет). Вида `server` в публичной схеме намеренно нет —
+подделать «серверную ошибку» через эндпоинт нельзя; внутренний вызов
+`reportServerError` идёт своим типом. User-Agent берётся на сервере
+из заголовка.
 
 ## Защита публичного эндпоинта
 
@@ -32,9 +35,11 @@ Telegram-группу при настроенном `ERROR_ALERT_CHAT_ID`. `@sen
 - Санитайзинг (данным из браузера не доверяем): query-строки,
   `tgWebAppData`, `hash=`, JWT (`eyJ…`), длинные hex — из message, stack,
   route, componentStack.
-- Отпечаток `sha1(kind + message + первый кадр без номеров строк)`:
-  первое появление — алерт сразу, повторы — не чаще раза в 30 минут
-  с пометкой «×N»; Map ограничен 200 записями.
+- Отпечаток `sha1(kind + message + первый кадр + route)`: первая
+  строка V8-стека — заголовок, поэтому кадр ищется как `at ...`
+  (V8) или `fn@file:line`   (Safari/Firefox, e-mail не подходит).
+- Троттлинг: первое появление — алерт сразу, повторы — не чаще раза
+  в 30 минут с пометкой «×N»; Map ограничен 200 записями.
 - Глобальный потолок 20 алертов/час — главная защита от засыпания
   уникальными сообщениями в обход дедупликации; остальное считается
   и раз в час уходит одной сводкой «пропущено N».
@@ -51,7 +56,9 @@ Telegram-группу при настроенном `ERROR_ALERT_CHAT_ID`. `@sen
   `unhandledrejection` (ловят и сбои инициализации).
 - Фильтр шума (не отправлять): `ResizeObserver loop`, `Script error.`,
   стеки `chrome-extension://` / `moz-extension://`, `AbortError`,
+  сетевые `Failed to fetch` / `Load failed` / `NetworkError`,
   ожидаемые `ApiError` 4xx (их обрабатывает UI).
+- Маршрут берётся из `location.hash` (HashRouter: pathname всегда `/`).
 - `ErrorBoundary.componentDidCatch` → `reportError` с `kind: "boundary"`
   и `componentStack`.
 
@@ -64,9 +71,16 @@ Telegram-группу при настроенном `ERROR_ALERT_CHAT_ID`. `@sen
 
 ## Осознанные компромиссы
 
-- Серверные 5xx идут в тот же канал: `app.onError` вызывает
-  `reportServerError` с `kind: "server"` (backend-only вид контракта);
-  4xx `onError` не триггерят и остаются тихими.
+- Серверные 5xx идут в тот же канал отдельным инстансом со своим
+  бюджетом (флуд публичного эндпоинта их не глушит): `app.onError`
+  плюс route-level catch перед ответом 500 (bookings create/status/
+  cancel, reviews create) вызывают `reportServerError` с `kind:
+  "server"` (внутренний тип, не из публичной схемы).
+- В Telegram от серверных ошибок уходит только заголовок
+  `server-error`, имя ошибки, маршрут и пара кадров стека; полный
+  текст остаётся в pino (`logger.error({ err })` рядом с вызовом).
+  Pino-запись самого репортёра включает усечённый стек, чтобы ничего
+  не терялось при заглушённом алерте.
 - Нет source maps и группировки — при желании позже подключается
   Bugsink без переделки канала.
 - In-memory лимитер и троттлинг — один инстанс; масштаб это не меняет.

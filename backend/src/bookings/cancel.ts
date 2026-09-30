@@ -4,6 +4,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { db } from "../db.js";
 import type { AuthEnv } from "../auth/middleware.js";
 import { logger } from "../logger.js";
+import { reportServerError } from "../client-errors/index.js";
 import { cancelBookingLimiter } from "../middleware/rateLimit.js";
 import { ERROR_CODES } from "../errors.js";
 import { BookingError } from "./shared.js";
@@ -138,6 +139,7 @@ cancelRouter.patch("/:id/cancel", cancelBookingLimiter, async (c) => {
       },
       "booking_cancel_failed",
     );
+    reportServerError(error, c.req.method, c.req.path);
 
     return c.json({ message: "Internal server error" }, 500);
   }

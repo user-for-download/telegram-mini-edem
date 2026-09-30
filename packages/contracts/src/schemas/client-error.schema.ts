@@ -4,13 +4,15 @@ import { z } from "zod";
  * Отчёт о клиентской ошибке — POST /api/v1/client-errors (публичный:
  * ошибки бывают до авторизации, ответ 204). User-Agent берётся на
  * сервере из заголовка, клиент его не присылает.
+ *
+ * Вида "server" здесь намеренно нет: серверные 500 идут внутренним
+ * вызовом (reportServerError) и подделать их через публичный эндпоинт
+ * нельзя.
  */
 export const CLIENT_ERROR_KINDS = [
   "error",
   "unhandledrejection",
   "boundary",
-  // Backend-only: необработанные 500 через app.onError (клиент его не шлёт).
-  "server",
 ] as const;
 
 export const clientErrorKindSchema = z.enum(CLIENT_ERROR_KINDS);

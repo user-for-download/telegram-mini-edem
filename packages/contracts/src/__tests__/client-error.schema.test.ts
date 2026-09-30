@@ -31,11 +31,11 @@ describe("client-error contracts", () => {
     ).toEqual({ kind: "boundary", message: "boom" });
   });
 
-  it("принимает backend-вид server (app.onError)", () => {
+  it("отклоняет вид server (внутренний, не для публичного эндпоинта)", () => {
     expect(
       clientErrorSchema.safeParse({ kind: "server", message: "boom" })
         .success,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("отклоняет неизвестный kind", () => {

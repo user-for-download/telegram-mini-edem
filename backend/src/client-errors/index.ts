@@ -16,6 +16,7 @@ import { ERROR_CODES } from "../errors.js";
 import { logger } from "../logger.js";
 import {
   createClientErrorReporter,
+  isStackFrameLine,
   type ClientErrorReporter,
 } from "../services/clientErrorReporter.js";
 
@@ -37,6 +38,20 @@ export function getClientErrorReporter(): ClientErrorReporter {
     });
   }
   return reporter;
+}
+
+// Отдельный инстанс со своим бюджетом: флуд публичного эндпоинта
+// не должен глушить алерты настоящих серверных 5xx.
+let serverReporter: ClientErrorReporter | null = null;
+
+export function getServerErrorReporter(): ClientErrorReporter {
+  if (!serverReporter) {
+    serverReporter = createClientErrorReporter({
+      chatId: env.ERROR_ALERT_CHAT_ID,
+      enabled: env.CLIENT_ERRORS_ENABLED,
+    });
+  }
+  return serverReporter;
 }
 
 clientErrorsRouter.post(
@@ -78,9 +93,13 @@ clientErrorsRouter.post(
 );
 
 /**
- * Серверные 5xx в тот же канал: вызывается из app.onError (там же —
- * pino-лог и Sentry). Никогда не бросает: репортёр fire-and-forget,
- * сверху страховочный try/catch, чтобы onError не уронил ответ 500.
+ * Серверные 5xx в тот же канал: вызывается из app.onError и из
+ * route-level catch перед ответом 500 (там же — pino-лог через
+ * logger.error({ err }), полный текст остаётся в логах). В Telegram
+ * уходит только имя ошибки, маршрут и пара кадров стека: тексты
+ * серверных исключений могут содержать e-mail и данные из БД.
+ * Никогда не бросает: репортёр fire-and-forget, сверху страховочный
+ * try/catch, чтобы не уронить ответ 500.
  */
 export function reportServerError(
   error: unknown,
@@ -88,11 +107,24 @@ export function reportServerError(
   path: string,
 ): void {
   try {
-    getClientErrorReporter().report({
+    const name =
+      error instanceof Error
+        ? error.name || "Error"
+        : typeof error === "string"
+          ? "String"
+          : "Unknown";
+    const frames = (error instanceof Error ? (error.stack ?? "") : "")
+      .split("\n")
+      .map((line) => line.trim())
+      // Только кадры (isStackFrameLine): заголовок с текстом
+      // исключения в алерт не берём — он остаётся в pino.
+      .filter((line) => isStackFrameLine(line))
+      .slice(0, 2)
+      .join("\n");
+    getServerErrorReporter().report({
       kind: "server",
-      message:
-        error instanceof Error ? error.message || "Internal error" : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
+      message: name,
+      stack: frames || undefined,
       route: `${method} ${path}`.slice(0, 200),
     });
   } catch (reportError) {

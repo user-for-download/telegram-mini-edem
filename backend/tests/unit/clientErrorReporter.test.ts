@@ -68,6 +68,27 @@ describe("fingerprintClientError", () => {
     expect(a).toBe(b);
   });
 
+  it("пропускает V8-заголовок: одинаковый текст из разных файлов — разный отпечаток", () => {
+    const a = fingerprintClientError(
+      "error",
+      "boom",
+      "Error: boom\n    at App (a.js:10:5)",
+    );
+    const b = fingerprintClientError(
+      "error",
+      "boom",
+      "Error: boom\n    at App (b.js:10:5)",
+    );
+    expect(a).not.toBe(b);
+  });
+
+  it("различает route при прочих равных", () => {
+    const stack = "Error: boom\n    at App (a.js:10:5)";
+    expect(
+      fingerprintClientError("error", "boom", stack, "GET /a"),
+    ).not.toBe(fingerprintClientError("error", "boom", stack, "GET /b"));
+  });
+
   it("различает разные сообщения и kind", () => {
     const a = fingerprintClientError("error", "boom");
     expect(fingerprintClientError("error", "other")).not.toBe(a);

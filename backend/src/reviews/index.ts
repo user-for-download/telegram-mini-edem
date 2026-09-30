@@ -7,6 +7,7 @@ import { createReviewDtoSchema, paginatedReviewsResponseSchema } from "@edem/con
 import { db } from "../db.js";
 import { requireUser, type AuthEnv } from "../auth/middleware.js";
 import { logger } from "../logger.js";
+import { reportServerError } from "../client-errors/index.js";
 import { serializeTrip, serializeReview, type TripWithDriver } from "../serializers/index.js";
 import {
   publicReadLimiter,
@@ -599,6 +600,7 @@ reviewsRouter.post("/", requireUser, mutationLimiter, async (c) => {
       },
       "review_create_failed"
     );
+    reportServerError(error, c.req.method, c.req.path);
 
     return c.json({ message: "Internal server error" }, 500);
   }

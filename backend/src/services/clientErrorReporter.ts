@@ -7,7 +7,6 @@
 // Часы и транспорт инжектятся (deps) для юнит-тестов без сети —
 // как уже сделано в telegramSend.
 import { createHash } from "node:crypto";
-import type { ClientError } from "@edem/contracts";
 import { logger } from "../logger.js";
 import { sendTelegramMessage, type SendInput } from "./telegramSend.js";
 
@@ -32,7 +31,7 @@ export function sanitizeClientErrorText(value: string): string {
     .replace(/\?[\w%.~-]+=[^\s]*/g, `?${REDACTED}`);
 }
 
-export function sanitizeClientError(input: ClientError): ClientError {
+export function sanitizeClientError(input: ErrorReportInput): ErrorReportInput {
   return {
     ...input,
     message: sanitizeClientErrorText(input.message),
@@ -45,30 +44,57 @@ export function sanitizeClientError(input: ClientError): ClientError {
 }
 
 /**
- * Отпечаток: kind + message + первый кадр стека без номеров строк
- * и колонок — одна и та же ошибка после пересборки не считается новой.
+ * Вход репортёра. ClientError из контрактов совместим структурно;
+ * внутренний вид kind="server" публичной схемой не принимается.
+ */
+export interface ErrorReportInput {
+  kind: string;
+  message: string;
+  stack?: string;
+  componentStack?: string;
+  route?: string;
+  release?: string;
+}
+
+/**
+ * Строка похожа на кадр стека: V8 "at ..." или Safari/Firefox
+ * "fn@file:line" (e-mail вида user@host без :line не подходит).
+ */
+export function isStackFrameLine(line: string): boolean {
+  return /^\s*at\s/i.test(line) || /@\S*:\d+/.test(line);
+}
+
+/**
+ * Отпечаток: kind + message + первый кадр стека (без номеров строк
+ * и колонок) + route. Первая строка V8-стека — заголовок ошибки, а не
+ * кадр, поэтому пропускаем её через isStackFrameLine; иначе — первая
+ * непустая строка.
  */
 export function fingerprintClientError(
   kind: string,
   message: string,
   stack?: string,
+  route?: string,
 ): string {
+  const lines = (stack ?? "")
+    .split("\n")
+    .map((line: string) => line.replace(/:\d+(?::\d+)?/g, "").trim())
+    .filter((line: string) => line.length > 0);
   const firstFrame =
-    (stack ?? "")
-      .split("\n")
-      .map((line: string) => line.replace(/:\d+(?::\d+)?/g, "").trim())
-      .find((line: string) => line.length > 0) ?? "";
+    lines.find((line) => isStackFrameLine(line)) ?? lines[0] ?? "";
   return createHash("sha1")
-    .update(`${kind}\n${message}\n${firstFrame}`)
+    .update(`${kind}\n${message}\n${firstFrame}\n${route ?? ""}`)
     .digest("hex");
 }
 
 /** Текст алерта: plain text без parse_mode, IP не включаем. */
 export function buildClientErrorAlertText(
-  input: ClientError,
+  input: ErrorReportInput,
   repeats: number,
 ): string {
-  const lines = [`client-error [${input.kind}]`];
+  const title =
+    input.kind === "server" ? "server-error" : `client-error [${input.kind}]`;
+  const lines = [title];
   if (repeats > 0) lines.push(`повторов с прошлого алерта: ×${repeats}`);
   if (input.route) lines.push(`route: ${input.route}`);
   if (input.release) lines.push(`release: ${input.release}`);
@@ -102,7 +128,7 @@ interface SeenEntry {
 }
 
 export interface ClientErrorReporter {
-  report(input: ClientError): void;
+  report(input: ErrorReportInput): void;
 }
 
 /**
@@ -171,7 +197,7 @@ export function createClientErrorReporter(
   }
 
   return {
-    report(input: ClientError): void {
+    report(input: ErrorReportInput): void {
       const clean = sanitizeClientError(input);
       const current = now();
       logger.warn(
@@ -180,6 +206,7 @@ export function createClientErrorReporter(
           route: clean.route,
           release: clean.release,
           message: clean.message,
+          stack: clean.stack ? clean.stack.slice(0, 2000) : undefined,
         },
         "client_error",
       );
@@ -191,6 +218,7 @@ export function createClientErrorReporter(
         clean.kind,
         clean.message,
         clean.stack,
+        clean.route,
       );
       const entry = seen.get(fingerprint);
       if (entry && current - entry.lastAlertAt < dedupeTtlMs) {
