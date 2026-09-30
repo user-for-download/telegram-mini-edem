@@ -204,7 +204,16 @@ export function createClientErrorReporter(
             "ok" in outcome &&
             !(outcome as { ok: boolean }).ok
           ) {
-            logger.debug({ outcome }, "client_error_alert_not_delivered");
+            // Фатальные исходы (токен/чат мёртв) — в warn, иначе сбой
+            // диагностики будет слепым: запись client_error есть, а причины
+            // недоставки на debug-уровне не видно. Транзиентные (сеть,
+            // rate limit) остаются на debug, чтобы не шуметь.
+            const kind = (outcome as { kind?: unknown }).kind;
+            if (kind === "permanent" || kind === "bot_blocked") {
+              logger.warn({ outcome }, "client_error_alert_not_delivered");
+            } else {
+              logger.debug({ outcome }, "client_error_alert_not_delivered");
+            }
           }
         },
         (error: unknown) => {

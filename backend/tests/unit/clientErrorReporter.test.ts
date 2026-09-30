@@ -164,6 +164,45 @@ describe("createClientErrorReporter", () => {
     expect(summary?.text).toContain("5");
   });
 
+  it("фатальная недоставка (bot_blocked) — warn, транзиент — debug", async () => {
+    const { logger } = await import("../../src/logger.js");
+    const warn = logger.warn as unknown as ReturnType<typeof vi.fn>;
+    const debug = logger.debug as unknown as ReturnType<typeof vi.fn>;
+
+    const blocked = createClientErrorReporter({
+      chatId: -100123,
+      now: () => 0,
+      send: async () => ({ ok: false as const, kind: "bot_blocked" as const }),
+    });
+    blocked.report({ kind: "error", message: "фатальный случай" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(
+      warn.mock.calls.some((call) =>
+        String(call[1]).includes("client_error_alert_not_delivered"),
+      ),
+    ).toBe(true);
+
+    warn.mockClear();
+    debug.mockClear();
+    const flaky = createClientErrorReporter({
+      chatId: -100123,
+      now: () => 0,
+      send: async () => ({ ok: false as const, kind: "transient" as const }),
+    });
+    flaky.report({ kind: "error", message: "транзиентный случай" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(
+      warn.mock.calls.some((call) =>
+        String(call[1]).includes("client_error_alert_not_delivered"),
+      ),
+    ).toBe(false);
+    expect(
+      debug.mock.calls.some((call) =>
+        String(call[1]).includes("client_error_alert_not_delivered"),
+      ),
+    ).toBe(true);
+  });
+
   it("без chatId — только лог, без отправки", async () => {
     const t = 0;
     const sent: unknown[] = [];

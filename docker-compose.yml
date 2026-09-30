@@ -61,6 +61,8 @@ services:
       # URL Telegram Mini App для кнопки «Открыть» в сообщениях бота
       # (web_app.url в sendMessage). Пусто = сообщения без кнопки.
       TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-}
+      # SOCKS5-прокси для Bot API: прямого egress на api.telegram.org нет.
+      TELEGRAM_API_PROXY: ${TELEGRAM_API_PROXY:-}
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
       SENTRY_DSN: ${SENTRY_DSN:-}
       # Канал отчётов об ошибках в Telegram-группу (client-error-reporting):
