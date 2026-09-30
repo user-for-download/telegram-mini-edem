@@ -125,25 +125,29 @@ describe("notificationRoute / isCriticalNotification (контракт parity)",
 });
 
 describe("NotificationsPage: шапка и контракт", () => {
-  it("заголовок, счётчик непрочитанных, ссылка на настройки, critical-подпись", () => {
+  it("пилюли сегментов + IconButton «Прочитать все» со счётчиком", () => {
     setMocks(pageWithItems([makeNotification()]));
 
     const html = renderPage();
 
     expect(html).toContain("Уведомления");
-    expect(html).toContain("Непрочитанных: 1");
-    expect(html).toContain('href="#/settings"');
-    expect(html).toContain("Настройки уведомлений");
-    expect(html).toContain("сохраняются всегда");
-    expect(html).toContain("Прочитать все");
+    expect(html).toContain("Новые");
+    expect(html).toContain("Водитель");
+    expect(html).toContain("Пассажир");
+    expect(html).toContain("Фильтр уведомлений");
+    // IconButton: имя со счётчиком (кнопки «Прочитать все» больше нет).
+    expect(html).toContain('aria-label="Прочитать все (1)"');
+    expect(html).not.toContain("Настройки уведомлений");
+    expect(html).not.toContain("сохраняются всегда");
   });
 
-  it("все прочитаны — подпись и неактивная кнопка «Прочитать все»", () => {
+  it("все прочитаны — IconButton неактивна, имя без счётчика", () => {
     setMocks(pageWithItems([makeNotification({ isRead: true })], 0));
 
     const html = renderPage();
 
-    expect(html).toContain("Все уведомления прочитаны");
+    expect(html).toContain('aria-label="Все уведомления прочитаны"');
+    expect(html).toContain("Пока нет уведомлений");
   });
 });
 

@@ -2,20 +2,17 @@ import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Banner,
-  Caption,
   IconContainer,
   Section,
-  Text,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
-import { Button } from "@/ui/Button";
 import { Chip } from "@/ui/Chip";
+import { IconButton } from "@/ui/IconButton";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { BTN_ROW, INFO, PROSE, SHRINK } from "@/ui/classes";
 import { FetchMore } from "@/ui/FetchMore";
 
-import { BellRing, CheckCheck, Info, Settings2, TriangleAlert } from "lucide-react";
+import { BellRing, CheckCheck, Info, TriangleAlert } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
@@ -315,54 +312,32 @@ export function NotificationsPage() {
         onRetry={() => void inbox.refetch()}
       >
         <Page>
-          {/* Инфо-панель: поверхность — Section без заголовка. */}
-          <Section>
-            <SectionBody>
-              <div className={styles.unreadRow}>
-                <BellRing size={16} className={`${INFO} ${SHRINK}`} />
-                <Text Component="p" aria-live="polite">
-                  {unreadCount > 0
-                    ? `Непрочитанных: ${unreadCount}.`
-                    : "Все уведомления прочитаны."}
-                </Text>
-              </div>
-              <Caption Component="p" className={PROSE}>
-                Важные статусы поездки и брони сохраняются всегда, даже если
-                некритичные уведомления выключены.
-              </Caption>
-              <div className={BTN_ROW}>
-                {/* Кнопка-ссылка: официальный паттерн tgui (стори Blocks/Button → Link):
-                  Button с Component="a" вместо самописного <a> со стилями. */}
-                <Button
-                  Component="a"
-                  href="#/settings"
-                  size="s"
-                  before={<Settings2 size={15} />}
-                  className={styles.settingsBtn}
-                >
-                  Настройки уведомлений
-                </Button>
-                <Button
-                  stretched
-                  size="s"
-                  before={<CheckCheck size={15} />}
-                  loading={markAll.isPending}
-                  disabled={markAll.isPending || unreadCount === 0}
-                  onClick={() => markAll.mutate()}
-                >
-                  Прочитать все
-                </Button>
-              </div>
-            </SectionBody>
-          </Section>
-
           {/* Лента: поверхность — Section без заголовка (шаблон групп:
-            TripRequests, популярные). Сверху ряд сегментов (зеркало
-            TripActivePage: Новые / Водитель / Пассажир); пустое состояние —
-            текст сегмента, баннеры хранят свой хром. */}
+            TripRequests, популярные). Сверху ряд пилюль: сегменты Новые /
+            Водитель / Пассажир + справа IconButton «Прочитать все»
+            (CheckCheck). Пустое состояние — текст сегмента, баннеры хранят
+            свой хром. */}
           <Section>
-            <div className={styles.chipRow} role="group" aria-label="Фильтр уведомлений">
-              {FILTERS.map(({ id, title }) => renderFilter(id, title))}
+            <div className={styles.chipRow}>
+              <div className={styles.segments} role="group" aria-label="Фильтр уведомлений">
+                {FILTERS.map(({ id, title }) => renderFilter(id, title))}
+              </div>
+              <div aria-live="polite">
+                <IconButton
+                  aria-label={
+                    unreadCount > 0
+                      ? `Прочитать все (${unreadCount})`
+                      : "Все уведомления прочитаны"
+                  }
+                  disabled={markAll.isPending || unreadCount === 0}
+                  onClick={() => {
+                    haptic.light();
+                    markAll.mutate();
+                  }}
+                >
+                  <CheckCheck size={20} />
+                </IconButton>
+              </div>
             </div>
             <SectionBody>
               {visibleItems.length === 0 ? (

@@ -4,27 +4,22 @@
  * (src/ui/ui.module.css). Здесь остались только локальные роли ниже
  * уровня секции. */
 
-/* Строка «Непрочитанных: N» + иконка. */
-.unreadRow {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-xs);
-}
-
-
-
-/* Кнопка-ссылка на настройки растёт (было flex-1). */
-.settingsBtn {
-  flex-grow: 1;
-}
-
-/* Ряд сегментов (зеркало TripActivePage.chipRow: Новые / Водитель /
- * Пассажир). gap 6px — off-scale осознанно, ради визуального единства
- * с поездками (token-lint пропускает off-scale). */
+/* Ряд пилюль (сегменты Новые / Водитель / Пассажир + справа IconButton
+ * «Прочитать все»). gap 6px — off-scale осознанно, ради визуального
+ * единства с поездками (token-lint пропускает off-scale). */
 .chipRow {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
+}
+
+/* Сегменты слева: пилюли в ряд. */
+.segments {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 /* Бейджи-фильтры в стиле кошелька: неактивный — просто текст без фона
