@@ -63,6 +63,40 @@ describe("reportServerError", () => {
     expect(input.text).toContain("server-error");
   });
 
+  it("разные Zod-дрейфы — разные алерты, индексы массивов схлопываются", async () => {
+    const { z } = await import("zod");
+    const schema = z.object({
+      price: z.number(),
+      items: z.array(z.object({ id: z.string() })),
+    });
+    const driftPrice = schema.safeParse({ price: "x", items: [] });
+    const driftId = schema.safeParse({ price: 1, items: [{ id: 5 }] });
+    const driftIdOtherIndex = schema.safeParse({
+      price: 1,
+      items: [{ id: "ok" }, { id: 6 }],
+    });
+    expect(driftPrice.success).toBe(false);
+    expect(driftId.success).toBe(false);
+    expect(driftIdOtherIndex.success).toBe(false);
+    if (driftPrice.success || driftId.success || driftIdOtherIndex.success) {
+      return;
+    }
+
+    sendTelegramMessage.mockClear();
+    reportServerError(driftPrice.error, "GET", "/api/v1/trips");
+    reportServerError(driftId.error, "GET", "/api/v1/trips");
+    // Тот же дрейф, другой индекс элемента — дедуплицируется.
+    reportServerError(driftIdOtherIndex.error, "GET", "/api/v1/trips");
+    await Promise.resolve();
+
+    const texts = sendTelegramMessage.mock.calls.map(
+      (call) => (call[0] as { text: string }).text,
+    );
+    expect(texts).toHaveLength(2);
+    expect(texts[0]).toContain("ZodError: price(invalid_type)");
+    expect(texts[1]).toContain("ZodError: items.*.id(invalid_type)");
+  });
+
   it("пустое имя → заглушка, не бросает при сбое транспорта", async () => {
     sendTelegramMessage.mockRejectedValueOnce(new Error("net down"));
     const nameless = new Error();

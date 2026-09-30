@@ -10,6 +10,7 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { clientErrorSchema } from "@edem/contracts";
+import { ZodError } from "zod";
 import { createRateLimiter } from "../middleware/rateLimit.js";
 import { env } from "../env.js";
 import { ERROR_CODES } from "../errors.js";
@@ -93,13 +94,39 @@ clientErrorsRouter.post(
 );
 
 /**
+ * Формат Zod-дрейфа для алерта: до 3 первых issue вида
+ * `ZodError: items.*.price(invalid_type)`. В path — имена полей схемы
+ * (индексы массивов схлопываются в *, чтобы отпечаток не размножался
+ * по элементам), в скобках — код нарушения. Тексты issue.message не
+ * берём: они иногда содержат полученные значения. Нюанс: для z.record
+ * в path попадают ключи записи (потенциально данные), поэтому строка
+ * ограничена ~150 символами и всё равно проходит санитайзер.
+ */
+const ZOD_DRAFT_MAX_LENGTH = 150;
+
+export function formatZodDrift(error: ZodError): string {
+  const parts = error.issues.slice(0, 3).map((issue) => {
+    const path =
+      issue.path
+        .map((segment) => (typeof segment === "number" ? "*" : String(segment)))
+        .join(".") || "(root)";
+    return `${path}(${issue.code})`;
+  });
+  const text = `ZodError: ${parts.join(", ")}`;
+  return text.length > ZOD_DRAFT_MAX_LENGTH
+    ? `${text.slice(0, ZOD_DRAFT_MAX_LENGTH - 1)}…`
+    : text;
+}
+
+/**
  * Серверные 5xx в тот же канал: вызывается из app.onError и из
  * route-level catch перед ответом 500 (там же — pino-лог через
  * logger.error({ err }), полный текст остаётся в логах). В Telegram
- * уходит только имя ошибки, маршрут и пара кадров стека: тексты
- * серверных исключений могут содержать e-mail и данные из БД.
- * Никогда не бросает: репортёр fire-and-forget, сверху страховочный
- * try/catch, чтобы не уронить ответ 500.
+ * уходит только имя ошибки (для ZodError — формат дрейфа по полям),
+ * маршрут и пара кадров стека: тексты серверных исключений могут
+ * содержать e-mail и данные из БД. Никогда не бросает: репортёр
+ * fire-and-forget, сверху страховочный try/catch, чтобы не уронить
+ * ответ 500.
  */
 export function reportServerError(
   error: unknown,
@@ -108,11 +135,13 @@ export function reportServerError(
 ): void {
   try {
     const name =
-      error instanceof Error
-        ? error.name || "Error"
-        : typeof error === "string"
-          ? "String"
-          : "Unknown";
+      error instanceof ZodError
+        ? formatZodDrift(error)
+        : error instanceof Error
+          ? error.name || "Error"
+          : typeof error === "string"
+            ? "String"
+            : "Unknown";
     const frames = (error instanceof Error ? (error.stack ?? "") : "")
       .split("\n")
       .map((line) => line.trim())
