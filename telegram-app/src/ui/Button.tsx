@@ -7,11 +7,7 @@ import { MIN_TARGET } from "@/ui/classes";
  * не меняем, но выбор «какая это кнопка» перестаёт быть выбором mode).
  */
 export type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "ghost"
-  | "outline"
-  | "white";
+  "primary" | "secondary" | "ghost" | "outline" | "white";
 
 const MODES = {
   primary: "filled",
@@ -21,8 +17,10 @@ const MODES = {
   white: "white",
 } as const;
 
-export interface ButtonProps
-  extends Omit<ComponentProps<typeof TguiButton>, "mode"> {
+export interface ButtonProps extends Omit<
+  ComponentProps<typeof TguiButton>,
+  "mode"
+> {
   /**
    * primary — главное действие экрана/диалога (1–2 на экран);
    * secondary (по умолчанию) — обычное действие;

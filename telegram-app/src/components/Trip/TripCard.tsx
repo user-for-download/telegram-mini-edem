@@ -132,6 +132,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
                   pending={cancelPending}
                   destructive
                   actionsEnd
+                  mode="outline"
                   onConfirm={() => onCancel(booking.id)}
                 />
               </div>
@@ -195,6 +196,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
                 pending={cancelPending}
                 destructive
                 actionsEnd
+                mode="outline"
                 onConfirm={() => onCancel(trip.id)}
               />
             </div>
