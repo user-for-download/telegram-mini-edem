@@ -56,6 +56,10 @@ export function isNoiseError(error: unknown): boolean {
   if (!message || message === "Script error.") return true;
   if (message.includes("ResizeObserver loop")) return true;
   // Нестабильная сеть (мобильные клиенты): fetch в Safari/Firefox/Chrome.
+  // ВНИМАНИЕ: сюда же попадает "Failed to fetch dynamically imported
+  // module" (устаревший чанк после деплоя). Сейчас React.lazy нет, так
+  // что фильтр безопасен; при добавлении ленивой загрузки это сообщение
+  // нужно исключить из фильтра — иначе пропуск чанка станет невидимым.
   if (
     message.includes("Failed to fetch") ||
     message.includes("Load failed") ||
