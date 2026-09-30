@@ -11,7 +11,7 @@ import { tripsRouter } from "./trips/index.js";
 import { bookingsRouter } from "./bookings/index.js";
 import { reviewsRouter } from "./reviews/index.js";
 import { feedbackRouter } from "./feedback/index.js";
-import { clientErrorsRouter } from "./client-errors/index.js";
+import { clientErrorsRouter, reportServerError } from "./client-errors/index.js";
 import { usersRouter } from "./users/index.js";
 import { adminRouter } from "./admin/index.js";
 import { citiesRouter } from "./cities/index.js";
@@ -311,6 +311,9 @@ app.onError((error, c) => {
   if (env.SENTRY_DSN) {
     Sentry.captureException(error);
   }
+
+  // Серверные 5xx — в тот же Telegram-канал, что клиентские ошибки.
+  reportServerError(error, c.req.method, c.req.path);
 
   return c.json(
     { code: ERROR_CODES.INTERNAL_ERROR, message: "Internal server error" },

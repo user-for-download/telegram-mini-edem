@@ -9,6 +9,8 @@ export const CLIENT_ERROR_KINDS = [
   "error",
   "unhandledrejection",
   "boundary",
+  // Backend-only: необработанные 500 через app.onError (клиент его не шлёт).
+  "server",
 ] as const;
 
 export const clientErrorKindSchema = z.enum(CLIENT_ERROR_KINDS);

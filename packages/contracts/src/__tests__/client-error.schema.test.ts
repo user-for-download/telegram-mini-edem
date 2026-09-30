@@ -31,9 +31,16 @@ describe("client-error contracts", () => {
     ).toEqual({ kind: "boundary", message: "boom" });
   });
 
+  it("принимает backend-вид server (app.onError)", () => {
+    expect(
+      clientErrorSchema.safeParse({ kind: "server", message: "boom" })
+        .success,
+    ).toBe(true);
+  });
+
   it("отклоняет неизвестный kind", () => {
     expect(
-      clientErrorSchema.safeParse({ ...valid, kind: "server" }).success,
+      clientErrorSchema.safeParse({ ...valid, kind: "worker" }).success,
     ).toBe(false);
   });
 
