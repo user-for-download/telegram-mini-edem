@@ -14,6 +14,10 @@ import "./index.css";
 // Мок окружения для разработки в обычном браузере. Работает только при
 // import.meta.env.DEV (tree-shaken в проде) — см. mockEnv.ts.
 import "./mockEnv.ts";
+import { initErrorReporting } from "@/utils/reportError.ts";
+
+// Репортёр ошибок — до рендера, чтобы ловить сбои инициализации.
+initErrorReporting();
 
 const root = ReactDOM.createRoot(document.getElementById("root")!);
 

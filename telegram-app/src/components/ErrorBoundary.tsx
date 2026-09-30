@@ -1,4 +1,10 @@
-import { Component, type ComponentType, type PropsWithChildren } from "react";
+import {
+  Component,
+  type ComponentType,
+  type ErrorInfo,
+  type PropsWithChildren,
+} from "react";
+import { reportError } from "@/utils/reportError.ts";
 
 /**
  * Минимальный ErrorBoundary (паттерн reactjs-template): ловит краши ниже
@@ -21,6 +27,13 @@ class ErrorBoundaryInner extends Component<
 
   static getDerivedStateFromError(error: unknown) {
     return { error };
+  }
+
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    reportError(error, {
+      kind: "boundary",
+      componentStack: info.componentStack ?? undefined,
+    });
   }
 
   render() {
