@@ -78,6 +78,7 @@ import {
 import { useAuthStore } from "@/store/useAuthStore";
 import { TRIP_KEYS } from "@/queries/useTripsQuery";
 import { BOOKING_KEYS } from "@/queries/useBookingsQuery";
+import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
 
 /** Управляемый дубль WebSocket: handshake, события и close — по команде. */
 class FakeWebSocket {
@@ -356,7 +357,7 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     expect(mockHaptic).toHaveBeenCalledTimes(1);
   });
 
-  it("обрыв 1001 → reconnect с backoff; после auth:ok — resync trips+bookings", async () => {
+  it("обрыв 1001 → reconnect с backoff; после auth:ok — resync trips+bookings+notifications", async () => {
     authenticate();
     await renderProvider();
     const first = lastInstance();
@@ -389,6 +390,7 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     expect(probeState.resyncSeq).toBe(1);
     expect(invalidateCallsFor([...TRIP_KEYS.all])).toBe(1);
     expect(invalidateCallsFor([...BOOKING_KEYS.all])).toBe(1);
+    expect(invalidateCallsFor([...NOTIFICATION_KEYS.all])).toBe(1);
     // Reconnect несёт свежий auth с тем же токеном.
     expect(sentMessages(second)[0]).toEqual({ type: "auth", token: "access-1" });
   });

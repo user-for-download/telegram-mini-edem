@@ -7,6 +7,7 @@ const MONTHS_GENITIVE = [
 ] as const;
 
 const MS_IN_DAY = 24 * 60 * 60 * 1000;
+const MOSCOW_TZ = "Europe/Moscow";
 
 /** Локальная дата (не UTC) в ISO-формате YYYY-MM-DD. */
 export function toIsoDate(date: Date): string {
@@ -30,10 +31,31 @@ function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/**
+ * Date-only "YYYY-MM-DD" как локальный календарный день. `new Date("…")`
+ * парсит такую строку в UTC-полночь, и в часовых поясах западнее UTC
+ * startOfDay сдвигал её на предыдущий день — метки «Сегодня/Завтра»
+ * врали. Полные ISO-даты со временем идут прежним путём.
+ */
+function parseDay(value: string): Date | null {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (dateOnly) {
+    const local = new Date(
+      Number(dateOnly[1]),
+      Number(dateOnly[2]) - 1,
+      Number(dateOnly[3]),
+    );
+    return Number.isNaN(local.getTime()) ? null : local;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 /** «Сегодня» / «Завтра» / «Вчера» / «12 сентября» относительно now. */
 export function dayLabel(dateIso: string, now: Date = new Date()): string {
-  const target = startOfDay(new Date(dateIso));
-  if (Number.isNaN(target.getTime())) return dateIso;
+  const parsed = parseDay(dateIso);
+  if (!parsed) return dateIso;
+  const target = startOfDay(parsed);
   const diffDays = Math.round(
     (target.getTime() - startOfDay(now).getTime()) / MS_IN_DAY,
   );
@@ -69,4 +91,27 @@ export function formatArrivalTime(time: string, durationMinutes: number): string
   const hours = Math.floor(wrapped / 60);
   const minutes = wrapped % 60;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+/**
+ * ISO-момент → «30 сентября, 18:30» в московском времени. Невалидный
+ * ввод — «—». Для сущностей без своих date/time-полей (запросы попуток):
+ * сырой ISO в UI не показываем.
+ */
+export function formatMoscowDateTime(value: string | undefined): string {
+  if (!value) return "—";
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) return "—";
+  const date = new Date(time);
+  const day = new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+    timeZone: MOSCOW_TZ,
+  }).format(date);
+  const clock = new Intl.DateTimeFormat("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: MOSCOW_TZ,
+  }).format(date);
+  return `${day}, ${clock}`;
 }

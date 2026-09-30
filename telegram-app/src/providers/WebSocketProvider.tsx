@@ -489,11 +489,14 @@ export const TelegramRealtimeListener: FC = () => {
 
   // Reconnect после разрыва: за время обрыва данные могли устареть —
   // обновляем всё, что зависит от WS-событий. Дедуп выше гасит повторную
-  // доставку тех же событий сервером.
+  // доставку тех же событий сервером. Inbox уведомлений — authoritative
+  // канал parity: пропущенные за разрыв события иначе не подтянутся
+  // до ручного рефетча.
   useEffect(() => {
     if (resyncSeq === 0) return;
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.all });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.all });
+    void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.all });
   }, [resyncSeq, queryClient]);
 
   useWsEvent("notification:new", () => {

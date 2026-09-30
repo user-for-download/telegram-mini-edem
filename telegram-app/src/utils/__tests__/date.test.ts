@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
+import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, formatMoscowDateTime, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
 
 const NOW = new Date(2026, 8, 10, 15, 0, 0); // четверг 2026-09-10
 
@@ -24,6 +24,12 @@ describe("dayLabel", () => {
 
   it("passes through garbage input", () => {
     expect(dayLabel("не дата", NOW)).toBe("не дата");
+  });
+
+  it("treats date-only strings as local calendar days (no UTC shift)", () => {
+    const localNoon = new Date(2026, 8, 10, 12, 0, 0);
+    expect(dayLabel(toIsoDate(localNoon), localNoon)).toBe("Сегодня");
+    expect(dayLabel("2026-09-11", localNoon)).toBe("Завтра");
   });
 });
 
@@ -80,5 +86,19 @@ describe("toLocalDateTimeInputValue", () => {
     const original = new Date(2026, 8, 10, 15, 4, 0);
     const parsed = new Date(toLocalDateTimeInputValue(original));
     expect(parsed.getTime()).toBe(original.getTime());
+  });
+});
+
+describe("formatMoscowDateTime", () => {
+  it("formats UTC ISO in Moscow wall time", () => {
+    // 15:00Z = 18:00 МСК.
+    expect(formatMoscowDateTime("2026-09-30T15:00:00.000Z")).toBe(
+      "30 сентября, 18:00",
+    );
+  });
+
+  it("returns a dash for missing or invalid input", () => {
+    expect(formatMoscowDateTime(undefined)).toBe("—");
+    expect(formatMoscowDateTime("не дата")).toBe("—");
   });
 });

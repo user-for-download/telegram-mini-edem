@@ -2,7 +2,6 @@ import {
   Cell,
   IconContainer,
   Section,
-  Caption,
 } from "@telegram-apps/telegram-ui";
 import { Route, ChevronRight } from "lucide-react";
 import { POPULAR_ROUTES } from "@/consts/popularRoutes";
@@ -30,12 +29,6 @@ export function PopularRoutesSection({ onSelect }: PopularRoutesSectionProps) {
             <IconContainer>
               <Route aria-hidden />
             </IconContainer>
-          }
-          subtitle={
-            <Caption level="1" weight="3">
-              {/*TODO: Подготовить количество доступных поездок*/}
-              Доступно поездок: 5
-            </Caption>
           }
         >
           {route.from} → {route.to}

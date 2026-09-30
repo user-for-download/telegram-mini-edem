@@ -18,6 +18,8 @@ import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
+import { formatMoscowDateTime } from "@/utils/date";
+import { validateRideRequestWindow } from "./rideRequestValidation";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import {
   useCancelRideRequestMutation,
@@ -126,17 +128,19 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
   const submit = () => {
     const fromCity = cities.data?.find((city) => city.name === from);
     const toCity = cities.data?.find((city) => city.name === to);
-    const earliestDate = new Date(earliest);
-    const latestDate = new Date(latest);
-    if (
-      !fromCity ||
-      !toCity ||
-      !Number.isFinite(earliestDate.getTime()) ||
-      !Number.isFinite(latestDate.getTime())
-    ) {
-      setValidationError("Выберите города и временной интервал");
+    if (!fromCity || !toCity) {
+      setValidationError("Выберите города из справочника");
       return;
     }
+    // Порядок окна — до схемы: zod отвечает английским message,
+    // пользователю показываем русский текст.
+    const windowError = validateRideRequestWindow(earliest, latest);
+    if (windowError) {
+      setValidationError(windowError);
+      return;
+    }
+    const earliestDate = new Date(earliest);
+    const latestDate = new Date(latest);
     if (fromCity.id === toCity.id) {
       setValidationError("Города отправления и прибытия должны различаться");
       return;
@@ -146,7 +150,9 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
       toCityId: toCity.id,
       earliestAt: earliestDate.toISOString(),
       latestAt: latestDate.toISOString(),
-      expiresAt: earliestDate.toISOString(),
+      // Запрос живёт до конца окна «Не позже»: привязка к earliest
+      // гасила его из выдачи в момент начала окна.
+      expiresAt: latestDate.toISOString(),
       seats: Number(seats),
     });
     if (!parsed.success) {
@@ -337,7 +343,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                   </StatusPill>
                 </div>
                 <Caption Component="div">
-                  {`${request.earliestAt} — ${request.latestAt} · ${request.seats} мест`}
+                  {`${formatMoscowDateTime(request.earliestAt)} — ${formatMoscowDateTime(request.latestAt)} · ${request.seats} мест`}
                 </Caption>
                 {editingId === request.id ? (
                   <>

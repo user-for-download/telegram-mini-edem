@@ -128,4 +128,21 @@ describe("NextTripBanner", () => {
     expect(html).toContain("Едете как водитель");
     expect(html).toContain("свободно 2");
   });
+
+  it("показывает московское время, а не UTC-срез ISO", () => {
+    // Завтрашняя московская дата, 18:00 МСК = 15:00Z.
+    const moscowDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Moscow",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(Date.now() + 36 * 60 * 60 * 1000));
+    const departureAt = `${moscowDate}T15:00:00.000Z`;
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({ data: pages([trip({ id: "td", departureAt })]) }),
+    );
+    const html = render(<NextTripBanner />);
+    expect(html).toContain("18:00");
+    expect(html).not.toContain("15:00");
+  });
 });

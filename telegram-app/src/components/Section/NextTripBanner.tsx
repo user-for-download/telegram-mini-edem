@@ -3,7 +3,7 @@ import { Armchair, Car } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
 import { useInfiniteMyTripsQuery } from "@/queries/useTripsQuery";
-import { dayLabel } from "@/utils/date";
+import { formatRelativeDeparture } from "@/utils/bookingSplit";
 import { haptic } from "@/utils/haptics";
 import styles from "./NextTripBanner.module.css";
 
@@ -77,8 +77,9 @@ export function NextTripBanner() {
   );
   if (!next) return null;
 
-  const [dateIso = "", timeRaw = ""] = next.departureAt?.split("T") ?? [];
-  const when = `${dayLabel(dateIso)}, ${timeRaw.slice(0, 5)}`;
+  // Время отправления — московское (Europe/Moscow): departureAt приходит
+  // UTC-ISO, срез строки показывал бы UTC-часы (18:00 МСК → «15:00»).
+  const when = formatRelativeDeparture(next.departureAt);
   const seatInfo =
     next.role === "passenger" && next.seat !== undefined
       ? `место ${next.seat}`
