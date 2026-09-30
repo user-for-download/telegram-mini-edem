@@ -70,6 +70,14 @@ describe("isNoiseError — фильтр шума", () => {
     expect(isNoiseError(new Error("Network request failed"))).toBe(true);
   });
 
+  it("пропускает протухший чанк после деплоя (React.lazy)", () => {
+    expect(
+      isNoiseError(
+        new TypeError("Failed to fetch dynamically imported module"),
+      ),
+    ).toBe(false);
+  });
+
   it("режет ожидаемые ApiError 4xx, пропускает 5xx и обычные ошибки", () => {
     expect(isNoiseError(new ApiError("not found", "NOT_FOUND", 404))).toBe(
       true,
