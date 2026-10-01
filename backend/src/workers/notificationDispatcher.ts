@@ -1,6 +1,7 @@
 // backend/src/workers/notificationDispatcher.ts
 //
-// Outbox-диспетчер фоновых доставок (bot-api shadow mode, §4.3).
+// Outbox-диспетчер фоновых доставок (Bot API approved 2026-09-14,
+// ADR telegram-notification-delivery).
 //
 // Цикл: pollOnce() атомарно забирает пачку pending-задач (status flip
 // pending -> processing, условие nextAttemptAt <= now), для каждой:
@@ -10,11 +11,9 @@
 // 2) per-user rate limit (optional ≤ N/час, critical ≤ 1/5мин на тип)
 //    — при превышении задача остаётся pending с nextAttemptAt в конце
 //    окна, попыткой не считается;
-// 3) shadow-«доставка»: внешний вызов Bot API ЗАБЛОКИРОВАН (ADR
-//    telegram-notification-delivery), поэтому успех разметается как
-//    status='delivered', error='shadow' — явный признак того, что
-//    сообщения не уходило. При аппруве канала сюда встанет реальный
-//    sendMessage без смены контракта outbox.
+// 3) доставка: при TELEGRAM_BOT_TOKEN — реальный sendMessage
+//    (текст = title + body inbox-уведомления, кнопка «Открыть»
+//    по deep-link); без токена — skipped/no_token без внешних вызовов.
 //
 // Ретраи: непредвиденная ошибка -> attempts+1, бэкофф 1м/5м/15м,
 // после MAX_RETRIES -> failed. Логи: userId+type+outcome, без body/PII.
