@@ -40,7 +40,7 @@ logger.info({ port: env.PORT }, "WebSocket support injected");
 
 startTripWorker();
 startWsReaper();
-// Outbox-диспетчер TG-доставок: shadow mode, внешних вызовов нет (ADR).
+// Outbox-диспетчер TG-доставок (реальный sendMessage при токене, skipped/no_token без него).
 startNotificationDispatcher();
 
 const SHUTDOWN_TIMEOUT_MS = 20_000;

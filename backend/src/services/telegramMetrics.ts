@@ -1,7 +1,9 @@
 // backend/src/services/telegramMetrics.ts
 //
-// Агрегаты outbox-доставок для наблюдаемости (bot-api shadow,
+// Агрегаты outbox-доставок для наблюдаемости (Bot API approved 2026-09-14,
 // approval-package §4.6): счётчики по status/error из NotificationDelivery.
+// Без токена диспетчер пишет skipped/no_token — отдельной «теневой» серии
+// нет: delivered означает реальный sendMessage.
 //
 // Чистая читающая агрегация groupBy: без PII (только counts), без тел
 // сообщений. Вызывается из /metrics (Prometheus-снимок) и доступна
@@ -18,10 +20,8 @@ export interface TelegramDeliveryMetrics {
   pending: number;
   /** processing — прямо сейчас в воркере. */
   processing: number;
-  /** delivered, включая shadow-маркер. */
+  /** delivered — реальная отправка через sendMessage. */
   delivered: number;
-  /** delivered с error='shadow' — размечено без внешней отправки. */
-  deliveredShadow: number;
   /** failed после исчерпания ретраев. */
   failed: number;
   /** skipped по причинам (каналы отказа). */
@@ -58,7 +58,6 @@ export function foldGroups(
     pending: 0,
     processing: 0,
     delivered: 0,
-    deliveredShadow: 0,
     failed: 0,
     skipped: {},
   };
@@ -72,7 +71,6 @@ export function foldGroups(
         break;
       case "delivered":
         metrics.delivered += count;
-        if (g.error === "shadow") metrics.deliveredShadow += count;
         break;
       case "failed":
         metrics.failed += count;
@@ -103,9 +101,6 @@ export function renderTelegramMetrics(m: TelegramDeliveryMetrics): string {
     `tg_outbox_status{status="processing"} ${m.processing}`,
     `tg_outbox_status{status="delivered"} ${m.delivered}`,
     `tg_outbox_status{status="failed"} ${m.failed}`,
-    `# HELP tg_outbox_delivered_shadow Deliveries marked without external send (shadow mode).`,
-    `# TYPE tg_outbox_delivered_shadow counter`,
-    `tg_outbox_delivered_shadow ${m.deliveredShadow}`,
   ];
   for (const [reason, count] of Object.entries(m.skipped)) {
     lines.push(`tg_outbox_skipped{reason="${reason}"} ${count}`);

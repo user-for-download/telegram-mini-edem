@@ -107,6 +107,65 @@ export function tripSnapshotOf(trip: {
   };
 }
 
+/** Итог одного прогона pruneOldNotifications (только счётчики, без id). */
+export interface PruneOldNotificationsResult {
+  outboxDeleted: number;
+  inboxReadDeleted: number;
+  inboxUnreadDeleted: number;
+}
+
+/**
+ * Чистка старых уведомлений по retention-окнам (идемпотентна: повторный
+ * прогон удаляет 0). Вызывается из часового цикла tripWorker — отдельного
+ * воркера/интервала нет (single Postgres instance).
+ *
+ * - outbox: NotificationDelivery со status IN (delivered, skipped, failed)
+ *   и updatedAt старше TG_NOTIFICATION_OUTBOX_RETENTION_MS.
+ *   pending/processing НЕ трогаются никогда.
+ * - inbox: Notification с isRead=true и createdAt старше
+ *   TG_NOTIFICATION_INBOX_READ_RETENTION_MS; isRead=false и createdAt
+ *   старше TG_NOTIFICATION_INBOX_UNREAD_RETENTION_MS.
+ *
+ * Resend-after-recovery не меняется: затронуты только терминальные
+ * статусы outbox и старые inbox-записи. В логах — только счётчики.
+ */
+export async function pruneOldNotifications(
+  now: Date = new Date(),
+): Promise<PruneOldNotificationsResult> {
+  const outboxCutoff = new Date(
+    now.getTime() - env.TG_NOTIFICATION_OUTBOX_RETENTION_MS,
+  );
+  const readCutoff = new Date(
+    now.getTime() - env.TG_NOTIFICATION_INBOX_READ_RETENTION_MS,
+  );
+  const unreadCutoff = new Date(
+    now.getTime() - env.TG_NOTIFICATION_INBOX_UNREAD_RETENTION_MS,
+  );
+
+  const [outbox, inboxRead, inboxUnread] = await Promise.all([
+    db.notificationDelivery.deleteMany({
+      where: {
+        status: { in: ["delivered", "skipped", "failed"] },
+        updatedAt: { lt: outboxCutoff },
+      },
+    }),
+    db.notification.deleteMany({
+      where: { isRead: true, createdAt: { lt: readCutoff } },
+    }),
+    db.notification.deleteMany({
+      where: { isRead: false, createdAt: { lt: unreadCutoff } },
+    }),
+  ]);
+
+  const result: PruneOldNotificationsResult = {
+    outboxDeleted: outbox.count,
+    inboxReadDeleted: inboxRead.count,
+    inboxUnreadDeleted: inboxUnread.count,
+  };
+  logger.info(result, "notifications_pruned");
+  return result;
+}
+
 export async function createNotification(
   userId: string,
   type: string,

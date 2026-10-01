@@ -1,26 +1,24 @@
 // backend/src/services/telegramNotifications.ts
 //
-// Telegram-доставка уведомлений (tg-migration-15).
+// Политика и helpers TG-доставки уведомлений (Bot API approved 2026-09-14,
+// ADR telegram-notification-delivery).
 //
-// Утверждённый механизм (ADR telegram-notification-delivery, контракт
-// notification-parity-contract.md): персистентный in-app inbox + WebSocket
-// как foreground-hint. Фоновая отправка через Telegram Bot API ЗАБЛОКИРОВАНА
-// продуктовым решением — этот модуль намеренно не делает никаких внешних
-// вызовов и не требует Bot-токена.
+// Утверждённый механизм: персистентный in-app inbox + WebSocket как
+// foreground-hint + фоновый outbox-диспетчер (notificationDispatcher):
+// при TELEGRAM_BOT_TOKEN — реальный sendMessage, без токена —
+// skipped/no_token без внешних вызовов.
 //
 // Ответственность модуля:
 // - `shouldDeliverTelegram` — чистая политика opt-out / critical override;
+// - `decideTelegramDelivery` — чистая политика с согласием (/start) и
+//   kill-switch;
 // - `resolveTelegramDeepLink` — чистый allowlist TG-маршрутов, всё
 //   неизвестное схлопывается в безопасный `/notifications`;
 // - `findNotificationDuplicate` — защита от двойной доставки одного и того же
 //   события (повторный прогон воркера): одинаковые user+type+title+body
-//   внутри окна дедупликации;
-// - `deliverTelegramNotification` — тонкий IO-контур: никогда не бросает
-//   исключения наружу, исход наблюдаем через лог без тел сообщений,
-//   токенов, initData и PII.
+//   внутри окна дедупликации.
 import { db } from "../db.js";
 import { env } from "../env.js";
-import { logger } from "../logger.js";
 import { CRITICAL_NOTIFICATION_TYPES } from "@edem/contracts";
 
 /**
@@ -178,57 +176,4 @@ export async function findNotificationDuplicate(
     select: { id: true },
   });
   return existing !== null;
-}
-
-export type TelegramDeliveryReason =
-  | "delivered"
-  | "disabled"
-  | "duplicate"
-  | "error";
-
-export interface TelegramDeliveryOutcome {
-  delivered: boolean;
-  channel: "in_app";
-  deepLink: string;
-  reason: TelegramDeliveryReason;
-}
-
-export interface TelegramDeliveryInput extends TelegramDuplicateInput {
-  fragment?: string;
-}
-
-/**
- * TG-контур доставки: in-app запись уже создана вызывающим
- * (createNotification), здесь — валидация deep-link, наблюдаемость
- * и явный отказ от заблокированного внешнего канала.
- *
- * Никогда не бросает исключения: ошибка логируется, бизнес-транзакция
- * вызывающего не затрагивается (запись уже в БД).
- */
-export async function deliverTelegramNotification(
-  input: TelegramDeliveryInput,
-): Promise<TelegramDeliveryOutcome> {
-  const deepLink = resolveTelegramDeepLink(input.fragment);
-  try {
-    if (!env.TELEGRAM_DELIVERY_ENABLED) {
-      logger.debug(
-        { userId: input.userId, type: input.type },
-        "tg_delivery_skipped_disabled",
-      );
-      return { delivered: false, channel: "in_app", deepLink, reason: "disabled" };
-    }
-    // Bot API заблокирован (см. ADR): внешнего вызова нет по построению.
-    // Лог фиксирует это решение для наблюдаемости, а не попытку отправки.
-    logger.debug(
-      { userId: input.userId, type: input.type, deepLink },
-      "tg_delivery_external_blocked",
-    );
-    return { delivered: true, channel: "in_app", deepLink, reason: "delivered" };
-  } catch (error) {
-    logger.error(
-      { err: error, userId: input.userId, type: input.type },
-      "tg_delivery_failed",
-    );
-    return { delivered: false, channel: "in_app", deepLink, reason: "error" };
-  }
 }

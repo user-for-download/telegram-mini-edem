@@ -202,7 +202,7 @@ app.get("/health/ready", async (c) => {
 /**
  * Метрики сервиса в Prometheus text-формате.
  * В production endpoint закрыт, даже если токен ошибочно не настроен.
- * TG-outbox агрегаты добавляются отдельным блоком (shadow-наблюдаемость).
+ * TG-outbox агрегаты добавляются отдельным блоком (наблюдаемость outbox).
  */
 app.get("/metrics", async (c) => {
   if (!env.METRICS_TOKEN) {

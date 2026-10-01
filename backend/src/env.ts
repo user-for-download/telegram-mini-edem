@@ -203,9 +203,9 @@ export const env = {
     .filter(Boolean),
 
   /**
-   * Kill-switch TG-доставки уведомлений (tg-migration-15): при false
-   * deliverTelegramNotification фиксирует пропуск в логе, inbox-записи
-   * продолжают создаваться. Дефолт true — доставка включена.
+   * Kill-switch TG-доставки уведомлений: при false диспетчер размечает
+   * задачи skipped/channel_disabled, inbox-записи продолжают создаваться.
+   * Дефолт true — доставка включена.
    */
   TELEGRAM_DELIVERY_ENABLED: boolEnv("TELEGRAM_DELIVERY_ENABLED", true),
 
@@ -237,8 +237,8 @@ export const env = {
 
   /**
    * Интервал опроса outbox-таблицы NotificationDelivery диспетчером
-   * (в миллисекундах). Дефолт 15 секунд — консервативный поллинг,
-   * без отдельного процесса-воркера на shadow-этапе.
+   * (в миллисекундах). Дефолт 15 секунд — консервативный поллинг
+   * outbox-таблицы.
    */
   TG_NOTIFICATION_DISPATCH_INTERVAL_MS: positiveIntEnv(
     "TG_NOTIFICATION_DISPATCH_INTERVAL_MS",
@@ -313,6 +313,38 @@ export const env = {
   TG_NOTIFICATION_DEDUPE_WINDOW_MS: positiveIntEnv(
     "TG_NOTIFICATION_DEDUPE_WINDOW_MS",
     60 * 1000,
+  ),
+
+  /**
+   * Outbox retention (мс): pruneOldNotifications удаляет NotificationDelivery
+   * со статусом IN (delivered, skipped, failed), чей updatedAt старше этого
+   * окна. Строки pending/processing НЕ трогаются никогда (доставка ещё не
+   * завершена). Дефолт 30 суток.
+   */
+  TG_NOTIFICATION_OUTBOX_RETENTION_MS: positiveIntEnv(
+    "TG_NOTIFICATION_OUTBOX_RETENTION_MS",
+    30 * 24 * 60 * 60 * 1000,
+  ),
+
+  /**
+   * Inbox retention прочитанных (мс): pruneOldNotifications удаляет
+   * Notification с isRead=true, чей createdAt старше этого окна.
+   * Дефолт 90 суток.
+   */
+  TG_NOTIFICATION_INBOX_READ_RETENTION_MS: positiveIntEnv(
+    "TG_NOTIFICATION_INBOX_READ_RETENTION_MS",
+    90 * 24 * 60 * 60 * 1000,
+  ),
+
+  /**
+   * Inbox retention непрочитанных (мс): pruneOldNotifications удаляет
+   * Notification с isRead=false, чей createdAt старше этого окна.
+   * Окно длиннее прочитанных: непрочитанное — ещё актуально для
+   * пользователя. Дефолт 180 суток.
+   */
+  TG_NOTIFICATION_INBOX_UNREAD_RETENTION_MS: positiveIntEnv(
+    "TG_NOTIFICATION_INBOX_UNREAD_RETENTION_MS",
+    180 * 24 * 60 * 60 * 1000,
   ),
 
   /**

@@ -28,7 +28,7 @@ Telegram mapping:
 |---|---|
 | Notification inbox | Required: implement the Telegram route, list, unread count, mark-read and mark-all-read. |
 | Foreground WebSocket behavior | Required: auth, ping/pong, reconnect, refresh/resync and event handling. |
-| `notifications.sendMessage` / `messages.send` | Not a literal port. Bot API delivery is **blocked** pending product approval. |
+| `notifications.sendMessage` / `messages.send` | Not a literal port. Bot API delivery was blocked pending product approval; **approved 2026-09-14** — flows only through the outbox dispatcher below. |
 
 ## Contract rules
 
@@ -60,8 +60,9 @@ Engineering constraints for the enabled channel:
 - Outbox pattern (`NotificationDelivery`) is the source of truth for
   delivery state; the dispatcher re-reads the kill-switch, user consent
   and toggle on every tick (no caching).
-- `TELEGRAM_BOT_TOKEN` presence gates real sending: without a token the
-  dispatcher stays in shadow mode (`delivered` + `error='shadow'`).
+- `TELEGRAM_BOT_TOKEN` presence gates real sending: with a token the
+  dispatcher performs a real sendMessage; without a token it marks tasks
+  `skipped`/`no_token` without any external call.
 - Rate limits: optional ≤5/hour per user, critical ≤1 per 5 min per type;
   retries with 1m/5m/15m backoff, max 3 attempts.
 - Telegram 403 (bot blocked) → skip as `bot_blocked` and clear
@@ -83,7 +84,7 @@ Engineering constraints for the enabled channel:
 ## Consequences
 
 Positive: parity is achievable without coupling core transactions to Telegram messaging, and users can recover missed foreground events from the inbox.
-Trade-off: users do not receive an external message while the app is closed unless the separate Bot API option is approved and implemented.
+Trade-off (parity phase, before the 2026-09-14 approval): users did not receive an external message while the app was closed. Since the approval the live outbox dispatcher delivers background messages (real sendMessage with token; `skipped`/`no_token` without).
 
 ## Acceptance checks
 
@@ -92,5 +93,5 @@ Trade-off: users do not receive an external message while the app is closed unle
 - WebSocket reconnect/resync restores missed notification and booking/trip state.
 - Background Bot API messages flow only through the approved outbox dispatcher
   (`notificationDispatcher.ts`) with consent, rate limits and kill-switch
-  enforced per tick; shadow mode (no token) marks `delivered`/`shadow` without
+  enforced per tick; no-token mode marks `skipped`/`no_token` without
   any external call.

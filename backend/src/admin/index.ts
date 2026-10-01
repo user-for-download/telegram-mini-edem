@@ -701,8 +701,8 @@ adminRouter.patch("/users/:id/onboarding-reset", mutationLimiter, async (c) => {
 });
 
 /**
- * Ручной стоп Telegram-уведомлений пользователя (bot-api shadow,
- * approval-package §4.6): обнуляет согласие (tgChatJoinedAt) и гасит
+ * Ручной стоп Telegram-уведомлений пользователя (approval-package §4.6):
+ * обнуляет согласие (tgChatJoinedAt) и гасит
  * его pending-задачи в outbox как skipped/admin_stopped. Следующий тик
  * диспетчера увидит чат=null и пропустит остальные — стоп мгновенный,
  * без кэша. Идемпотентно: повторный стоп на пустом согласии — 200.

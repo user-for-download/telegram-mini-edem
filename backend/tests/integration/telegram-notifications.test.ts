@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 const { db } = await import("../../src/db.js");
-const { createNotification } = await import(
+const { env } = await import("../../src/env.js");
+const { createNotification, pruneOldNotifications } = await import(
   "../../src/services/notification.service.js"
 );
 
@@ -285,5 +286,153 @@ describe("createNotification — outbox (bot-api shadow)", () => {
 
     expect(await countNotifications(userId)).toBe(1);
     expect(await countDeliveries(userId)).toBe(0);
+  });
+});
+
+describe("pruneOldNotifications — retention", () => {
+  const HOUR_MS = 60 * 60 * 1000;
+  let inboxSeq = 0;
+
+  async function seedInbox(
+    userId: string,
+    opts: { isRead: boolean; createdAt: Date },
+  ): Promise<string> {
+    inboxSeq += 1;
+    const row = await db.notification.create({
+      data: {
+        userId,
+        type: "trip_cancelled",
+        title: `Retention ${inboxSeq}`,
+        body: `Retention body ${inboxSeq}`,
+        isRead: opts.isRead,
+        createdAt: opts.createdAt,
+      },
+    });
+    return row.id;
+  }
+
+  async function seedOutbox(
+    notificationId: string,
+    userId: string,
+    status: string,
+    updatedAt: Date,
+  ): Promise<string> {
+    const delivery = await db.notificationDelivery.create({
+      data: {
+        notificationId,
+        userId,
+        channel: "telegram",
+        type: "trip_cancelled",
+        status,
+      },
+    });
+    // updatedAt — @updatedAt: Prisma не даёт выставить вручную,
+    // поэтому сдвигаем в прошлое прямым SQL.
+    await db.$executeRaw`UPDATE "NotificationDelivery" SET "updatedAt" = ${updatedAt} WHERE "id" = ${delivery.id}`;
+    return delivery.id;
+  }
+
+  async function deliveryExists(id: string): Promise<boolean> {
+    return (
+      (await db.notificationDelivery.findUnique({ where: { id } })) !== null
+    );
+  }
+
+  async function inboxExists(id: string): Promise<boolean> {
+    return (await db.notification.findUnique({ where: { id } })) !== null;
+  }
+
+  it("outbox: старые terminal удалены, pending/processing целы, граница окна", async () => {
+    const userId = await seedTelegramUser({});
+    const parentId = await seedInbox(userId, {
+      isRead: false,
+      createdAt: new Date(),
+    });
+    const now = Date.now();
+    const windowMs = env.TG_NOTIFICATION_OUTBOX_RETENTION_MS;
+    const inside = new Date(now - windowMs + HOUR_MS);
+    const outside = new Date(now - windowMs - HOUR_MS);
+
+    const oldDelivered = await seedOutbox(parentId, userId, "delivered", outside);
+    const freshDelivered = await seedOutbox(parentId, userId, "delivered", inside);
+    const oldSkipped = await seedOutbox(parentId, userId, "skipped", outside);
+    const oldFailed = await seedOutbox(parentId, userId, "failed", outside);
+    // Незавершённые старые — чистка их не касается никогда.
+    const oldPending = await seedOutbox(parentId, userId, "pending", outside);
+    const oldProcessing = await seedOutbox(parentId, userId, "processing", outside);
+
+    const result = await pruneOldNotifications();
+
+    expect(result.outboxDeleted).toBe(3);
+    expect(await deliveryExists(oldDelivered)).toBe(false);
+    expect(await deliveryExists(oldSkipped)).toBe(false);
+    expect(await deliveryExists(oldFailed)).toBe(false);
+    expect(await deliveryExists(freshDelivered)).toBe(true);
+    expect(await deliveryExists(oldPending)).toBe(true);
+    expect(await deliveryExists(oldProcessing)).toBe(true);
+  });
+
+  it("inbox: границы read/unread окон (внутри — целы, снаружи — удалены)", async () => {
+    const userId = await seedTelegramUser({});
+    const now = Date.now();
+    const readMs = env.TG_NOTIFICATION_INBOX_READ_RETENTION_MS;
+    const unreadMs = env.TG_NOTIFICATION_INBOX_UNREAD_RETENTION_MS;
+
+    const readInside = await seedInbox(userId, {
+      isRead: true,
+      createdAt: new Date(now - readMs + HOUR_MS),
+    });
+    const readOutside = await seedInbox(userId, {
+      isRead: true,
+      createdAt: new Date(now - readMs - HOUR_MS),
+    });
+    const unreadInside = await seedInbox(userId, {
+      isRead: false,
+      createdAt: new Date(now - unreadMs + HOUR_MS),
+    });
+    const unreadOutside = await seedInbox(userId, {
+      isRead: false,
+      createdAt: new Date(now - unreadMs - HOUR_MS),
+    });
+
+    const result = await pruneOldNotifications();
+
+    expect(result.inboxReadDeleted).toBe(1);
+    expect(result.inboxUnreadDeleted).toBe(1);
+    expect(await inboxExists(readInside)).toBe(true);
+    expect(await inboxExists(readOutside)).toBe(false);
+    expect(await inboxExists(unreadInside)).toBe(true);
+    expect(await inboxExists(unreadOutside)).toBe(false);
+  });
+
+  it("повторный прогон идемпотентен (второй раз удаляет 0)", async () => {
+    const userId = await seedTelegramUser({});
+    const parentId = await seedInbox(userId, {
+      isRead: false,
+      createdAt: new Date(),
+    });
+    await seedOutbox(
+      parentId,
+      userId,
+      "failed",
+      new Date(Date.now() - env.TG_NOTIFICATION_OUTBOX_RETENTION_MS - HOUR_MS),
+    );
+    await seedInbox(userId, {
+      isRead: true,
+      createdAt: new Date(
+        Date.now() - env.TG_NOTIFICATION_INBOX_READ_RETENTION_MS - HOUR_MS,
+      ),
+    });
+
+    const first = await pruneOldNotifications();
+    expect(first.outboxDeleted).toBe(1);
+    expect(first.inboxReadDeleted).toBe(1);
+
+    const second = await pruneOldNotifications();
+    expect(second).toEqual({
+      outboxDeleted: 0,
+      inboxReadDeleted: 0,
+      inboxUnreadDeleted: 0,
+    });
   });
 });

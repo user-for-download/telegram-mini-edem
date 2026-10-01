@@ -5,6 +5,7 @@ import { wsManager } from "../ws/manager.js";
 import { logBusinessEvent } from "../logger/business.js";
 import {
   createNotification,
+  pruneOldNotifications,
   tripSnapshotOf,
 } from "../services/notification.service.js";
 import { PENDING_BOOKING_TTL_MS } from "../bookings/shared.js";
@@ -40,6 +41,14 @@ export async function processExpiredTrips() {
 
   try {
     await expirePendingBookings(new Date());
+    // Retention-чистка уведомлений — часть часового цикла, отдельного
+    // воркера нет. Изолированный try/catch: сбой prune не должен
+    // останавливать автозавершение поездок. Счётчики логирует сам хелпер.
+    try {
+      await pruneOldNotifications(new Date());
+    } catch (err) {
+      logger.error({ err }, "trip_worker_prune_failed");
+    }
     while (true) {
       const expiredTrips: ExpiredTrip[] = await db.trip.findMany({
         where: {

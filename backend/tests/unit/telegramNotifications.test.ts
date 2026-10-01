@@ -1,8 +1,7 @@
 // backend/tests/unit/telegramNotifications.test.ts
 //
-// tg-migration-15: политика TG-доставки (inbox + наблюдаемость, без внешних
-// вызовов — Bot API заблокирован). Чистые функции + контур deliver с
-// мокнутыми db/logger/env (паттерн notification-push.test.ts).
+// Политика TG-доставки (live dispatcher, Bot API approved 2026-09-14):
+// чистые функции с мокнутыми db/env (паттерн notification-push.test.ts).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const findFirst = vi.fn();
@@ -31,13 +30,12 @@ const {
   decideTelegramDelivery,
   resolveTelegramDeepLink,
   findNotificationDuplicate,
-  deliverTelegramNotification,
   TELEGRAM_FALLBACK_ROUTE,
 } = await import("../../src/services/telegramNotifications.js");
 
 const UUID = "123e4567-e89b-12d3-a456-426614174000";
 
-describe("decideTelegramDelivery — полная политика с согласием (bot-api shadow)", () => {
+describe("decideTelegramDelivery — полная политика с согласием (live dispatcher)", () => {
   it("kill-switch → channel_disabled, даже для critical с чатом", () => {
     expect(
       decideTelegramDelivery({
@@ -198,82 +196,5 @@ describe("findNotificationDuplicate — окно дедупликации", () =
       body: "B",
     });
     expect(dup).toBe(false);
-  });
-});
-
-describe("deliverTelegramNotification — контур без внешних вызовов", () => {
-  const fetchMock = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.stubGlobal("fetch", fetchMock);
-    envState.TELEGRAM_DELIVERY_ENABLED = true;
-  });
-
-  it("включено → delivered с валидным deep-link, fetch не вызывается", async () => {
-    const outcome = await deliverTelegramNotification({
-      userId: "u1",
-      type: "trip_cancelled",
-      title: "T",
-      body: "B",
-      fragment: "/bookings",
-    });
-
-    expect(outcome).toEqual({
-      delivered: true,
-      channel: "in_app",
-      deepLink: "/bookings",
-      reason: "delivered",
-    });
-    // Bot API заблокирован: внешних попыток нет даже без токена.
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("kill-switch → пропуск с причиной disabled", async () => {
-    envState.TELEGRAM_DELIVERY_ENABLED = false;
-
-    const outcome = await deliverTelegramNotification({
-      userId: "u1",
-      type: "trip_cancelled",
-      title: "T",
-      body: "B",
-    });
-
-    expect(outcome.delivered).toBe(false);
-    expect(outcome.reason).toBe("disabled");
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("логи не содержат тел сообщений и секретов", async () => {
-    await deliverTelegramNotification({
-      userId: "u1",
-      type: "trip_cancelled",
-      title: "СекретныйЗаголовок",
-      body: "СекретноеТело initData=abc token=xyz",
-      fragment: "/bookings",
-    });
-
-    const logged = JSON.stringify([
-      ...debugMock.mock.calls,
-      ...infoMock.mock.calls,
-      ...errorMock.mock.calls,
-    ]);
-    expect(logged).not.toContain("СекретныйЗаголовок");
-    expect(logged).not.toContain("СекретноеТело");
-    expect(logged).not.toContain("initData=abc");
-    expect(logged).not.toContain("token=xyz");
-  });
-
-  it("неизвестный deep-link схлопывается в inbox без ошибки", async () => {
-    const outcome = await deliverTelegramNotification({
-      userId: "u1",
-      type: "booking_created",
-      title: "T",
-      body: "B",
-      fragment: "/admin/secret?token=x",
-    });
-
-    expect(outcome.delivered).toBe(true);
-    expect(outcome.deepLink).toBe(TELEGRAM_FALLBACK_ROUTE);
   });
 });
