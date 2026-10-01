@@ -277,7 +277,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
     const notificationId = await createNotification(
       booking.trip.driverId,
       "booking_created",
-      "Новая заявка",
+      "Новая заявка на место",
       `Получена новая заявка на место ${seat} в поездке ${booking.trip.fromCity} → ${booking.trip.toCity}`,
       // Тап открывает шторку деталей поездки водителя.
       `/trips/${tripId}`,

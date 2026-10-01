@@ -516,7 +516,7 @@ export const TelegramRealtimeListener: FC = () => {
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.detail(tripId) });
     enqueueNotice({
       key: `ws_booking_new_${bookingId}`,
-      title: "Новая заявка на поездку",
+      title: "Новая заявка на место",
     });
   });
 

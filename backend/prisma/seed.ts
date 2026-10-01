@@ -2383,7 +2383,7 @@ async function main() {
     {
       userId: "u-1",
       type: "booking_created",
-      title: "Новая заявка на поездку",
+      title: "Новая заявка на место",
       body: "Павел Никитин хочет присоединиться к вашей поездке Вологда → Череповец.",
       isRead: false,
       actorName: "Павел Никитин",
@@ -2396,7 +2396,7 @@ async function main() {
     {
       userId: "u-3",
       type: "booking_created",
-      title: "Новая заявка на поездку",
+      title: "Новая заявка на место",
       body: "Павел Никитин хочет присоединиться к вашей поездке Череповец → Вологда.",
       isRead: false,
       actorName: "Павел Никитин",
@@ -2409,7 +2409,7 @@ async function main() {
     {
       userId: "u-3",
       type: "booking_created",
-      title: "Новая заявка на поездку",
+      title: "Новая заявка на место",
       body: "Артём Киселёв хочет присоединиться к вашей поездке Череповец → Вологда.",
       isRead: false,
       actorName: "Артём Киселёв",
@@ -2435,7 +2435,7 @@ async function main() {
     {
       userId: "u-18",
       type: "booking_created",
-      title: "Новая заявка на поездку",
+      title: "Новая заявка на место",
       body: "Вы отправили заявку на поездку Вологда → Череповец.",
       isRead: true,
     },
@@ -2443,7 +2443,7 @@ async function main() {
     {
       userId: "u-dev",
       type: "booking_created",
-      title: "Новая заявка на поездку",
+      title: "Новая заявка на место",
       body: "Дарья Петрова хочет присоединиться к вашей поездке Вологда → Череповец.",
       isRead: false,
       // Per-entity deep-link (демо тапа → шторка деталей поездки): заявка

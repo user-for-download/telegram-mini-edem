@@ -327,7 +327,7 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     expect(invalidateCallsFor([...TRIP_KEYS.my()])).toBe(1);
     expect(invalidateCallsFor([...BOOKING_KEYS.trip("t-1")])).toBe(1);
     expect(invalidateCallsFor([...TRIP_KEYS.detail("t-1")])).toBe(1);
-    expect(document.body.textContent).toContain("Новая заявка на поездку");
+    expect(document.body.textContent).toContain("Новая заявка на место");
   });
 
   it("повтор того же события — дубликат: без повторной инвалидации и нотиса", async () => {
