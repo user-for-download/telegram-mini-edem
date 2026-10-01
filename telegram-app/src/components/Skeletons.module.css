@@ -75,18 +75,13 @@
   border-radius: var(--app-radius-pill);
 }
 
-/* Болванка уведомления — зеркало NotificationCard (Banner inline). */
+/* Болванка уведомления — зеркало NotificationCell (чат-лист). */
 .notifBanner {
   display: flex;
   gap: var(--app-space-sm);
 }
 
-.notifBefore {
-  height: 40px;
-  width: 40px;
-  flex-shrink: 0;
-  border-radius: var(--app-radius-md);
-}
+/* Круг-аватар болванки — общий .avatarCircle выше (40px, круг). */
 
 .notifLines {
   flex: 1 1 0%;

@@ -2,12 +2,27 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const findMany = vi.fn();
 const findFirst = vi.fn();
+const findUniqueUser = vi.fn();
 const createNotification = vi.fn();
+const sendToUser = vi.fn();
+const tripSnapshotOf = vi
+  .fn()
+  .mockReturnValue({ from: "F", to: "T", price: 100 });
 
 vi.mock("../../src/db.js", () => ({
-  db: { rideRequest: { findMany }, notification: { findFirst } },
+  db: {
+    rideRequest: { findMany },
+    notification: { findFirst },
+    user: { findUnique: findUniqueUser },
+  },
 }));
-vi.mock("../../src/services/notification.service.js", () => ({ createNotification }));
+vi.mock("../../src/services/notification.service.js", () => ({
+  createNotification,
+  tripSnapshotOf,
+}));
+vi.mock("../../src/ws/manager.js", () => ({
+  wsManager: { sendToUser },
+}));
 
 const { notifyMatchingRideRequests } = await import("../../src/rideRequests/matching.js");
 
@@ -16,6 +31,7 @@ describe("RideRequest matching notifications", () => {
     vi.clearAllMocks();
     findMany.mockResolvedValue([{ id: "request-1", userId: "passenger-1" }]);
     findFirst.mockResolvedValue(null);
+    findUniqueUser.mockResolvedValue({ name: "Илья Северов" });
   });
 
   const trip = {
@@ -28,6 +44,7 @@ describe("RideRequest matching notifications", () => {
   };
 
   it("notifies matching requester with a trip deep link", async () => {
+    createNotification.mockResolvedValue("n1");
     await notifyMatchingRideRequests(trip);
     expect(createNotification).toHaveBeenCalledWith(
       "passenger-1",
@@ -35,7 +52,21 @@ describe("RideRequest matching notifications", () => {
       "Подходящая поездка",
       expect.stringContaining("trip-1"),
       "/trips/trip-1",
+      "Илья Северов",
+      "matched",
+      { from: "F", to: "T", price: 100 },
     );
+    // M4: live-hint инбокса — только если запись создана.
+    expect(sendToUser).toHaveBeenCalledWith("passenger-1", {
+      type: "notification:new",
+      payload: { id: "refresh" },
+    });
+  });
+
+  it("no WS-hint when notification skipped (m10)", async () => {
+    createNotification.mockResolvedValue(null);
+    await notifyMatchingRideRequests(trip);
+    expect(sendToUser).not.toHaveBeenCalled();
   });
 
   it("does not duplicate a notification for the same trip", async () => {

@@ -51,6 +51,13 @@ describe("Telegram query key factories", () => {
       "notifications",
       "inbox",
       20,
+      "unread",
+    ]);
+    expect(NOTIFICATION_KEYS.inbox(20, "driver")).toEqual([
+      "notifications",
+      "inbox",
+      20,
+      "driver",
     ]);
   });
 });

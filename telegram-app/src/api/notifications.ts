@@ -26,10 +26,19 @@ export const notificationsApi = {
     cursor?: string,
     limit = 20,
     signal?: AbortSignal,
+    filter?: { role?: "driver" | "passenger"; unreadOnly?: boolean },
   ): Promise<NotificationsPage> => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor) {
       params.set("cursor", cursor);
+    }
+    // Серверный фильтр архивов (m3): role/unreadOnly резолвит бэкенд
+    // по NOTIFICATION_ROLE_TYPES из @edem/contracts, клиент типы не знает.
+    if (filter?.role) {
+      params.set("role", filter.role);
+    }
+    if (filter?.unreadOnly) {
+      params.set("unreadOnly", "1");
     }
     return apiClient.request<NotificationsPage>(
       `/notifications/my?${params.toString()}`,

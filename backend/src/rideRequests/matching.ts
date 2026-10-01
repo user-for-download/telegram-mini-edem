@@ -1,11 +1,18 @@
 import type { Prisma } from "../generated/prisma/client.js";
 import { db } from "../db.js";
-import { createNotification } from "../services/notification.service.js";
+import { wsManager } from "../ws/manager.js";
+import {
+  createNotification,
+  tripSnapshotOf,
+} from "../services/notification.service.js";
 
 type TripForMatching = Pick<
   Prisma.TripGetPayload<Prisma.TripDefaultArgs>,
   | "id"
   | "driverId"
+  | "fromCity"
+  | "toCity"
+  | "price"
   | "fromCityId"
   | "toCityId"
   | "departureAt"
@@ -48,6 +55,12 @@ export async function notifyMatchingRideRequests(
     take: 50,
   });
 
+  // Имя водителя для второй строки ячеек — один запрос на подборку.
+  const driver = await db.user.findUnique({
+    where: { id: trip.driverId },
+    select: { name: true },
+  });
+
   for (const request of requests) {
     const type = "ride_request_match";
     const body = `Нашлась подходящая поездка для вашего запроса. Откройте поездку и отправьте заявку на бронирование. ${MATCH_NOTIFY_TRIP_ID_MARKER}${trip.id}`;
@@ -60,12 +73,24 @@ export async function notifyMatchingRideRequests(
       select: { id: true },
     });
     if (duplicate) continue;
-    await createNotification(
+    // M4: live-hint инбокса, как у остальных типов (раньше match приходил
+    // только через stale/refetch). Hint — только если запись создана.
+    const notificationId = await createNotification(
       request.userId,
       type,
       "Подходящая поездка",
       body,
       `/trips/${trip.id}`,
+      // Вторая строка — «имя • действие», третья — снапшот поездки.
+      driver?.name,
+      "matched",
+      tripSnapshotOf(trip),
     );
+    if (notificationId) {
+      wsManager.sendToUser(request.userId, {
+        type: "notification:new",
+        payload: { id: "refresh" },
+      });
+    }
   }
 }

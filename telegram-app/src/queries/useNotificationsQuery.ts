@@ -6,23 +6,31 @@ import {
 } from "@tanstack/react-query";
 import { notificationsApi } from "@/api/notifications";
 import type { NotificationsPage } from "@edem/contracts";
+import type { NotifSegment } from "@/pages/Notifications/NotificationsPage";
 
 export const NOTIFICATION_KEYS = {
   all: ["notifications"] as const,
-  inbox: (limit: number) =>
-    [...NOTIFICATION_KEYS.all, "inbox", limit] as const,
+  inbox: (limit: number, segment: NotifSegment = "unread") =>
+    [...NOTIFICATION_KEYS.all, "inbox", limit, segment] as const,
 };
 
 /**
  * Inbox уведомлений: cursor-пагинация backend (GET /notifications/my).
- * nextCursor === null означает конец списка — getNextPageParam возвращает
- * undefined и hasNextPage гаснет (зеркально useUserReviewsInfiniteQuery).
+ * Фильтр — серверный: сегмент уходит в query (role/unreadOnly), клиент
+ * по типам не фильтрует (m3). nextCursor === null означает конец списка —
+ * getNextPageParam возвращает undefined и hasNextPage гаснет.
  */
-export function useNotificationsInboxQuery(limit = 20) {
+export function useNotificationsInboxQuery(
+  limit = 20,
+  segment: NotifSegment = "unread",
+) {
   return useInfiniteQuery({
-    queryKey: NOTIFICATION_KEYS.inbox(limit),
+    queryKey: NOTIFICATION_KEYS.inbox(limit, segment),
     queryFn: ({ pageParam, signal }) =>
-      notificationsApi.getMy(pageParam, limit, signal),
+      notificationsApi.getMy(pageParam, limit, signal, {
+        role: segment === "unread" ? undefined : segment,
+        unreadOnly: segment === "unread",
+      }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 30_000,
@@ -38,6 +46,11 @@ export function useMarkNotificationReadMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => notificationsApi.markRead(id),
+    // Откат оптимистичного кэша при ошибке (m2): инвалидация тянет
+    // авторитетное состояние, зависших «прочитанных» не остаётся.
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.all });
+    },
     onSuccess: (updated) => {
       queryClient.setQueriesData<InfiniteData<NotificationsPage>>(
         { queryKey: NOTIFICATION_KEYS.all },
@@ -76,6 +89,9 @@ export function useMarkAllNotificationsReadMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => notificationsApi.markAllRead(),
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.all });
+    },
     onSuccess: () => {
       queryClient.setQueriesData<InfiniteData<NotificationsPage>>(
         { queryKey: NOTIFICATION_KEYS.all },

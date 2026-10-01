@@ -5,17 +5,18 @@
 // Источники переходов:
 // - Bot API startapp-параметр (`?startapp=<token>`) — разбирает
 //   resolveStartParamRoute, результат ведёт на внутренний маршрут;
-// - tap по инбокс-уведомлению — ведёт notificationRoute из
-//   NotificationsPage (единственный источник правды для tap-destinations,
+// - tap по инбокс-уведомлению — Notification.deepLink (per-entity,
+//   серверный allowlist) с fallback на типовую карту notificationRoute
+//   в NotificationsPage (единственный источник правды для tap-destinations,
 //   покрыт notificationsPage.test.tsx; здесь не дублируется);
 // - share поездки — buildTripStartParam/buildTripDeepLink из helpers/tripShare
 //   (токен `trip_<uuid>`).
 //
-// Per-entity ссылки без идентификаторов (заявки на поездку, конкретная бронь,
-// авто, репорты, модалка водителя) намеренно не поддерживаются: в startapp
-// нельзя класть сырые данные пользователя, а payload уведомления entity-id
-// не несёт — та же blocked-причина, что зафиксирована в контракте parity.
-// Неизвестный/битый параметр — безопасный fallback на FALLBACK_ROUTE.
+// В startapp нельзя класть сырые данные пользователя, поэтому там
+// поддерживаются только section-токены и `trip_<uuid>`. Per-entity
+// id для инбокса передаётся отдельно — через Notification.deepLink, а не
+// через startapp. Неизвестный/битый параметр — безопасный fallback на
+// FALLBACK_ROUTE.
 
 export const FALLBACK_ROUTE = "/trips";
 

@@ -86,10 +86,30 @@ model RefreshToken {
 model Notification {
   id        String   @id @default(uuid())
   userId    String
-  type      String // booking_created, booking_confirmed, trip_cancelled
+  type      String // booking_created, booking_status_changed, trip_cancelled, ...
   title     String
   body      String
   isRead    Boolean  @default(false)
+  // Allowlist-маршрут telegram-app для тапа по уведомлению: сервер
+  // пропускает fragment через resolveTelegramDeepLink (без query/hash/PII,
+  // неизвестное → /notifications). Клиент открывает его (напр.
+  // /trips/<uuid> — шторка деталей поездки), иначе fallback по type.
+  deepLink  String?
+  // Кто — отображаемое имя второй стороны (водитель/пассажир сервиса,
+  // «Администрация»/«Модерация»/«Поддержка» для админ-событий). Вторая
+  // строка ячейки инбокса. null — у события нет персоны.
+  actorName String?
+  // Машинный код действия для третьей строки ячейки (client map):
+  // created/confirmed/declined/cancelled/completed/changed/matched/
+  // replied/approved/rejected. null — легаси-записи без кода.
+  action    String?
+  // Снапшот поездки для третьей строки ячейки («дата, время • цена •
+  // маршрут»): фиксируется в момент события, переживает удаление
+  // поездки. null — у события нет поездки (отзывы, поддержка).
+  tripFrom        String?
+  tripTo          String?
+  tripPrice       Int?
+  tripDepartureAt DateTime?
   createdAt DateTime @default(now())
 
   user        User @relation(fields: [userId], references: [id], onDelete: Cascade)

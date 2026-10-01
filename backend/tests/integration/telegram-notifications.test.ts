@@ -11,8 +11,8 @@ const { createNotification } = await import(
  * Утверждённый механизм: inbox-запись + наблюдаемый исход, внешних
  * вызовов нет (Bot API заблокирован — TELEGRAM_BOT_TOKEN не требуется
  * и не используется). Проверяем сквозь createNotification:
- * opt-out, critical override, дедуп повторов, различимые события
- * и путь без platform-id (без TG-дедупа).
+ * opt-out, critical override, дедуп повторов (для всех, m9),
+ * различимые события и путь без platform-id.
  *
  * Паттерны репо: реальная БД, уникальные telegramUserId (BigInt-диапазон
  * 9_930_000+), чистка созданных строк в afterEach.
@@ -150,22 +150,22 @@ describe("createNotification — TG-доставка", () => {
   it("без Bot-токена и внешней конфигурации доставка не падает", async () => {
     // TELEGRAM_BOT_TOKEN в тестовом окружении не задан — утвержденному
     // механизму он не нужен: запись создаётся, исключений нет.
+    // m10: возвращается id созданной записи.
     const userId = await seedTelegramUser({});
 
-    await expect(
-      createNotification(
-        userId,
-        "booking_status_changed",
-        "Заявка подтверждена",
-        "Водитель подтвердил вашу заявку",
-        "/bookings",
-      ),
-    ).resolves.toBeUndefined();
+    const id = await createNotification(
+      userId,
+      "booking_status_changed",
+      "Заявка подтверждена",
+      "Водитель подтвердил вашу заявку",
+      "/bookings",
+    );
+    expect(typeof id).toBe("string");
 
     expect(await countNotifications(userId)).toBe(1);
   });
 
-  it("пользователь без platform-id: critical создаёт записи без TG-дедупа", async () => {
+  it("пользователь без platform-id: дедуп тоже работает (m9)", async () => {
     const userId = await seedIdentitylessUser({});
 
     await createNotification(
@@ -175,7 +175,7 @@ describe("createNotification — TG-доставка", () => {
       "Поездка Москва → Казань отменена",
       "/bookings",
     );
-    await createNotification(
+    const second = await createNotification(
       userId,
       "trip_cancelled",
       "Поездка отменена",
@@ -183,8 +183,10 @@ describe("createNotification — TG-доставка", () => {
       "/bookings",
     );
 
-    // Дедуп применяется только к TG-идентифицированным пользователям.
-    expect(await countNotifications(userId)).toBe(2);
+    // Дедуп — для всех пользователей, не только TG: повтор не плодит
+    // записи и возвращает null (WS-hint гасится).
+    expect(second).toBeNull();
+    expect(await countNotifications(userId)).toBe(1);
   });
 });
 

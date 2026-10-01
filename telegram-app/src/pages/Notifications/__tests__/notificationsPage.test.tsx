@@ -26,13 +26,16 @@ vi.mock("@/queries/useNotificationsQuery", () => ({
 
 import {
   NotificationsPage,
-  DRIVER_NOTIFICATION_TYPES,
-  PASSENGER_NOTIFICATION_TYPES,
+  formatNotifTime,
+  formatNotificationWho,
+  formatTripDetail,
   isCriticalNotification,
   normalizeNotifSegment,
-  notifSegmentOf,
+  notificationActionLabel,
   notificationRoute,
+  notificationTarget,
 } from "@/pages/Notifications/NotificationsPage";
+import { NOTIFICATION_ROLE_TYPES } from "@edem/contracts";
 
 function makeNotification(overrides: Record<string, unknown> = {}) {
   return {
@@ -42,6 +45,13 @@ function makeNotification(overrides: Record<string, unknown> = {}) {
     title: "Бронь подтверждена",
     body: "Водитель подтвердил вашу заявку",
     isRead: false,
+    deepLink: null,
+    actorName: null,
+    action: null,
+    tripFrom: null,
+    tripTo: null,
+    tripPrice: null,
+    tripDepartureAt: null,
     createdAt: "2026-09-09T10:00:00.000Z",
     ...overrides,
   };
@@ -124,6 +134,79 @@ describe("notificationRoute / isCriticalNotification (контракт parity)",
   });
 });
 
+describe("notificationTarget: deepLink важнее fallback-карты", () => {
+  it("серверный per-entity deepLink приоритетен", () => {
+    expect(
+      notificationTarget({ type: "trip_cancelled", deepLink: "/trips/uuid" }),
+    ).toBe("/trips/uuid");
+  });
+
+  it("без deepLink — типовая карта разделов", () => {
+    expect(notificationTarget({ type: "trip_cancelled", deepLink: null })).toBe(
+      "/bookings",
+    );
+    expect(notificationTarget({ type: "trip_cancelled" })).toBe("/bookings");
+  });
+
+  it("без deepLink и типа — null (пассивная строка)", () => {
+    expect(
+      notificationTarget({ type: "something_future", deepLink: null }),
+    ).toBeNull();
+  });
+});
+
+describe("formatNotifTime / notificationAcronym", () => {
+  it("сегодня — ЧЧ:ММ (TZ-независимо)", () => {
+    expect(formatNotifTime(new Date().toISOString())).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  it("старая дата — короткий день без времени, битая — как есть", () => {
+    expect(formatNotifTime("2020-01-15T10:00:00.000Z")).toContain("2020");
+    expect(formatNotifTime("мусор")).toBe("мусор");
+  });
+
+  it("словарь действий: глаголы по коду, неизвестное — null", () => {
+    expect(notificationActionLabel("confirmed")).toBe("подтвердил");
+    expect(notificationActionLabel("cancelled")).toBe("отменил");
+    expect(notificationActionLabel("created")).toBe("отправил заявку");
+    expect(notificationActionLabel(null)).toBeNull();
+    expect(notificationActionLabel(undefined)).toBeNull();
+    expect(notificationActionLabel("something_future")).toBeNull();
+  });
+
+  it("formatNotificationWho: «фио • действие» одной строкой", () => {
+    expect(formatNotificationWho("Дарья Петрова", "отправил заявку")).toBe(
+      "Дарья Петрова • отправил заявку",
+    );
+    expect(formatNotificationWho("Дарья Петрова", null)).toBe("Дарья Петрова");
+    expect(formatNotificationWho(null, "отменил")).toBe("отменил");
+    expect(formatNotificationWho(null, null)).toBeNull();
+  });
+
+  it("formatTripDetail: «дата, время • цена • маршрут»", () => {
+    const detail = formatTripDetail({
+      from: "Вологда",
+      to: "Череповец",
+      price: 500,
+      departureAt: "2020-09-10T09:00:00.000Z",
+    });
+    expect(detail).toContain("500 ₽");
+    expect(detail).toContain("Вологда → Череповец");
+    expect(detail).toContain("2020");
+    expect(
+      formatTripDetail({ from: null, to: null, price: null, departureAt: null }),
+    ).toBeNull();
+    expect(
+      formatTripDetail({
+        from: "Вологда",
+        to: null,
+        price: null,
+        departureAt: "мусор",
+      }),
+    ).toBe("Вологда");
+  });
+});
+
 describe("NotificationsPage: шапка и контракт", () => {
   it("пилюли сегментов + IconButton «Прочитать все» со счётчиком", () => {
     setMocks(pageWithItems([makeNotification()]));
@@ -142,7 +225,8 @@ describe("NotificationsPage: шапка и контракт", () => {
   });
 
   it("все прочитаны — IconButton неактивна, имя без счётчика", () => {
-    setMocks(pageWithItems([makeNotification({ isRead: true })], 0));
+    // Сервер для «Новых» прочитанные не отдаёт: пустой ответ → empty-текст.
+    setMocks(pageWithItems([], 0));
 
     const html = renderPage();
 
@@ -152,7 +236,7 @@ describe("NotificationsPage: шапка и контракт", () => {
 });
 
 describe("NotificationsPage: карточки", () => {
-  it("критичная — callout «Важное», некритичная непрочитанная — «Новое»", () => {
+  it("критичная — без слова «Важное», только три строки", () => {
     setMocks(
       pageWithItems([
         makeNotification({ id: "n-1", type: "booking_status_changed" }),
@@ -162,15 +246,63 @@ describe("NotificationsPage: карточки", () => {
 
     const html = renderPage();
 
-    expect(html).toContain("Важное");
-    expect(html).toContain("Новое");
-    // callout читается раньше заголовка (статус над title): видимый header —
-    // последнее вхождение title (первое — aria-label баннера в атрибутах).
-    expect(html.indexOf("Важное")).toBeLessThan(html.lastIndexOf("Бронь подтверждена"));
-    expect(html.indexOf("Новое")).toBeLessThan(html.lastIndexOf("Новая заявка"));
+    expect(html).not.toContain("Важное");
+    expect(html).not.toContain("Новое");
+    // Непрочитанное состояние — dot-бейдж (тип number не используется).
+    expect(html).toContain('data-testid="notification-unread-n-1"');
+    expect(html).toContain('data-testid="notification-unread-n-2"');
   });
 
-  it("прочитанная некритичная — без callout; иконка декоративна", () => {
+  it("три строки: событие / «фио • действие» / «дата • цена • маршрут»", () => {
+    setMocks(
+      pageWithItems([
+        makeNotification({
+          id: "n-1",
+          title: "Новая заявка",
+          actorName: "Дарья Петрова",
+          action: "created",
+          tripFrom: "Вологда",
+          tripTo: "Череповец",
+          tripPrice: 500,
+          tripDepartureAt: "2026-09-10T09:00:00.000Z",
+        }),
+      ]),
+    );
+
+    const html = renderPage();
+
+    expect(html).toContain("Новая заявка");
+    expect(html).toContain("Дарья Петрова • отправил заявку");
+    expect(html).toContain("500 ₽");
+    expect(html).toContain("Вологда → Череповец");
+    expect(html).toContain(
+      'aria-label="Новая заявка. Дарья Петрова • отправил заявку.',
+    );
+  });
+
+  it("без actor/action — строки скрыты, имя прежнее", () => {
+    setMocks(pageWithItems([makeNotification()]));
+
+    const html = renderPage();
+
+    expect(html).toContain(
+      'aria-label="Бронь подтверждена. Отметить прочитанным и открыть"',
+    );
+  });
+
+  it("строка без аватара: только время справа", () => {
+    setMocks(pageWithItems([makeNotification()]));
+
+    const html = renderPage();
+
+    // Аватара нет (раньше был акроним ">БР<").
+    expect(html).not.toContain(">БР<");
+    // Время — вторая строка штатного Info (текст зависит от TZ,
+    // фикстура сентябрьская — месяц стабилен в любом TZ).
+    expect(html).toContain("сент");
+  });
+
+  it("прочитанная некритичная — без статусов и без dot", () => {
     setMocks(
       pageWithItems([
         makeNotification({
@@ -194,11 +326,12 @@ describe("NotificationsPage: карточки", () => {
     expect(html).toContain("Прочитанная заявка");
     expect(html).not.toContain("Новое");
     expect(html).not.toContain("Важное");
-    // Иконка before декоративна: смысл дублирует callout текстом.
+    expect(html).not.toContain("notification-unread-");
+    // Шеврон декоративен: смысл дублирует aria-label ячейки.
     expect(html).toContain('aria-hidden="true"');
   });
 
-  it("тап по баннеру ведёт на раздел события; у неизвестного типа — только прочтение", () => {
+  it("тап по ячейке ведёт на раздел события; у неизвестного типа — только прочтение", () => {
     setMocks(
       pageWithItems([
         makeNotification({ id: "n-1", type: "booking_status_changed" }),
@@ -208,10 +341,11 @@ describe("NotificationsPage: карточки", () => {
 
     const html = renderPage();
 
-    // Баннер — кнопка: имя содержит title + действие (кнопок «Открыть» больше нет).
+    // Ячейка интерактивна (type="button"): имя содержит title + действие
+    // (кнопок «Открыть» больше нет).
     expect(html).toContain('aria-label="Бронь подтверждена. Отметить прочитанным и открыть"');
     expect(html).toContain('aria-label="Ответ поддержки. Отметить прочитанным и открыть"');
-    expect(html).toContain('data-testid="notification-banner-n-1"');
+    expect(html).toContain('data-testid="notification-cell-n-1"');
     expect(html).not.toContain("Открыть</");
     expect(html).not.toContain("Отметить прочитанным</");
 
@@ -221,7 +355,7 @@ describe("NotificationsPage: карточки", () => {
     expect(unknown).not.toContain("Открыть");
   });
 
-  it("прочитанная с маршрутом — «Открыть»; без маршрута и прочитанная — не кнопка", () => {
+  it("прочитанная с маршрутом — «Открыть» и шеврон; без маршрута — пассивна", () => {
     setMocks(
       pageWithItems([
         makeNotification({ id: "n-1", isRead: true }),
@@ -229,14 +363,31 @@ describe("NotificationsPage: карточки", () => {
       ], 0),
     );
 
-    // Прочитанные — в ролевом сегменте («Новые» показывают только unread).
+    // Сервер уже отфильтровал архив: клиент показывает обе как есть.
     const html = renderPageAt("/notifications?segment=passenger");
 
     expect(html).toContain('aria-label="Бронь подтверждена. Открыть"');
-    expect(html).not.toContain("Старое");
-    // Только один role=button: прочитанная без маршрута и не в карте — статична.
-    expect(html.match(/role="button"/g)?.length ?? 0).toBe(1);
+    expect(html).toContain("Старое");
+    // Две ячейки: интерактивная (с маршрутом) и пассивная без aria-label.
+    expect(html.match(/data-testid="notification-cell-/g)?.length ?? 0).toBe(2);
     expect(html).not.toContain("Отметить прочитанным");
+  });
+
+  it("интерактивная ячейка — role=button + tabindex (M2), пассивная — без", () => {
+    setMocks(
+      pageWithItems([
+        makeNotification({ id: "n-1", type: "booking_status_changed" }),
+        makeNotification({ id: "n-2", isRead: true, type: "something_future", title: "Старое" }),
+      ], 1),
+    );
+
+    const html = renderPage();
+
+    // n-1 непрочитана с маршрутом: кнопочная семантика для клавиатуры/SR.
+    // n-2 пассивна (прочитана, без маршрута): ни role, ни tabindex, ни label.
+    expect(html.match(/role="button"/g)?.length ?? 0).toBe(1);
+    expect(html).toContain('tabindex="0"');
+    expect(html).not.toContain('aria-label="Старое');
   });
 
   it("пагинация: кнопка «Показать ещё» при следующей странице", () => {
@@ -246,6 +397,17 @@ describe("NotificationsPage: карточки", () => {
     });
 
     expect(renderPage()).toContain("Показать ещё");
+  });
+
+  it("M1: пустой сегмент при hasNextPage — всё равно «Показать ещё»", () => {
+    setMocks({
+      ...pageWithItems([]),
+      hasNextPage: true,
+    });
+
+    const html = renderPage();
+    expect(html).toContain("Пока нет уведомлений");
+    expect(html).toContain("Показать ещё");
   });
 
   it("пустое состояние", () => {
@@ -268,23 +430,24 @@ describe("NotificationsPage: сегменты", () => {
     expect(normalizeNotifSegment("")).toBe("unread");
   });
 
-  it("карта type→role: водительские, пассажирские, нейтраль — нигде", () => {
-    expect(notifSegmentOf("booking_created")).toBe("driver");
-    expect(notifSegmentOf("ride_request_match")).toBe("driver");
-    expect(notifSegmentOf("booking_status_changed")).toBe("passenger");
-    expect(notifSegmentOf("trip_cancelled")).toBe("passenger");
-    expect(notifSegmentOf("trip_status_changed")).toBe("passenger");
-    expect(notifSegmentOf("trip_details_changed")).toBe("passenger");
-    expect(notifSegmentOf("review_approved")).toBeNull();
-    expect(notifSegmentOf("feedback_replied")).toBeNull();
-    expect(notifSegmentOf("something_future")).toBeNull();
-    // Карты не пересекаются.
-    for (const type of DRIVER_NOTIFICATION_TYPES) {
-      expect(PASSENGER_NOTIFICATION_TYPES.has(type)).toBe(false);
-    }
+  it("карта type→role: единый источник в контрактах (m3)", () => {
+    // booking_created — водитель; match — автор запроса (пассажир);
+    // trip_status_changed — оба (водителю о своей, пассажирам об их);
+    // нейтраль — нигде (только «Новые», пока непрочитана).
+    expect(NOTIFICATION_ROLE_TYPES.driver.has("booking_created")).toBe(true);
+    expect(NOTIFICATION_ROLE_TYPES.driver.has("trip_status_changed")).toBe(true);
+    expect(NOTIFICATION_ROLE_TYPES.passenger.has("ride_request_match")).toBe(true);
+    expect(NOTIFICATION_ROLE_TYPES.passenger.has("booking_status_changed")).toBe(true);
+    expect(NOTIFICATION_ROLE_TYPES.passenger.has("trip_cancelled")).toBe(true);
+    expect(NOTIFICATION_ROLE_TYPES.passenger.has("trip_status_changed")).toBe(true);
+    expect(NOTIFICATION_ROLE_TYPES.passenger.has("trip_details_changed")).toBe(true);
+    expect(NOTIFICATION_ROLE_TYPES.driver.has("ride_request_match")).toBe(false);
+    expect(NOTIFICATION_ROLE_TYPES.driver.has("review_approved")).toBe(false);
+    expect(NOTIFICATION_ROLE_TYPES.passenger.has("review_approved")).toBe(false);
+    expect(NOTIFICATION_ROLE_TYPES.passenger.has("feedback_replied")).toBe(false);
   });
 
-  it("«Новые» — только непрочитанные всех типов (нейтраль не теряется)", () => {
+  it("клиент не фильтрует по типам: показывает всё, что вернул сервер", () => {
     setMocks(
       pageWithItems([
         makeNotification({ id: "n-1", type: "booking_created" }),
@@ -293,14 +456,16 @@ describe("NotificationsPage: сегменты", () => {
       ]),
     );
 
+    // Фильтр — серверный (?role=/unreadOnly): «Новые» с сервера уже только
+    // непрочитанные, клиент ничего не выкидывает сам.
     const html = renderPageAt("/notifications");
 
     expect(html).toContain("Бронь подтверждена");
     expect(html).toContain("Ответ поддержки");
-    expect(html).not.toContain("Прочитанная заявка");
+    expect(html).toContain("Прочитанная заявка");
   });
 
-  it("ролевые сегменты фильтруют по карте, включая прочитанные", () => {
+  it("сегмент уходит в хук: сервер отдаёт архив, клиент его не трогает", () => {
     const items = [
       makeNotification({ id: "n-1", type: "booking_created", title: "Заявка водителя" }),
       makeNotification({ id: "n-2", type: "booking_status_changed", isRead: true, title: "Статус пассажира" }),
@@ -309,33 +474,30 @@ describe("NotificationsPage: сегменты", () => {
     setMocks(pageWithItems(items));
 
     const driver = renderPageAt("/notifications?segment=driver");
+    expect(mockUseInbox).toHaveBeenCalledWith(20, "driver");
     expect(driver).toContain("Заявка водителя");
-    expect(driver).not.toContain("Статус пассажира");
-    expect(driver).not.toContain("Отзыв принят");
+    expect(driver).toContain("Статус пассажира");
+    expect(driver).toContain("Отзыв принят");
 
     const passenger = renderPageAt("/notifications?segment=passenger");
+    expect(mockUseInbox).toHaveBeenCalledWith(20, "passenger");
+    expect(passenger).toContain("Заявка водителя");
     expect(passenger).toContain("Статус пассажира");
-    expect(passenger).not.toContain("Заявка водителя");
-    expect(passenger).not.toContain("Отзыв принят");
+    expect(passenger).toContain("Отзыв принят");
   });
 
   it("пустые сегменты — свои тексты; чипы с aria-pressed", () => {
-    setMocks(pageWithItems([makeNotification({ id: "n-1", type: "booking_created", title: "Заявка водителя" })]));
+    setMocks(pageWithItems([]));
 
     const driver = renderPageAt("/notifications?segment=driver");
-    expect(driver).toContain("Заявка водителя");
+    expect(driver).toContain("Нет уведомлений водителя");
+    expect(driver).toContain("Заявки пассажиров и совпадения запросов появятся здесь");
     expect(driver).toContain('aria-pressed="true"');
 
-    // В пассажирском та же заявка не видна — свой empty-текст.
+    // Пустой инбокс в пассажирском — свой empty-текст.
     const passenger = renderPageAt("/notifications?segment=passenger");
     expect(passenger).toContain("Нет уведомлений пассажира");
     expect(passenger).toContain("Подтверждения, отмены и изменения поездок появятся здесь");
-
-    // Пустой инбокс в водительском — свой empty-текст.
-    setMocks(pageWithItems([]));
-    const emptyDriver = renderPageAt("/notifications?segment=driver");
-    expect(emptyDriver).toContain("Нет уведомлений водителя");
-    expect(emptyDriver).toContain("Заявки пассажиров и совпадения запросов появятся здесь");
   });
 });
 

@@ -501,7 +501,9 @@ export const TelegramRealtimeListener: FC = () => {
 
   useWsEvent("notification:new", () => {
     // Событие — только hint, не запись: инвалидируем inbox, UI подтянет
-    // авторитетное состояние HTTP-запросом.
+    // авторитетное состояние HTTP-запросом. Тоста намеренно нет (m8):
+    // сигнал — бейдж на табе; доменные события (booking:new и др.) уже
+    // показывают свои тосты, дубль был бы шумом.
     void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.all });
   });
 

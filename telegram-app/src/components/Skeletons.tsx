@@ -48,8 +48,8 @@ export function TripCardSkeleton() {
   );
 }
 
-/** Болванка уведомления — зеркало NotificationBanner (Banner inline, без
- * кнопок: before-блок иконки, строки callout/header/subheader/description). */
+/** Болванка уведомления — зеркало NotificationCell (три однострочные
+ * строки без аватара). */
 export function NotificationCardSkeleton() {
   return (
     <Skeleton
@@ -58,11 +58,8 @@ export function NotificationCardSkeleton() {
       className={`${styles.cardSkeleton} ${CARD_SURFACE}`}
     >
       <div className={`${CARD_PAD} ${styles.notifBanner}`}>
-        <div className={styles.notifBefore} />
         <Stack gap="xs" className={styles.notifLines}>
-          <div className={styles.lineSub} />
           <div className={styles.lineNotifTitle} />
-          <div className={styles.lineSub} />
           <div className={styles.lineFull} />
           <div className={styles.line60} />
         </Stack>

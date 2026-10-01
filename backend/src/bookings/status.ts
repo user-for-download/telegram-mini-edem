@@ -16,7 +16,10 @@ import { getSanitizedBody } from "../middleware/sanitize.js";
 import { ERROR_CODES } from "../errors.js";
 import { activeBookingWhere, BookingError } from "./shared.js";
 import { logBusinessEvent } from "../logger/business.js";
-import { createNotification } from "../services/notification.service.js";
+import {
+  createNotification,
+  tripSnapshotOf,
+} from "../services/notification.service.js";
 import { wsManager } from "../ws/manager.js";
 
 export const statusRouter = new Hono<AuthEnv>();
@@ -270,13 +273,17 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
       driverId: user.id,
     });
 
-    await createNotification(
+    const notificationId = await createNotification(
       passengerId,
       "booking_status_changed",
       newStatus === "confirmed" ? "Заявка подтверждена" : "Заявка отклонена",
       `Водитель ${newStatus === "confirmed" ? "подтвердил" : "отклонил"} вашу заявку в поездке ${updated.booking.trip.fromCity} → ${updated.booking.trip.toCity}`,
-      // Deep-link: тап по push открывает «Мои брони».
-      "/bookings",
+      // Тап открывает шторку деталей поездки.
+      `/trips/${updated.booking.trip.id}`,
+      // Вторая строка — «имя • действие», третья — снапшот поездки.
+      user.name,
+      newStatus,
+      tripSnapshotOf(updated.booking.trip),
     );
 
     wsManager.sendToUser(passengerId, {
@@ -288,10 +295,12 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
       },
     });
 
-    wsManager.sendToUser(passengerId, {
-      type: "notification:new",
-      payload: { id: "refresh" },
-    });
+    if (notificationId) {
+      wsManager.sendToUser(passengerId, {
+        type: "notification:new",
+        payload: { id: "refresh" },
+      });
+    }
 
     return c.json(serializeBooking(updated.booking));
   } catch (error) {

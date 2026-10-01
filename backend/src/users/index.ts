@@ -16,7 +16,10 @@ import { revokeAllActiveTokens } from "../auth/tokens.js";
 import { ERROR_CODES } from "../errors.js";
 import { DEFAULT_AVATAR_URL } from "../constants.js";
 import { logBusinessEvent } from "../logger/business.js";
-import { createNotification } from "../services/notification.service.js";
+import {
+  createNotification,
+  tripSnapshotOf,
+} from "../services/notification.service.js";
 
 const updateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
@@ -71,12 +74,20 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
         id: string;
         fromCity: string;
         toCity: string;
+        price: number;
+        departureAt: Date;
         confirmedPassengerIds: string[];
         declinedPassengerIds: string[];
       }> = [];
       const ownTrips = await tx.trip.findMany({
         where: { driverId: user.id, status: "active" },
-        select: { id: true, fromCity: true, toCity: true },
+        select: {
+          id: true,
+          fromCity: true,
+          toCity: true,
+          price: true,
+          departureAt: true,
+        },
       });
       for (const trip of ownTrips) {
         const pendings = await tx.booking.findMany({
@@ -116,6 +127,8 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
           id: trip.id,
           fromCity: trip.fromCity,
           toCity: trip.toCity,
+          price: trip.price,
+          departureAt: trip.departureAt,
           confirmedPassengerIds,
           declinedPassengerIds,
         });
@@ -211,38 +224,52 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
       passengersCount: trip.confirmedPassengerIds.length,
     });
     for (const pid of trip.confirmedPassengerIds) {
-      await createNotification(
+      const notificationId = await createNotification(
         pid,
         "trip_status_changed",
         "Поездка завершена",
         `Поездка ${trip.fromCity} → ${trip.toCity} завершена. Вы можете оставить отзыв.`,
-        "/bookings/history",
+        // Тап открывает шторку деталей завершённой поездки.
+        `/trips/${trip.id}`,
+        // Вторая строка — «имя • действие», третья — снапшот поездки.
+        user.name,
+        "completed",
+        tripSnapshotOf(trip),
       );
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
         payload: { tripId: trip.id, status: "completed" },
       });
-      wsManager.sendToUser(pid, {
-        type: "notification:new",
-        payload: { id: "refresh" },
-      });
+      if (notificationId) {
+        wsManager.sendToUser(pid, {
+          type: "notification:new",
+          payload: { id: "refresh" },
+        });
+      }
     }
     for (const pid of trip.declinedPassengerIds) {
-      await createNotification(
+      const notificationId = await createNotification(
         pid,
         "trip_status_changed",
         "Поездка завершена",
         `Поездка ${trip.fromCity} → ${trip.toCity} завершена, ваша заявка отклонена.`,
-        "/bookings/history",
+        // Тап открывает шторку деталей завершённой поездки.
+        `/trips/${trip.id}`,
+        // Вторая строка — «имя • действие», третья — снапшот поездки.
+        user.name,
+        "completed",
+        tripSnapshotOf(trip),
       );
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
         payload: { tripId: trip.id, status: "completed" },
       });
-      wsManager.sendToUser(pid, {
-        type: "notification:new",
-        payload: { id: "refresh" },
-      });
+      if (notificationId) {
+        wsManager.sendToUser(pid, {
+          type: "notification:new",
+          payload: { id: "refresh" },
+        });
+      }
     }
   }
   for (const booking of result.cancelledBookings) {

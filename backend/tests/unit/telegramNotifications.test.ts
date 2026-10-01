@@ -30,7 +30,7 @@ const {
   shouldDeliverTelegram,
   decideTelegramDelivery,
   resolveTelegramDeepLink,
-  findTelegramDuplicate,
+  findNotificationDuplicate,
   deliverTelegramNotification,
   TELEGRAM_FALLBACK_ROUTE,
 } = await import("../../src/services/telegramNotifications.js");
@@ -172,14 +172,14 @@ describe("resolveTelegramDeepLink — allowlist маршрутов", () => {
   });
 });
 
-describe("findTelegramDuplicate — окно дедупликации", () => {
+describe("findNotificationDuplicate — окно дедупликации", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("находит идентичную свежую запись", async () => {
     findFirst.mockResolvedValue({ id: "n1" });
-    const dup = await findTelegramDuplicate({
+    const dup = await findNotificationDuplicate({
       userId: "u1",
       type: "trip_cancelled",
       title: "T",
@@ -191,7 +191,7 @@ describe("findTelegramDuplicate — окно дедупликации", () => {
 
   it("без совпадения — не дубликат", async () => {
     findFirst.mockResolvedValue(null);
-    const dup = await findTelegramDuplicate({
+    const dup = await findNotificationDuplicate({
       userId: "u1",
       type: "trip_cancelled",
       title: "T",

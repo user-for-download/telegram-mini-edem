@@ -65,6 +65,44 @@ describe("createNotification — outbox wiring (shadow)", () => {
     });
   });
 
+  it("actor/action пишутся в inbox, но не утекают в outbox", async () => {
+    findUnique.mockResolvedValue({
+      id: "u1",
+      telegramUserId: 123n,
+      notificationsEnabled: true,
+      tgChatJoinedAt: new Date(),
+    });
+
+    await createNotification(
+      "u1",
+      "booking_status_changed",
+      "T",
+      "B",
+      "/trips/trip-1",
+      "Илья Северов",
+      "confirmed",
+    );
+
+    expect(notificationCreate).toHaveBeenCalledWith({
+      data: {
+        userId: "u1",
+        type: "booking_status_changed",
+        title: "T",
+        body: "B",
+        deepLink: "/notifications",
+        actorName: "Илья Северов",
+        action: "confirmed",
+        tripFrom: null,
+        tripTo: null,
+        tripPrice: null,
+        tripDepartureAt: null,
+      },
+    });
+    const delivery = deliveryCreate.mock.calls[0][0].data;
+    expect(delivery).not.toHaveProperty("actorName");
+    expect(delivery).not.toHaveProperty("action");
+  });
+
   it("optional + тумблер on + чат → inbox + outbox pending", async () => {
     findUnique.mockResolvedValue({
       id: "u1",
@@ -113,6 +151,32 @@ describe("createNotification — outbox wiring (shadow)", () => {
     expect(deliveryCreate).not.toHaveBeenCalled();
   });
 
+  it("m10: пропуск по тумблеру возвращает null (WS-hint гасится)", async () => {
+    findUnique.mockResolvedValue({
+      id: "u1",
+      telegramUserId: 123n,
+      notificationsEnabled: false,
+      tgChatJoinedAt: new Date(),
+    });
+
+    await expect(
+      createNotification("u1", "booking_created", "T", "B"),
+    ).resolves.toBeNull();
+  });
+
+  it("m10: созданная запись возвращает id", async () => {
+    findUnique.mockResolvedValue({
+      id: "u1",
+      telegramUserId: 123n,
+      notificationsEnabled: true,
+      tgChatJoinedAt: new Date(),
+    });
+
+    await expect(
+      createNotification("u1", "trip_cancelled", "T", "B"),
+    ).resolves.toBe("n1");
+  });
+
   it("kill-switch → inbox + outbox skipped/channel_disabled", async () => {
     envState.TELEGRAM_DELIVERY_ENABLED = false;
     findUnique.mockResolvedValue({
@@ -130,7 +194,22 @@ describe("createNotification — outbox wiring (shadow)", () => {
     expect(data.error).toBe("channel_disabled");
   });
 
-  it("дубликат → ни inbox, ни outbox", async () => {
+  it("m9: дедуп работает и без telegramUserId (не только TG)", async () => {
+    findUnique.mockResolvedValue({
+      id: "u1",
+      telegramUserId: null,
+      notificationsEnabled: true,
+    });
+    notificationFindFirst.mockResolvedValue({ id: "existing" });
+
+    await expect(
+      createNotification("u1", "trip_cancelled", "T", "B"),
+    ).resolves.toBeNull();
+
+    expect(notificationCreate).not.toHaveBeenCalled();
+  });
+
+  it("m10: дубликат возвращает null", async () => {
     findUnique.mockResolvedValue({
       id: "u1",
       telegramUserId: 123n,
@@ -139,7 +218,9 @@ describe("createNotification — outbox wiring (shadow)", () => {
     });
     notificationFindFirst.mockResolvedValue({ id: "existing" });
 
-    await createNotification("u1", "trip_cancelled", "T", "B");
+    await expect(
+      createNotification("u1", "trip_cancelled", "T", "B"),
+    ).resolves.toBeNull();
 
     expect(notificationCreate).not.toHaveBeenCalled();
     expect(deliveryCreate).not.toHaveBeenCalled();
@@ -169,7 +250,7 @@ describe("createNotification — outbox wiring (shadow)", () => {
 
     await expect(
       createNotification("u1", "trip_cancelled", "T", "B"),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe("n1");
 
     expect(notificationCreate).toHaveBeenCalledTimes(1);
   });

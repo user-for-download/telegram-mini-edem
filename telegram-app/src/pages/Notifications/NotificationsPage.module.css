@@ -51,30 +51,31 @@
 }
 
 /* Пустое состояние: центрированные тексты на поверхности Section. */
-.emptyText {
-  text-align: center;
+
+/* Строка уведомления (чат-лист): правая колонка — штатный Info кита.
+ * Обёртка after у кита — последний ребёнок flex-корня Cell (порядок
+ * before/тело/after из dist 2.1.13): растягиваем её на всю высоту, чтобы
+ * шеврон и время держались верхней части строки. */
+.cell.cell > :last-child {
+  align-self: stretch;
 }
 
-/* Баннер уведомления (inline) во всю ширину рельса SectionBody:
- * гасим боковые margin кита (base 16px / iOS 20px — как NextTripBanner).
- * Удвоенный селектор — канон репозитория (NextTripBanner, .card.card). */
-.banner.banner {
-  margin-left: 0;
-  margin-right: 0;
-}
-
-/* Иконка типа уведомления: декоративна (aria-hidden), смысл дублирует
- * callout текстом. Цвета только --tgui--*. */
-.icon-critical {
-  color: var(--tgui--destructive_text_color);
-}
-
-.icon-request {
-  color: var(--tgui--link_color);
-}
-
-.icon-feedback {
+/* Шеврон deep-link (верхняя строка Info, text-align:right у кита):
+ * декоративен, намекает на переход. */
+.chevron {
   color: var(--tgui--hint_color);
+}
+
+/* Дата второй строкой Info — компактно: мельче подписи кита и строго
+ * в одну строку, иначе «9 сент. 2026 г.» переносится и колонка
+ * становится трёхстрочной (шеврон + число + дата).
+ * Хэш подписи из @telegram-apps/telegram-ui@2.1.13 (pinned) — при bump
+ * сверить в dist/styles.css. Неслойный модуль бьёт слой tgui
+ * без !important. */
+.info.info :global(.tgui-4af039094fb946b4) {
+  font-size: 11px;
+  line-height: 1.33;
+  white-space: nowrap;
 }
 
 /* Якорь автодогрузки: скрыт от скринридера, высота 48px держит скролл. */

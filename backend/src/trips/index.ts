@@ -27,7 +27,10 @@ import {
 import { getSanitizedBody } from "../middleware/sanitize.js";
 import { ERROR_CODES } from "../errors.js";
 import { logBusinessEvent } from "../logger/business.js";
-import { createNotification } from "../services/notification.service.js";
+import {
+  createNotification,
+  tripSnapshotOf,
+} from "../services/notification.service.js";
 import { wsManager } from "../ws/manager.js";
 import { notifyMatchingRideRequests } from "../rideRequests/matching.js";
 import {
@@ -941,11 +944,17 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
     // createNotification глотает ошибки внутри, поэтому параллелим безопасно.
     await Promise.all(
       confirmedBookings.map(async (booking) => {
-        await createNotification(
+        const notificationId = await createNotification(
           booking.passengerId,
           "trip_details_changed",
           "Детали поездки изменены",
           `Водитель изменил детали поездки ${updated.fromCity} → ${updated.toCity}. Проверьте время и место встречи.`,
+          // Тап открывает шторку деталей изменённой поездки.
+          `/trips/${updated.id}`,
+          // Вторая строка — «имя • действие», третья — снапшот поездки.
+          user.name,
+          "changed",
+          tripSnapshotOf(updated),
         );
 
         wsManager.sendToUser(booking.passengerId, {
@@ -953,10 +962,12 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
           payload: { tripId: trip.id },
         });
         // Подсказываем онлайн-клиенту обновить список/счётчик уведомлений.
-        wsManager.sendToUser(booking.passengerId, {
-          type: "notification:new",
-          payload: { id: "refresh" },
-        });
+        if (notificationId) {
+          wsManager.sendToUser(booking.passengerId, {
+            type: "notification:new",
+            payload: { id: "refresh" },
+          });
+        }
       }),
     );
   }
@@ -1093,23 +1104,29 @@ tripsRouter.patch("/:id/cancel", requireUser, cancelTripLimiter, async (c) => {
   // createNotification глотает ошибки внутри, поэтому параллелим безопасно.
   await Promise.all(
     uniquePassengers.map(async (pid) => {
-      await createNotification(
+      const notificationId = await createNotification(
         pid,
         "trip_cancelled",
         "Поездка отменена",
         `Водитель отменил поездку ${updated.fromCity} → ${updated.toCity}`,
-        // Deep-link: тап по push открывает «Мои брони».
-        "/bookings",
+        // Тап открывает шторку деталей отменённой поездки.
+        `/trips/${updated.id}`,
+        // Вторая строка — «имя • действие», третья — снапшот поездки.
+        user.name,
+        "cancelled",
+        tripSnapshotOf(updated),
       );
 
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
         payload: { tripId: updated.id, status: "cancelled" },
       });
-      wsManager.sendToUser(pid, {
-        type: "notification:new",
-        payload: { id: "refresh" },
-      });
+      if (notificationId) {
+        wsManager.sendToUser(pid, {
+          type: "notification:new",
+          payload: { id: "refresh" },
+        });
+      }
     }),
   );
 
@@ -1312,44 +1329,56 @@ tripsRouter.patch(
     // Персистентные уведомления + WS-события пассажирам (ВНЕ транзакции,
     // паттерн как в автозавершении воркером).
     for (const pid of passengerIds) {
-      await createNotification(
+      const notificationId = await createNotification(
         pid,
         "trip_status_changed",
         "Поездка завершена",
         `Поездка ${updated.fromCity} → ${updated.toCity} завершена. Вы можете оставить отзыв.`,
-        // Deep-link: тап по push открывает историю (где оставляется отзыв).
-        "/bookings/history",
+        // Тап открывает шторку деталей завершённой поездки.
+        `/trips/${updated.id}`,
+        // Вторая строка — «имя • действие», третья — снапшот поездки.
+        user.name,
+        "completed",
+        tripSnapshotOf(updated),
       );
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
         payload: { tripId: updated.id, status: "completed" },
       });
-      wsManager.sendToUser(pid, {
-        type: "notification:new",
-        payload: { id: "refresh" },
-      });
+      if (notificationId) {
+        wsManager.sendToUser(pid, {
+          type: "notification:new",
+          payload: { id: "refresh" },
+        });
+      }
     }
 
     // Pending-пассажиры, отклонённые при завершении: уведомляем их так же,
     // как это делает воркер автозавершения (tripWorker.ts), иначе заявка
     // исчезала бы молча.
     for (const pid of declinedPassengerIds) {
-      await createNotification(
+      const notificationId = await createNotification(
         pid,
         "trip_status_changed",
         "Поездка завершена",
         `Поездка ${updated.fromCity} → ${updated.toCity} завершена, ваша заявка отклонена.`,
-        // Deep-link: тап по push открывает историю броней.
-        "/bookings/history",
+        // Тап открывает шторку деталей завершённой поездки.
+        `/trips/${updated.id}`,
+        // Вторая строка — «имя • действие», третья — снапшот поездки.
+        user.name,
+        "completed",
+        tripSnapshotOf(updated),
       );
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
         payload: { tripId: updated.id, status: "completed" },
       });
-      wsManager.sendToUser(pid, {
-        type: "notification:new",
-        payload: { id: "refresh" },
-      });
+      if (notificationId) {
+        wsManager.sendToUser(pid, {
+          type: "notification:new",
+          payload: { id: "refresh" },
+        });
+      }
     }
 
     return c.json(

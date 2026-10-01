@@ -27,7 +27,10 @@ import {
   type CreateResult,
 } from "./shared.js";
 import { logBusinessEvent } from "../logger/business.js";
-import { createNotification } from "../services/notification.service.js";
+import {
+  createNotification,
+  tripSnapshotOf,
+} from "../services/notification.service.js";
 import { wsManager } from "../ws/manager.js";
 
 export const createRouter = new Hono<AuthEnv>();
@@ -271,11 +274,17 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
       seat,
     });
 
-    await createNotification(
+    const notificationId = await createNotification(
       booking.trip.driverId,
       "booking_created",
       "Новая заявка",
       `Получена новая заявка на место ${seat} в поездке ${booking.trip.fromCity} → ${booking.trip.toCity}`,
+      // Тап открывает шторку деталей поездки водителя.
+      `/trips/${tripId}`,
+      // Вторая строка — «имя • действие», третья — снапшот поездки.
+      booking.passenger.name,
+      "created",
+      tripSnapshotOf(booking.trip),
     );
 
     // Внешняя доставка водителю — только через утверждённый канал
@@ -286,10 +295,14 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
       payload: { bookingId: booking.id, tripId },
     });
 
-    wsManager.sendToUser(booking.trip.driverId, {
-      type: "notification:new",
-      payload: { id: "refresh" },
-    });
+    // Hint инбокса — только если запись реально создана (m10): пропуск
+    // (тумблер/дедуп) или сбой не должны дёргать ленту впустую.
+    if (notificationId) {
+      wsManager.sendToUser(booking.trip.driverId, {
+        type: "notification:new",
+        payload: { id: "refresh" },
+      });
+    }
 
     return c.json(serializeBooking(booking), 201);
   } catch (error) {

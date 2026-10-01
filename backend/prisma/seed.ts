@@ -42,6 +42,11 @@ interface SeedUser {
   isVerified: boolean;
   notificationsEnabled?: boolean;
   about?: string;
+  // Телефон для связи водителя с подтверждённым пассажиром (F1). Хранится
+  // нормализованным (только цифры, опционально ведущий +) — как пишет
+  // POST /users/me (normalizePhone, src/users/index.ts). Сидим только
+  // водителям: пассажирам он публично не нужен.
+  phone?: string;
   car?: SeedCar;
   // Демо админ-флоу: забаненный пользователь (bannedAt + обязательный
   // banReason, как требует рантайм при бане через админку).
@@ -260,6 +265,7 @@ const users: SeedUser[] = [
     isVerified: true,
 
     about: "За рулём 7 лет. Регулярно езжу между Москвой и СПб.",
+    phone: "+79110000001",
     car: { model: "Skoda Octavia", color: "белый", plate: "А 217 МК 78" },
   },
   {
@@ -273,6 +279,7 @@ const users: SeedUser[] = [
     isVerified: true,
 
     about: "Люблю комфортные спокойные поездки.",
+    phone: "+79110000002",
     car: { model: "Kia Rio", color: "синий", plate: "В 804 ТР 777" },
   },
   {
@@ -287,6 +294,7 @@ const users: SeedUser[] = [
     isVerified: true,
 
     about: "Езжу аккуратно, в машине есть кондиционер и хорошая музыка.",
+    phone: "+79110000003",
     car: { model: "Volkswagen Tiguan", color: "чёрный", plate: "Е 991 ЕЕ 199" },
   },
   {
@@ -300,6 +308,7 @@ const users: SeedUser[] = [
     isVerified: true,
 
     about: "Командировки по области, беру максимум 2 попутчиков.",
+    phone: "+79110000005",
     car: { model: "Toyota Camry", color: "серебристый", plate: "М 342 КХ 77" },
   },
   {
@@ -313,6 +322,7 @@ const users: SeedUser[] = [
     isVerified: true,
 
     about: "Аккуратная езда, в машине всегда чисто. Только некурящие.",
+    phone: "+79110000006",
     car: { model: "Hyundai Solaris", color: "красный", plate: "К 156 РУ 178" },
   },
   {
@@ -325,6 +335,7 @@ const users: SeedUser[] = [
     tripsCount: 12,
     isVerified: true,
     about: "Езжу по выходным за город, могу подбросить.",
+    phone: "+79110000007",
     car: { model: "Renault Duster", color: "серый", plate: "С 803 СС 78" },
   },
   {
@@ -338,6 +349,7 @@ const users: SeedUser[] = [
     isVerified: true,
 
     about: "Люблю дальние поездки с приятной беседой.",
+    phone: "+79110000008",
     car: { model: "Mazda CX-5", color: "голубой", plate: "Т 618 ВА 77" },
   },
   {
@@ -350,6 +362,7 @@ const users: SeedUser[] = [
     tripsCount: 8,
     isVerified: true,
     about: "Новичок в сервисе, езжу по выходным.",
+    phone: "+79110000009",
     car: { model: "Lada Vesta", color: "белый", plate: "Х 455 УК 190" },
   },
   {
@@ -363,6 +376,7 @@ const users: SeedUser[] = [
     isVerified: true,
 
     about: "Пунктуальный, выезжаю строго вовремя.",
+    phone: "+79110000010",
     car: { model: "BMW 320i", color: "чёрный", plate: "О 912 ОК 77" },
   },
   {
@@ -376,6 +390,7 @@ const users: SeedUser[] = [
     isVerified: true,
 
     about: "Езжу в Тарногский Городок к родителям каждую неделю.",
+    phone: "+79110000011",
     car: { model: "Kia Sportage", color: "белый", plate: "А 777 АА 77" },
   },
   {
@@ -388,6 +403,7 @@ const users: SeedUser[] = [
     tripsCount: 14,
     isVerified: true,
     about: "Документы на проверке, но езжу аккуратно.",
+    phone: "+79110000012",
     car: { model: "Skoda Rapid", color: "зелёный", plate: "Р 234 РМ 78" },
   },
   {
@@ -401,6 +417,7 @@ const users: SeedUser[] = [
     isVerified: true,
 
     about: "Только с детским креслом при необходимости, по запросу.",
+    phone: "+79110000013",
     car: { model: "Nissan Qashqai", color: "коричневый", plate: "У 567 НК 78" },
   },
   // Пассажиры
@@ -566,6 +583,7 @@ const users: SeedUser[] = [
     tgChatJoinedAtDaysAgo: 1,
     isVerified: true,
     about: "Тестовый аккаунт разработчика (dev-стенд).",
+    phone: "+79110000000",
     car: { model: "Lada Vesta", color: "графитовый", plate: "А 001 ДЕ 35" },
   },
 ];
@@ -1996,6 +2014,12 @@ function validateSeedData(): void {
     if (user.bannedAtDaysAgo !== undefined && !user.banReason) {
       throw new Error(`Banned seed user ${user.id} без причины`);
     }
+    // Телефон обязан проходить normalizePhone (src/users/index.ts):
+    // 7..15 цифр, опционально ведущий +. Иначе 400 на POST /users/me
+    // разошёлся бы с сохранённым в сиде значением.
+    if (user.phone !== undefined && !/^\+?\d{7,15}$/.test(user.phone)) {
+      throw new Error(`Invalid phone in seed user ${user.id}: ${user.phone}`);
+    }
   }
 
   for (const rr of rideRequests) {
@@ -2142,6 +2166,7 @@ async function main() {
           ? new Date(seedNow.getTime() - 60 * dayMs)
           : null,
         about: u.about,
+        phone: u.phone ?? null,
         bannedAt:
           u.bannedAtDaysAgo !== undefined
             ? new Date(seedNow.getTime() - u.bannedAtDaysAgo * dayMs)
@@ -2361,6 +2386,12 @@ async function main() {
       title: "Новая заявка на поездку",
       body: "Павел Никитин хочет присоединиться к вашей поездке Вологда → Череповец.",
       isRead: false,
+      actorName: "Павел Никитин",
+      action: "created",
+      tripFrom: "Вологда",
+      tripTo: "Череповец",
+      tripPrice: 500,
+      tripDepartureAt: new Date(seedNow.getTime() + 2 * dayMs),
     },
     {
       userId: "u-3",
@@ -2368,6 +2399,12 @@ async function main() {
       title: "Новая заявка на поездку",
       body: "Павел Никитин хочет присоединиться к вашей поездке Череповец → Вологда.",
       isRead: false,
+      actorName: "Павел Никитин",
+      action: "created",
+      tripFrom: "Череповец",
+      tripTo: "Вологда",
+      tripPrice: 500,
+      tripDepartureAt: new Date(seedNow.getTime() + 3 * dayMs),
     },
     {
       userId: "u-3",
@@ -2375,13 +2412,25 @@ async function main() {
       title: "Новая заявка на поездку",
       body: "Артём Киселёв хочет присоединиться к вашей поездке Череповец → Вологда.",
       isRead: false,
+      actorName: "Артём Киселёв",
+      action: "created",
+      tripFrom: "Череповец",
+      tripTo: "Вологда",
+      tripPrice: 550,
+      tripDepartureAt: new Date(seedNow.getTime() + 3 * dayMs),
     },
     {
       userId: "u-4",
-      type: "booking_confirmed",
+      type: "booking_status_changed",
       title: "Бронирование подтверждено",
       body: "Марина Ковалёва подтвердила вашу поездку Вологда → Великий Устюг.",
       isRead: false,
+      actorName: "Марина Ковалёва",
+      action: "confirmed",
+      tripFrom: "Вологда",
+      tripTo: "Великий Устюг",
+      tripPrice: 700,
+      tripDepartureAt: new Date(seedNow.getTime() + 4 * dayMs),
     },
     {
       userId: "u-18",
@@ -2397,34 +2446,72 @@ async function main() {
       title: "Новая заявка на поездку",
       body: "Дарья Петрова хочет присоединиться к вашей поездке Вологда → Череповец.",
       isRead: false,
+      // Per-entity deep-link (демо тапа → шторка деталей поездки): заявка
+      // по поездке t-dev-1. Остальные сид-уведомления без deepLink —
+      // клиент уходит по fallback-карте раздела.
+      // m7: сид пишет deepLink напрямую, в обход resolveTelegramDeepLink
+      // (рантайм требует UUID и слаг t-dev-1 схлопнул бы в /notifications).
+      // Осознанное dev-исключение: сид-поездки на слагах, а GET /trips/:id
+      // uuid не валидирует — тап в деве работает как в проде.
+      deepLink: "/trips/t-dev-1",
+      actorName: "Дарья Петрова",
+      action: "created",
+      tripFrom: "Вологда",
+      tripTo: "Череповец",
+      tripPrice: 450,
+      tripDepartureAt: new Date(seedNow.getTime() + dayMs + 9 * 3_600_000),
     },
     {
       userId: "u-dev",
-      type: "booking_confirmed",
+      type: "booking_status_changed",
       title: "Бронирование подтверждено",
       body: "Марина Ковалёва подтвердила вашу бронь Вологда → Сокол.",
       isRead: false,
+      actorName: "Марина Ковалёва",
+      action: "confirmed",
+      tripFrom: "Вологда",
+      tripTo: "Сокол",
+      tripPrice: 350,
+      tripDepartureAt: new Date(seedNow.getTime() + 2 * dayMs),
     },
     {
       userId: "u-dev",
-      type: "booking_confirmed",
+      type: "booking_status_changed",
       title: "Бронирование подтверждено",
       body: "Алексей Громов подтвердил вашу бронь Вологда → Череповец.",
       isRead: false,
+      actorName: "Алексей Громов",
+      action: "confirmed",
+      tripFrom: "Вологда",
+      tripTo: "Череповец",
+      tripPrice: 450,
+      tripDepartureAt: new Date(seedNow.getTime() + dayMs + 9 * 3_600_000),
     },
     {
       userId: "u-16",
-      type: "booking_confirmed",
+      type: "booking_status_changed",
       title: "Бронирование подтверждено",
       body: "Дмитрий Соколов подтвердил вашу поездку Вологда → Грязовец.",
       isRead: false,
+      actorName: "Дмитрий Соколов",
+      action: "confirmed",
+      tripFrom: "Вологда",
+      tripTo: "Грязовец",
+      tripPrice: 400,
+      tripDepartureAt: new Date(seedNow.getTime() + 2 * dayMs),
     },
     {
       userId: "u-22",
-      type: "booking_confirmed",
+      type: "booking_status_changed",
       title: "Бронирование подтверждено",
       body: "Татьяна Белова подтвердила вашу поездку Кадуй → Тарногский Городок.",
       isRead: true,
+      actorName: "Татьяна Белова",
+      action: "confirmed",
+      tripFrom: "Кадуй",
+      tripTo: "Тарногский Городок",
+      tripPrice: 600,
+      tripDepartureAt: new Date(seedNow.getTime() + 5 * dayMs),
     },
     {
       userId: "u-15",
@@ -2432,6 +2519,12 @@ async function main() {
       title: "Поездка отменена",
       body: "Алексей Громов отменил поездку Федотово → Вологда.",
       isRead: false,
+      actorName: "Алексей Громов",
+      action: "cancelled",
+      tripFrom: "Федотово",
+      tripTo: "Вологда",
+      tripPrice: 300,
+      tripDepartureAt: new Date(seedNow.getTime() + 3 * dayMs),
     },
     {
       userId: "u-4",
@@ -2439,17 +2532,28 @@ async function main() {
       title: "Поездка отменена",
       body: "Дмитрий Соколов отменил поездку Суда → Череповец.",
       isRead: true,
+      actorName: "Дмитрий Соколов",
+      action: "cancelled",
+      tripFrom: "Суда",
+      tripTo: "Череповец",
+      tripPrice: 350,
+      tripDepartureAt: new Date(seedNow.getTime() + 2 * dayMs),
     },
-  ];
-
-  // 6 новых типов уведомлений (старый booking_confirmed + 5 новых)
-  const newNotifications = [
+    // Новые типы уведомлений — parity с типами рантайма
+    // (notification.service.ts) и картой deep-link мини-апа
+    // (NOTIFICATION_ROUTES): старый booking_confirmed рантайм не пишет.
     {
       userId: "u-18",
       type: "ride_request_match",
       title: "Новый попутчик",
       body: "Иван Иванов хочет присоединиться к вашей поездке Москва → Казань.",
       isRead: false,
+      actorName: "Иван Иванов",
+      action: "matched",
+      tripFrom: "Москва",
+      tripTo: "Казань",
+      tripPrice: 1200,
+      tripDepartureAt: new Date(seedNow.getTime() + 5 * dayMs),
     },
     {
       userId: "u-18",
@@ -2457,6 +2561,11 @@ async function main() {
       title: "Изменение деталей поездки",
       body: "Время отправления поездки Череповец → Вологда сдвинуто на 30 минут.",
       isRead: false,
+      action: "changed",
+      tripFrom: "Череповец",
+      tripTo: "Вологда",
+      tripPrice: 500,
+      tripDepartureAt: new Date(seedNow.getTime() + 3 * dayMs),
     },
     {
       userId: "u-18",
@@ -2464,6 +2573,7 @@ async function main() {
       title: "Статус бронирования изменён",
       body: "Ваша заявка на поездку подтверждена.",
       isRead: false,
+      action: "confirmed",
     },
     {
       userId: "u-18",
@@ -2471,6 +2581,7 @@ async function main() {
       title: "Поездка отменена",
       body: "Ваша поездка отменена.",
       isRead: false,
+      action: "cancelled",
     },
     {
       userId: "u-18",
@@ -2478,18 +2589,21 @@ async function main() {
       title: "Ответ на обращение в поддержку",
       body: "На ваш вопрос ответил администратор.",
       isRead: false,
+      actorName: "Оператор",
+      action: "replied",
     },
     {
       userId: "u-18",
       type: "review_rejected",
-      title: "Отзыв отклонен",
-      body: "Ваш отзыв о поездке отклонен администраей.",
+      title: "Отзыв отклонён",
+      body: "Ваш отзыв о поездке отклонён администратором.",
       isRead: false,
+      actorName: "Модератор",
+      action: "rejected",
     },
   ];
-  const allNotifications = [...notifications, ...newNotifications];
   // Уведомления приходили в прошлом (разброс по часам), а не все «сейчас».
-  for (const [index, n] of allNotifications.entries()) {
+  for (const [index, n] of notifications.entries()) {
     await prisma.notification.create({
       data: {
         ...n,

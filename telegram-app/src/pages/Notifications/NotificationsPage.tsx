@@ -1,8 +1,9 @@
-import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useMemo, type KeyboardEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Banner,
-  IconContainer,
+  Badge,
+  Cell,
+  Info,
   Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
@@ -12,7 +13,7 @@ import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { FetchMore } from "@/ui/FetchMore";
 
-import { BellRing, CheckCheck, Info, TriangleAlert } from "lucide-react";
+import { CheckCheck, ChevronRight } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
@@ -25,7 +26,10 @@ import { SectionBody } from "@/ui/SectionBody";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { ApiError } from "@/api/client";
-import type { Notification } from "@edem/contracts";
+import {
+  CRITICAL_NOTIFICATION_TYPES,
+  type Notification,
+} from "@edem/contracts";
 import styles from "./NotificationsPage.module.css";
 import {
   useMarkAllNotificationsReadMutation,
@@ -34,28 +38,24 @@ import {
 } from "@/queries/useNotificationsQuery";
 
 /**
- * Типы, которые backend создаёт даже при выключенном тумблере
- * (зеркало CRITICAL_NOTIFICATION_TYPES из notification.service.ts).
- * Контракт: docs/migration/notification-parity-contract.md.
+ * Критичные типы — единый источник CRITICAL_NOTIFICATION_TYPES
+ * из @edem/contracts (там же backend и тесты контракта).
+ * Реэкспорт для существующих импортов страницы/тестов.
  */
-export const CRITICAL_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
-  "booking_status_changed",
-  "trip_cancelled",
-  "trip_status_changed",
-]);
+export { CRITICAL_NOTIFICATION_TYPES };
 
 export function isCriticalNotification(type: string): boolean {
   return CRITICAL_NOTIFICATION_TYPES.has(type);
 }
 
 /**
- * Deep-link маршрута по типу уведомления (контракт parity).
+ * Fallback-карта маршрута по типу уведомления.
  *
- * Notification не несёт entity-id (только id/userId/type/title/body),
- * поэтому ссылки — на уровень разделов, а не конкретных сущностей:
- * per-entity deep-links (trip_<uuid>, booking-specific) заблокированы,
- * пока payload не несёт идентификаторы. Неизвестные типы — без ссылки
- * (честно null, не выдуманный маршрут).
+ * Источник правды для тапа — серверный `Notification.deepLink`
+ * (per-entity, напр. `/trips/<uuid>`); эта карта срабатывает только когда
+ * deepLink не пришёл (легаси/сид-записи без него). Ссылки — на уровень
+ * разделов: per-entity id в самой карте не выводится.
+ * Неизвестные типы — без ссылки (честно null, не выдуманный маршрут).
  */
 export const NOTIFICATION_ROUTES: Readonly<Record<string, string>> = {
   booking_created: "/bookings?segment=requests",
@@ -73,6 +73,98 @@ export function notificationRoute(type: string): string | null {
   return NOTIFICATION_ROUTES[type] ?? null;
 }
 
+/**
+ * Маршрут тапа по уведомлению: приоритет — серверный allowlist-deepLink
+ * (per-entity, напр. `/trips/<uuid>` — шторка деталей поездки), иначе
+ * fallback-карта по type. `deepLink` уже провалидирован бэкендом
+ * (resolveTelegramDeepLink), поэтому здесь — только выбор источника.
+ */
+export function notificationTarget(notification: {
+  type: string;
+  deepLink?: string | null;
+}): string | null {
+  return notification.deepLink ?? notificationRoute(notification.type);
+}
+
+/**
+ * Словарь действий для третьей строки ячейки (глаголы, как пишет рантайм
+ * в `Notification.action`). Неизвестный/пустой код — null, строка
+ * скрывается (легаси-записи без кода).
+ */
+export const NOTIFICATION_ACTION_LABELS: Readonly<Record<string, string>> = {
+  created: "отправил заявку",
+  confirmed: "подтвердил",
+  declined: "отклонил",
+  cancelled: "отменил",
+  completed: "завершил",
+  changed: "изменил",
+  matched: "найдена поездка",
+  replied: "ответил",
+  approved: "опубликовал",
+  rejected: "отклонил",
+};
+
+export function notificationActionLabel(
+  action: string | null | undefined,
+): string | null {
+  if (!action) return null;
+  return NOTIFICATION_ACTION_LABELS[action] ?? null;
+}
+
+/**
+ * Вторая строка ячейки: «ФИО • действие» в одну строку. Части по
+ * отдельности тоже валидны, обе пустые — строка скрывается.
+ */
+export function formatNotificationWho(
+  actorName: string | null | undefined,
+  actionLabel: string | null,
+): string | null {
+  if (actorName && actionLabel) return `${actorName} • ${actionLabel}`;
+  return actorName ?? actionLabel ?? null;
+}
+
+/**
+ * Третья строка ячейки: «дата, время • цена • маршрут» (как в ячейках
+ * заявок на бронирование). Сегодня — только время, иначе день
+ * полностью. Пустые части пропускаются, всё пустое — null.
+ */
+export function formatTripDetail(input: {
+  from?: string | null;
+  to?: string | null;
+  price?: number | null;
+  departureAt?: string | null;
+}): string | null {
+  const parts: string[] = [];
+  if (input.departureAt) {
+    const date = new Date(input.departureAt);
+    if (!Number.isNaN(date.getTime())) {
+      const time = date.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const today = date.toDateString() === new Date().toDateString();
+      if (today) {
+        parts.push(time);
+      } else {
+        const sameYear = date.getFullYear() === new Date().getFullYear();
+        const day = date.toLocaleDateString(
+          "ru-RU",
+          sameYear
+            ? { day: "numeric", month: "short" }
+            : { day: "numeric", month: "short", year: "numeric" },
+        );
+        parts.push(`${day}, ${time}`);
+      }
+    }
+  }
+  if (typeof input.price === "number") {
+    parts.push(`${input.price} ₽`);
+  }
+  const route = [input.from, input.to].filter(Boolean).join(" → ");
+  if (route) parts.push(route);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 export type NotifSegment = "unread" | "driver" | "passenger";
 
 /**
@@ -87,120 +179,133 @@ export function normalizeNotifSegment(raw: string | null): NotifSegment {
 }
 
 /**
- * Карта type → роль получателя (сверена с backend по createNotification):
- * Водитель — booking_created (bookings/create.ts:276, получатель driverId),
- * ride_request_match (rideRequests/matching.ts:52, автор запроса);
- * Пассажир — booking_status_changed (bookings/status.ts:275),
- * trip_cancelled (trips/index.ts:1098, admin/index.ts:875),
- * trip_status_changed (trips/users/worker — все получатели пассажиры,
- * водительских отправок этого типа в коде нет),
- * trip_details_changed (trips/index.ts:946, confirmed passengers).
- * Нейтральные (review_approved/rejected, feedback_replied, unknown) —
- * ни в одной карте: видны только в «Новых», ролевые их не показывают.
+ * Карта type → роль получателя УДАЛЕНА (m3): единый источник
+ * NOTIFICATION_ROLE_TYPES живёт в @edem/contracts, фильтр — серверный
+ * (`GET /my?role=`). Клиент передаёт сегмент как есть и по типам
+ * сам не фильтрует — иначе архивы дырявые и врут (ride_request_match
+ * получатель — пассажир, trip_status_changed уходит и водителю).
+ * Нейтральные (review_*, feedback_*) — только очередь «Новые», пока
+ * непрочитаны: архивного дома у них нет (осознанно, без роли поездки).
  */
-export const DRIVER_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
-  "booking_created",
-  "ride_request_match",
-]);
 
-export const PASSENGER_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
-  "booking_status_changed",
-  "trip_cancelled",
-  "trip_status_changed",
-  "trip_details_changed",
-]);
-
-export function notifSegmentOf(type: string): NotifSegment | null {
-  if (DRIVER_NOTIFICATION_TYPES.has(type)) return "driver";
-  if (PASSENGER_NOTIFICATION_TYPES.has(type)) return "passenger";
-  return null;
-}
-
-function formatDate(createdAt: string): string {
-  const date = new Date(createdAt);
+/**
+ * Короткое время уведомления (верхняя строка справа, как в чат-листе):
+ * сегодня — «ЧЧ:ММ», в этом году — «9 сен», иначе — с годом.
+ * Экспорт — для юнит-теста (TZ-независимый кейс «сегодня»).
+ */
+export function formatNotifTime(createdAt: string): string {  const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return createdAt;
-  return date.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return date.toLocaleDateString(
+    "ru-RU",
+    sameYear
+      ? { day: "numeric", month: "short" }
+      : { day: "numeric", month: "short", year: "numeric" },
+  );
 }
 
-function NotificationBanner({
+function NotificationCell({
   notification,
   onMarkRead,
   marking,
+  onOpen,
 }: {
   notification: Notification;
   onMarkRead: (id: string) => void;
   marking: boolean;
+  onOpen: (route: string) => void;
 }) {
-  const route = notificationRoute(notification.type);
-  const critical = isCriticalNotification(notification.type);
-  // Статус читается первым (callout над заголовком): критичное важнее
-  // «нового», прочитанная некритичная — без статуса вообще.
-  const callout = critical
-    ? "Важное"
-    : !notification.isRead
-      ? "Новое"
-      : undefined;
-  const iconKind = critical
-    ? "critical"
-    : notification.type === "booking_created" ||
-        notification.type === "ride_request_match" ||
-        notification.type === "trip_details_changed"
-      ? "request"
-      : "feedback";
-  // Тап по баннеру: непрочитанную помечаем прочитанной, затем уходим по
+  const route = notificationTarget(notification);
+  const actionLabel = notificationActionLabel(notification.action);
+  // Строка 2 — «ФИО • действие» в одну строку; строка 3 — снапшот
+  // поездки («дата, время • цена • маршрут»). Пустые скрываются.
+  const whoLine = formatNotificationWho(notification.actorName, actionLabel);
+  const detailLine = formatTripDetail({
+    from: notification.tripFrom,
+    to: notification.tripTo,
+    price: notification.tripPrice,
+    departureAt: notification.tripDepartureAt,
+  });
+  // Тап по ячейке: непрочитанную помечаем прочитанной, затем уходим по
   // маршруту (если есть). Отдельных кнопок нет: «Прочитать все» сверху
-  // закрывает массовый кейс (паттерн NextTripBanner: role/tabIndex/Enter/Space).
+  // закрывает массовый кейс. Навигация — через роутер (m11), клавиатура —
+  // role/табиндекс/Enter/Space: tgui Tappable на div их сам не даёт (M2).
   const interactive = route !== null || !notification.isRead;
   const activate = () => {
     if (!interactive || marking) return;
     haptic.light();
     if (!notification.isRead) onMarkRead(notification.id);
-    if (route) window.location.hash = `#${route}`;
+    if (route) onOpen(route);
   };
-  const label = route
-    ? `${notification.title}. ${notification.isRead ? "Открыть" : "Отметить прочитанным и открыть"}`
-    : `${notification.title}. Отметить прочитанным`;
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      activate();
+    }
+  };
+  const label = [
+    notification.title,
+    whoLine ?? undefined,
+    detailLine ?? undefined,
+    route
+      ? notification.isRead
+        ? "Открыть"
+        : "Отметить прочитанным и открыть"
+      : !notification.isRead
+        ? "Отметить прочитанным"
+        : undefined,
+  ]
+    .filter((part): part is string => typeof part === "string")
+    .join(". ");
+
+  // Строка — ровно три смысловые строки: событие (title),
+  // «ФИО • действие» (whoLine), «дата, время • цена • маршрут»
+  // (detailLine); всё однострочное с обрезкой (без multiline).
+  // Пустые строки скрываются (легаси-записи без кода).
+  // Аватара нет, статуса «Важное» нет — только три строки.
+  // Правая колонка — штатный двустрочный Info кита: шеврон сверху,
+  // время диммером снизу.
   return (
-    <Banner
-      type="inline"
-      className={styles.banner}
-      before={
-        <IconContainer className={styles[`icon-${iconKind}`]}>
-          {iconKind === "critical" ? (
-            <TriangleAlert size={24} aria-hidden />
-          ) : iconKind === "request" ? (
-            <BellRing size={24} aria-hidden />
-          ) : (
-            <Info size={24} aria-hidden />
-          )}
-        </IconContainer>
+    <Cell
+      // type="button" БЕЗ Component="button": корень остаётся div (как
+      // PopularRoutesSection). Component="button" подменяет корень на
+      // нативный <button> и ломает раскладку Cell (UA-стили кнопки).
+      {...(interactive ? { type: "button" as const } : {})}
+      className={styles.cell}
+      titleBadge={
+        !notification.isRead ? (
+          <Badge type="dot" data-testid={`notification-unread-${notification.id}`} />
+        ) : undefined
       }
-      callout={callout}
-      header={notification.title}
-      subheader={formatDate(notification.createdAt)}
-      description={notification.body}
+      subtitle={whoLine ?? undefined}
+      description={detailLine ?? undefined}
+      after={
+        <Info
+          type="text"
+          className={styles.info}
+          subtitle={formatNotifTime(notification.createdAt)}
+        >
+          {route ? (
+            <ChevronRight size={16} className={styles.chevron} aria-hidden />
+          ) : null}
+        </Info>
+      }
+      onClick={interactive ? activate : undefined}
+      onKeyDown={interactive ? handleKeyDown : undefined}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}
       aria-label={interactive ? label : undefined}
-      onClick={interactive ? activate : undefined}
-      onKeyDown={
-        interactive
-          ? (event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                activate();
-              }
-            }
-          : undefined
-      }
-      data-testid={`notification-banner-${notification.id}`}
-    />
+      data-testid={`notification-cell-${notification.id}`}
+    >
+      {notification.title}
+    </Cell>
   );
 }
 
@@ -209,34 +314,28 @@ function NotificationBanner({
  * персист + WebSocket-хинт, Bot API — blocked и здесь не предполагается).
  *
  * - Cursor-пагинация (limit 20, «Показать ещё»);
- * - прочитать одно / прочитать все (оптимистичный кэш);
- * - критичные статусы всегда в inbox независимо от тумблера
- *   (подпись + ссылка на /settings).
+ * - прочитать одно / прочитать все (оптимистичный кэш + откат инвалидацией);
+ * - сегменты — серверный фильтр (?role=/unreadOnly), клиент типы не знает.
  */
 export function NotificationsPage() {
-  const inbox = useNotificationsInboxQuery(20);
-  const markRead = useMarkNotificationReadMutation();
-  const markAll = useMarkAllNotificationsReadMutation();
   const [searchParams, setSearchParams] = useSearchParams();
   const segment = normalizeNotifSegment(searchParams.get("segment"));
+  const navigate = useNavigate();
+  const inbox = useNotificationsInboxQuery(20, segment);
+  const markRead = useMarkNotificationReadMutation();
+  const markAll = useMarkAllNotificationsReadMutation();
 
+  // Фильтр — серверный: бэкенд уже отдал нужный архив, клиент показывает
+  // как есть (m3). «Новые» — очередь входящих (все типы, только непрочитанные).
   const items = useMemo(
     () => inbox.data?.pages.flatMap((page) => page.items) ?? [],
     [inbox.data],
   );
+  const visibleItems = items;
   const unreadCount = inbox.data?.pages[0]?.unreadCount ?? 0;
-
-  // Фильтр сегментов — клиентский по загруженным страницам (как matchesQuery
-  // в TripActivePage; backend без role — серверный ?role= не делаем).
-  // «Новые» — очередь входящих (все типы, включая нейтральные);
-  // ролевые — архивы по карте type→role (включая прочитанные).
-  const visibleItems = useMemo(
-    () =>
-      segment === "unread"
-        ? items.filter((n) => !n.isRead)
-        : items.filter((n) => notifSegmentOf(n.type) === segment),
-    [items, segment],
-  );
+  // markRead.variables — id записи в полёте: блокируем только её ячейку (m1),
+  // а не всю ленту.
+  const markingId = markRead.isPending ? markRead.variables : undefined;
 
   const emptyState =
     segment === "driver"
@@ -312,61 +411,70 @@ export function NotificationsPage() {
         onRetry={() => void inbox.refetch()}
       >
         <Page>
-          {/* Лента: поверхность — Section без заголовка (шаблон групп:
-            TripRequests, популярные). Сверху ряд пилюль: сегменты Новые /
-            Водитель / Пассажир + справа IconButton «Прочитать все»
-            (CheckCheck). Пустое состояние — текст сегмента, баннеры хранят
-            свой хром. */}
-          <Section>
-            <div className={styles.chipRow}>
-              <div className={styles.segments} role="group" aria-label="Фильтр уведомлений">
-                {FILTERS.map(({ id, title }) => renderFilter(id, title))}
-              </div>
-              <div aria-live="polite">
-                <IconButton
-                  aria-label={
-                    unreadCount > 0
-                      ? `Прочитать все (${unreadCount})`
-                      : "Все уведомления прочитаны"
-                  }
-                  disabled={markAll.isPending || unreadCount === 0}
-                  onClick={() => {
-                    haptic.light();
-                    markAll.mutate();
-                  }}
-                >
-                  <CheckCheck size={20} />
-                </IconButton>
-              </div>
+          {/* Сверху ряд пилюль: сегменты Новые / Водитель / Пассажир +
+            справа IconButton «Прочитать все» (CheckCheck) — голый div под
+            Page (гуттер даёт сам Page, паттерн TripActivePage).
+            Лента — прямые Cell внутри Section: кит сам вставляет Divider
+            между строками (hairline-разделители, как в TripHistory).
+            Пустое состояние — текст сегмента в теле Section. */}
+          <div className={styles.chipRow}>
+            <div className={styles.segments} role="group" aria-label="Фильтр уведомлений">
+              {FILTERS.map(({ id, title }) => renderFilter(id, title))}
             </div>
-            <SectionBody>
-              {visibleItems.length === 0 ? (
+            <div aria-live="polite">
+              <IconButton
+                aria-label={
+                  unreadCount > 0
+                    ? `Прочитать все (${unreadCount})`
+                    : "Все уведомления прочитаны"
+                }
+                disabled={markAll.isPending || unreadCount === 0}
+                onClick={() => {
+                  haptic.light();
+                  markAll.mutate();
+                }}
+              >
+                <CheckCheck size={20} />
+              </IconButton>
+            </div>
+          </div>
+
+          {visibleItems.length === 0 ? (
+            <Section>
+              <SectionBody>
                 <EmptyState
                   header={emptyState.header}
                   description={emptyState.description}
                 />
-              ) : (
-                <>
-                  {visibleItems.map((notification) => (
-                    <NotificationBanner
-                      key={notification.id}
-                      notification={notification}
-                      marking={markRead.isPending}
-                      onMarkRead={(id) => markRead.mutate(id)}
-                    />
-                  ))}
-                  <FetchMore
-                    hasNextPage={inbox.hasNextPage}
-                    isFetchingNextPage={inbox.isFetchingNextPage}
-                    fetchNextPage={() => void inbox.fetchNextPage()}
-                    sentinelRef={sentinelRef}
-                    placeholder={<NotificationCardSkeleton />}
-                    placeholderLabel="Загрузка ещё уведомлений"
-                  />
-                </>
-              )}
-            </SectionBody>
-          </Section>
+              </SectionBody>
+            </Section>
+          ) : (
+            <Section>
+              {visibleItems.map((notification) => (
+                <NotificationCell
+                  key={notification.id}
+                  notification={notification}
+                  marking={markingId === notification.id}
+                  onMarkRead={(id) => markRead.mutate(id)}
+                  onOpen={(to) => navigate(to)}
+                />
+              ))}
+            </Section>
+          )}
+
+          {/* M1: конец ленты — по hasNextPage, а не по видимым: иначе пустой
+              сегмент при непрочитанных на следующих страницах — тупик без
+              кнопки и без сентинела автодогрузки. */}
+          {(visibleItems.length > 0 || inbox.hasNextPage) && (
+            <FetchMore
+              hasNextPage={inbox.hasNextPage}
+              isFetchingNextPage={inbox.isFetchingNextPage}
+              fetchNextPage={() => void inbox.fetchNextPage()}
+              sentinelRef={sentinelRef}
+              placeholder={<NotificationCardSkeleton />}
+              placeholderLabel="Загрузка ещё уведомлений"
+            />
+          )}
         </Page>
       </QueryState>
     </>

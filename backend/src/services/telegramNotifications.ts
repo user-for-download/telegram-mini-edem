@@ -12,7 +12,7 @@
 // - `shouldDeliverTelegram` — чистая политика opt-out / critical override;
 // - `resolveTelegramDeepLink` — чистый allowlist TG-маршрутов, всё
 //   неизвестное схлопывается в безопасный `/notifications`;
-// - `findTelegramDuplicate` — защита от двойной доставки одного и того же
+// - `findNotificationDuplicate` — защита от двойной доставки одного и того же
 //   события (повторный прогон воркера): одинаковые user+type+title+body
 //   внутри окна дедупликации;
 // - `deliverTelegramNotification` — тонкий IO-контур: никогда не бросает
@@ -21,16 +21,15 @@
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
+import { CRITICAL_NOTIFICATION_TYPES } from "@edem/contracts";
 
 /**
  * Критичные типы: персистятся независимо от пользовательского тумблера.
- * Единый источник — используется и notification.service.ts.
+ * Алиас единого источника из @edem/contracts (там же — клиент и тесты
+ * контракта; локальных дублирующих сетов быть не должно).
  */
-export const TELEGRAM_CRITICAL_TYPES: ReadonlySet<string> = new Set([
-  "booking_status_changed",
-  "trip_cancelled",
-  "trip_status_changed",
-]);
+export const TELEGRAM_CRITICAL_TYPES: ReadonlySet<string> =
+  CRITICAL_NOTIFICATION_TYPES;
 
 /** Безопасный фолбэк: входная точка inbox, существует всегда. */
 export const TELEGRAM_FALLBACK_ROUTE = "/notifications";
@@ -160,8 +159,10 @@ export interface TelegramDuplicateInput {
  * Ищет идентичную запись того же пользователя/события/текста,
  * созданную внутри окна дедупликации. Легитимные разные события
  * отличаются текстом (город/дата/маршрут), поэтому не подавляются.
+ * Для всех пользователей, не только TG (m9): повторный прогон воркера
+ * иначе дублирует inbox остальным.
  */
-export async function findTelegramDuplicate(
+export async function findNotificationDuplicate(
   input: TelegramDuplicateInput,
   windowMs: number = env.TG_NOTIFICATION_DEDUPE_WINDOW_MS,
 ): Promise<boolean> {

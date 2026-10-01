@@ -8,7 +8,9 @@ import {
 import { z } from "zod";
 import {
   notificationSchema,
+  NOTIFICATION_ROLE_TYPES,
   notificationsPageSchema,
+  notificationsQuerySchema,
 } from "@edem/contracts";
 
 export const notificationsRouter = new Hono<AuthEnv>();
@@ -28,6 +30,17 @@ notificationsRouter.get("/my", publicReadLimiter, async (c) => {
     ? Math.min(Math.max(limitRaw, 1), 50)
     : 20;
 
+  // Серверный фильтр архивов (m3): клиент передаёт сегмент как есть,
+  // по типам сам больше не фильтрует. Невалидный role — 400, а не молча всё.
+  const filterParse = notificationsQuerySchema.safeParse({
+    role: c.req.query("role") ?? undefined,
+    unreadOnly: c.req.query("unreadOnly") ?? undefined,
+  });
+  if (!filterParse.success) {
+    return c.json({ message: "Invalid query" }, 400);
+  }
+  const { role, unreadOnly } = filterParse.data;
+
   let cursor: { createdAt: Date; id: string } | undefined;
   if (cursorStr) {
     // Cap base64-курсора до декодирования: отсекаем заведомо мусорные
@@ -46,11 +59,37 @@ notificationsRouter.get("/my", publicReadLimiter, async (c) => {
     }
   }
 
+  const where: {
+    userId: string;
+    type?: { in: string[] };
+    isRead?: boolean;
+    OR?: Array<{
+      createdAt: { lt: Date } | Date;
+      id?: { lt: string };
+    }>;
+  } = { userId: user.id };
+  if (role) {
+    where.type = { in: [...NOTIFICATION_ROLE_TYPES[role]] };
+  }
+  if (unreadOnly) {
+    where.isRead = false;
+  }
+
+  // Ручной keyset вместо Prisma cursor: курсорная строка обязана попадать
+  // в where, а isRead меняется между страницами (прочтение) — Prisma cursor
+  // на выбывшей строке ломается. Формат токена прежний {createdAt, id},
+  // клиент не меняется.
+  if (cursor) {
+    where.OR = [
+      { createdAt: { lt: cursor.createdAt } },
+      { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+    ];
+  }
+
   const notifications = await db.notification.findMany({
-    where: { userId: user.id },
+    where,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit + 1,
-    ...(cursor ? { cursor, skip: 1 } : {}),
   });
 
   const hasMore = notifications.length > limit;
@@ -68,12 +107,13 @@ notificationsRouter.get("/my", publicReadLimiter, async (c) => {
     where: { userId: user.id, isRead: false },
   });
 
-  // Контракт ждёт createdAt ISO-строкой (z.string().datetime()),
+  // Контракт ждёт даты ISO-строками (z.string().datetime()),
   // Prisma отдаёт Date — сериализуем до parse, иначе Zod бросает и роут
   // отвечает 500 на любой непустой inbox.
   const serialized = items.map((n) => ({
     ...n,
     createdAt: n.createdAt.toISOString(),
+    tripDepartureAt: n.tripDepartureAt ? n.tripDepartureAt.toISOString() : null,
   }));
   return c.json(
     notificationsPageSchema.parse({
@@ -102,6 +142,9 @@ notificationsRouter.patch("/:id/read", notificationReadLimiter, async (c) => {
     notificationSchema.parse({
       ...updated,
       createdAt: updated.createdAt.toISOString(),
+      tripDepartureAt: updated.tripDepartureAt
+        ? updated.tripDepartureAt.toISOString()
+        : null,
     }),
   );
 });
