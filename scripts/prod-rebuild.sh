@@ -5,10 +5,12 @@
 # npm ci и нетронутые исходники не пересобираются (смена только backend
 # → webapp берётся целиком из кэша, и наоборот). Это в разы быстрее full.
 #
-# Готовность ждём ОПРОСОМ /health/ready (backend применяет миграции на
-# старте), а не фиксированным sleep: под нагрузкой/на медленном хосте
-# sleep мог не дождаться и скрипт заканчивался успехом при мёртвом бэкенде.
-# Любая красная проверка → exit 1 + диагностика (ps, логи).
+# Готовность ждём ОПРОСОМ, а не фиксированным sleep: /health/ready у
+# backend (он применяет миграции на старте) и HTTP 200 у webapp — оба
+# опрашиваются в цикле. Одиночная мгновенная проверка webapp ловила
+# ложный FAIL: nginx поднимается на пару секунд позже backend
+# (в отчёте это был HTTP 000000). Любая красная проверка → exit 1 +
+# диагностика (ps, логи).
 #
 # Опции:
 #   --clean     полный сброс: prune builder/image + build --no-cache
@@ -111,11 +113,46 @@ fi
 echo "PASS | health/ready 200 ($HEALTH_URL)"
 
 # 2. Остальные проверки: считаем красные, падаем в конце.
+http_code() {
+  # HTTP-код ответа; ошибка соединения/пустой вывод → ровно "000".
+  # Было `curl ... -w '%{http_code}' ... || echo 000`: при недоступном
+  # порту curl сам печатает "000" и возвращает ненулевой код, поэтому
+  # fallback дописывал второй "000" — в отчёте выходило "000000".
+  c="$(curl -s -o /dev/null -w '%{http_code}' "$@" 2>/dev/null)" || true
+  [ -n "$c" ] || c=000
+  printf '%s' "$c"
+}
+
+# Опрос до первого HTTP 200 (или до лимита секунд, дефолт HEALTH_TIMEOUT).
+# Сервисы стартуют асинхронно: nginx webapp поднимается на пару секунд
+# позже backend, и мгновенный однократный chk давал ложный FAIL.
+# Печатает PASS/FAIL, возвращает 0 при успехе.
+wait_http_200() {
+  name="$1"
+  url="$2"
+  limit="${3:-$HEALTH_TIMEOUT}"
+  i=0
+  code=000
+  while [ "$i" -lt "$limit" ]; do
+    code="$(http_code "$url")"
+    if [ "$code" = "200" ]; then
+      echo "PASS | $name | HTTP $code"
+      return 0
+    fi
+    i=$((i + 1))
+    sleep 1
+  done
+  echo "FAIL | $name | HTTP $code (нет 200 за ${limit}s)"
+  return 1
+}
+
 fails=0
+
+# health/live — backend уже поднят (health/ready выше), хватает одного замера.
 chk() {
   name="$1"
   url="$2"
-  code="$(curl -s -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || echo 000)"
+  code="$(http_code "$url")"
   if [ "$code" = "200" ]; then
     echo "PASS | $name | HTTP $code"
   else
@@ -123,12 +160,13 @@ chk() {
     fails=$((fails + 1))
   fi
 }
-
 chk "health/live" "http://127.0.0.1:3000/health/live"
-chk "webapp" "$WEBAPP_URL"
+
+# webapp — опрос, а не одиночный замер: nginx стартует асинхронно.
+wait_http_200 "webapp" "$WEBAPP_URL" || fails=$((fails + 1))
 
 if [ -n "$TG_HOST" ]; then
-  code="$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $TG_HOST" http://127.0.0.1:3000/ 2>/dev/null || echo 000)"
+  code="$(http_code -H "Host: $TG_HOST" http://127.0.0.1:3000/)"
   if [ "$code" = "200" ]; then
     echo "PASS | tg-host | HTTP $code | $TG_HOST"
   else
