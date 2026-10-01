@@ -31,6 +31,26 @@ const ruleBody = (css: string, selector: string): string =>
     ),
   )?.[1] ?? "";
 
+/**
+ * CSS без комментариев. Обязательно для проверок по тексту: комментарии в
+ * этом репозитории ПОСТОЯННО упоминают «@layer tgui» и «без !important» —
+ * наивная регулярка ловит их и даёт 20 ложных срабатываний.
+ */
+const stripCssComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+/** Все .css/.module.css файлы приложения (рекурсивно, кроме тестов). */
+function walkCss(dir: string, acc: string[] = []): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name !== "__tests__") walkCss(full, acc);
+    } else if (/\.(css|module\.css)$/.test(entry.name)) {
+      acc.push(full);
+    }
+  }
+  return acc;
+}
+
 /** Все .ts/.tsx файлы приложения, кроме тестов. */
 function walkSource(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -176,5 +196,69 @@ describe("каркас: рецепт выбранного тега (ui/Chip tone
   it("фон выбранного тега — кит-токен, а не литерал", () => {
     const rule = ruleBody(chipCss, '.accent[aria-pressed="true"]');
     expect(rule).toContain("background: var(--tgui--button_color");
+  });
+});
+
+describe("каскад: наши модули обязаны остаться ВНЕ слоя tgui", () => {
+  // Весь фасад держится на одном: неслойный модуль бьёт @layer tgui при любой
+  // специфичности. Отсюда два следствия, каждое из которых тихо ломает
+  // переопределения, оставляя тесты зелёными:
+  //   1) наш CSS не должен попасть в СЛОЙ (тогда он опустится ниже кита);
+  //   2) !important в наших файлах запрещён — он ломает правило «побеждает
+  //      геометрия/слой, а не важность» и маскирует ошибки каскада.
+  // Проверяем по ВСЕМ .css приложения, а не только по src/ui: модуль экрана
+  // точно так же уехал бы в слой, если бы кто-то его туда завёл.
+  const cssFiles = walkCss(join(here, ".."));
+  /** Код файла без комментариев (см. stripCssComments). */
+  const codeOf = (f: string): string => stripCssComments(readFileSync(f, "utf8"));
+
+  it("наш CSS в приложении есть и ни один файл не положен в @layer", () => {
+    expect(cssFiles.length).toBeGreaterThan(20);
+    // Модули: @layer запрещён полностью. index.css — единственное законное
+    // место: там объявление @layer tgui и импорт кита внутрь слоя. После
+    // вырезания этих двух строк @layer не должен остаться НИГДЕ.
+    const modules = cssFiles.filter((f) => !f.endsWith(`${sep}index.css`));
+    const inModule = modules.filter((f) => /@layer\s/.test(codeOf(f)));
+    expect(inModule).toEqual([]);
+
+    const indexLeftover = codeOf(join(here, "..", "index.css"))
+      .replace(/@layer\s+tgui\s*;/g, "")
+      .replace(/@import[^;]*telegram-ui[^;]*layer\(tgui\);/g, "");
+    expect(indexLeftover).not.toMatch(/@layer\s/);
+  });
+
+  it("!important не используется нигде в нашем CSS", () => {
+    const offenders = cssFiles.filter((f) => codeOf(f).includes("!important"));
+    expect(offenders).toEqual([]);
+  });
+
+  it("слой tgui объявлен ДО импорта кита (порядок объявления = порядок слоёв)", () => {
+    const layerAt = indexCss.indexOf("@layer tgui;");
+    const importAt = indexCss.indexOf(
+      '@import "@telegram-apps/telegram-ui/dist/styles.css" layer(tgui);',
+    );
+    expect(layerAt).toBeGreaterThanOrEqual(0);
+    expect(importAt).toBeGreaterThan(layerAt);
+  });
+
+  it("в index.css кит подключён РОВНО ОДИН раз", () => {
+    const imports = indexCss.match(/@import[^;]*telegram-ui[^;]*;/g) ?? [];
+    expect(imports).toHaveLength(1);
+    expect(imports[0]).toContain("layer(tgui)");
+  });
+});
+
+describe("каскад: остаточные слепые зоны (документированы, не закрыты)", () => {
+  // Честная фиксация того, что структурными проверками НЕ ловится:
+  // итоговое применение стилей в браузере (порядок инъекции модулей,
+  // поведение @layer в конкретном движке). Для этого нужен замер
+  // getComputedStyle в браузере (Playwright), а не чтение текста — jsdom
+  // не каскадит слои. Пока такого стенда нет, это осознанный пробел:
+  //новое глобальное НЕСЛОЙНОЕ правило в index/css с теми же свойствами, что
+  // перебивает .page/.pageHero/.card.card, прошло бы молча.
+  it("гипотеза о слепой зоне зафиксирована в ui/README.md", () => {
+    const readme = readCss("../ui/README.md");
+    expect(readme).toContain("@layer tgui");
+    expect(readme).toMatch(/слойн/i);
   });
 });
