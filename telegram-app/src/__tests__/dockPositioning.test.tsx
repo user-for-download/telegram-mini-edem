@@ -1,24 +1,20 @@
 // Проверка ПРИМЕНЕНИЯ стилей позиционирования дока таббара и снэкбара.
 //
-// Оба правила были написаны удвоенными селекторами (`.tabbar.tabbar`,
-// `.snackbar.snackbar`) с ошибочным обоснованием «перебить каскад кита
-// специфичностью». Удвоение не повышает специфичность — оно требует, чтобы
-// класс стоял в className ДВАЖДЫ. Класс приходил один раз, поэтому правила
-// не матчились: тост висел на китовом `bottom: 10px` поверх дока, а док был
-// полосой во всю ширину без пилюли — при том что вложенные правила
-// (`.tabbar :global(...)`) применялись, а --app-page-pad-bottom уже
-// резервировал место под пилюлю.
+// Здесь нет бага: `.tabbar.tabbar` и `.snackbar.snackbar` — рабочие
+// удвоенные селекторы (подъём специфичности, матчит и с одним вхождением
+// класса; проверено в браузере). Раньше я счёл их мёртвыми и «исправил»
+// на одиночные — это было неверно.
 //
-// Текстовые пины в layoutCss.test.ts были зелёными при мёртвых правилах.
-// Здесь проверяем class-атрибут реального рендера — но не само по себе
-// («класс присутствует» ничего не значит), а то, что класс сел на ТОТ ЖЕ
-// узел, на котором у кита стоит `position: fixed`. Именно от этого зависит,
-// применится ли наш `bottom`/`left`/`right`. Если кит перенесёт fixed на
-// другой узел (или сменит хэш) — тест упадёт.
+// Тест оставлен ради полезного инварианта: наш класс должен сесть на ТОТ ЖЕ
+// узел, на котором у кита стоит `position: fixed`. Если кит перенесёт
+// позиционирование на другой узел (или сменит хэш при bump'е), наши
+// bottom/left/right перестанут применяться — а текстовые пины в
+// layoutCss.test.ts этого не видят.
+//
+// Итоговое применение целиком проверяет e2e/ui-cascade.mjs (браузер).
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { AppRoot, Snackbar, Tabbar } from "@telegram-apps/telegram-ui";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -59,24 +55,6 @@ function kitRule(cls: string): string {
   return m?.[1] ?? "";
 }
 
-/** Код CSS модуля без комментариев (комментарии упоминают старый селектор). */
-const cssCode = (p: string): string =>
-  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", p), "utf8").replace(
-    /\/\*[\s\S]*?\*\//g,
-    "",
-  );
-
-/**
- * Селектор правила обязан быть ОДИНОЧНЫМ. Это вторая, не менее важная
- * половина условия «правило применится»: класс в DOM (проверяем выше) плюс
- * селектор `.X` вместо `.X.X`. Проверка только по DOM молча проходила бы
- * при возвращённом удвоении — мы это видели.
- */
-function expectSingleSelector(css: string, cls: string): void {
-  expect(css).toMatch(new RegExp(`^\\.${cls}\\s*[,{]`, "m"));
-  expect(css).not.toMatch(new RegExp(`\\.${cls}\\s*\\.${cls}`));
-}
-
 describe("док таббара: наш класс сел на узел китово position:fixed", () => {
   // Корневой класс китового Tabbar, нёсший позиционирование (dist 2.1.13).
   const KIT_FIXED = "tgui-7a5facec9dc28fae";
@@ -102,13 +80,7 @@ describe("док таббара: наш класс сел на узел кито
     expect(classes).toContain(KIT_FIXED);
   });
 
-  it("селектор .tabbar одиночный — иначе правило не сматчится", () => {
-    expectSingleSelector(cssCode("components/TabsBar/Tabbar.module.css"), "tabbar");
-  });
-
-  it("вложенные правила таббара живые: одиночный .tabbar в class", () => {
-    // Регрессия-фикса: если бы .tabbar остался удвоенным, вложенные
-    // правила перестали бы работать вместе с контейнерными.
+  it("класс .tabbar приходит ровно один раз", () => {
     const html = render(
       <Tabbar className={TABBAR}>
         {[
@@ -144,10 +116,6 @@ describe("снэкбар: наш класс сел на узел китово po
     const classes = classesOfNodeWith(html, SNACKBAR);
     expect(classes).toContain(SNACKBAR);
     expect(classes).toContain(KIT_FIXED);
-  });
-
-  it("селектор .snackbar одиночный — иначе правило не сматчится", () => {
-    expectSingleSelector(cssCode("components/Toast/Toast.module.css"), "snackbar");
   });
 
   it("класс .snackbar приходит ровно один раз (не удвоен в className)", () => {
