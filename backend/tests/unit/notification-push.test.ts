@@ -104,6 +104,7 @@ describe("createNotification — outbox wiring (shadow)", () => {
         deepLink: "/notifications",
         actorName: "Илья Северов",
         action: "confirmed",
+        recipientRole: null,
         tripFrom: null,
         tripTo: null,
         tripPrice: null,

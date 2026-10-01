@@ -512,6 +512,8 @@ adminRouter.post("/feedback/:id/reply", mutationLimiter, async (c) => {
     // Вторая строка — «имя • действие» (глагол согласуется с актором).
     actorName: "Оператор",
     action: "replied",
+    // Без роли: у ответа поддержки нет ролевого контекста поездки —
+    // виден только в очереди «Новые», архивного дома нет (осознанно).
   });
 
   logBusinessEvent("feedback.replied", {
@@ -890,6 +892,8 @@ adminRouter.patch("/trips/:id/cancel", mutationLimiter, async (c) => {
         actorName: "Администратор",
         action: "cancelled",
         tripSnapshot: tripSnapshotOf(trip),
+        // Получатели — пассажиры отменённой поездки.
+        role: "passenger",
       });
 
       wsManager.sendToUser(pid, {
@@ -1249,6 +1253,8 @@ adminRouter.patch("/reviews/:id/approve", mutationLimiter, async (c) => {
     // Вторая строка — «имя • действие» (глагол согласуется с актором).
     actorName: "Модератор",
     action: "approved",
+    // Без роли: у модерации отзыва нет ролевого контекста поездки —
+    // виден только в очереди «Новые», архивного дома нет (осознанно).
   });
 
   return c.json(serializeAdminReview(updated));
@@ -1358,6 +1364,8 @@ adminRouter.patch("/reviews/:id/reject", mutationLimiter, async (c) => {
     // Вторая строка — «имя • действие» (глагол согласуется с актором).
     actorName: "Модератор",
     action: "rejected",
+    // Без роли: у модерации отзыва нет ролевого контекста поездки —
+    // виден только в очереди «Новые», архивного дома нет (осознанно).
   });
 
   return c.json(serializeAdminReview(updated));

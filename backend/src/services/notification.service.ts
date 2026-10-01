@@ -16,7 +16,10 @@
 import { db } from "../db.js";
 import { logger } from "../logger.js";
 import { env } from "../env.js";
-import { NOTIFICATION_HINT_REFRESH_ID } from "@edem/contracts";
+import {
+  NOTIFICATION_HINT_REFRESH_ID,
+  type NotificationRole,
+} from "@edem/contracts";
 import { wsManager } from "./wsManager.js";
 import {
   decideTelegramDelivery,
@@ -181,13 +184,17 @@ export async function createNotification(
   action?: string,
   /** Снапшот поездки для третьей строки («дата • цена • маршрут»). */
   tripSnapshot?: NotificationTripSnapshot,
+  /** Роль получателя в момент события (driver | passenger). Последний
+   * опциональный параметр — прямым вызывающим ничего не ломает.
+   * null в БД — записи без ролевого контекста (админ-события, легаси). */
+  role?: NotificationRole,
   /** Возвращает id созданной записи; null — пропуск (тумблер/дедуп) или сбой. */
 ): Promise<string | null> {
   try {
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) return null;
     // Критичные уведомления создаются независимо от тумблера.
-    // Некритичные (booking_created, trip_details_changed и др.)
+    // Некритичные (booking_created и др.)
     // подчиняются настройкам пользователя.
     // Критичные типы — единый источник CRITICAL_NOTIFICATION_TYPES
     // в @edem/contracts (там же клиент; комментарий о бизнес-контракте
@@ -223,6 +230,7 @@ export async function createNotification(
         deepLink: fragment ? resolveTelegramDeepLink(fragment) : null,
         actorName: actorName ?? null,
         action: action ?? null,
+        recipientRole: role ?? null,
         tripFrom: tripSnapshot?.from ?? null,
         tripTo: tripSnapshot?.to ?? null,
         tripPrice: tripSnapshot?.price ?? null,
@@ -276,6 +284,9 @@ export interface NotifyUserInput {
   action?: string;
   /** Снапшот поездки для третьей строки («дата • цена • маршрут»). */
   tripSnapshot?: NotificationTripSnapshot;
+  /** Роль получателя в момент события. Без неё — null (админ-события
+   * без ролевого контекста, легаси-совместимость). */
+  role?: NotificationRole;
 }
 
 /**
@@ -301,6 +312,7 @@ export async function notifyUser(
     input.actorName,
     input.action,
     input.tripSnapshot,
+    input.role,
   );
   if (id) {
     wsManager.sendToUser(input.userId, {

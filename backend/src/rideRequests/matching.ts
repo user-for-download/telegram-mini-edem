@@ -85,6 +85,8 @@ export async function notifyMatchingRideRequests(
       actorName: driver?.name,
       action: "matched",
       tripSnapshot: tripSnapshotOf(trip),
+      // Получатель — автор запроса (потенциальный пассажир).
+      role: "passenger",
     });
   }
 }

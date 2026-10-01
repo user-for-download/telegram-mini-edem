@@ -257,6 +257,8 @@ async function processExpiredTrip(trip: ExpiredTrip, cutoff: Date) {
             actorName: driver?.name,
             action: "completed",
             tripSnapshot: tripSnapshotOf(trip),
+            // Получатели — пассажиры автозавершённой поездки.
+            role: "passenger",
           });
           wsManager.sendToUser(pId, {
             type: "trip:status_changed",
@@ -277,6 +279,8 @@ async function processExpiredTrip(trip: ExpiredTrip, cutoff: Date) {
             actorName: driver?.name,
             action: "completed",
             tripSnapshot: tripSnapshotOf(trip),
+            // Получатели — пассажиры с отклонённой pending-заявкой.
+            role: "passenger",
           });
           wsManager.sendToUser(pId, {
             type: "trip:status_changed",
@@ -297,6 +301,8 @@ async function processExpiredTrip(trip: ExpiredTrip, cutoff: Date) {
           actorName: driver?.name,
           action: "completed",
           tripSnapshot: tripSnapshotOf(trip),
+          // Получатель — водитель автозавершённой поездки.
+          role: "driver",
         });
         wsManager.sendToUser(trip.driverId, {
           type: "trip:status_changed",

@@ -69,6 +69,17 @@ describe("decideTelegramDelivery — полная политика с согла
     ).toEqual({ deliver: true });
   });
 
+  it("trip_details_changed — critical: чат + выключенный тумблер → доставляем", () => {
+    expect(
+      decideTelegramDelivery({
+        type: "trip_details_changed",
+        notificationsEnabled: false,
+        chatJoined: true,
+        channelEnabled: true,
+      }),
+    ).toEqual({ deliver: true });
+  });
+
   it("optional + чат + выключенный тумблер → notifications_disabled", () => {
     expect(
       decideTelegramDelivery({
@@ -118,12 +129,12 @@ describe("shouldDeliverTelegram — opt-out / critical override", () => {
     expect(shouldDeliverTelegram("booking_status_changed", false)).toBe(true);
     expect(shouldDeliverTelegram("trip_cancelled", false)).toBe(true);
     expect(shouldDeliverTelegram("trip_status_changed", false)).toBe(true);
+    expect(shouldDeliverTelegram("trip_details_changed", false)).toBe(true);
   });
 
   it("optional подчиняется тумблеру", () => {
     expect(shouldDeliverTelegram("booking_created", true)).toBe(true);
     expect(shouldDeliverTelegram("booking_created", false)).toBe(false);
-    expect(shouldDeliverTelegram("trip_details_changed", false)).toBe(false);
     expect(shouldDeliverTelegram("review_approved", false)).toBe(false);
   });
 });

@@ -284,6 +284,8 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
       actorName: user.name,
       action: newStatus,
       tripSnapshot: tripSnapshotOf(updated.booking.trip),
+      // Получатель — пассажир (автор заявки).
+      role: "passenger",
     });
 
     wsManager.sendToUser(passengerId, {

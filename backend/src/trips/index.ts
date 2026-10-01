@@ -955,6 +955,8 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
           actorName: user.name,
           action: "changed",
           tripSnapshot: tripSnapshotOf(updated),
+          // Получатели — пассажиры с confirmed-бронью.
+          role: "passenger",
         });
 
         wsManager.sendToUser(booking.passengerId, {
@@ -1108,6 +1110,8 @@ tripsRouter.patch("/:id/cancel", requireUser, cancelTripLimiter, async (c) => {
         actorName: user.name,
         action: "cancelled",
         tripSnapshot: tripSnapshotOf(updated),
+        // Получатели — пассажиры отменённой поездки.
+        role: "passenger",
       });
 
       wsManager.sendToUser(pid, {
@@ -1327,6 +1331,8 @@ tripsRouter.patch(
         actorName: user.name,
         action: "completed",
         tripSnapshot: tripSnapshotOf(updated),
+        // Получатели — пассажиры завершённой поездки.
+        role: "passenger",
       });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
@@ -1349,6 +1355,8 @@ tripsRouter.patch(
         actorName: user.name,
         action: "completed",
         tripSnapshot: tripSnapshotOf(updated),
+        // Получатели — пассажиры с отклонённой pending-заявкой.
+        role: "passenger",
       });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",

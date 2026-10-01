@@ -512,6 +512,70 @@ describe("NotificationsPage: сегменты", () => {
   });
 });
 
+describe("NotificationsPage: ролевые архивы (item 10, m3)", () => {
+  it("архив «Водитель» рендерит ровно строки сервера, без клиентского фильтра", () => {
+    // Сервер отдал в архив смешанные строки (включая прочитанные и тип
+    // вне клиентских карт) — клиент рисует все как есть, по типам не фильтрует.
+    setMocks(
+      pageWithItems([
+        makeNotification({ id: "n-1", type: "booking_created", title: "Заявка водителя" }),
+        makeNotification({ id: "n-2", type: "booking_status_changed", isRead: true, title: "Статус пассажира" }),
+        makeNotification({ id: "n-3", type: "something_future", title: "Тип вне карт клиента" }),
+      ]),
+    );
+
+    const html = renderPageAt("/notifications?segment=driver");
+
+    expect(mockUseInbox).toHaveBeenCalledWith(20, "driver");
+    expect(html).toContain("Заявка водителя");
+    expect(html).toContain("Статус пассажира");
+    expect(html).toContain("Тип вне карт клиента");
+  });
+
+  it("легаси-строки (без роли) рендерятся через серверный fallback — клиент их не отсекает", () => {
+    // Легаси (recipientRole null) попадает в архив только по серверной
+    // type-карте NOTIFICATION_ROLE_TYPES; клиент о роли не знает и не фильтрует.
+    setMocks(
+      pageWithItems([
+        makeNotification({ id: "n-1", type: "booking_created", title: "Легаси-заявка" }),
+      ]),
+    );
+
+    const html = renderPageAt("/notifications?segment=driver");
+
+    expect(html).toContain("Легаси-заявка");
+  });
+
+  it("архив «Пассажир»: тип вне клиентских карт рендерится, если сервер его вернул", () => {
+    setMocks(
+      pageWithItems([
+        makeNotification({ id: "n-1", type: "ride_request_match", title: "Совпадение запроса" }),
+        makeNotification({ id: "n-2", type: "something_future", title: "Будущий тип" }),
+      ]),
+    );
+
+    const html = renderPageAt("/notifications?segment=passenger");
+
+    expect(mockUseInbox).toHaveBeenCalledWith(20, "passenger");
+    expect(html).toContain("Совпадение запроса");
+    expect(html).toContain("Будущий тип");
+  });
+
+  it("нейтральный тип от сервера тоже рендерится (клиент архивные строки не фильтрует)", () => {
+    // feedback_replied — нейтральный (архивного дома нет по контракту), но
+    // если сервер вернул строку — клиент обязан её показать.
+    setMocks(
+      pageWithItems([
+        makeNotification({ id: "n-1", type: "feedback_replied", title: "Ответ поддержки" }),
+      ]),
+    );
+
+    const html = renderPageAt("/notifications?segment=driver");
+
+    expect(html).toContain("Ответ поддержки");
+  });
+});
+
 describe("NotificationsPage: состояния запроса", () => {
   it("loading — спиннер, ошибка — повтор", () => {
     setMocks({ isLoading: true });

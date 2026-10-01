@@ -60,20 +60,39 @@ notificationsRouter.get("/my", publicReadLimiter, async (c) => {
     }
   }
 
+  // userId + isRead — верхнеуровневые AND-условия. Составные OR-группы
+  // (роль, курсор) кладутся в where.AND массивом: второй where.OR ПЕРЕЗАПИСАЛ
+  // бы первый (курсорный keyset терялся бы при ?role=), поэтому обе OR-группы
+  // комбинируются через AND.
   const where: {
     userId: string;
-    type?: { in: string[] };
     isRead?: boolean;
-    OR?: Array<{
-      createdAt: { lt: Date } | Date;
-      id?: { lt: string };
+    AND?: Array<{
+      OR: Array<{
+        createdAt?: { lt: Date } | Date;
+        id?: { lt: string };
+        recipientRole?: string | null;
+        type?: { in: string[] };
+      }>;
     }>;
   } = { userId: user.id };
-  if (role) {
-    where.type = { in: [...NOTIFICATION_ROLE_TYPES[role]] };
-  }
   if (unreadOnly) {
     where.isRead = false;
+  }
+
+  const andConditions: NonNullable<typeof where.AND> = [];
+  if (role) {
+    // Строки с записанной ролью матчатся напрямую; легаси-строки
+    // (recipientRole null) — по type-карте NOTIFICATION_ROLE_TYPES.
+    andConditions.push({
+      OR: [
+        { recipientRole: role },
+        {
+          recipientRole: null,
+          type: { in: [...NOTIFICATION_ROLE_TYPES[role]] },
+        },
+      ],
+    });
   }
 
   // Ручной keyset вместо Prisma cursor: курсорная строка обязана попадать
@@ -81,10 +100,15 @@ notificationsRouter.get("/my", publicReadLimiter, async (c) => {
   // на выбывшей строке ломается. Формат токена прежний {createdAt, id},
   // клиент не меняется.
   if (cursor) {
-    where.OR = [
-      { createdAt: { lt: cursor.createdAt } },
-      { createdAt: cursor.createdAt, id: { lt: cursor.id } },
-    ];
+    andConditions.push({
+      OR: [
+        { createdAt: { lt: cursor.createdAt } },
+        { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+      ],
+    });
+  }
+  if (andConditions.length > 0) {
+    where.AND = andConditions;
   }
 
   const notifications = await db.notification.findMany({

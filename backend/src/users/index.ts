@@ -235,6 +235,8 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
         actorName: user.name,
         action: "completed",
         tripSnapshot: tripSnapshotOf(trip),
+        // Получатели — пассажиры завершённой поездки.
+        role: "passenger",
       });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
@@ -253,6 +255,8 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
         actorName: user.name,
         action: "completed",
         tripSnapshot: tripSnapshotOf(trip),
+        // Получатели — пассажиры с отклонённой pending-заявкой.
+        role: "passenger",
       });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",

@@ -54,6 +54,7 @@ describe("RideRequest matching notifications", () => {
       fragment: "/trips/trip-1",
       actorName: "Илья Северов",
       action: "matched",
+      role: "passenger",
       tripSnapshot: { from: "F", to: "T", price: 100 },
     });
     // Item 7: hint уходит внутри notifyUser — напрямую matching WS не шлёт

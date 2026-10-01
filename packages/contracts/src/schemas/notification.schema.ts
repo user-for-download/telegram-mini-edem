@@ -56,6 +56,7 @@ export type UnreadCount = z.infer<typeof unreadCountSchema>;
 export const CRITICAL_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
   "booking_status_changed",
   "trip_cancelled",
+  "trip_details_changed",
   "trip_status_changed",
 ]);
 

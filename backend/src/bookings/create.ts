@@ -285,6 +285,8 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
       actorName: booking.passenger.name,
       action: "created",
       tripSnapshot: tripSnapshotOf(booking.trip),
+      // Получатель — водитель поездки.
+      role: "driver",
     });
 
     // Внешняя доставка водителю — только через утверждённый канал

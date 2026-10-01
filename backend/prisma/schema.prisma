@@ -103,6 +103,9 @@ model Notification {
   // created/confirmed/declined/cancelled/completed/changed/matched/
   // replied/approved/rejected. null — легаси-записи без кода.
   action    String?
+  // Роль получателя в момент события: driver | passenger. null —
+  // легаси-записи до введения роли (фильтр по type-map fallback).
+  recipientRole String?
   // Снапшот поездки для третьей строки ячейки («дата, время • цена •
   // маршрут»): фиксируется в момент события, переживает удаление
   // поездки. null — у события нет поездки (отзывы, поддержка).

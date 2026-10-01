@@ -88,6 +88,7 @@ describe("notification role/critical sets (single source, m3/m6)", () => {
     expect([...CRITICAL_NOTIFICATION_TYPES].sort()).toEqual([
       "booking_status_changed",
       "trip_cancelled",
+      "trip_details_changed",
       "trip_status_changed",
     ]);
   });

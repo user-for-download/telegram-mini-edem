@@ -95,3 +95,10 @@ Trade-off (parity phase, before the 2026-09-14 approval): users did not receive 
   (`notificationDispatcher.ts`) with consent, rate limits and kill-switch
   enforced per tick; no-token mode marks `skipped`/`no_token` without
   any external call.
+
+## Addendum 2026-10-01 — `trip_details_changed` is critical
+
+`trip_details_changed` is now in `CRITICAL_NOTIFICATION_TYPES`: it is
+persisted to the inbox and delivered regardless of the shared
+optional-notification toggle. Users with the toggle OFF will newly
+receive these (inbox + background delivery with consent).

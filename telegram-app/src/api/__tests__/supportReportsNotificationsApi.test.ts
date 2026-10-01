@@ -75,6 +75,45 @@ describe("notificationsApi (Telegram)", () => {
     );
   });
 
+  it("getMy с role — серверный фильтр ролевого архива (item 10)", async () => {
+    requestMock.mockResolvedValue({ items: [], nextCursor: null });
+
+    await notificationsApi.getMy(undefined, 20, undefined, { role: "driver" });
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "/notifications/my?limit=20&role=driver",
+      { signal: undefined },
+      notificationsPageSchema,
+    );
+  });
+
+  it("getMy с unreadOnly — очередь «Новые» (item 10)", async () => {
+    requestMock.mockResolvedValue({ items: [], nextCursor: null });
+
+    await notificationsApi.getMy(undefined, 20, undefined, { unreadOnly: true });
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "/notifications/my?limit=20&unreadOnly=1",
+      { signal: undefined },
+      notificationsPageSchema,
+    );
+  });
+
+  it("getMy с role+unreadOnly — оба фильтра в одном запросе", async () => {
+    requestMock.mockResolvedValue({ items: [], nextCursor: null });
+
+    await notificationsApi.getMy(undefined, 20, undefined, {
+      role: "passenger",
+      unreadOnly: true,
+    });
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "/notifications/my?limit=20&role=passenger&unreadOnly=1",
+      { signal: undefined },
+      notificationsPageSchema,
+    );
+  });
+
   it("markRead кодирует id и идёт на PATCH /:id/read", async () => {
     requestMock.mockResolvedValue(notification({ isRead: true }));
 

@@ -57,7 +57,13 @@ async function getInbox(token: string, query = "") {
     headers: bearer(token, uniqueIp()),
   });
   return { status: res.status, body: (await res.json()) as {
-    items: Array<{ type: string; isRead: boolean }>;
+    items: Array<{
+      id: string;
+      type: string;
+      title: string;
+      isRead: boolean;
+      recipientRole: string | null;
+    }>;
     nextCursor: string | null;
     unreadCount: number;
   } };
@@ -193,6 +199,146 @@ describe("GET /notifications/my — серверный фильтр role/unreadO
     expect(page2.body.items).toHaveLength(1);
     expect(page2.body.nextCursor).toBeNull();
     expect(page2.body.items[0].type).not.toBe(page1.body.items[0].type);
+  });
+
+  it("stored recipientRole разводит строки по архивам (dual-role)", async () => {
+    const { userId, accessToken } = await telegramLogin(
+      app,
+      nextTelegramId(),
+      "Роль",
+    );
+    const now = Date.now();
+    // trip_status_changed входит в ОБЕ type-карты — только stored-роль
+    // различает архивы (legacy fallback отдал бы строку обоим).
+    await db.notification.create({
+      data: {
+        userId,
+        type: "trip_status_changed",
+        title: "D",
+        body: "BD",
+        recipientRole: "driver",
+        createdAt: new Date(now - 3000),
+      },
+    });
+    await db.notification.create({
+      data: {
+        userId,
+        type: "trip_status_changed",
+        title: "P",
+        body: "BP",
+        recipientRole: "passenger",
+        createdAt: new Date(now - 2000),
+      },
+    });
+    await db.notification.create({
+      data: {
+        userId,
+        type: "booking_created",
+        title: "B",
+        body: "BB",
+        recipientRole: "driver",
+        createdAt: new Date(now - 1000),
+      },
+    });
+
+    const driver = await getInbox(accessToken, "?role=driver");
+    expect(driver.status).toBe(200);
+    expect(driver.body.items.map((n) => n.title).sort()).toEqual(["B", "D"]);
+
+    const passenger = await getInbox(accessToken, "?role=passenger");
+    expect(passenger.status).toBe(200);
+    expect(passenger.body.items.map((n) => n.title)).toEqual(["P"]);
+  });
+
+  it("legacy-строки без роли матчатся по type-карте, вне карты — нигде", async () => {
+    const { userId, accessToken } = await telegramLogin(
+      app,
+      nextTelegramId(),
+      "Роль",
+    );
+    const now = Date.now();
+    const legacy = [
+      { type: "booking_created", title: "LD" },
+      { type: "booking_status_changed", title: "LP" },
+      { type: "review_approved", title: "LN" },
+    ];
+    for (const [i, row] of legacy.entries()) {
+      await db.notification.create({
+        data: {
+          userId,
+          type: row.type,
+          title: row.title,
+          body: `LB${i}`,
+          // recipientRole не пишем — null, как у строк до миграции.
+          createdAt: new Date(now - (3000 - i * 1000)),
+        },
+      });
+    }
+
+    const driver = await getInbox(accessToken, "?role=driver");
+    expect(driver.status).toBe(200);
+    expect(driver.body.items.map((n) => n.title)).toEqual(["LD"]);
+
+    const passenger = await getInbox(accessToken, "?role=passenger");
+    expect(passenger.status).toBe(200);
+    expect(passenger.body.items.map((n) => n.title)).toEqual(["LP"]);
+
+    // Нейтральный тип без архивного дома — только в общем списке.
+    const all = await getInbox(accessToken, "?limit=20");
+    expect(all.status).toBe(200);
+    expect(all.body.items.map((n) => n.title).sort()).toEqual([
+      "LD",
+      "LN",
+      "LP",
+    ]);
+  });
+
+  it("cursor + ?role= со stored-ролями: все страницы без дублей и чужих", async () => {
+    const { userId, accessToken } = await telegramLogin(
+      app,
+      nextTelegramId(),
+      "Роль",
+    );
+    const now = Date.now();
+    // Роли чередуются по времени — фильтр обязан резаться ДО курсора
+    // (AND-реструктура where), иначе страницы брали бы чужие строки.
+    const seed: Array<{ type: string; title: string; role: string }> = [
+      { type: "booking_created", title: "D1", role: "driver" },
+      { type: "booking_status_changed", title: "P1", role: "passenger" },
+      { type: "booking_created", title: "D2", role: "driver" },
+      { type: "booking_status_changed", title: "P2", role: "passenger" },
+      { type: "booking_created", title: "D3", role: "driver" },
+    ];
+    for (const [i, row] of seed.entries()) {
+      await db.notification.create({
+        data: {
+          userId,
+          type: row.type,
+          title: row.title,
+          body: `B${i}`,
+          recipientRole: row.role,
+          createdAt: new Date(now - (5000 - i * 1000)),
+        },
+      });
+    }
+
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    for (let page = 0; page < 5; page++) {
+      const query =
+        `?role=driver&limit=1` +
+        (cursor ? `&cursor=${encodeURIComponent(cursor)}` : "");
+      const res = await getInbox(accessToken, query);
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].title.startsWith("D")).toBe(true);
+      seen.push(res.body.items[0].title);
+      cursor = res.body.nextCursor;
+      if (!cursor) break;
+    }
+    // Новейшие первыми, все 3 driver-строки ровно по разу, passenger — ни разу.
+    expect(seen).toEqual(["D3", "D2", "D1"]);
+    expect(cursor).toBeNull();
   });
 });
 
