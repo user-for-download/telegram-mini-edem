@@ -99,11 +99,11 @@ describe("каркас: слой TGUI и нижний клиренс", () => {
   });
 
   it("снекбар снизу над доком таббара и со стандартной высотой", () => {
-    const snackbar = ruleBody(toastCss, ".snackbar.snackbar");
+    const snackbar = ruleBody(toastCss, ".snackbar");
     expect(snackbar).toContain("top: auto");
     expect(snackbar).toContain("var(--app-dock-height)");
     expect(snackbar).toContain("var(--app-dock-float)");
-    expect(ruleBody(toastCss, ".snackbar.snackbar > div")).toContain(
+    expect(ruleBody(toastCss, ".snackbar > div")).toContain(
       "min-height: 48px",
     );
   });
