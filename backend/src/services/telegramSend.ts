@@ -10,6 +10,9 @@
 // Исходы (SendOutcome) — машина, без текстов ответа Telegram:
 // - ok            → 200, сообщение доставлено;
 // - bot_blocked   → 403: пользователь заблокировал бота (перманентно);
+// - chat_not_found → 4xx с description «chat not found»: чата нет
+//   (chatId из проверенного initData ⇒ нет согласия; терминально,
+//   как bot_blocked — диспетчер сбрасывает tgChatJoinedAt, skipped);
 // - rate_limited  → 429: глобальный лимит Telegram, уважаем retry_after;
 // - permanent     → 400 и прочие 4xx: повтор бессмыслен;
 // - transient     → сеть/таймаут/5xx: кандидат на ретрай диспетчера.
@@ -24,6 +27,7 @@ import { logger } from "../logger.js";
 export type SendOutcome =
   | { ok: true }
   | { ok: false; kind: "bot_blocked" }
+  | { ok: false; kind: "chat_not_found" }
   | { ok: false; kind: "rate_limited"; retryAfterMs: number }
   | { ok: false; kind: "permanent" }
   | { ok: false; kind: "transient" };
@@ -132,6 +136,19 @@ async function safeJson(res: Response): Promise<unknown> {
   }
 }
 
+/**
+ * Чистая проверка: несёт ли тело Bot API признак «chat not found».
+ * Bot API отвечает 400 с description вида «Bad Request: chat not found».
+ * Сравнение — case-insensitive подстрока по строковому description;
+ * не-объектные тела (null/строка/массив-без-description) — не признак.
+ */
+function isChatNotFound(body: unknown): boolean {
+  if (typeof body !== "object" || body === null) return false;
+  const description = (body as { description?: unknown }).description;
+  if (description === undefined || description === null) return false;
+  return String(description).toLowerCase().includes("chat not found");
+}
+
 /** Маппинг HTTP-исхода на SendOutcome (чистая, тестируется отдельно). */
 export function mapStatusToOutcome(
   status: number,
@@ -150,7 +167,10 @@ export function mapStatusToOutcome(
       retryAfterMs: Math.min(Math.max(retrySec, 1), 3600) * 1000,
     };
   }
-  if (status >= 400 && status < 500) return { ok: false, kind: "permanent" };
+  if (status >= 400 && status < 500) {
+    if (isChatNotFound(body)) return { ok: false, kind: "chat_not_found" };
+    return { ok: false, kind: "permanent" };
+  }
   return { ok: false, kind: "transient" };
 }
 

@@ -1,13 +1,13 @@
 // backend/tests/e2e/botApiShadow.test.ts
 //
-// E2E bot-api shadow mode: полный жизненный цикл фоновых доставок без
-// единого внешнего вызова (Bot API заблокирован ADR).
+// E2E no_token-пути: полный жизненный цикл фоновых доставок без токена
+// и без единого внешнего вызова (Bot API недоступен без токена).
 //
-// Сценарий (approval-package §4.7 + §5 раскатка-шаг 1 «тень»):
+// Сценарий (approval-package §4.7 + §5 раскатка-шаг 1):
 // 1. /start через webhook → согласие зафиксировано;
 // 2. critical (booking_status_changed) и optional (booking_created)
 //    события → inbox + outbox pending;
-// 3. pollOnce → delivered/shadow (fetch-шпион: api.telegram.org не звался);
+// 3. pollOnce → skipped/no_token (fetch-шпион: api.telegram.org не звался);
 // 4. /stop → optional даёт skipped/no_chat, critical без чата — тоже
 //    тихо skipped (инвариант одного тумблера: критичные гейтятся только
 //    чатом, сплита telegramNotificationsEnabled нет);
@@ -126,8 +126,8 @@ afterEach(async () => {
   createdUserIds.length = 0;
 });
 
-describe("E2E: bot-api shadow — полный цикл", () => {
-  it("/start → critical+optional события → outbox → pollOnce → delivered/shadow", async () => {
+describe("E2E: no_token — полный цикл", () => {
+  it("/start → critical+optional события → outbox → pollOnce → skipped/no_token", async () => {
     const user = await seedUser();
     await webhookStart(user.tgId);
 
@@ -163,13 +163,13 @@ describe("E2E: bot-api shadow — полный цикл", () => {
       "/trips/my/123e4567-e89b-12d3-a456-426614174000/requests",
     );
 
-    // Диспетчер: обе задачи размечены delivered/shadow.
+    // Диспетчер: без токена обе задачи тихо skipped/no_token.
     const claimed = await pollOnce();
     expect(claimed).toBeGreaterThanOrEqual(2);
 
     deliveries = await deliveriesOf(user.id);
-    expect(deliveries.every((d) => d.status === "delivered")).toBe(true);
-    expect(deliveries.every((d) => d.error === "shadow")).toBe(true);
+    expect(deliveries.every((d) => d.status === "skipped")).toBe(true);
+    expect(deliveries.every((d) => d.error === "no_token")).toBe(true);
 
     assertNoExternalCalls();
   });

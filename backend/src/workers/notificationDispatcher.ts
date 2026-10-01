@@ -53,6 +53,78 @@ export interface DispatcherDeps {
   now?: () => Date;
 }
 
+/** Зависшая processing-запись, кандидат на восстановление. */
+interface StuckDelivery {
+  id: string;
+  attempts: number;
+}
+
+/**
+ * Чистое разделение зависших записей: исчерпавшие ретраи — в failed,
+ * остальные — обратно в очередь. attempts+1 >= maxRetries — порог
+ * совпадает с retryOrFail/processDelivery (включая текущую попытку).
+ */
+function splitStuckForRecovery(
+  stuck: readonly StuckDelivery[],
+  maxRetries: number,
+): { retryIds: string[]; failIds: string[] } {
+  const retryIds: string[] = [];
+  const failIds: string[] = [];
+  for (const row of stuck) {
+    if (row.attempts + 1 >= maxRetries) failIds.push(row.id);
+    else retryIds.push(row.id);
+  }
+  return { retryIds, failIds };
+}
+
+/**
+ * Восстановление зависших processing-записей (краш/рестарт посреди
+ * батча): updatedAt старше TG_NOTIFICATION_PROCESSING_TIMEOUT_MS —
+ * обратно в pending с очищенным nextAttemptAt (забираемы сразу же в
+ * этом тике) и attempts+1; исчерпавшие лимит — в failed. Свежие
+ * processing-строки фильтр updatedAt не затрагивает никогда.
+ * Логи — только машинные коды и счётчики, без body/PII.
+ */
+async function recoverStuckProcessing(now: Date): Promise<void> {
+  const cutoff = new Date(now.getTime() - env.TG_NOTIFICATION_PROCESSING_TIMEOUT_MS);
+  const stuck = await db.notificationDelivery.findMany({
+    where: { status: "processing", updatedAt: { lt: cutoff } },
+    select: { id: true, attempts: true },
+  });
+  if (stuck.length === 0) return;
+  const { retryIds, failIds } = splitStuckForRecovery(stuck, env.TG_NOTIFICATION_MAX_RETRIES);
+  if (retryIds.length > 0) {
+    await db.notificationDelivery.updateMany({
+      where: { id: { in: retryIds } },
+      data: {
+        status: "pending",
+        nextAttemptAt: null,
+        attempts: { increment: 1 },
+        error: "processing_timeout",
+      },
+    });
+    logger.warn(
+      { recovered: retryIds.length, code: "processing_timeout" },
+      "tg_dispatch_recovered",
+    );
+  }
+  if (failIds.length > 0) {
+    await db.notificationDelivery.updateMany({
+      where: { id: { in: failIds } },
+      data: {
+        status: "failed",
+        nextAttemptAt: null,
+        attempts: { increment: 1 },
+        error: "max_retries_exceeded",
+      },
+    });
+    logger.error(
+      { recovered: failIds.length, code: "max_retries_exceeded" },
+      "tg_dispatch_recovery_failed",
+    );
+  }
+}
+
 /** Атомарный захват пачки pending-задач (pending -> processing). */
 async function claimPendingBatch(now: Date): Promise<ClaimedDelivery[]> {
   return db.notificationDelivery.updateManyAndReturn({
@@ -209,16 +281,18 @@ async function settleSendOutcome(
     );
     return true;
   }
-  if (outcome.kind === "bot_blocked") {
-    // Пользователь заблокировал бота: согласие недействительно, чата
-    // больше нет — сбрасываем, следующих отправок не будет (ADR).
+  if (outcome.kind === "bot_blocked" || outcome.kind === "chat_not_found") {
+    // Терминально, без ретраев: согласие недействительно, чата больше
+    // нет — сбрасываем, следующих отправок не будет (ADR). chatId взят
+    // из проверенного initData, поэтому «chat not found» означает
+    // отсутствие чата/согласия, а не временный сбой.
     await db.user.update({
       where: { id: delivery.userId },
       data: { tgChatJoinedAt: null },
     });
-    await settleDelivery(delivery, "skipped", "bot_blocked");
+    await settleDelivery(delivery, "skipped", outcome.kind);
     logger.debug(
-      { userId: delivery.userId, type: delivery.type, outcome: "bot_blocked" },
+      { userId: delivery.userId, type: delivery.type, outcome: outcome.kind },
       "tg_dispatch_skipped",
     );
     return true;
@@ -233,7 +307,13 @@ async function settleSendOutcome(
     return true;
   }
   if (outcome.kind === "permanent") {
-    await retryOrFail(delivery, "bad_request", null, now);
+    // Одна попытка: 4xx-повтор бессмыслен — сразу failed/bad_request.
+    // settleDelivery на failed сам делает attempts+1, retryOrFail не зовём.
+    await settleDelivery(delivery, "failed", "bad_request");
+    logger.error(
+      { userId: delivery.userId, type: delivery.type, outcome: "failed", code: "bad_request" },
+      "tg_dispatch_failed",
+    );
     return true;
   }
   return false; // transient — вызывающий разметит кодом network_error.
@@ -323,24 +403,24 @@ async function processDelivery(delivery: ClaimedDelivery, now: Date): Promise<vo
       return;
     }
 
-    // 4) Доставка: без токена — shadow-разметка (внешнего вызова нет);
+    // 4) Доставка: без токена — skipped/no_token (внешнего вызова нет);
     //    с токеном — реальный sendMessage (ADR approved 2026-09-14).
     if (!env.TELEGRAM_BOT_TOKEN) {
-      await settleDelivery(delivery, "delivered", "shadow");
+      await settleDelivery(delivery, "skipped", "no_token");
       logger.debug(
-        { userId: delivery.userId, type: delivery.type, outcome: "delivered_shadow" },
-        "tg_dispatch_shadow",
+        { userId: delivery.userId, type: delivery.type, outcome: "no_token" },
+        "tg_dispatch_skipped",
       );
       return;
     }
     await sendDelivery(delivery, user?.telegramUserId ?? null, now);
-  } catch {
+  } catch (err) {
     // 5) Непредвиденная ошибка: ретраи с бэкоффом, потом failed.
     const nextAttempt = RETRY_BACKOFF_MS[delivery.attempts] ?? null;
     if (nextAttempt === null || delivery.attempts + 1 >= env.TG_NOTIFICATION_MAX_RETRIES) {
       await settleDelivery(delivery, "failed", "max_retries_exceeded");
       logger.error(
-        { userId: delivery.userId, type: delivery.type, outcome: "failed" },
+        { err, userId: delivery.userId, type: delivery.type, outcome: "failed" },
         "tg_dispatch_failed",
       );
       return;
@@ -352,7 +432,7 @@ async function processDelivery(delivery: ClaimedDelivery, now: Date): Promise<vo
       new Date(now.getTime() + nextAttempt),
     );
     logger.error(
-      { userId: delivery.userId, type: delivery.type, outcome: "retry_scheduled" },
+      { err, userId: delivery.userId, type: delivery.type, outcome: "retry_scheduled" },
       "tg_dispatch_retry",
     );
   }
@@ -365,6 +445,7 @@ async function processDelivery(delivery: ClaimedDelivery, now: Date): Promise<vo
  */
 export async function pollOnce(deps: DispatcherDeps = {}): Promise<number> {
   const now = deps.now ? deps.now() : new Date();
+  await recoverStuckProcessing(now);
   const batch = await claimPendingBatch(now);
   if (batch.length === 0) return 0;
 
@@ -387,13 +468,18 @@ function runDispatcherCycle(): void {
 
 export function startNotificationDispatcher(): void {
   if (workerInterval) return;
+  if (env.TELEGRAM_DELIVERY_ENABLED && !env.TELEGRAM_BOT_TOKEN) {
+    logger.warn({ code: "no_token" }, "tg_dispatch_no_token");
+  }
   runDispatcherCycle();
   workerInterval = setInterval(
     runDispatcherCycle,
     env.TG_NOTIFICATION_DISPATCH_INTERVAL_MS,
   );
   workerInterval.unref?.();
-  logger.info("Notification outbox dispatcher started (shadow mode)");
+  logger.info(
+    "Notification outbox dispatcher started (no-token ticks mark skipped/no_token)",
+  );
 }
 
 export function stopNotificationDispatcher(): void {

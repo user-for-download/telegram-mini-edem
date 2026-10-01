@@ -64,6 +64,44 @@ describe("mapStatusToOutcome — маппинг HTTP → исход", () => {
     });
   });
 
+  it("400 с description «chat not found» → chat_not_found (терминально)", () => {
+    expect(
+      mapStatusToOutcome(400, {
+        ok: false,
+        error_code: 400,
+        description: "Bad Request: chat not found",
+      }),
+    ).toEqual({ ok: false, kind: "chat_not_found" });
+  });
+
+  it("chat-not-found регистронезависим, любой 4xx кроме 403/429", () => {
+    expect(
+      mapStatusToOutcome(400, { description: "Bad Request: CHAT NOT FOUND" }),
+    ).toEqual({ ok: false, kind: "chat_not_found" });
+    expect(
+      mapStatusToOutcome(404, { description: "chat NOT found" }),
+    ).toEqual({ ok: false, kind: "chat_not_found" });
+  });
+
+  it("не-объектные тела и пустой description → permanent, не chat_not_found", () => {
+    expect(mapStatusToOutcome(400, null)).toEqual({
+      ok: false,
+      kind: "permanent",
+    });
+    expect(mapStatusToOutcome(400, "chat not found")).toEqual({
+      ok: false,
+      kind: "permanent",
+    });
+    expect(mapStatusToOutcome(400, {})).toEqual({
+      ok: false,
+      kind: "permanent",
+    });
+    expect(mapStatusToOutcome(400, { description: 400 })).toEqual({
+      ok: false,
+      kind: "permanent",
+    });
+  });
+
   it("500/502 → transient (ретрай)", () => {
     expect(mapStatusToOutcome(500, {})).toEqual({ ok: false, kind: "transient" });
     expect(mapStatusToOutcome(502, {})).toEqual({ ok: false, kind: "transient" });

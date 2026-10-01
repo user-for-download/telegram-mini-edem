@@ -161,6 +161,33 @@ describe("E2E real-send: 403 bot_blocked", () => {
   });
 });
 
+describe("E2E real-send: 400 chat_not_found", () => {
+  it("400 chat not found → skipped + согласие сброшено, без ретрая", async () => {
+    mockTelegramSend(400, {
+      ok: false,
+      error_code: 400,
+      description: "Bad Request: chat not found",
+    });
+    const user = await seedUser();
+
+    await createNotification(user.id, "trip_cancelled", "T", "B");
+    await pollOnce();
+
+    const deliveries = await deliveriesOf(user.id);
+    expect(deliveries[0].status).toBe("skipped");
+    expect(deliveries[0].error).toBe("chat_not_found");
+
+    // Согласие отозвано автоматически.
+    const after = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.tgChatJoinedAt).toBeNull();
+
+    // Ровно один вызов API — ретрая нет.
+    expect(
+      fetchSpy.mock.calls.filter((c) => String(c[0]) === SEND_URL),
+    ).toHaveLength(1);
+  });
+});
+
 describe("E2E real-send: 429 rate_limited", () => {
   it("429 с retry_after → pending, nextAttemptAt в будущем, attempts=1", async () => {
     mockTelegramSend(429, {

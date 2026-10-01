@@ -1,11 +1,14 @@
 // backend/tests/unit/notificationDispatcher.test.ts
 //
-// Outbox-диспетчер (bot-api shadow): pollOnce размечает задачи без
-// внешних вызовов. Мокаем db/env (паттерн telegramNotifications.test),
+// Outbox-диспетчер (no_token без токена): pollOnce размечает задачи;
+// без токена внешнего вызова нет, с токеном — реальный sendMock.
+// Мокаем db/env (паттерн telegramNotifications.test),
 // fetch-шпион следит, что api.telegram.org не зовётся НИКОГДА.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const updateManyAndReturn = vi.fn();
+const updateMany = vi.fn();
+const findManyStuck = vi.fn();
 const update = vi.fn();
 const userFindUnique = vi.fn();
 const userUpdate = vi.fn();
@@ -20,6 +23,8 @@ vi.mock("../../src/db.js", () => ({
     notification: { findUnique: notificationFindUnique },
     notificationDelivery: {
       updateManyAndReturn,
+      updateMany,
+      findMany: findManyStuck,
       update,
       count: deliveryCount,
       findFirst: deliveryFindFirst,
@@ -40,13 +45,17 @@ const envState = {
   TELEGRAM_BOT_TOKEN: "",
   TG_NOTIFICATION_DISPATCH_BATCH_SIZE: 20,
   TG_NOTIFICATION_MAX_RETRIES: 3,
+  TG_NOTIFICATION_PROCESSING_TIMEOUT_MS: 600_000,
   TG_NOTIFICATION_USER_RATE_WINDOW_MS: 3_600_000,
   TG_NOTIFICATION_USER_RATE_MAX: 5,
   TG_NOTIFICATION_CRITICAL_TYPE_COOLDOWN_MS: 300_000,
+  TG_NOTIFICATION_DISPATCH_INTERVAL_MS: 5_000,
 };
 vi.mock("../../src/env.js", () => ({ env: envState }));
 
-const { pollOnce } = await import("../../src/workers/notificationDispatcher.js");
+const { pollOnce, startNotificationDispatcher, stopNotificationDispatcher } =
+  await import("../../src/workers/notificationDispatcher.js");
+const { logger } = await import("../../src/logger.js");
 
 const USER_ACTIVE = {
   notificationsEnabled: true,
@@ -83,6 +92,8 @@ describe("pollOnce — захват и обработка", () => {
     vi.stubGlobal("fetch", fetchMock);
     envState.TELEGRAM_DELIVERY_ENABLED = true;
     envState.TELEGRAM_BOT_TOKEN = "";
+    findManyStuck.mockResolvedValue([]);
+    updateMany.mockResolvedValue({ count: 0 });
     update.mockResolvedValue({});
     userUpdate.mockResolvedValue({});
     userFindUnique.mockResolvedValue(USER_ACTIVE);
@@ -98,16 +109,16 @@ describe("pollOnce — захват и обработка", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
-  it("happy path: чат + тумблер → delivered/shadow, без внешних вызовов", async () => {
+  it("happy path без токена: чат + тумблер → skipped/no_token, без внешних вызовов", async () => {
     updateManyAndReturn.mockResolvedValue([delivery()]);
 
     const claimed = await pollOnce();
 
     expect(claimed).toBe(1);
-    // Статус delivered с маркером shadow (Bot API заблокирован).
+    // Без токена внешнего вызова нет — задача тихо skipped.
     expect(update).toHaveBeenCalledWith({
       where: { id: "d1" },
-      data: expect.objectContaining({ status: "delivered", error: "shadow" }),
+      data: expect.objectContaining({ status: "skipped", error: "no_token" }),
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -192,7 +203,7 @@ describe("pollOnce — захват и обработка", () => {
     });
   });
 
-  it("ошибка БД → attempts+1 и pending с бэкоффом 1м", async () => {
+  it("ошибка БД → attempts+1 и pending с бэкоффом 1м, err залогирован", async () => {
     // Первая settle (update) падает как «неожиданная ошибка обработки».
     update.mockRejectedValueOnce(new Error("db flake"));
     updateManyAndReturn.mockResolvedValue([delivery()]);
@@ -209,6 +220,11 @@ describe("pollOnce — захват и обработка", () => {
         attempts: 1,
       }),
     });
+    // Bare catch логирует пойманную ошибку (ids + машинные коды, без PII).
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error), userId: "u1" }),
+      expect.any(String),
+    );
   });
 
   it("ошибка на attempts=2 (последняя) → failed/max_retries_exceeded", async () => {
@@ -246,6 +262,8 @@ describe("pollOnce — реальная отправка (токен задан,
     vi.clearAllMocks();
     envState.TELEGRAM_DELIVERY_ENABLED = true;
     envState.TELEGRAM_BOT_TOKEN = "123:abc";
+    findManyStuck.mockResolvedValue([]);
+    updateMany.mockResolvedValue({ count: 0 });
     update.mockResolvedValue({});
     userUpdate.mockResolvedValue({});
     userFindUnique.mockResolvedValue(USER_ACTIVE);
@@ -258,7 +276,7 @@ describe("pollOnce — реальная отправка (токен задан,
     deliveryFindFirst.mockResolvedValue(null);
   });
 
-  it("ok → delivered без shadow-маркера; текст = title+body, deep-link передан", async () => {
+  it("ok → delivered без маркера; текст = title+body, deep-link передан", async () => {
     updateManyAndReturn.mockResolvedValue([delivery()]);
 
     await pollOnce();
@@ -288,6 +306,30 @@ describe("pollOnce — реальная отправка (токен задан,
       where: { id: "d1" },
       data: expect.objectContaining({ status: "skipped", error: "bot_blocked" }),
     });
+  });
+
+  it("chat_not_found → skipped + согласие сброшено, ретраев нет (одна попытка)", async () => {
+    sendMock.mockResolvedValue({ ok: false, kind: "chat_not_found" });
+    updateManyAndReturn.mockResolvedValue([delivery()]);
+
+    await pollOnce();
+
+    // Ровно одна попытка отправки — перепланирования нет.
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(userUpdate).toHaveBeenCalledWith({
+      where: { id: "u1" },
+      data: { tgChatJoinedAt: null },
+    });
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "d1" },
+      data: expect.objectContaining({ status: "skipped", error: "chat_not_found" }),
+    });
+    // Терминально: ни pending-возврата, ни инкремента попыток.
+    const data = update.mock.calls[0][0].data;
+    expect(data.status).toBe("skipped");
+    expect(data.attempts).toBeUndefined();
+    expect(data.nextAttemptAt ?? null).toBeNull();
   });
 
   it("429 rate_limited → pending с nextAttemptAt = retry_after, attempts+1", async () => {
@@ -339,20 +381,27 @@ describe("pollOnce — реальная отправка (токен задан,
     });
   });
 
-  it("400 permanent → ретраи по обычной схеме, error=bad_request", async () => {
+  it("400 permanent → сразу failed/bad_request, одна попытка (ретраев нет)", async () => {
     sendMock.mockResolvedValue({ ok: false, kind: "permanent" });
     updateManyAndReturn.mockResolvedValue([delivery()]);
 
     await pollOnce();
 
-    expect(update).toHaveBeenLastCalledWith({
+    // Ровно одна попытка отправки — перепланирования нет.
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({
       where: { id: "d1" },
       data: expect.objectContaining({
-        status: "pending",
+        status: "failed",
         error: "bad_request",
         attempts: 1,
       }),
     });
+    // Терминально: второго шанса нет (nextAttemptAt=null).
+    const data = update.mock.calls[0][0].data;
+    expect(data.status).toBe("failed");
+    expect(data.nextAttemptAt ?? null).toBeNull();
   });
 
   it("inbox-запись удалена → skipped/notification_deleted, без отправки", async () => {
@@ -375,6 +424,8 @@ describe("pollOnce — реальная отправка (токен задан,
 describe("pollOnce — захват очереди", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    findManyStuck.mockResolvedValue([]);
+    updateMany.mockResolvedValue({ count: 0 });
   });
 
   it("забирает только pending с наступившим nextAttemptAt", async () => {
@@ -399,5 +450,146 @@ describe("pollOnce — захват очереди", () => {
   it("обработка не бросает наружу даже при катастрофе в claim", async () => {
     updateManyAndReturn.mockRejectedValue(new Error("conn lost"));
     await expect(pollOnce()).rejects.toThrow("conn lost");
+  });
+});
+
+describe("pollOnce — восстановление зависших processing", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    envState.TELEGRAM_DELIVERY_ENABLED = true;
+    envState.TELEGRAM_BOT_TOKEN = "";
+    envState.TG_NOTIFICATION_PROCESSING_TIMEOUT_MS = 600_000;
+    envState.TG_NOTIFICATION_MAX_RETRIES = 3;
+    updateMany.mockResolvedValue({ count: 1 });
+    update.mockResolvedValue({});
+    userFindUnique.mockResolvedValue(USER_ACTIVE);
+    notificationFindUnique.mockResolvedValue({ title: "Заголовок", body: "Тело" });
+    deliveryCount.mockResolvedValue(0);
+    deliveryFindFirst.mockResolvedValue(null);
+  });
+
+  it("stuck-строка старше таймаута → pending и отправлена ровно один раз", async () => {
+    findManyStuck.mockResolvedValue([{ id: "stuck1", attempts: 0 }]);
+    // Восстановленная строка забирается тем же тиком.
+    updateManyAndReturn.mockResolvedValue([delivery({ id: "stuck1" })]);
+    const now = new Date("2026-09-14T12:00:00Z");
+
+    const claimed = await pollOnce({ now: () => now });
+
+    // Фильтр: только processing старше cutoff (fresh не затрагиваем).
+    expect(findManyStuck).toHaveBeenCalledWith({
+      where: {
+        status: "processing",
+        updatedAt: {
+          lt: new Date(now.getTime() - envState.TG_NOTIFICATION_PROCESSING_TIMEOUT_MS),
+        },
+      },
+      select: { id: true, attempts: true },
+    });
+    // Возврат в очередь: claimable сразу (nextAttemptAt=null), attempts+1.
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["stuck1"] } },
+      data: expect.objectContaining({
+        status: "pending",
+        nextAttemptAt: null,
+        error: "processing_timeout",
+      }),
+    });
+    expect(updateMany.mock.calls[0][0].data.attempts).toEqual({ increment: 1 });
+    // Тот же тик доставил ровно один раз (no_token, без внешних вызовов).
+    expect(claimed).toBe(1);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "stuck1" },
+      data: expect.objectContaining({ status: "skipped", error: "no_token" }),
+    });
+  });
+
+  it("свежие processing (внутри таймаута) не трогаются", async () => {
+    // БД-фильтр updatedAt < cutoff свежие строки исключает сам —
+    // зависших нет, recovery молчит, очередь пуста.
+    findManyStuck.mockResolvedValue([]);
+    updateManyAndReturn.mockResolvedValue([]);
+    const now = new Date("2026-09-14T12:00:00Z");
+
+    expect(await pollOnce({ now: () => now })).toBe(0);
+    expect(updateMany).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("stuck на исходе ретраев (attempts+1 >= MAX) → failed", async () => {
+    findManyStuck.mockResolvedValue([{ id: "stuck9", attempts: 2 }]);
+    updateManyAndReturn.mockResolvedValue([]);
+
+    await pollOnce();
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["stuck9"] } },
+      data: expect.objectContaining({
+        status: "failed",
+        error: "max_retries_exceeded",
+      }),
+    });
+    expect(updateMany.mock.calls[0][0].data.attempts).toEqual({ increment: 1 });
+    // В очередь не возвращаем — claim нечего забирать, settle нет.
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("смешанный батч: retry-строки в pending, лимитные — в failed", async () => {
+    findManyStuck.mockResolvedValue([
+      { id: "s-retry", attempts: 0 },
+      { id: "s-fail", attempts: 5 },
+    ]);
+    updateManyAndReturn.mockResolvedValue([]);
+
+    await pollOnce();
+
+    expect(updateMany).toHaveBeenCalledTimes(2);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["s-retry"] } },
+      data: expect.objectContaining({ status: "pending" }),
+    });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["s-fail"] } },
+      data: expect.objectContaining({ status: "failed" }),
+    });
+  });
+});
+
+describe("startNotificationDispatcher — стартовая диагностика", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    envState.TELEGRAM_DELIVERY_ENABLED = true;
+    envState.TELEGRAM_BOT_TOKEN = "";
+    findManyStuck.mockResolvedValue([]);
+    updateManyAndReturn.mockResolvedValue([]);
+  });
+
+  it("enabled без токена → warn no_token, стартовый лог без «shadow»", async () => {
+    startNotificationDispatcher();
+    try {
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ code: "no_token" }),
+        expect.any(String),
+      );
+      const infoText = vi
+        .mocked(logger.info)
+        .mock.calls.map((call) => String(call[0]))
+        .join(" ");
+      expect(infoText).not.toContain("shadow");
+      expect(infoText).toContain("no_token");
+    } finally {
+      stopNotificationDispatcher();
+    }
+  });
+
+  it("токен задан → warn нет", async () => {
+    envState.TELEGRAM_BOT_TOKEN = "123:abc";
+    startNotificationDispatcher();
+    try {
+      expect(logger.warn).not.toHaveBeenCalled();
+    } finally {
+      stopNotificationDispatcher();
+    }
   });
 });

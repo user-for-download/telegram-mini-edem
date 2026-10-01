@@ -277,6 +277,19 @@ export const env = {
   TG_NOTIFICATION_DISPATCH_BATCH_SIZE: positiveIntEnv("TG_NOTIFICATION_DISPATCH_BATCH_SIZE", 50),
 
   /**
+   * Таймаут зависших processing-записей outbox (мс): pollOnce в начале
+   * тика возвращает в pending строки со статусом processing, чей
+   * updatedAt старше этого окна (краш/рестарт посреди батча), с bump
+   * attempts; исчерпавшие TG_NOTIFICATION_MAX_RETRIES — в failed.
+   * Должен превышать пачку × таймаут отправки (50 × 10 с ≈ 8.3 мин),
+   * иначе живые тики будут отбирать задачи друг у друга; дефолт 10 мин.
+   */
+  TG_NOTIFICATION_PROCESSING_TIMEOUT_MS: positiveIntEnv(
+    "TG_NOTIFICATION_PROCESSING_TIMEOUT_MS",
+    10 * 60 * 1000,
+  ),
+
+  /**
    * URL Telegram Mini App (https://t.me/... или прямой https-домен) для
    * кнопки «Открыть» в сообщениях бота (web_app). Пусто = сообщения
    * без кнопки (только текст). Deep-link маршруты allowlist-ятся
