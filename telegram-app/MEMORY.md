@@ -200,8 +200,9 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
   `TRIP_KEYS.all`/`BOOKING_KEYS.all`/`NOTIFICATION_KEYS.all` (HTTP refetch, не replay).
 - Дедуп событий: модульное множество `realtimeSeenEvents` (живёт между маунтами и
   между тестами одного файла — **в тестах ключи уникальны**), cap 200.
-- `notification:new` — только hint (инвалидация inbox), тоста нет. Остальные
-  (`booking:*`, `trip:*`) — инвалидация + Snackbar + haptic, с dedupeKey.
+- `notification:new` — только hint, тоста нет. Хинт **сужен**: инвалидирует
+  `NOTIFICATION_KEYS.unreadCount()` + `NOTIFICATION_KEYS.lists()` (текущий список),
+  НЕ blanket `all`. Остальные (`booking:*`, `trip:*`) — инвалидация + Snackbar + haptic.
 - **Файл `WebSocketProvider.tsx` = 604 строки**: транспорт (WsProvider) + доменные
   подписки (TelegramRealtimeListener). Кандидат на вынос listener (см. Findings).
 
@@ -222,12 +223,32 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
 - `route-fade` key = только `pathname` (смена query не перемонтирует страницу, чтобы не
   терять скролл/скелетоны).
 
-## 13. Query keys
+## 13. Query keys и уведомления
+
+### Query keys
 
 `queries/useTripsQuery.ts`: `TRIP_KEYS = { all, lists(), list(filters), my(),
 details(), detail(id) }`. Аналогично `BOOKING_KEYS`, `NOTIFICATION_KEYS`.
+`NOTIFICATION_KEYS = { all, lists(), inbox(limit, segment), unreadCount() }`.
 Цикл избегается сырым `["bookings"]` в `useInvalidateTripsAndBookings`
 (`useBookingsQuery` импортирует `TRIP_KEYS`).
+
+### Уведомления — что есть (после плана 2026-10-01)
+
+- **Backend** (`backend/src/notifications/index.ts`): `GET /my` (cursor + `?role=`/`?unreadOnly=`),
+  `GET /unread-count` (owner-scope, лёгкий), `PATCH /:id/read` (scoped `updateMany` + 404),
+  `PATCH /read-all`. Схемы — `unreadCountSchema`, `notificationsQuerySchema` в контрактах.
+- **Retention**: `pruneOldNotifications` в `notification.service.ts` (outbox 30д,
+  inbox read 90д / unread 180д), хук в `processExpiredTrips` (tripWorker), knobs в `env.ts`.
+- **RecipientRole**: `Notification.recipientRole` (String?, миграция
+  `20261001092913`), `?role=` = stored role OR legacy `NOTIFICATION_ROLE_TYPES` fallback.
+- **notifyUser** (`notification.service.ts`): `createNotification` + WS-hint
+  `notification:new` с `NOTIFICATION_HINT_REFRESH_ID` — только при созданной записи.
+- **Dispatcher** (`workers/notificationDispatcher.ts`): recovery зависших `processing`
+  (`TG_NOTIFICATION_PROCESSING_TIMEOUT_MS`, дефолт 10 мин), `chat_not_found`/`permanent`
+  → терминально, `skipped/no_token` без токена, `trip_details_changed` в критичных.
+- **Client**: бейдж на табе — `useUnreadCountQuery()`; хинт сужен до счётчика + текущего
+  списка; мутации чтения патчат оба кэша (`applyMarkReadCaches`/`applyMarkAllReadCaches`).
 
 ## 14. Тесты — конвенции
 
@@ -292,16 +313,18 @@ details(), detail(id) }`. Аналогично `BOOKING_KEYS`, `NOTIFICATION_KEY
 |---|---|---|---|
 | medium | `package.json:15` | скоуп `@tma.js/sdk-react` устарел; отстаёт по мажору | плановый апгрейд одной зависимостью, сверить changelog + `kitContract` |
 | medium | `WebSocketProvider.tsx:103,465` | транспорт + доменные подписки в одном файле 604 строки | вынести `TelegramRealtimeListener` в `providers/` |
-| medium | `mockEnv.ts:75` | dev-bypass `hash=dev-hash` — закрыт бэкендовым `ALLOW_DEV_AUTH`+allowlist | подтвердить гейт на бэке; в проде tree-shaken |
 | low | `useAuthStore.ts:14,236` | статус `"error"` не выставляется → недостижимые ветки `AuthGate.tsx:73,179` | удалить или начать использовать |
 | low | `client.ts:79`, `useAuthStore.ts:96`, `AuthGate.tsx:125` | `ACCOUNT_DELETED_MESSAGE`/`isDeletedError` в 3 местах | один общий helper |
 | low | `AppConfig.tsx:114-162` | дубль списка `THEME_VAR_NAMES`/палитр | приемлемо, покрыто тестом контраста |
+| low | `README.md:12,344`, `backend/ENVIRONMENT.md:76-91` | устаревшая «blocked/shadow»-проза после удаления shadow-режима | добрать микрокоммитом |
 
 ## 18. Куда смотреть дальше
 
 - `README.md` (корень) — продукт, деплой, env.
 - Бывшие `docs/migration/*` и отчёты деплоя удалены из дерева — смотри git.
 - `docs/deployment/telegram-staging-checklist.md` — живой прод-чеклист.
+- `docs/adr/telegram-notification-delivery.md` — доставка уведомлений (inbox + WS + Bot API).
 - `e2e/telegram-parity.mjs`, `e2e/telegram-realtime.mjs` — сценарии.
 - `packages/contracts/src/index.ts` — Zod-схемы/DTO, общие с backend.
 - `webapp/` — админка (shadcn-style), отдельный слой; не путать с mini-app.
+- `.tmp/sessions/2026-10-01-notifications-fix/context.md` — контекст плана уведомлений (10 пунктов).
