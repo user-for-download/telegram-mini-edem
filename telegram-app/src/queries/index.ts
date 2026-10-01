@@ -7,5 +7,4 @@ export * from "./useRideRequestsQuery";
 export * from "./profile";
 export * from "./useSupportQuery";
 export * from "./useTripsQuery";
-export * from "./useUsersQuery";
 export * from "./vehicle";

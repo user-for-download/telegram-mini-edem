@@ -38,33 +38,9 @@ const validUser = {
 
 const userWithoutCar = { ...validUser, car: undefined };
 
-describe("vehicleApi (Telegram, порт usersApi.updateCar)", () => {
+describe("vehicleApi: подресурс /users/me/car", () => {
   beforeEach(() => {
     requestMock.mockReset();
-  });
-
-  it("getCurrentVehicle читает /users/me с userSchema и возвращает car", async () => {
-    requestMock.mockResolvedValue(validUser);
-
-    const vehicle = await vehicleApi.getCurrentVehicle();
-
-    expect(requestMock).toHaveBeenCalledWith("/users/me", { signal: undefined }, userSchema);
-    expect(vehicle).toEqual({ model: "Skoda Octavia", color: "белый", plate: "583" });
-  });
-
-  it("getCurrentVehicle возвращает null, когда авто не добавлено (empty-state, не ошибка)", async () => {
-    requestMock.mockResolvedValue(userWithoutCar);
-
-    await expect(vehicleApi.getCurrentVehicle()).resolves.toBeNull();
-  });
-
-  it("getCurrentVehicle прокидывает сигнал отмены", async () => {
-    const signal = new AbortController().signal;
-    requestMock.mockResolvedValue(validUser);
-
-    await vehicleApi.getCurrentVehicle(signal);
-
-    expect(requestMock).toHaveBeenCalledWith("/users/me", { signal }, userSchema);
   });
 
   it("upsertVehicle шлёт POST /users/me/car с JSON-телом и валидирует ответ", async () => {
@@ -116,7 +92,6 @@ describe("vehicleApi (Telegram, порт usersApi.updateCar)", () => {
   it("неавторизованный доступ: 401 пробрасывается (сессия/AuthGate обрабатывают)", async () => {
     requestMock.mockRejectedValue(new ApiError("Unauthorized", "UNAUTHORIZED", 401));
 
-    await expect(vehicleApi.getCurrentVehicle()).rejects.toMatchObject({ status: 401 });
     await expect(
       vehicleApi.upsertVehicle({ model: "Lada", color: "белый" }),
     ).rejects.toMatchObject({ status: 401 });

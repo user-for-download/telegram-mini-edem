@@ -41,10 +41,21 @@ export function DriverPanel({
   // Заявки видны только водителю: остальным бэкенд вернёт 403,
   // поэтому запрос делаем только здесь.
   const bookings = useTripBookingsQuery(tripId, { enabled: isActive });
-  const pendingCount =
+  // Число в кнопке — СЕРВЕРНЫЙ pendingRequestsCount из trip (детали уже
+  // загружены, нового запроса не нужно). Считать по загруженным
+  // страницам нельзя: /bookings/trip/:id отдаёт по 50 строк на страницу,
+  // и при >50 заявках водитель видел бы «50» вместо реального числа
+  // (пагинация при этом не подгружается — кнопка ведёт на экран заявок).
+  // Строки по 50 для отрисовки списка на экране заявок остаются: там нужен
+  // сам список, а не его длина.
+  //
+  // pendingRequestsCount опционален в контракте — при его отсутствии
+  // откатываемся к подсчёту по загруженным страницам.
+  const loadedPendingCount =
     bookings.data?.pages
       .flatMap((page) => page.items)
       .filter((booking) => booking.status === "pending").length ?? 0;
+  const pendingCount = trip.pendingRequestsCount ?? loadedPendingCount;
 
   return (
     <div className={styles.section}>

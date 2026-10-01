@@ -94,6 +94,45 @@ export function formatArrivalTime(time: string, durationMinutes: number): string
 }
 
 /**
+ * Ключ календарного дня в московской зоне: "YYYY-MM-DD".
+ *
+ * Нужен там, где сравниваются ДНИ, а не instants: «сегодня ли поездка»,
+ * «этот же год». Сравнивать через date.toDateString() нельзя — это зона
+ * устройства, и у клиента в UTC−5 «сегодня» начнётся на 5 часов раньше
+ * московского. en-CA даёт ISO-подобный YYYY-MM-DD.
+ *
+ * Общий хелпер вместо копии `MOSCOW_TZ` в каждом модуле: правило
+ * «время поездок показываем по Москве» должно быть одно.
+ */
+export function moscowDayKey(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: MOSCOW_TZ,
+  }).format(date);
+}
+
+/** Московский час:минуты даты. */
+export function moscowTimeLabel(date: Date): string {
+  return new Intl.DateTimeFormat("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: MOSCOW_TZ,
+  }).format(date);
+}
+
+/** Московская дата даты: "2 июн." или "2 июн. 2029" (другой год — с годом). */
+export function moscowDateLabel(date: Date, withYear: boolean): string {
+  return new Intl.DateTimeFormat(
+    "ru-RU",
+    withYear
+      ? { day: "numeric", month: "short", year: "numeric", timeZone: MOSCOW_TZ }
+      : { day: "numeric", month: "short", timeZone: MOSCOW_TZ },
+  ).format(date);
+}
+
+/**
  * ISO-момент → «30 сентября, 18:30» в московском времени. Невалидный
  * ввод — «—». Для сущностей без своих date/time-полей (запросы попуток):
  * сырой ISO в UI не показываем.

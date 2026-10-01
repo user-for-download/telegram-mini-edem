@@ -192,9 +192,10 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
   `{"type":"auth","token"}`, **никогда** в URL/query (утечка в логи).
 - Серверный `ping` → клиентский `pong`. Клиентского ping/subscription нет.
 - Reconnect: bounded backoff 1s→30s, jitter 0.75..1.25 (`computeReconnectDelay`).
-- Close-политики (`classifyWsClose`): `4403` terminal (бан/удаление, без refresh-loop),
+- Close-политики (`classifyWsClose`): `4403` terminal (без refresh-loop),
   `1008/4401` auth-refresh (через `apiClient.tryRefresh`), `1000` stop, остальное —
-  reconnect.
+  reconnect. Внутри 4403 причина (`CloseEvent.reason`) решает, **удалён** аккаунт
+  или **забанен** — экран у них разный; строки бэкенда перечислены в §18.
 - Пауза reconnect в background/offline, resume по `visibilitychange`/`online`.
 - Ресинк после каждого reconnect (`resyncSeq > 0`) — инвалидация
   `TRIP_KEYS.all`/`BOOKING_KEYS.all`/`NOTIFICATION_KEYS.all` (HTTP refetch, не replay).
@@ -203,8 +204,9 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
 - `notification:new` — только hint, тоста нет. Хинт **сужен**: инвалидирует
   `NOTIFICATION_KEYS.unreadCount()` + `NOTIFICATION_KEYS.lists()` (текущий список),
   НЕ blanket `all`. Остальные (`booking:*`, `trip:*`) — инвалидация + Snackbar + haptic.
-- **Файл `WebSocketProvider.tsx` = 604 строки**: транспорт (WsProvider) + доменные
-  подписки (TelegramRealtimeListener). Кандидат на вынос listener (см. Findings).
+- **Файл `WebSocketProvider.tsx` = 613 строк**: транспорт (WsProvider) + доменные
+  подписки (TelegramRealtimeListener) + классификатор 4403. Кандидат на вынос
+  listener (см. §17).
 
 ## 12. Роутинг и deep links
 
@@ -306,19 +308,47 @@ details(), detail(id) }`. Аналогично `BOOKING_KEYS`, `NOTIFICATION_KEY
   `prefers-reduced-motion`; тап ≥44px.
 - **e2e**: без `waitForTimeout` для UI, уникальные данные на прогон, cleanup в `finally`,
   `pageerror` валит прогон.
-
 ## 17. Findings / кандидаты в работу (на 2026-10-01)
+
+Полный аудит `telegram-app` (12 дефектов, план `.tmp/tasks/tg-bugfix-audit/`)
+закрыт. Ниже — что осталось после него.
 
 | Severity | Файл:строка | Что | Направление |
 |---|---|---|---|
 | medium | `package.json:15` | скоуп `@tma.js/sdk-react` устарел; отстаёт по мажору | плановый апгрейд одной зависимостью, сверить changelog + `kitContract` |
-| medium | `WebSocketProvider.tsx:103,465` | транспорт + доменные подписки в одном файле 604 строки | вынести `TelegramRealtimeListener` в `providers/` |
-| low | `useAuthStore.ts:14,236` | статус `"error"` не выставляется → недостижимые ветки `AuthGate.tsx:73,179` | удалить или начать использовать |
-| low | `client.ts:79`, `useAuthStore.ts:96`, `AuthGate.tsx:125` | `ACCOUNT_DELETED_MESSAGE`/`isDeletedError` в 3 местах | один общий helper |
-| low | `AppConfig.tsx:114-162` | дубль списка `THEME_VAR_NAMES`/палитр | приемлемо, покрыто тестом контраста |
-| low | `README.md:12,344`, `backend/ENVIRONMENT.md:76-91` | устаревшая «blocked/shadow»-проза после удаления shadow-режима | добрать микрокоммитом |
+| medium | `WebSocketProvider.tsx` | транспорт + доменные подписки в одном файле (613 строк) | вынести `TelegramRealtimeListener` в `providers/` |
+| medium | `useAuthStore.ts` (`bootstrapPromise`) | нет таймаута на самом bootstrap: unsettled-промис блокирует все будущие `bootstrap()` | страхуется 15s-таймаутом `apiClient`; при смене транспорта понадобится явный |
+| low | `AppConfig.tsx` | дубль списка `THEME_VAR_NAMES`/палитр | приемлемо, покрыто тестом контраста |
+| low | `README.md`, `backend/ENVIRONMENT.md` | устаревшая «blocked/shadow»-проза после удаления shadow-режима | добрать микрокоммитом |
+| low | `backend/src/admin/index.ts:654` | unban **не** переоткрывает WS: клиент после бана держит `terminalTokenRef` и разлогинится до перезапуска приложения | снимать терминал по HTTP-баунсу или документировать «перезапустите апп» |
 
-## 18. Куда смотреть дальше
+Закрыто аудитом (не возвращать): `?segment=driving` вёл на «Все» вместо
+«Водитель» (3 точки входа); автодогрузка списков не работала нигде (observer
+не навешивался на поздно появившийся сентинел); close 4403 всегда показывал
+бан, и удалённый аккаунт не мог увидеть экран «Профиль удалён»;
+`refreshSession` воскрешал `authenticated` при `session === null`;
+`SearchPage` игнорировал смену `?from/?to`; отметка прочитанным не была
+оптимистичной; время в уведомлениях считалось в зоне устройства вместо
+`Europe/Moscow`; счётчик «Прочитать все» подставлял сегментное число как
+глобальное; таймер 429 не останавливался на нуле; `closingBehavior` снимался
+при уходе любой из грязных форм; статус `"error"` был недостижим.
+
+## 18. Инварианты, добавленные аудитом (не ломать)
+
+| Инвариант | Где |
+|---|---|
+| 4403 различает удаление и бан по **трём** строкам причины: `Account is deleted` (ws-auth), `Account deleted` (DELETE /me, **без «is»**), `Account is banned`; незнакомая → `banned` + один HTTP-bootstrap с возвратом к дефолту | `WebSocketProvider.tsx` (`classifyTerminalCloseReason`) |
+| Подписка сентинела навешивается в момент **появления** узла (эффект на каждом рендере + сверка `observedRef`), а не только на маунте | `useInfiniteSentinel.ts` |
+| Результат refresh не применяется, если сессию уже сняли: guard `if (!get().session) return` | `useAuthStore.ts` (`refreshSession`) |
+| `markRead` оптимистичен: `onMutate` + снапшот обоих кэшей; `markReadInPages` чистая; декремент счётчика ровно один на вызов | `useNotificationsQuery.ts` |
+| Время поездок и уведомлений — только через `moscowDayKey`/`moscowTimeLabel`/`moscowDateLabel` из `utils/date.ts`; `toLocale*` без `timeZone` запрещён | `utils/date.ts` |
+| Счётчик «Прочитать все» — только `useUnreadCountQuery`; сегментный `pages[0].unreadCount` как глобальное запрещён | `NotificationsPage.tsx` |
+| `closingBehavior` — общее состояние клиента: счётчик грязных форм, а не флаг | `useClosingConfirmation.ts` |
+| `ACCOUNT_DELETED_MESSAGE` определена один раз в `api/client.ts`; мок этого модуля обязан повторять её | `api/client.ts` |
+| `/users/me` описывает **только** `api/profile.ts`; ключи ресурса — `USER_KEYS` в `queries/profile.ts` | `api/profile.ts`, `queries/profile.ts` |
+| Тесты: TZ-зависимое поведение проверяется файлом с принудительным `process.env.TZ`; SSR разделяет соседние текстовые узлы маркером `<!-- -->` | `notificationsTime.tz.test.ts` |
+
+## 19. Куда смотреть дальше
 
 - `README.md` (корень) — продукт, деплой, env.
 - Бывшие `docs/migration/*` и отчёты деплоя удалены из дерева — смотри git.
@@ -327,4 +357,5 @@ details(), detail(id) }`. Аналогично `BOOKING_KEYS`, `NOTIFICATION_KEY
 - `e2e/telegram-parity.mjs`, `e2e/telegram-realtime.mjs` — сценарии.
 - `packages/contracts/src/index.ts` — Zod-схемы/DTO, общие с backend.
 - `webapp/` — админка (shadcn-style), отдельный слой; не путать с mini-app.
-- `.tmp/sessions/2026-10-01-notifications-fix/context.md` — контекст плана уведомлений (10 пунктов).
+- `.tmp/sessions/2026-10-01-notifications-fix/context.md` — контекст плана уведомлений.
+- `.tmp/sessions/2026-10-01-tg-bugfix-audit/context.md` — контекст аудита (B1–B12).

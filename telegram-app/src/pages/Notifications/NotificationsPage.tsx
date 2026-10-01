@@ -18,6 +18,11 @@ import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
 import {
+  moscowDateLabel,
+  moscowDayKey,
+  moscowTimeLabel,
+} from "@/utils/date";
+import {
   NotificationCardSkeleton,
   NotificationCardsSkeleton,
 } from "@/components/Skeletons";
@@ -139,22 +144,20 @@ export function formatTripDetail(input: {
   if (input.departureAt) {
     const date = new Date(input.departureAt);
     if (!Number.isNaN(date.getTime())) {
-      const time = date.toLocaleTimeString("ru-RU", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const today = date.toDateString() === new Date().toDateString();
-      if (today) {
+      // Время поездок — по Москве (moscowDayKey/moscowTimeLabel из
+      // utils/date), как в карточках поездок. Раньше здесь стояли
+      // toLocale*("ru-RU") без timeZone, то есть зона УСТРОЙСТВА: у
+      // клиента в Лос-Анджелесе «18:00 МСК» показывалось как «08:00».
+      // Сравнение дней — тоже по московским ключам, иначе «сегодня»
+      // считалось по местному календарю.
+      const time = moscowTimeLabel(date);
+      const dayKey = moscowDayKey(date);
+      const todayKey = moscowDayKey(new Date());
+      if (dayKey === todayKey) {
         parts.push(time);
       } else {
-        const sameYear = date.getFullYear() === new Date().getFullYear();
-        const day = date.toLocaleDateString(
-          "ru-RU",
-          sameYear
-            ? { day: "numeric", month: "short" }
-            : { day: "numeric", month: "short", year: "numeric" },
-        );
-        parts.push(`${day}, ${time}`);
+        const sameYear = dayKey.slice(0, 4) === todayKey.slice(0, 4);
+        parts.push(`${moscowDateLabel(date, !sameYear)}, ${time}`);
       }
     }
   }
@@ -194,22 +197,20 @@ export function normalizeNotifSegment(raw: string | null): NotifSegment {
  * сегодня — «ЧЧ:ММ», в этом году — «9 сен», иначе — с годом.
  * Экспорт — для юнит-теста (TZ-независимый кейс «сегодня»).
  */
-export function formatNotifTime(createdAt: string): string {  const date = new Date(createdAt);
+export function formatNotifTime(createdAt: string): string {
+  const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return createdAt;
+  // Тот же московский часовой пояс, что у времени поездок (B8): иначе
+  // в уведомлении и в карточке одна и та же минута показывалась разными
+  // часами у клиента не в московской зоне.
   const now = new Date();
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const dayKey = moscowDayKey(date);
+  const todayKey = moscowDayKey(now);
+  if (dayKey === todayKey) {
+    return moscowTimeLabel(date);
   }
-  const sameYear = date.getFullYear() === now.getFullYear();
-  return date.toLocaleDateString(
-    "ru-RU",
-    sameYear
-      ? { day: "numeric", month: "short" }
-      : { day: "numeric", month: "short", year: "numeric" },
-  );
+  const sameYear = dayKey.slice(0, 4) === todayKey.slice(0, 4);
+  return moscowDateLabel(date, !sameYear);
 }
 
 function NotificationCell({
@@ -315,7 +316,8 @@ function NotificationCell({
  * персист + WebSocket-хинт, Bot API — blocked и здесь не предполагается).
  *
  * - Cursor-пагинация (limit 20, «Показать ещё»);
- * - прочитать одно / прочитать все (оптимистичный кэш + откат инвалидацией);
+ * - прочитать одно — оптимистично (точка и бейдж гаснут на тапе,
+ *   откат из снапшота + инвалидация при ошибке), прочитать все — сразу;
  * - сегменты — серверный фильтр (?role=/unreadOnly), клиент типы не знает.
  */
 export function NotificationsPage() {
@@ -325,9 +327,6 @@ export function NotificationsPage() {
   const inbox = useNotificationsInboxQuery(20, segment);
   const markRead = useMarkNotificationReadMutation();
   const markAll = useMarkAllNotificationsReadMutation();
-  // Счётчик «Прочитать все» — авторитетный ключ unread-count (легче inbox
-  // и един для всех сегментов); page[0].unreadCount — только фолбэк до
-  // первой загрузки счётчика. Имя кнопки и aria-live не меняются.
 
   // Фильтр — серверный: бэкенд уже отдал нужный архив, клиент показывает
   // как есть (m3). «Новые» — очередь входящих (все типы, только непрочитанные).
@@ -337,8 +336,15 @@ export function NotificationsPage() {
   );
   const visibleItems = items;
   const counter = useUnreadCountQuery();
-  const unreadCount =
-    counter.data ?? inbox.data?.pages[0]?.unreadCount ?? 0;
+  // Счётчик «Прочитать все» — ТОЛЬКО авторитетный unread-count: он один
+  // для всех сегментов, тогда как inbox отдаётся с фильтром (?role=/
+  // unreadOnly) и pages[0].unreadCount считает непрочитанные только
+  // В ЭТОМ архиве. Фолбэк на него показывал в действии «Прочитать
+  // все (7)», хотя глобально непрочитанных 12, и кнопка при этом
+  // гасилась зря. Пока счётчик грузится — 0 (B9).
+  // Бейдж таба живёт отдельно (AppRouter → useUnreadCountQuery) и
+  // правку не затрагивает.
+  const unreadCount = counter.data ?? 0;
   // markRead.variables — id записи в полёте: блокируем только её ячейку (m1),
   // а не всю ленту.
   const markingId = markRead.isPending ? markRead.variables : undefined;

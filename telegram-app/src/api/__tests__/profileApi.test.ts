@@ -75,28 +75,4 @@ describe("profileApi (Telegram)", () => {
       expect.anything(),
     );
   });
-
-  it("logout передаёт refreshToken на /auth/logout", async () => {
-    requestMock.mockResolvedValue({ success: true });
-
-    await profileApi.logout("refresh-123");
-
-    expect(requestMock).toHaveBeenCalledWith(
-      "/auth/logout",
-      { method: "POST", body: JSON.stringify({ refreshToken: "refresh-123" }) },
-      expect.anything(),
-    );
-  });
-
-  it("logout без токена шлёт пустое тело (backend всё равно success)", async () => {
-    requestMock.mockResolvedValue({ success: true });
-
-    await profileApi.logout();
-
-    expect(requestMock).toHaveBeenCalledWith(
-      "/auth/logout",
-      { method: "POST", body: "{}" },
-      expect.anything(),
-    );
-  });
 });

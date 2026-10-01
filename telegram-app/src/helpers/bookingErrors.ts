@@ -3,7 +3,7 @@
 // конфликт мест, пересечение броней, уехавшие поездки, авторизация, офлайн.
 // Бэкенд — авторитет: маппим только его коды (backend/src/errors.ts,
 // backend/src/trips/errors.ts), тексты — RU для UI.
-import { ApiError } from "@/api/client";
+import { ACCOUNT_DELETED_MESSAGE, ApiError } from "@/api/client";
 
 const CODE_MESSAGES: Record<string, string> = {
   SEAT_TAKEN: "Место только что заняли — выберите другое",
@@ -19,10 +19,6 @@ const CODE_MESSAGES: Record<string, string> = {
   CONFLICT: "Данные только что изменились — обновите и повторите",
   REQUEST_TIMEOUT: "Превышено время ожидания — проверьте соединение",
 };
-
-// 403 удалённого аккаунта (тот же код FORBIDDEN, что у бана —
-// useAuthStore.isDeletedError различает так же, по message).
-const ACCOUNT_DELETED_MESSAGE = "Account is deleted";
 
 export function bookingErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {

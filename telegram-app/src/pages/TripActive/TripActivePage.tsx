@@ -30,14 +30,23 @@ import styles from "./TripActivePage.module.css";
 type TripSegment = "all" | "driver" | "passenger";
 
 /**
- * Нормализация ?segment: all ← {all, driving, driver (legacy), active
- * (legacy), всё остальное}; passenger ← {passenger, bookings (legacy)};
- * driver ← {driver, requests (legacy)}. Не редирект, а нормализация
- * отображения: легаси-ссылки остаются валидными.
+ * Нормализация ?segment: driver ← {driver, driving, requests (legacy)};
+ * passenger ← {passenger, bookings (legacy)}; all ← {all, active
+ * (legacy), всё остальное}. Не редирект, а нормализация отображения:
+ * легаси-ссылки остаются валидными.
+ *
+ * B7: «driving» — это ДРАЙВЕР, а не алиас «Все». Ровно этот токен шлют
+ * три точки входа, и все три имеют в виду «за рулём»: счётчик «Поездки»
+ * на главной (TripCountersSection), действия экрана заявок водителя
+ * (TripRequestsModal) и deep-link my_trips (deepLinks). Прежний маппинг
+ * в «Все» уводил все три не туда. Экспорт — для таблицы токенов в юнит-
+ * тесте (рядом с normalizeNotifSegment в NotificationsPage).
  */
-function normalizeSegment(raw: string | null): TripSegment {
+export function normalizeSegment(raw: string | null): TripSegment {
   if (raw === "passenger" || raw === "bookings") return "passenger";
-  if (raw === "driver" || raw === "requests") return "driver";
+  if (raw === "driver" || raw === "requests" || raw === "driving") {
+    return "driver";
+  }
   return "all";
 }
 

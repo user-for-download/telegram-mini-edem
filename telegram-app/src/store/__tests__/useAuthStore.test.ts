@@ -12,9 +12,45 @@ vi.mock("@/api/auth.api", () => ({
 
 vi.mock("@/utils/telegram-adapter", () => ({
   getRawInitData: vi.fn(),
+  purgeLaunchParamsCache: vi.fn(),
 }));
 
+// Сетевая граница refresh: apiClient подменяем (tryRefresh нельзя вести
+// по-настоящему — нужен контролируемый результат и гонка с logout).
+// ApiError берём ОРИГИНАЛЬНЫЙ (importOriginal), иначе instanceof в сторе
+// перестал бы работать и ветки banned/deleted стали бы мёртвыми.
+const { mockTryRefresh, mockSetSession, mockInvalidatePendingRefresh } =
+  vi.hoisted(() => ({
+    mockTryRefresh: vi.fn(),
+    mockSetSession: vi.fn(),
+    mockInvalidatePendingRefresh: vi.fn(),
+  }));
+
+vi.mock("@/api/client", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/api/client")>();
+  return {
+    ...original,
+    apiClient: {
+      setToken: vi.fn(),
+      setRefreshToken: vi.fn(),
+      setSession: mockSetSession,
+      getToken: vi.fn(),
+      isRefreshing: () => false,
+      onTokenUpdate: vi.fn(() => () => {}),
+      onSessionExpired: vi.fn(() => () => {}),
+      onBanned: vi.fn(() => () => {}),
+      onDeleted: vi.fn(() => () => {}),
+      onRefreshStart: vi.fn(() => () => {}),
+      onRefreshEnd: vi.fn(() => () => {}),
+      invalidatePendingRefresh: mockInvalidatePendingRefresh,
+      tryRefresh: mockTryRefresh,
+      request: vi.fn(),
+    },
+  };
+});
+
 import { ApiError } from "@/api/client";
+import type { RefreshResult } from "@/api/client";
 import { authApi } from "@/api/auth.api";
 import { getRawInitData } from "@/utils/telegram-adapter";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -64,10 +100,29 @@ function resetStore() {
     session: null,
     banReason: null,
     initData: null,
+    lastAuthError: null,
   });
   mockedLoginWithTelegram.mockReset();
   mockedGetRawInitData.mockReset();
   mockedGetRawInitData.mockReturnValue(RAW_INIT_DATA);
+  mockTryRefresh.mockReset();
+  mockSetSession.mockReset();
+  mockInvalidatePendingRefresh.mockReset();
+}
+
+/** Сессия в фоне: refresh «завис» в полёте, logout приходит параллельно. */
+function seedBackgroundSession() {
+  useAuthStore.setState({
+    status: "background",
+    user: validUser,
+    session: {
+      accessToken: "access-1",
+      refreshToken: "refresh-1",
+      expiresAt: Date.now() + 900_000,
+    },
+    banReason: null,
+    initData: null,
+  });
 }
 
 describe("useAuthStore.bootstrap (Telegram)", () => {
@@ -159,5 +214,140 @@ describe("useAuthStore.bootstrap (Telegram)", () => {
     const state = useAuthStore.getState();
     expect(state.status).toBe("unauthenticated");
     expect(state.banReason).toBeNull();
+  });
+});
+
+
+/**
+ * B6: результат refresh нельзя применять, если сессию уже сняли.
+ * Гонка реальная: пользователь уходит в фон, возврат инициирует refresh,
+ * а параллельно приходит logout / отзыв токена / бан. apiClient отсекает
+ * подмену токенов (refreshGeneration), но статус не сторожит — без
+ * проверки session транзиентный сбой возвращал status="authenticated"
+ * при session === null, и приложение рендерилось без токена.
+ */
+describe("useAuthStore.refreshSession: сессия снята параллельно (B6)", () => {
+  beforeEach(() => {
+    resetStore();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("transient-failure после logout не воскрешает 'authenticated'", async () => {
+    let settle: (result: RefreshResult) => void = () => {};
+    mockTryRefresh.mockReturnValue(
+      new Promise<RefreshResult>((resolve) => {
+        settle = resolve;
+      }),
+    );
+    seedBackgroundSession();
+
+    const inflight = useAuthStore.getState().refreshSession();
+    // Даём refreshSession дойти до await tryRefresh.
+    await vi.waitFor(() => expect(mockTryRefresh).toHaveBeenCalledTimes(1));
+
+    await useAuthStore.getState().clearSession("logout");
+    expect(useAuthStore.getState().status).toBe("unauthenticated");
+
+    // Refresh завершается транзиентно (сеть/5xx) — состояние не меняем.
+    settle("transient-failure");
+    await inflight;
+
+    const state = useAuthStore.getState();
+    expect(state.status).toBe("unauthenticated");
+    expect(state.session).toBeNull();
+  });
+
+  it("permanent-rejection после logout не затирает маркер SESSION_EXPIRED", async () => {
+    // Гонка обязательна: при мгновенном refresh ветка permanent-rejection
+    // отработала бы ДО logout и тест прошёл бы на любом коде.
+    let settle: (result: RefreshResult) => void = () => {};
+    mockTryRefresh.mockReturnValue(
+      new Promise<RefreshResult>((resolve) => {
+        settle = resolve;
+      }),
+    );
+    seedBackgroundSession();
+
+    const inflight = useAuthStore.getState().refreshSession();
+    await vi.waitFor(() => expect(mockTryRefresh).toHaveBeenCalledTimes(1));
+    await useAuthStore.getState().clearSession("Session expired");
+
+    settle("permanent-rejection");
+    await inflight;
+
+    const state = useAuthStore.getState();
+    expect(state.status).toBe("unauthenticated");
+    expect(state.lastAuthError).toEqual({ code: "SESSION_EXPIRED" });
+  });
+
+  it("transient-failure при живой сессии возвращает активный статус", async () => {
+    mockTryRefresh.mockResolvedValue("transient-failure");
+    seedBackgroundSession();
+
+    await useAuthStore.getState().refreshSession();
+
+    const state = useAuthStore.getState();
+    expect(state.status).toBe("authenticated");
+    expect(state.session?.refreshToken).toBe("refresh-1");
+    // Сессию не сбрасываем — следующий запрос повторит refresh.
+    expect(state.lastAuthError).toBeNull();
+  });
+
+  it("permanent-rejection при живой сессии сбрасывает её", async () => {
+    mockTryRefresh.mockResolvedValue("permanent-rejection");
+    seedBackgroundSession();
+
+    await useAuthStore.getState().refreshSession();
+
+    expect(useAuthStore.getState().status).toBe("unauthenticated");
+    expect(useAuthStore.getState().session).toBeNull();
+  });
+
+  it("бан во время refresh не затирается логаутом", async () => {
+    let settle: (result: RefreshResult) => void = () => {};
+    mockTryRefresh.mockReturnValue(
+      new Promise<RefreshResult>((resolve) => {
+        settle = resolve;
+      }),
+    );
+    seedBackgroundSession();
+
+    const inflight = useAuthStore.getState().refreshSession();
+    await vi.waitFor(() => expect(mockTryRefresh).toHaveBeenCalledTimes(1));
+
+    // apiClient.onBanned уже выставил статус и обнулил сессию.
+    useAuthStore.setState({
+      status: "banned",
+      user: null,
+      session: null,
+      banReason: "Спам",
+    });
+
+    settle("permanent-rejection");
+    await inflight;
+
+    const state = useAuthStore.getState();
+    expect(state.status).toBe("banned");
+    expect(state.banReason).toBe("Спам");
+  });
+
+  it("без refresh-токена refreshSession сразу чистит сессию", async () => {
+    useAuthStore.setState({
+      status: "background",
+      user: validUser,
+      session: {
+        accessToken: "access-1",
+        refreshToken: "",
+        expiresAt: Date.now() - 1,
+      },
+    });
+
+    await useAuthStore.getState().refreshSession();
+
+    expect(mockTryRefresh).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().status).toBe("unauthenticated");
   });
 });

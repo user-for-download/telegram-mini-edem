@@ -7,6 +7,11 @@
 // - SSR-safe: без IntersectionObserver (renderToString / node) хук
 //   возвращает ref и ничего не делает — контент рендерится сразу,
 //   видна fallback-кнопка «Показать ещё»;
+// - подписка навешивается в момент ПОЯВЛЕНИЯ узла, а не только на
+//   маунте: сентинел рендерит ui/FetchMore, а тот — только при
+//   hasNextPage, т.е. уже после загрузки данных. Эффект подписки
+//   поэтому вызывается на каждом рендере и сверяет узел/rootMargin
+//   с текущей подпиской (observedRef), а не пересоздаёт observer;
 // - guard двойного срабатывания: флаг in-flight + isFetchingNextPage;
 // - cleanup: observer.disconnect() при размонтировании;
 // - якорь скролла: сентинел нулевого размера вне потока (места не
@@ -61,6 +66,12 @@ export function useInfiniteSentinel(
   // Якорь скролла: позиция вьюпорта перед догрузкой.
   const anchorTopRef = useRef<number | null>(null);
   const wasFetchingRef = useRef(false);
+  // Текущая подписка: узел + rootMargin, под которые она создана.
+  const observedRef = useRef<{
+    element: HTMLElement;
+    rootMargin: string;
+    observer: IntersectionObserver;
+  } | null>(null);
 
   // Сброс in-flight при завершении догрузки.
   useEffect(() => {
@@ -114,21 +125,53 @@ export function useInfiniteSentinel(
   );
 
   useEffect(() => {
-    if (disabled) return;
-    // SSR / renderToString: observer отсутствует — выходим тихо,
-    // контент уже отрендерен, работает fallback-кнопка.
-    if (typeof IntersectionObserver === "undefined") return;
+    const drop = () => {
+      observedRef.current?.observer.disconnect();
+      observedRef.current = null;
+    };
+
+    if (disabled || typeof IntersectionObserver === "undefined") {
+      // SSR / renderToString: observer отсутствует — выходим тихо,
+      // контент уже отрендерен, работает fallback-кнопка.
+      drop();
+      return;
+    }
+
+    // Узла нет — либо ещё не появился (сентинел рендерит ui/FetchMore
+    // только при hasNextPage, т.е. уже после загрузки данных), либо
+    // только что исчез (конец списка / размонтирование ветки: React
+    // обнулил ref). В обоих случаях снимаем прежнюю подписку, если она
+    // была, и ждём следующего рендера.
     const element = sentinelRef.current;
-    if (!element) return;
+    if (!element) {
+      drop();
+      return;
+    }
+
+    const current = observedRef.current;
+    if (
+      current &&
+      current.element === element &&
+      current.rootMargin === rootMargin
+    ) {
+      return;
+    }
+    drop();
 
     const observer = new IntersectionObserver(onIntersect, { rootMargin });
     observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  // onIntersect в deps НЕ кладём (useEffectEvent стабилен по дизайну —
-  // exhaustive-deps требует его убрать).
-  }, [disabled, rootMargin]);
+    observedRef.current = { element, rootMargin, observer };
+  });
+
+  // Размонтирование: снять подписку ровно один раз (эффект выше не имеет
+  // cleanup — иначе он пересоздавал бы observer на каждом рендере).
+  useEffect(
+    () => () => {
+      observedRef.current?.observer.disconnect();
+      observedRef.current = null;
+    },
+    [],
+  );
 
   return sentinelRef;
 }

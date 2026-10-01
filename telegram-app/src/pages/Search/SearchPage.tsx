@@ -75,6 +75,32 @@ export function SearchPage() {
   );
   const [showFilters, setShowFilters] = useState(false);
 
+  // B3: пресет из URL применяется НЕ только на маунте. Страница не
+  // перемонтируется при смене ?from/?to/?segment: route-fade от AppRouter
+  // нарочно key'ится одним pathname (иначе смена query роняет скролл и
+  // скелетоны), поэтому useState-инициализатор срабатывал ровно один раз
+  // и повторный переход «Главная → Поиск» с другим маршрутом показывал
+  // прошлую выдачу (так ведут PopularRoutesSection на главной и
+  // deep-link токены).
+  //
+  // Синхронизация фазой рендера, а не эффектом: эффект с зависимостью
+  // searchParams срабатывал бы на каждом рендере (новый объект
+  // URLSearchParams) и setForm новым объектом зациклил бы рендер.
+  // Ориентируемся на СТРОКУ параметров — она меняется только навигацией.
+  //
+  // Решение по конфликту «URL побеждает»: это deep link, он и задаёт
+  // выдачу. Несохранённый набор в форме при переходе по внешней ссылке
+  // сбрасывается осознанно. Локальные чипы (даты, цена, теги) URL не
+  // трогают, поэтому подмены не происходит — см. set/selectSegment.
+  const paramKey = searchParams.toString();
+  const [appliedParamKey, setAppliedParamKey] = useState(paramKey);
+  if (appliedParamKey !== paramKey) {
+    setAppliedParamKey(paramKey);
+    const preset = presetFromParams(searchParams);
+    setForm(preset);
+    setSubmitted(preset);
+  }
+
   // Панель фильтров — state-drawer: нативный Back закрывает её, а не
   // уводит со страницы (тот же стек modalBack, что у state-модалок).
   useModalBack(() => setShowFilters(false), showFilters);

@@ -2,9 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { PassengerBooking } from "@edem/contracts";
 import {
-  confirmedSectionHeader,
   formatRelativeDeparture,
-  formatSeatNumber,
   isUpcomingBooking,
   splitBookingsByStatus,
 } from "@/utils/bookingSplit";
@@ -98,22 +96,6 @@ describe("splitBookingsByStatus", () => {
     );
     expect(confirmed).toEqual([]);
     expect(pending).toEqual([]);
-  });
-});
-
-describe("confirmedSectionHeader", () => {
-  it("всегда «Вы пассажир»", () => {
-    expect(confirmedSectionHeader(1)).toBe("Вы пассажир");
-    expect(confirmedSectionHeader(2)).toBe("Вы пассажир");
-    expect(confirmedSectionHeader(5)).toBe("Вы пассажир");
-  });
-});
-
-describe("formatSeatNumber", () => {
-  it("seat — порядковый номер места, не количество", () => {
-    expect(formatSeatNumber(1)).toBe("место №1");
-    expect(formatSeatNumber(2)).toBe("место №2");
-    expect(formatSeatNumber(3)).toBe("место №3");
   });
 });
 

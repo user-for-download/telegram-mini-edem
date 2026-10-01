@@ -30,7 +30,7 @@ export function useVehicleQuery(options?: {
 }
 
 /**
- * Создание/обновление авто (POST /users/me/car): после успеха кэш
+ * Создание авто (POST /users/me/car): после успеха кэш
  * ["users","me"] перезаписывается и стор синкается — зеркально
  * useProfileUpdateMutation (CarFormModal писал user в useAuthStore напрямую).
  */
@@ -38,20 +38,6 @@ export function useUpsertVehicleMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: VehicleFormDto) => vehicleApi.upsertVehicle(data),
-    onSuccess: (user) => {
-      queryClient.setQueryData(VEHICLE_KEYS.current(), user);
-      useAuthStore.setState({ user });
-    },
-  });
-}
-
-/**
- * Обновление через PATCH-алиас backend (тот же upsertCar на сервере).
- */
-export function useUpdateVehicleMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: VehicleFormDto) => vehicleApi.updateVehicle(data),
     onSuccess: (user) => {
       queryClient.setQueryData(VEHICLE_KEYS.current(), user);
       useAuthStore.setState({ user });

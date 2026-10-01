@@ -11,7 +11,7 @@ import { Notice } from "@/ui/Notice";
 import { Page } from "@/ui/Page";
 
 import { Handshake, Lock, Scale } from "lucide-react";
-import { usersApi } from "@/api/users.api";
+import { profileApi } from "@/api/profile";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ONBOARDING_VERSION } from "@/onboarding/version";
 import styles from "./Onboarding.module.css";
@@ -30,7 +30,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
     busyRef.current = true;
     setBusy(true);
     setError(null);
-    void usersApi
+    void profileApi
       .completeOnboarding(ONBOARDING_VERSION)
       .then((updated) => useAuthStore.setState({ user: updated }))
       .catch(() =>

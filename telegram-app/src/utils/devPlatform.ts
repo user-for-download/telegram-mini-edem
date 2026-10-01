@@ -18,14 +18,6 @@ export const PLATFORM_OPTIONS: ReadonlyArray<{
   { value: "android", label: "Android" },
 ];
 
-export const APPEARANCE_OPTIONS: ReadonlyArray<{
-  value: AppearanceChoice;
-  label: string;
-}> = [
-  { value: "light", label: "Светлая" },
-  { value: "dark", label: "Тёмная" },
-];
-
 const PLATFORM_KEY = "edem:dev-platform";
 
 const listeners = new Set<() => void>();
@@ -82,20 +74,6 @@ export function resolveAppRootPlatform(
   if (choice === "ios") return "ios";
   if (choice === "android") return "base";
   return fallback;
-}
-
-/** Следующий вариант по кругу — тап по быстрой кнопке в шапке. */
-export function nextChoice<T extends string>(
-  options: ReadonlyArray<{ value: T; label: string }>,
-  current: T | null,
-): T {
-  const first = options[0];
-  if (!first) throw new Error("nextChoice: options must not be empty");
-  const index =
-    current === null
-      ? -1
-      : options.findIndex((option) => option.value === current);
-  return options[(index + 1) % options.length]?.value ?? first.value;
 }
 
 /** Круг платформы с возвратом в «Авто»: null → ios → android → null. */

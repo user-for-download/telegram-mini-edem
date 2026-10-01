@@ -21,15 +21,21 @@ const {
   mockSetSession,
   mockInvalidatePendingRefresh,
   mockHaptic,
+  mockLoginWithTelegram,
 } = vi.hoisted(() => ({
   mockIsRefreshing: vi.fn(),
   mockTryRefresh: vi.fn(),
   mockSetSession: vi.fn(),
   mockInvalidatePendingRefresh: vi.fn(),
   mockHaptic: vi.fn(),
+  mockLoginWithTelegram: vi.fn(),
 }));
 
 vi.mock("@/api/client", () => ({
+  // Модуль мокается целиком, поэтому повторяем и его константы:
+  // ACCOUNT_DELETED_MESSAGE читает useAuthStore (isDeletedError), и без
+  // неё в моке ветка «удалён» неотличима от «бан».
+  ACCOUNT_DELETED_MESSAGE: "Account is deleted",
   apiClient: {
     setToken: vi.fn(),
     setRefreshToken: vi.fn(),
@@ -63,18 +69,24 @@ vi.mock("@tma.js/sdk-react", () => ({
 }));
 
 vi.mock("@/api/auth.api", () => ({
-  authApi: { loginWithTelegram: vi.fn(), refreshToken: vi.fn() },
+  authApi: {
+    loginWithTelegram: mockLoginWithTelegram,
+    refreshToken: vi.fn(),
+  },
 }));
 
 import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppRoot } from "@telegram-apps/telegram-ui";
+import { retrieveRawInitData } from "@tma.js/sdk-react";
 import {
   TelegramRealtimeListener,
   WsProvider,
+  classifyTerminalCloseReason,
   useWs,
 } from "@/providers/WebSocketProvider";
+import { ApiError } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { TRIP_KEYS } from "@/queries/useTripsQuery";
 import { BOOKING_KEYS } from "@/queries/useBookingsQuery";
@@ -189,6 +201,9 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     mockSetSession.mockReset();
     mockInvalidatePendingRefresh.mockReset();
     mockHaptic.mockReset();
+    mockLoginWithTelegram.mockReset();
+    mockLoginWithTelegram.mockResolvedValue(undefined);
+    vi.mocked(retrieveRawInitData).mockReturnValue("auth_date=1&hash=dev");
     mockIsRefreshing.mockReturnValue(false);
     mockTryRefresh.mockResolvedValue("success");
     probeState = { isConnected: false, resyncSeq: 0, lastType: null };
@@ -439,6 +454,169 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
     expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
+  // B2: 4403 разводит «удалён» и «забанен». Таблица причин — три строки
+  // бэкенда (ws/index.ts:130 «Account is deleted», users/index.ts:278
+  // «Account deleted» без «is», ws/index.ts:136 + admin/index.ts:646
+  // «Account is banned»); неизвестная причина → banned + один bootstrap.
+  it("4403 'Account is deleted' (WS-auth) → экран удаления, не бан", async () => {
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+
+    await act(async () => {
+      ws.serverClose(4403, "Account is deleted");
+      await flushMicrotasks();
+    });
+
+    const state = useAuthStore.getState();
+    expect(state.status).toBe("deleted");
+    expect(state.session).toBeNull();
+    expect(state.banReason).toBeNull();
+    // Известная причина — HTTP-сверка не нужна.
+    expect(mockLoginWithTelegram).not.toHaveBeenCalled();
+    expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
+  it("4403 'Account deleted' (DELETE /me) → экран удаления, не бан", async () => {
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+
+    await act(async () => {
+      ws.serverClose(4403, "Account deleted");
+      await flushMicrotasks();
+    });
+
+    expect(useAuthStore.getState().status).toBe("deleted");
+    expect(mockLoginWithTelegram).not.toHaveBeenCalled();
+  });
+
+  it("4403 'Account is banned' → бан без HTTP-сверки", async () => {
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+
+    await act(async () => {
+      ws.serverClose(4403, "Account is banned");
+      await flushMicrotasks();
+    });
+
+    expect(useAuthStore.getState().status).toBe("banned");
+    expect(mockLoginWithTelegram).not.toHaveBeenCalled();
+  });
+
+  it("4403 с неизвестной причиной → ровно один bootstrap и никакого reconnect", async () => {
+    // Отложенный ответ: bootstrap «висит» на время проверки, поэтому
+    // его разрешаем в финале теста — иначе он останется unsettled и
+    // заблокирует bootstrap() следующих тестов (module-level
+    // single-flight bootstrapPromise в сторе).
+    let releaseBootstrap: () => void = () => {};
+    mockLoginWithTelegram.mockReturnValue(
+      new Promise<void>((resolve) => {
+        releaseBootstrap = resolve;
+      }),
+    );
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+
+    await act(async () => {
+      ws.serverClose(4403, "Account is on fire");
+      await flushMicrotasks();
+    });
+
+    expect(mockLoginWithTelegram).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(mockLoginWithTelegram).toHaveBeenCalledTimes(1);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+
+    // Снимаем блокировку bootstrapPromise для следующих тестов.
+    await act(async () => {
+      releaseBootstrap();
+      await flushMicrotasks();
+    });
+  });
+
+  it("4403 с неизвестной причиной: сеть недоступна → бан-экран не теряется", async () => {
+    // bootstrap() глотает ошибку и уводит в unauthenticated — дефолт
+    // обязан вернуть бан-экран с формой обжалования.
+    mockLoginWithTelegram.mockRejectedValue(new Error("network down"));
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+
+    await act(async () => {
+      ws.serverClose(4403, "");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(useAuthStore.getState().status).toBe("banned");
+  });
+
+  it("4403 с неизвестной причиной: авторитетный 403 'deleted' переключает экран", async () => {
+    mockLoginWithTelegram.mockRejectedValue(
+      new ApiError("Account is deleted", "FORBIDDEN", 403),
+    );
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+
+    await act(async () => {
+      ws.serverClose(4403, "");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+      await flushMicrotasks();
+    });
+
+    expect(useAuthStore.getState().status).toBe("deleted");
+  });
+
+  it("classifyTerminalCloseReason: таблица причин бэкенда", () => {
+    // ws/index.ts:130
+    expect(classifyTerminalCloseReason("Account is deleted")).toBe("deleted");
+    // users/index.ts:278 (DELETE /me — без "is")
+    expect(classifyTerminalCloseReason("Account deleted")).toBe("deleted");
+    // ws/index.ts:136 + admin/index.ts:646
+    expect(classifyTerminalCloseReason("Account is banned")).toBe("banned");
+    // неизвестное/пустое/отсутствует
+    expect(classifyTerminalCloseReason("")).toBe("unknown");
+    expect(classifyTerminalCloseReason(undefined)).toBe("unknown");
+    expect(classifyTerminalCloseReason("Account is Deleted")).toBe("unknown");
+    expect(classifyTerminalCloseReason("произвольная строка")).toBe("unknown");
   });
 
   it("1008 → single-flight refresh, reconnect с новым токеном", async () => {

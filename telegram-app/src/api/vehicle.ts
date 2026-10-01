@@ -1,4 +1,4 @@
-import { userSchema, type Car, type User } from "@edem/contracts";
+import { userSchema, type User } from "@edem/contracts";
 import { apiClient } from "./client";
 
 export interface VehicleFormDto {
@@ -13,7 +13,9 @@ export interface VehicleFormDto {
 }
 
 /**
- * Автомобильный API Telegram-приложения (порт usersApi.updateCar).
+ * Автомобильный API Telegram-приложения: подресурс /users/me/car.
+ * Просмотр авто намеренно НЕ здесь — он идёт через profileApi.getCurrentUser
+ * (у backend нет GET /users/me/car), см. queries/vehicle.ts.
  *
  * Все ответы валидируются shared-контрактами (@edem/contracts,
  * userSchema/carSchema) через apiClient.request(..., schema) — fail-closed:
@@ -37,15 +39,6 @@ export interface VehicleFormDto {
  * без авто — 404. Возвращает обновлённого пользователя для синка кэша.
  */
 export const vehicleApi = {
-  /**
-   * Просмотр: читает own-профиль и возвращает car (null — авто нет).
-   * Отдельного GET /users/me/car у backend нет — view идёт через /users/me.
-   */
-  getCurrentVehicle: (signal?: AbortSignal): Promise<Car | null> =>
-    apiClient
-      .request("/users/me", { signal }, userSchema)
-      .then((user) => user.car ?? null),
-
   /**
    * Создание/обновление (порт CarFormModal → POST /users/me/car).
    * Возвращает обновлённого пользователя — кэш и стор синкаются в queries/vehicle.

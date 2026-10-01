@@ -1,5 +1,4 @@
 import {
-  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -22,15 +21,6 @@ export const TRIP_KEYS = {
   detail: (id: string) => [...TRIP_KEYS.details(), id] as const,
 };
 
-export function useTripsQuery(filters?: SearchTripsFilters) {
-  return useQuery({
-    queryKey: TRIP_KEYS.list(filters),
-    queryFn: ({ signal }) => tripsApi.getTrips(filters, signal),
-    staleTime: 60_000,
-    placeholderData: keepPreviousData,
-  });
-}
-
 export function useInfiniteTripsQuery(filters?: SearchTripsFilters) {
   return useInfiniteQuery({
     queryKey: [...TRIP_KEYS.lists(), "infinite", filters] as const,
@@ -42,16 +32,6 @@ export function useInfiniteTripsQuery(filters?: SearchTripsFilters) {
         ? lastPage.pagination.page + 1
         : undefined,
     staleTime: 60_000,
-  });
-}
-
-export function useMyTripsQuery(options?: { enabled?: boolean }) {
-  return useQuery({
-    queryKey: TRIP_KEYS.my(),
-    queryFn: async ({ signal }) =>
-      (await tripsApi.getMyTrips({ limit: 50 }, signal)).items,
-    enabled: options?.enabled ?? true,
-    placeholderData: keepPreviousData,
   });
 }
 

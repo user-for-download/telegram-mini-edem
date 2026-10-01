@@ -3,13 +3,28 @@ import { profileApi, type ProfileUpdateDto } from "@/api/profile";
 import { useAuthStore } from "@/store/useAuthStore";
 
 /**
- * Ключи кэша профиля. Намеренно совпадают с USER_KEYS (["users", "me"]):
- * profile-хуки и users-хуки читают/пишут одну и ту же запись — рассинхрона
- * кэша между двумя модулями нет, инвалидация из любого места видна всем.
+ * Ключи ресурса «пользователь». Префикс один и общий: и собственный
+ * профиль (/users/me), и публичный (/users/:id) — это один ресурс, и
+ * инвалидация по префиксу должна бить оба. КлючиDetail переехали сюда из
+ * удалённого queries/useUsersQuery.ts: их единственный потребитель —
+ * инвалидация профиля жертвы после отзыва (useReviewsQuery).
+ */
+export const USER_KEYS = {
+  all: ["users"] as const,
+  current: () => [...USER_KEYS.all, "me"] as const,
+  details: () => [...USER_KEYS.all, "detail"] as const,
+  detail: (id: string) => [...USER_KEYS.details(), id] as const,
+};
+
+/**
+ * Ключи кэша профиля. Намеренно совпадают с USER_KEYS.current():
+ * profile-хуки и vehicle-хуки читают/пишут одну и ту же запись —
+ * рассинхрона кэша между модулями нет, инвалидация из любого места
+ * видна всем.
  */
 export const PROFILE_KEYS = {
-  all: ["users"] as const,
-  current: () => [...PROFILE_KEYS.all, "me"] as const,
+  all: USER_KEYS.all,
+  current: USER_KEYS.current,
 };
 
 export function useProfileQuery(options?: {
@@ -64,20 +79,9 @@ export function useDeleteAccountMutation() {
   });
 }
 
-/**
- * Выход: backend отзывает refresh-токен, локально сессия очищается
- * (clearSession гасит in-flight refresh, чтобы он не воскресил сессию).
- */
-export function useLogoutMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async () => {
-      const refreshToken = useAuthStore.getState().session?.refreshToken;
-      await profileApi.logout(refreshToken ?? undefined);
-    },
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: PROFILE_KEYS.all });
-      void useAuthStore.getState().clearSession("logout");
-    },
-  });
-}
+// Решение по логауту: кнопки «Выйти» в приложении нет осознанно
+// (ProfilePage: «Кнопки "Выйти" нет — только удаление, как Delete My
+// Account официалки»), поэтому useLogoutMutation и profileApi.logout
+// были недостижимым кодом. Удалены вместе. Если «Выйти» понадобится,
+// точка входа — здесь: POST /auth/logout на backend жив.
+//

@@ -60,22 +60,6 @@ export function splitBookingsByStatus(
   return { confirmed, pending };
 }
 
-/**
- * Заголовок секции confirmed-броней: роль пассажира.
- */
-export function confirmedSectionHeader(_count: number): string {
-  return "Вы пассажир";
-}
-
-/**
- * Номер места в поездке. Бронь всегда ровно на 1 место: seat — это
- * ПОРЯДКОВЫЙ НОМЕР места на схеме (1..MAX_SEATS), а не количество.
- * Цена брони всегда равна цене места (trip.price), без умножений.
- */
-export function formatSeatNumber(seat: number): string {
-  return `место №${seat}`;
-}
-
 const MOSCOW_TZ = "Europe/Moscow";
 
 /**

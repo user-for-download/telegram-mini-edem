@@ -63,10 +63,6 @@ vi.mock("@/queries/vehicle", () => ({
   useVehicleQuery: mockUseVehicle,
 }));
 
-vi.mock("@/queries/useReviewsQuery", () => ({
-  useUserReviewsQuery: () => ({ data: [], isLoading: false }),
-}));
-
 import { HomePage } from "@/pages/HomePage/HomePage";
 
 function queryState(overrides: Record<string, unknown> = {}) {
@@ -190,6 +186,61 @@ describe("HomePage", () => {
     expect(html).toContain("новых: 1");
     expect(html).toContain("Поездки");
     expect(html).toContain("Брони");
+  });
+
+  it("сводка: бейдж заявок — сумма pendingRequestsCount, а не длина списка", () => {
+    // Регрессия: /bookings/driver отдаёт take 50 СТРОК-заявок, поэтому
+    // requests.length упирался в 50 и при нескольких заявках на поездку
+    // показывал число поездок вместо числа заявок. Точный счётчик —
+    // сумма серверных pendingRequestsCount по активным поездкам.
+    mockUseMyTrips.mockReturnValue(
+      queryState({
+        data: {
+          pages: [
+            {
+              items: [
+                makeTrip({ id: "t-1", pendingRequestsCount: 30 }),
+                makeTrip({ id: "t-2", pendingRequestsCount: 25 }),
+              ],
+              pagination: { total: 2, hasMore: false },
+            },
+          ],
+        },
+      }),
+    );
+    // Строк в выдаче меньше 50 — как у бэкенда при обрезке.
+    mockUseDriverRequests.mockReturnValue(
+      queryState({ data: Array.from({ length: 12 }, () => makeDriverRequest()) }),
+    );
+
+    const html = render(<HomePage />);
+
+    expect(html).toContain("новых: 55");
+    expect(html).not.toContain("новых: 12");
+  });
+
+  it("сводка: без pendingRequestsCount — откат на оценку по списку", () => {
+    // pendingRequestsCount опционален в контракте: при ответе без него
+    // показываем прежнюю оценку по строкам, а не ноль.
+    mockUseMyTrips.mockReturnValue(
+      queryState({
+        data: {
+          pages: [
+            {
+              items: [makeTrip({ id: "t-1" }), makeTrip({ id: "t-2" })],
+              pagination: { total: 2, hasMore: false },
+            },
+          ],
+        },
+      }),
+    );
+    mockUseDriverRequests.mockReturnValue(
+      queryState({ data: [makeDriverRequest(), makeDriverRequest()] }),
+    );
+
+    const html = render(<HomePage />);
+
+    expect(html).toContain("новых: 2");
   });
 
   it("сводка: три плашки с aria-label целей (сегменты driving/bookings/requests)", () => {

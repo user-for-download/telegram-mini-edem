@@ -75,8 +75,13 @@ type ApiClientEvents = {
  * различает только текстом; та же конвенция, что isDeletedError в сторе
  * и bookingErrorMessage). Проверять ДО бана, иначе удалённый аккаунт
  * уйдёт на плашку бана.
+ *
+ * Константа ЖИВЁТ ЗДЕСЬ — это единственный модуль приложения, который
+ * знает протокол ошибки бэкенда. Стор, bookingErrors и ProfilePage
+ * импортируют её отсюда: копии «Account is deleted» в четырёх места
+ * разъезжались (забыли одну — экран уезжал в «бан»).
  */
-const ACCOUNT_DELETED_MESSAGE = "Account is deleted";
+export const ACCOUNT_DELETED_MESSAGE = "Account is deleted";
 
 export class ApiClient {
   private token: string | null = null;

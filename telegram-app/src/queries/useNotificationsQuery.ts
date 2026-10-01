@@ -57,50 +57,118 @@ export function useUnreadCountQuery() {
 }
 
 /**
- * Патч ОБОИХ кэшей при чтении одной записи: списки inbox (scope lists —
- * ключ счётчика под all, но НЕ под lists, число не трогаем) + декремент
- * счётчика, только если запись реально была непрочитанной.
+ * Помечает запись прочитанной на одной странице inbox.
+ *
+ * ЧИСТАЯ функция: на входе данные, на выходе — новые (или те же) плюс
+ * два признака для вызывающего. Побочных эффектов нет, поэтому её можно
+ * звать и из обработчика апдейта, не нарушая чистоту react-query
+ * (раньше флаг «была ли непрочитанной» мутировался прямо внутри
+ * updater'а setQueriesData — B5).
+ *
+ * - `changed` — запись была НЕПРОЧИТАННОЙ: именно этот признак
+ *   уменьшает счётчик (и page.unreadCount уменьшается на 1);
+ * - `present` — запись вообще есть на этой странице. Позволяет отличить
+ *   «уже прочитана» (present && !changed) от «её нет в кэше» (unknown).
+ */
+export function markReadInPages(
+  data: InfiniteData<NotificationsPage> | undefined,
+  id: string,
+  patch: Partial<Notification>,
+):
+  | {
+      data: InfiniteData<NotificationsPage>;
+      changed: boolean;
+      present: boolean;
+    }
+  | undefined {
+  if (!data) return undefined;
+
+  let changed = false;
+  let present = false;
+  const pages = data.pages.map((page) => {
+    let pageWasUnread = false;
+    const items = page.items.map((item) => {
+      if (item.id !== id) return item;
+      present = true;
+      if (!item.isRead) pageWasUnread = true;
+      // Патч мержится ВСЕГДА, даже для уже прочитанной записи: на
+      // успехе сервер присылает актуальные поля (actor/deepLink/время),
+      // а запись к этому моменту уже прочитана в кэше (оптимистичный
+      // патч) — ранний return по isRead выбрасывал бы их.
+      // isRead жёстко true: патч может не нести его.
+      return { ...item, ...patch, isRead: true };
+    });
+    if (pageWasUnread) changed = true;
+    const patched = items.some((item, index) => item !== page.items[index]);
+    if (!patched) return page;
+    return {
+      ...page,
+      items,
+      unreadCount:
+        pageWasUnread && typeof page.unreadCount === "number"
+          ? Math.max(0, page.unreadCount - 1)
+          : page.unreadCount,
+    };
+  });
+
+  if (!present) return undefined;
+  // Данные отдаём всегда: react-query применяет структурное разделение
+  // (replaceEqualDeep), поэтому глубоко равный результат не создаст
+  // новый объект и не вызовет ререндер.
+  return { data: { ...data, pages }, changed, present };
+}
+
+/** Уменьшить счётчик бейджа на 1 (не ниже нуля). */
+function decrementUnreadCount(queryClient: QueryClient): void {
+  queryClient.setQueryData<number>(
+    NOTIFICATION_KEYS.unreadCount(),
+    (count) => (typeof count === "number" ? Math.max(0, count - 1) : count),
+  );
+}
+
+/**
+ * Патч ОБОИХ кэшей при чтении одной записи: списков inbox (scope
+ * lists — ключ счётчика под all, но НЕ под lists) и счётчика бейджа.
+ *
+ * Чистая по построению: сначала читаем все совпавшие кэши, считаем
+ * изменения в чистой markReadInPages, затем пишем. Декремент счётчика
+ * ровно ОДИН на вызов, сколько бы сегментов ни содержало запись (B5).
+ *
+ * Если записи нет ни в одном кэше (сегмент переключили между рендером
+ * и тапом), о прежнем состоянии неизвестно — не угадываем, а
+ * перезапрашиваем авторитетный счётчик.
+ *
  * Возвращает, был ли декремент (для тестов/вызывающих).
  */
 export function applyMarkReadCaches(
   queryClient: QueryClient,
-  updated: Notification,
+  id: string,
+  patch: Partial<Notification>,
 ): boolean {
-  let decremented = false;
-  queryClient.setQueriesData<InfiniteData<NotificationsPage>>(
-    { queryKey: NOTIFICATION_KEYS.lists() },
-    (data) => {
-      if (!data) return data;
-      return {
-        ...data,
-        pages: data.pages.map((page) => {
-          let pageDecremented = false;
-          const items = page.items.map((item) => {
-            if (item.id !== updated.id || item.isRead) return item;
-            pageDecremented = true;
-            return updated;
-          });
-          if (pageDecremented) decremented = true;
-          return {
-            ...page,
-            items,
-            unreadCount:
-              page.unreadCount === undefined || !pageDecremented
-                ? page.unreadCount
-                : Math.max(0, page.unreadCount - 1),
-          };
-        }),
-      };
-    },
-  );
-  if (decremented) {
-    queryClient.setQueryData<number>(
-      NOTIFICATION_KEYS.unreadCount(),
-      (count) =>
-        typeof count === "number" ? Math.max(0, count - 1) : count,
-    );
+  const entries = queryClient.getQueriesData<InfiniteData<NotificationsPage>>({
+    queryKey: NOTIFICATION_KEYS.lists(),
+  });
+
+  let changed = false;
+  let present = false;
+  for (const [key, data] of entries) {
+    const result = markReadInPages(data, id, patch);
+    if (!result) continue;
+    present = present || result.present;
+    changed = changed || result.changed;
+    // Пишем всегда при present: на успехе это досинхронизация полей
+    // записи сервером, даже если read-state уже применён оптимистично.
+    queryClient.setQueryData(key, result.data);
   }
-  return decremented;
+
+  if (changed) {
+    decrementUnreadCount(queryClient);
+  } else if (!present) {
+    void queryClient.invalidateQueries({
+      queryKey: NOTIFICATION_KEYS.unreadCount(),
+    });
+  }
+  return changed;
 }
 
 /**
@@ -127,22 +195,67 @@ export function applyMarkAllReadCaches(queryClient: QueryClient): void {
   queryClient.setQueryData<number>(NOTIFICATION_KEYS.unreadCount(), 0);
 }
 
+/** Снапшот кэшей для отката оптимистичного патча. */
+interface MarkReadSnapshot {
+  lists: Array<
+    [readonly unknown[], InfiniteData<NotificationsPage> | undefined]
+  >;
+  count: number | undefined;
+}
+
 /**
- * Отметка одного уведомления прочитанным: оптимистично правим ОБА кэша
- * (списки inbox + счётчик бейджа), ресинк с сервером — по staleTime/рефетчу.
+ * Отметка одного уведомления прочитанным — ОПТИМИСТИЧНО: точка
+ * непрочтения в ленте и счётчик бейджа гаснут на тапе, до ответа
+ * сервера (B4 — раньше патч шёл в onSuccess, и докстринги обещали
+ * оптимизм, которого не было).
+ *
+ * Откат: onMutate гасит текущие запросы и кладёт снапшот обоих
+ * поддеревьев NOTIFICATION_KEYS.all; onError восстанавливает снапшот
+ * и затем инвалидирует — авторитетное состояние всё равно забирает
+ * сервер. onSuccess досинхронизирует запись целиком (сервер вернул
+ * актуальные actor/deepLink/время), повторного декремента не будет:
+ * в кэше запись уже прочитана, поэтому markReadInPages вернёт
+ * present && !changed.
  */
 export function useMarkNotificationReadMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => notificationsApi.markRead(id),
-    // Откат оптимистичного кэша при ошибке (m2): blanket-инвалидация тянет
-    // авторитетное состояние обоих кэшей (счётчик — тоже под all),
-    // зависших «прочитанных» не остаётся.
-    onError: () => {
+    onMutate: async (id): Promise<MarkReadSnapshot> => {
+      // Гасим полёты: иначе ответ соседнего refetch вернул бы старые
+      // данные поверх оптимистичного патча.
+      await queryClient.cancelQueries({ queryKey: NOTIFICATION_KEYS.all });
+      const snapshot: MarkReadSnapshot = {
+        lists: queryClient.getQueriesData<InfiniteData<NotificationsPage>>({
+          queryKey: NOTIFICATION_KEYS.lists(),
+        }),
+        count: queryClient.getQueryData<number>(
+          NOTIFICATION_KEYS.unreadCount(),
+        ),
+      };
+      applyMarkReadCaches(queryClient, id, {});
+      return snapshot;
+    },
+    onError: (_error, _id, snapshot) => {
+      if (snapshot) {
+        for (const [key, data] of snapshot.lists) {
+          queryClient.setQueryData(key, data);
+        }
+        if (snapshot.count === undefined) {
+          queryClient.removeQueries({
+            queryKey: NOTIFICATION_KEYS.unreadCount(),
+          });
+        } else {
+          queryClient.setQueryData(
+            NOTIFICATION_KEYS.unreadCount(),
+            snapshot.count,
+          );
+        }
+      }
       void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.all });
     },
     onSuccess: (updated) => {
-      applyMarkReadCaches(queryClient, updated);
+      applyMarkReadCaches(queryClient, updated.id, updated);
     },
   });
 }

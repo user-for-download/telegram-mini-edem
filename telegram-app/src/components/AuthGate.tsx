@@ -44,12 +44,15 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
     setCooldownLeft(0);
   }
   useEffect(() => {
-    if (!isRateLimited) return;
-    const timer = setInterval(() => {
+    // Отложенный таймер, а не setInterval: счётчик обязан ОСТАНОВИТЬСЯ на
+    // нуле. Интервал крутился бы раз в секунду до ухода со экрана — на
+    // 429 это минуты вхолостую (B10).
+    if (!isRateLimited || cooldownLeft <= 0) return;
+    const timer = setTimeout(() => {
       setCooldownLeft((left) => (left <= 0 ? 0 : left - 1));
     }, 1000);
-    return () => clearInterval(timer);
-  }, [isRateLimited, rateLimitEpoch]);
+    return () => clearTimeout(timer);
+  }, [isRateLimited, cooldownLeft]);
 
   useEffect(() => {
     if (status === "idle") {
@@ -70,7 +73,6 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
       // стартовать ДО логаута.
       if (
         state.status === "unauthenticated" ||
-        state.status === "error" ||
         state.status === "deleted"
       ) {
         return;
@@ -176,7 +178,7 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
     );
   }
 
-  if (status === "error" || status === "unauthenticated") {
+  if (status === "unauthenticated") {
     if (isRateLimited) {
       return (
         <AccountStatePage

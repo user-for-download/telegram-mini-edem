@@ -25,7 +25,9 @@ import styles from "./TripCountersSection.module.css";
  *    фолбэк — длина загруженных items;
  * 2) «Брони» — один counter: есть заявки — красным их число,
  *    иначе синим общее;
- * 3) «Заявки» — pending на мои поездки (красный при count > 0).
+ * 3) «Заявки» — сумма серверных pendingRequestsCount по активным
+ *    поездкам (красный при count > 0). Не длина списка заявок: тот
+ *    ограничен take 50 и считает строки, а не заявки.
  */
 export function TripCountersSection() {
   const navigate = useNavigate();
@@ -95,6 +97,30 @@ export function TripCountersSection() {
   const showPending = pendingCount > 0;
   const bookingsValue = showPending ? pendingCount : confirmed.length;
 
+  // Счётчик «Заявки» — сумма СЕРВЕРНЫХ pendingRequestsCount по активным
+  // поездкам, а не requests.length: /bookings/driver отдаёт take 50
+  // ЗАЯВОК (строк), поэтому при >50 заявок бейдж упирался в 50, а при
+  // нескольких заявках на одну поездку показывал поездки, а не заявки.
+  // Счётчик приходит с тем же where, что и список поездок, и уже в
+  // загруженной полезной нагрузке — нового запроса не нужно.
+  //
+  // Строки take:50 для отрисовки (DriverTripRequests) остаются: там
+  // нужен сам список строк, а не их количество.
+  //
+  // pendingRequestsCount опционален в контракте, поэтому при ответе без
+  // счётчиков (легаси/старый бэкенд) откатываемся к прежней оценке по
+  // строкам — хуже, чем ничего, но не «0».
+  const tripsWithRequestCount = ownTrips.filter(
+    (trip) => trip.pendingRequestsCount !== undefined,
+  );
+  const requestsValue =
+    tripsWithRequestCount.length > 0
+      ? tripsWithRequestCount.reduce(
+          (sum, trip) => sum + (trip.pendingRequestsCount ?? 0),
+          0,
+        )
+      : requests.length;
+
   const go = (to: string) => {
     haptic.light();
     navigate(to);
@@ -144,16 +170,16 @@ export function TripCountersSection() {
       key="requests"
       text="Заявки"
       onClick={() => go("/bookings?segment=requests")}
-      aria-label={`Заявки пассажиров, новых: ${requests.length}`}
+      aria-label={`Заявки пассажиров, новых: ${requestsValue}`}
     >
       <span className={styles.iconBadge}>
         <Inbox size={24} />
         <Badge
           type="number"
-          mode={requests.length === 0 ? "white" : "critical"}
+          mode={requestsValue === 0 ? "white" : "critical"}
           className={styles.badge}
         >
-          {requests.length}
+          {requestsValue}
         </Badge>
       </span>
     </InlineButtons.Item>,

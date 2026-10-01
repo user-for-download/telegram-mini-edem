@@ -6,8 +6,7 @@ import {
   vehicleServerErrorMessage,
 } from "@/components/Profile/vehicleValidation";
 import { VEHICLE_KEYS } from "@/queries/vehicle";
-import { PROFILE_KEYS } from "@/queries/profile";
-import { USER_KEYS } from "@/queries/useUsersQuery";
+import { PROFILE_KEYS, USER_KEYS } from "@/queries/profile";
 import { ApiError } from "@/api/client";
 
 describe("validateVehicleForm (порт CarFormModal)", () => {

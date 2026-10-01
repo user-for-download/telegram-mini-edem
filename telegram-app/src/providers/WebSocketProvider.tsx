@@ -50,6 +50,46 @@ import {
  * - resync после каждого reconnect — инвалидация запросов (HTTP, не replay).
  */
 
+/**
+ * Классификация терминального close 4403 по строке причины.
+ *
+ * Различаем «удалён» и «забанен», потому что это РАЗНЫЕ терминальные
+ * экраны: бан — плашка с формой обжалования, удаление — «Профиль удалён»
+ * без надежды на восстановление. Раньше оба случая сводились к
+ * status="banned", и удалённый аккаунт получал бан-экран.
+ *
+ * Строка причины — наш собственный фиксированный литерал (не PII и не
+ * данные авторизации), но в banReason она НЕ попадает: причина остаётся
+ * только из тела HTTP 403 (readBanReason). Принципиал прежний — «причины
+ * это диагностика, авторизация по телу ответа»; здесь reason решает
+ * лишь, КАКОЙ терминальный переход сделать.
+ *
+ * Таблица (три источника — три написания, сравнение с одной строкой
+ * молча ловило бы только WS-auth путь):
+ * - "Account is deleted" — backend/src/ws/index.ts:130 (WS-auth, deletedAt);
+ * - "Account deleted"    — backend/src/users/index.ts:278 (DELETE /me,
+ *                         самоудаление; без "is" — самый частый случай);
+ * - "Account is banned"  — backend/src/ws/index.ts:136 (WS-auth, bannedAt)
+ *                         и backend/src/admin/index.ts:646 (бан админом).
+ *
+ * "unknown" — причина пуста или незнакомая (старый клиент, иной бэкенд):
+ * безопасный дефолт "banned" + один HTTP-bootstrap, чтобы авторитетный
+ * 403 сам уточнил, deleted это или ban.
+ */
+export type TerminalCloseReason = "deleted" | "banned" | "unknown";
+
+export function classifyTerminalCloseReason(
+  reason: string | undefined,
+): TerminalCloseReason {
+  if (reason === "Account is deleted" || reason === "Account deleted") {
+    return "deleted";
+  }
+  if (reason === "Account is banned") {
+    return "banned";
+  }
+  return "unknown";
+}
+
 interface WsContextValue {
   isConnected: boolean;
   lastMessage: WsServerEvent | null;
@@ -224,15 +264,26 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
 
       const policy = classifyWsClose(e.code);
 
-      // 4403: бан/удаление — терминально. Ни reconnect, ни refresh-loop:
-      // сессию гасим по HTTP auth-политике (экран бана), banReason из
-      // close-причины НЕ берём (причины — только диагностика, не данные
-      // авторизации; реальную причину подтянет следующий HTTP bootstrap).
+      // 4403: бан/удаление — терминально. Ни reconnect, ни refresh-loop.
+      // banReason из close-причины НЕ берём (причины — только диагностика,
+      // не данные авторизации; реальная причина подтянется из тела 403).
+      // Различаем удаление и бан по машинной строке причины: экран у них
+      // разный (см. classifyTerminalCloseReason).
       if (policy === "terminal") {
+        const terminalReason = classifyTerminalCloseReason(e.reason);
         terminalTokenRef.current =
           useAuthStore.getState().session?.accessToken ?? null;
         apiClient.invalidatePendingRefresh();
         apiClient.setSession(null);
+
+        // Канонический переход удаления — тот же, что у HTTP-пути
+        // (403 "Account is deleted"): экран «Профиль удалён», пурж кэша
+        // launch params, гашение in-flight refresh.
+        if (terminalReason === "deleted") {
+          useAuthStore.getState().markAccountDeleted();
+          return;
+        }
+
         useAuthStore.setState({
           status: "banned",
           user: null,
@@ -240,6 +291,30 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
           banReason: null,
           initData: null,
         });
+
+        // Причина незнакома: единственный авторитетный источник — тело
+        // 403. Ровно один bootstrap; раньше этот шаг был описан
+        // комментарием, но не выполнялся.
+        //
+        // bootstrap() на время полёта ставит status="initializing"
+        // (AuthGate показывает спиннер), а при недоступной сети уводит в
+        // "unauthenticated" — и тогда бан-экран с формой обжалования
+        // потерялся бы. Поэтому авторитетный ответ (banned/deleted)
+        // принимаем как есть, а любой другой исход возвращаем к
+        // безопасному дефолту "banned".
+        if (terminalReason === "unknown") {
+          void useAuthStore.getState().bootstrap().then(() => {
+            const next = useAuthStore.getState().status;
+            if (next === "banned" || next === "deleted") return;
+            useAuthStore.setState({
+              status: "banned",
+              user: null,
+              session: null,
+              banReason: null,
+              initData: null,
+            });
+          });
+        }
         return;
       }
 

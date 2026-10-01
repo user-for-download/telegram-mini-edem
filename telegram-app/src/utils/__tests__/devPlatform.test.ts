@@ -1,24 +1,11 @@
 // Юнит-тесты чистых хелперов dev-переключателей платформы/темы.
 import { describe, expect, it } from "vitest";
 import {
-  APPEARANCE_OPTIONS,
   PLATFORM_OPTIONS,
   choiceLabel,
-  nextChoice,
   nextPlatformChoice,
   resolveAppRootPlatform,
 } from "@/utils/devPlatform";
-
-describe("nextChoice", () => {
-  it("круг по опциям", () => {
-    expect(nextChoice(PLATFORM_OPTIONS, "ios")).toBe("android");
-    expect(nextChoice(PLATFORM_OPTIONS, "android")).toBe("ios");
-  });
-
-  it("null стартует с первой опции", () => {
-    expect(nextChoice(PLATFORM_OPTIONS, null)).toBe("ios");
-  });
-});
 
 describe("nextPlatformChoice", () => {
   it("круг с возвратом в Авто", () => {
@@ -32,7 +19,10 @@ describe("choiceLabel", () => {
   it("null — Авто", () => {
     expect(choiceLabel(PLATFORM_OPTIONS, null)).toBe("Авто");
     expect(choiceLabel(PLATFORM_OPTIONS, "ios")).toBe("iOS");
-    expect(choiceLabel(APPEARANCE_OPTIONS, "dark")).toBe("Тёмная");
+    // choiceLabel работает с любым списком опций ( APPEARANCE_OPTIONS
+    // удалён как мёртвый — тема переключается отдельным циклом в
+    // DevToggles, а не общим списком).
+    expect(choiceLabel(PLATFORM_OPTIONS, "android")).toBe("Android");
   });
 });
 

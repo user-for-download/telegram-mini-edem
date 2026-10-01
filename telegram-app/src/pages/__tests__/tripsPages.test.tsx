@@ -78,6 +78,7 @@ vi.mock("@/queries/useAllCities", () => ({
 
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripPage } from "@/pages/Trip/TripPage";
+import { normalizeSegment } from "@/pages/TripActive/TripActivePage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function queryState(overrides: Record<string, unknown> = {}) {
@@ -241,5 +242,69 @@ describe("SearchPage parity", () => {
     );
     expect(html).toContain("Вологда");
     expect(html).toContain("Череповец");
+  });
+});
+
+/**
+ * B7: полная таблица токенов ?segment. «driving» — драйвер, а не «Все»:
+ * именно его шлют счётчик «Поездки» на главной, действия экрана заявок
+ * водителя и deep-link my_trips. Прежний маппинг в «Все» уводил все
+ * три точки входа не туда.
+ */
+describe("normalizeSegment: таблица токенов ?segment", () => {
+  it("driver: канонический + driving + легаси requests", () => {
+    expect(normalizeSegment("driver")).toBe("driver");
+    expect(normalizeSegment("driving")).toBe("driver");
+    expect(normalizeSegment("requests")).toBe("driver");
+  });
+
+  it("passenger: канонический + легаси bookings", () => {
+    expect(normalizeSegment("passenger")).toBe("passenger");
+    expect(normalizeSegment("bookings")).toBe("passenger");
+  });
+
+  it("all: явный, легаси active, пусто, null и мусор", () => {
+    expect(normalizeSegment("all")).toBe("all");
+    expect(normalizeSegment("active")).toBe("all");
+    expect(normalizeSegment(null)).toBe("all");
+    expect(normalizeSegment("")).toBe("all");
+    expect(normalizeSegment("history")).toBe("all");
+    expect(normalizeSegment("ДРАЙВЕР")).toBe("all");
+  });
+
+  it("?segment=driving рендерит только водительское (бронь пассажира не попадает)", () => {
+    // Регрессия B7 на уровне страницы: при старе маппинге «driving» уезжал
+    // в «Все», где список смешивает поездки за рулём и брони пассажира —
+    // и счётчик «Поездки» с главной вёл на смешанный список.
+    mockUseInfiniteMyTrips.mockReturnValue(
+      infiniteState([makeTrip({ pendingRequestsCount: 0 })]),
+    );
+    mockUseMyBookings.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "b-1",
+            status: "confirmed",
+            scope: "active",
+            seat: 1,
+            trip: {
+              ...makeTrip({ id: "t-2", fromCity: "Тула", toCity: "Смоленск" }),
+              driver: { id: "u-other", name: "Другой", rating: 4, reviewsCount: 3 },
+            },
+          },
+        ],
+      }),
+    );
+
+    const driverOnly = render(<TripPage />, "/bookings?segment=driving");
+    expect(driverOnly).toContain("Вы водитель");
+    expect(driverOnly).toContain("Москва");
+    expect(driverOnly).not.toContain("Смоленск");
+    expect(driverOnly).not.toContain("Другой");
+
+    // Контроль: сегмент «Все» по-прежнему смешанный.
+    const allSegments = render(<TripPage />, "/bookings?segment=all");
+    expect(allSegments).toContain("Вы водитель");
+    expect(allSegments).toContain("Другой");
   });
 });

@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { userSchema, type User } from "@edem/contracts";
+import {
+  userSchema,
+  type CompleteOnboardingBody,
+  type User,
+} from "@edem/contracts";
 import { apiClient } from "./client";
 
 const successSchema = z.object({ success: z.boolean() }).strict();
@@ -11,7 +15,11 @@ export interface ProfileUpdateDto {
 }
 
 /**
- * Профильный API Telegram-приложения (порт users.api).
+ * Профильный API Telegram-приложения — ЕДИНСТВЕННЫЙ источник ресурса
+ * /users/me. Раньше тот же ресурс описывали ещё api/users.api.ts
+ * (GET/PATCH /users/me, notification-settings, DELETE) и мёртвый
+ * getCurrentVehicle в api/vehicle.ts; типы разъехались — users.api
+ * не знал про phone, который есть в контракте. Дубли удалены.
  *
  * Все ответы валидируются shared-контрактами (@edem/contracts) через
  * apiClient.request(..., schema) — fail-closed: невалидный ответ сервера
@@ -44,17 +52,16 @@ export const profileApi = {
     apiClient.request("/users/me", { method: "DELETE" }, successSchema),
 
   /**
-   * Логаут: backend отзывает refresh-токен (POST /auth/logout — всегда 200,
-   * идемпотентен), локальная очистка сессии — в useLogoutMutation.
-   * Без refresh-токена шлём пустое тело: backend всё равно отвечает success.
+   * Отметка прохождения онбординга (POST /users/me/onboarding). Раньше жил
+   * в api/users.api.ts — второй модуль на тот же ресурс /users/me.
    */
-  logout: (refreshToken?: string): Promise<{ success: boolean }> =>
+  completeOnboarding: (version: string): Promise<User> =>
     apiClient.request(
-      "/auth/logout",
+      "/users/me/onboarding",
       {
         method: "POST",
-        body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+        body: JSON.stringify({ version } satisfies CompleteOnboardingBody),
       },
-      successSchema,
+      userSchema,
     ),
 };

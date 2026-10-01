@@ -220,7 +220,10 @@ describe("formatNotifTime / notificationAcronym", () => {
 
 describe("NotificationsPage: шапка и контракт", () => {
   it("пилюли сегментов + IconButton «Прочитать все» со счётчиком", () => {
-    setMocks(pageWithItems([makeNotification()]));
+    // Счётчик задаётся ЯВНО (глобальный unread-count). Раньше число
+    // подставлялось фолбэком из page[0].unreadCount сегментного ответа —
+    // это и был B9.
+    setMocks(pageWithItems([makeNotification()], 1), 1);
 
     const html = renderPage();
 
@@ -612,10 +615,15 @@ describe("NotificationsPage: бейдж — авторитетный счётч�
     expect(html).not.toContain("Прочитать все (");
   });
 
-  it("без счётчика (первая загрузка) — фолбэк на page[0], имя то же", () => {
+  it("без счётчика (первая загрузка) — 0, сегментное число не подставляется", () => {
+    // Пока глобальный счётчик не пришёл, число неизвестно: показываем 0.
+    // Сегментный page[0].unreadCount = 1 к делу не относится (B9) —
+    // кнопка помечает прочитанными ВСЁ, а не только архив.
     setMocks(pageWithItems([makeNotification()], 1));
 
-    expect(renderPage()).toContain('aria-label="Прочитать все (1)"');
+    const html = renderPage();
+    expect(html).toContain('aria-label="Все уведомления прочитаны"');
+    expect(html).not.toContain("Прочитать все (1)");
   });
 
   it("счётчик живёт в aria-live: анонс имени/числа без смены механики", () => {
@@ -656,9 +664,9 @@ describe("notifications cache: read/read-all правят ОБА кэша", () =
     });
     client.setQueryData(NOTIFICATION_KEYS.unreadCount(), 5);
 
-    const decremented = applyMarkReadCaches(client, {
-      ...makeNotification({ id: "n-1", isRead: true }),
-    } as never);
+    const decremented = applyMarkReadCaches(client, "n-1", {
+      isRead: true,
+    });
 
     expect(decremented).toBe(true);
     const inbox = client.getQueryData(inboxKey) as {
@@ -685,9 +693,9 @@ describe("notifications cache: read/read-all правят ОБА кэша", () =
     });
     client.setQueryData(NOTIFICATION_KEYS.unreadCount(), 5);
 
-    const decremented = applyMarkReadCaches(client, {
-      ...makeNotification({ id: "n-1", isRead: true }),
-    } as never);
+    const decremented = applyMarkReadCaches(client, "n-1", {
+      isRead: true,
+    });
 
     expect(decremented).toBe(false);
     const inbox = client.getQueryData(inboxKey) as {
@@ -743,5 +751,63 @@ describe("notification keys: узкий набор для WS-хинта", () => 
     const inboxKey = [...NOTIFICATION_KEYS.inbox(20, "unread")];
     expect(inboxKey.slice(0, 2)).toEqual([...NOTIFICATION_KEYS.lists()]);
     // Ключ счётчика — число, он НЕ под lists: list-патчи его не задевают.
+  });
+});
+
+
+/* B8 (время по Москве) вынесен в notificationsTime.tz.test.ts: там
+ * принудительно ставится TZ, отличная от московской, — на московской
+ * машине баг неотличим от корректного поведения. */
+
+describe("счётчик «Прочитать все»: сегмент не протекает (B9)", () => {
+  /** Сегментный ответ с unreadCount архива (для вьюпорт — это не глобальное число). */
+  function segmentInbox(unreadCount: number) {
+    return infiniteState({
+      data: {
+        pages: [
+          {
+            items: [makeNotification({ id: "n-1", isRead: false })],
+            nextCursor: null,
+            unreadCount,
+          },
+        ],
+      },
+    });
+  }
+
+  it("непрочитанные в архиве водителя НЕ попадают в число на кнопке", () => {
+    // Сегментный unreadCount = 7, глобальный счётчик ещё грузится
+    // (data === undefined). Показать «Прочитать все (7)» нельзя: это
+    // число непрочитанных ТОЛЬКО в водительском архиве, а действие
+    // помечает прочитанными всё.
+    mockUseInbox.mockReturnValue(segmentInbox(7));
+    mockUseUnreadCount.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const html = renderPageAt("/?segment=driver");
+
+    expect(html).not.toContain("Прочитать все (7)");
+    expect(html).toContain("Все уведомления прочитаны");
+  });
+
+  it("глобальный счётчик отражается в кнопке, сегментный игнорируется", () => {
+    mockUseInbox.mockReturnValue(segmentInbox(7));
+    mockUseUnreadCount.mockReturnValue({
+      data: 12,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const html = renderPageAt("/?segment=driver");
+
+    expect(html).toContain("Прочитать все (12)");
+    expect(html).not.toContain("Прочитать все (7)");
   });
 });

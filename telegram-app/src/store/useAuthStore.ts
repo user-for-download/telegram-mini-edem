@@ -3,15 +3,25 @@ import { getRawInitData, purgeLaunchParamsCache } from "@/utils/telegram-adapter
 import { log } from "@/utils/log";
 import type { User } from "@/types";
 import { authApi } from "@/api/auth.api";
-import { ApiError, apiClient } from "@/api/client";
+import {
+  ACCOUNT_DELETED_MESSAGE,
+  ApiError,
+  apiClient,
+} from "@/api/client";
 import type { AuthResponse, TelegramAuthRequest } from "@edem/contracts";
 
+/**
+ * Статусы авторизации. Значения "error" здесь НЕТ намеренно: сбой
+ * авторизации — это либо терминальный экран (banned/deleted), либо
+ * обычный "unauthenticated" с lastAuthError для различения причины
+ * (429 / SESSION_EXPIRED / INIT_DATA_UNAVAILABLE). Отдельного
+ * состояния не было никогда, и его проверки были недостижимыми.
+ */
 export type AuthStatus =
   | "idle"
   | "initializing"
   | "authenticated"
   | "unauthenticated"
-  | "error"
   | "background"
   | "banned"
   | "deleted";
@@ -90,10 +100,9 @@ function isBannedError(error: unknown): error is ApiError {
 
 /**
  * Распознаёт 403 удалённого аккаунта из bootstrap: код совпадает с баном
- * (FORBIDDEN), различаем по message ("Account is deleted"). Проверять ДО
- * isBannedError, иначе удалённый аккаунт попадёт на плашку бана.
+ * (FORBIDDEN), различаем по message. Проверять ДО isBannedError, иначе
+ * удалённый аккаунт попадёт на плашку бана.
  */
-const ACCOUNT_DELETED_MESSAGE = "Account is deleted";
 
 function isDeletedError(error: unknown): error is ApiError {
   return (
@@ -233,7 +242,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // размонтирован). Подписка одноразовая — снимается в finally ниже.
         // Дублирующее обновление из гейта идемпотентно (те же значения).
         const unsubscribe = apiClient.onTokenUpdate((tokens) => {
-          if (get().status === "unauthenticated" || get().status === "error" || get().status === "deleted") {
+          if (
+            get().status === "unauthenticated" ||
+            get().status === "deleted"
+          ) {
             return;
           }
           set({
@@ -258,6 +270,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           const refreshResult = await apiClient.tryRefresh();
 
+          // Сессию могли снять параллельно, пока шёл запрос: logout,
+          // отзыв refresh-токена, бан или удаление. Тогда результату
+          // refresh нечего применять — нужное состояние уже установлено,
+          // и трогать его нельзя. Сторожит именно session: проверка
+          // refreshGeneration в apiClient отсекает подмену токенов, но
+          // статус не сторожит (B6 — без этой проверки транзиентный сбой
+          // возвращал status="authenticated" при session === null, и
+          // приложение рендерилось без токена, с 401-циклом).
+          if (!get().session) return;
+
           if (refreshResult === "permanent-rejection") {
             // Бан (403 FORBIDDEN) идёт тем же путём: onBanned уже выставил
             // status="banned" — не затираем плашку бана логаутом.
@@ -271,6 +293,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // Транзиентный сбой (сеть/5xx/невалидный ответ): сессию НЕ
             // сбрасываем — следующий запрос повторит refresh и восстановится.
             // Возвращаем только активный статус; user/session не трогаем.
+            // Сессия гарантированно на месте — Early return выше.
             if (get().status !== "banned") {
               set({ status: "authenticated" });
             }
@@ -281,7 +304,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       } catch (error) {
         console.error("[Auth] Refresh failed:", error);
-        if (get().status !== "banned") {
+        // Тот же контракт, что и выше: без сессии состояние не трогаем.
+        if (get().status !== "banned" && get().session) {
           set({ status: "authenticated" });
         }
       }

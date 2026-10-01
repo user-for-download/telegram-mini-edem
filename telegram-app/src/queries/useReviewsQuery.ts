@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { reviewsApi } from "@/api/reviews.api";
-import { USER_KEYS } from "./useUsersQuery";
+import { USER_KEYS } from "./profile";
 import type { CreateReviewDto } from "@edem/contracts";
 
 export const REVIEW_KEYS = {
@@ -24,18 +24,6 @@ export function useMyReviewsQuery(options?: { enabled?: boolean }) {
     queryKey: REVIEW_KEYS.my(),
     queryFn: ({ signal }) => reviewsApi.getMyReviews(signal),
     enabled: options?.enabled ?? true,
-  });
-}
-
-export function useUserReviewsQuery(
-  userId: string,
-  options?: { enabled?: boolean },
-) {
-  return useQuery({
-    queryKey: REVIEW_KEYS.user(userId),
-    queryFn: async ({ signal }) =>
-      (await reviewsApi.getUserReviews(userId, undefined, 20, signal)).items,
-    enabled: Boolean(userId) && (options?.enabled ?? true),
   });
 }
 
