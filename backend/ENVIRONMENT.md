@@ -82,19 +82,61 @@ decision (see `docs/adr/telegram-notification-delivery.md`), the delivery
 service only resolves the deep-link and records observability
 (`src/services/telegramNotifications.ts`).
 
-- `TELEGRAM_DELIVERY_ENABLED` (default `true`) is the kill-switch: `false`
-  marks deliveries `disabled`, the inbox record is still created.
-- `TG_NOTIFICATION_DEDUPE_WINDOW_MS` (default `60000`) is the dedupe window
-  against duplicate deliveries of the same event.
-- Delivery never throws: a failure is logged (`tg_delivery_failed`) and does
-  not affect the caller's business transaction (the inbox row is already in
-  the DB).
+The outbox (`NotificationDelivery`) walks
+`pending → processing → delivered | skipped | failed`. Delivery never throws:
+a failure does not affect the caller's business transaction (the inbox row is
+already in the DB), it is only recorded on the delivery row and logged.
+
+### Channel switch
+
+- `TELEGRAM_DELIVERY_ENABLED` (default `true`) is the kill-switch. When
+  `false`, tasks settle as `skipped` with reason `channel_disabled` and the
+  inbox record is still created. There is no `disabled` status.
+
+### Dispatcher
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `TG_NOTIFICATION_DISPATCH_INTERVAL_MS` | `15000` | Dispatcher poll interval. |
+| `TG_NOTIFICATION_DISPATCH_BATCH_SIZE` | `50` | Tasks claimed per poll. |
+| `TG_NOTIFICATION_MAX_RETRIES` | `3` | Attempts before a task settles as `failed`. |
+| `TG_NOTIFICATION_PROCESSING_TIMEOUT_MS` | `600000` (10 min) | Rows left in `processing` longer than this are requeued by the recovery pass — covers a crash between claim and settle. Must exceed batch size × per-send timeout. |
+| `TG_NOTIFICATION_CRITICAL_TYPE_COOLDOWN_MS` | `300000` (5 min) | Cooldown between repeated critical events of the same type for one user. |
+| `TG_NOTIFICATION_USER_RATE_WINDOW_MS` | `3600000` (1 h) | User rate-limit window. |
+| `TG_NOTIFICATION_USER_RATE_MAX` | `5` | User rate-limit budget per window. |
+| `TG_NOTIFICATION_DEDUPE_WINDOW_MS` | `60000` | Dedupe window against duplicate deliveries of the same event. |
+
+### Retention
+
+`pruneOldNotifications` runs from the trip worker and is idempotent; a run
+that finds nothing to delete is cheap, so these are safe to leave at default.
+
+| Variable | Default | Deletes |
+|---|---|---|
+| `TG_NOTIFICATION_OUTBOX_RETENTION_MS` | 30 days | `NotificationDelivery` rows (outbox). |
+| `TG_NOTIFICATION_INBOX_READ_RETENTION_MS` | 90 days | Read `Notification` rows. |
+| `TG_NOTIFICATION_INBOX_UNREAD_RETENTION_MS` | 180 days | Unread `Notification` rows. |
+
+### Observability
+
+Metrics: `tg_outbox_channel_enabled`, `tg_outbox_total`, `tg_outbox_status`
+(by status), `tg_outbox_skipped`, `tg_outbox_skip_policy`.
+Logs use the `tg_outbox_*` family (`tg_outbox_enqueued`,
+`tg_outbox_enqueue_failed`, `tg_outbox_skip_record_failed`); the dispatcher
+also logs the terminal `outcome` per task. `error` on a delivery row is a
+short machine code — never message text, never PII.
 
 Example environment entries:
 
 ```dotenv
 TELEGRAM_DELIVERY_ENABLED=true
+TG_NOTIFICATION_DISPATCH_INTERVAL_MS=15000
+TG_NOTIFICATION_MAX_RETRIES=3
+TG_NOTIFICATION_PROCESSING_TIMEOUT_MS=600000
 TG_NOTIFICATION_DEDUPE_WINDOW_MS=60000
+TG_NOTIFICATION_OUTBOX_RETENTION_MS=2592000000
+TG_NOTIFICATION_INBOX_READ_RETENTION_MS=7776000000
+TG_NOTIFICATION_INBOX_UNREAD_RETENTION_MS=15552000000
 ```
 
 ## Metrics access
