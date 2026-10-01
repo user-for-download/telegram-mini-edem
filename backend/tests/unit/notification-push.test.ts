@@ -5,7 +5,12 @@
 // кладётся задача NotificationDelivery (pending) или skip с причиной.
 // Решение — decideTelegramDelivery (политика с чатом/kill-switch),
 // дедуп до записи, deep-link через allowlist.
+//
+// Item 7: notifyUser оборачивает createNotification + WS-hint
+// (notification:new с NOTIFICATION_HINT_REFRESH_ID): hint уходит только
+// когда запись реально создана, пропуски по тумблеру/дедупу ленту не дёргают.
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NOTIFICATION_HINT_REFRESH_ID } from "@edem/contracts";
 
 const findUnique = vi.fn();
 const notificationCreate = vi.fn().mockResolvedValue({ id: "n1" });
@@ -27,12 +32,19 @@ vi.mock("../../src/logger.js", () => ({
   logger: { error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("../../src/services/wsManager.js", () => ({
+  wsManager: { sendToUser: vi.fn() },
+}));
+
 const envState = { TELEGRAM_DELIVERY_ENABLED: true };
 vi.mock("../../src/env.js", () => ({ env: envState }));
 
-const { createNotification } = await import(
+const { createNotification, notifyUser } = await import(
   "../../src/services/notification.service.js"
 );
+
+const { wsManager } = await import("../../src/services/wsManager.js");
+const sendToUser = vi.mocked(wsManager.sendToUser);
 
 describe("createNotification — outbox wiring (shadow)", () => {
   beforeEach(() => {
@@ -267,5 +279,70 @@ describe("createNotification — outbox wiring (shadow)", () => {
 
     const data = deliveryCreate.mock.calls[0][0].data;
     expect(data.deepLink).toBe("/notifications");
+  });
+});
+
+describe("notifyUser — WS hint wiring (item 7)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    notificationCreate.mockResolvedValue({ id: "n1" });
+    notificationFindFirst.mockResolvedValue(null);
+    envState.TELEGRAM_DELIVERY_ENABLED = true;
+  });
+
+  it("hint id — контрактный сентинел 'refresh' (без магии на колл-сайтах)", () => {
+    expect(NOTIFICATION_HINT_REFRESH_ID).toBe("refresh");
+  });
+
+  it("созданная запись → hint отправлен, возвращается id", async () => {
+    findUnique.mockResolvedValue({
+      id: "u1",
+      telegramUserId: 123n,
+      notificationsEnabled: true,
+      tgChatJoinedAt: new Date(),
+    });
+
+    await expect(
+      notifyUser({ userId: "u1", type: "trip_cancelled", title: "T", body: "B" }),
+    ).resolves.toBe("n1");
+
+    expect(sendToUser).toHaveBeenCalledTimes(1);
+    expect(sendToUser).toHaveBeenCalledWith("u1", {
+      type: "notification:new",
+      payload: { id: NOTIFICATION_HINT_REFRESH_ID },
+    });
+  });
+
+  it("пропуск по тумблеру (null id) → hint НЕ отправлен", async () => {
+    findUnique.mockResolvedValue({
+      id: "u1",
+      telegramUserId: 123n,
+      notificationsEnabled: false,
+      tgChatJoinedAt: new Date(),
+    });
+
+    await expect(
+      notifyUser({ userId: "u1", type: "booking_created", title: "T", body: "B" }),
+    ).resolves.toBeNull();
+
+    expect(notificationCreate).not.toHaveBeenCalled();
+    expect(sendToUser).not.toHaveBeenCalled();
+  });
+
+  it("дедуп-пропуск (null id) → hint НЕ отправлен", async () => {
+    findUnique.mockResolvedValue({
+      id: "u1",
+      telegramUserId: 123n,
+      notificationsEnabled: true,
+      tgChatJoinedAt: new Date(),
+    });
+    notificationFindFirst.mockResolvedValue({ id: "existing" });
+
+    await expect(
+      notifyUser({ userId: "u1", type: "trip_cancelled", title: "T", body: "B" }),
+    ).resolves.toBeNull();
+
+    expect(notificationCreate).not.toHaveBeenCalled();
+    expect(sendToUser).not.toHaveBeenCalled();
   });
 });

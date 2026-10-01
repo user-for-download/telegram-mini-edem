@@ -54,7 +54,7 @@ import { tokensEqual } from "../utils/timingSafeEqual.js";
 import { getUniqueConstraintName } from "../utils/prisma-errors.js";
 import { recomputeUserRating } from "../reviews/rating.js";
 import {
-  createNotification,
+  notifyUser,
   tripSnapshotOf,
 } from "../services/notification.service.js";
 import { getTelegramDeliveryMetrics } from "../services/telegramMetrics.js";
@@ -498,28 +498,21 @@ adminRouter.post("/feedback/:id/reply", mutationLimiter, async (c) => {
   });
 
   // In-app уведомление: «feedback_replied» — не критичный тип, подчиняется
-  // тумблеру notificationsEnabled пользователя (createNotification проверяет
+  // тумблеру notificationsEnabled пользователя (notifyUser проверяет
   // его внутри). Глубокая ссылка ведёт в раздел «Мои обращения» мини-аппа.
-  const feedbackNotificationId = await createNotification(
-    updated.userId,
-    "feedback_replied",
-    "Ответ поддержки",
-    truncateForNotification(updated.reply ?? ""),
+  // Live-hint инбокса — внутри notifyUser, только если запись создана.
+  await notifyUser({
+    userId: updated.userId,
+    type: "feedback_replied",
+    title: "Ответ поддержки",
+    body: truncateForNotification(updated.reply ?? ""),
     // Query в deep-link резолвер отбрасывает (безопасный fallback), поэтому
     // ведём на чистый маршрут раздела поддержки.
-    "/profile/support",
+    fragment: "/profile/support",
     // Вторая строка — «имя • действие» (глагол согласуется с актором).
-    "Оператор",
-    "replied",
-  );
-  // Live-обновление инбокса (M4): как у остальных типов, hint — только если
-  // запись реально создана.
-  if (feedbackNotificationId) {
-    wsManager.sendToUser(updated.userId, {
-      type: "notification:new",
-      payload: { id: "refresh" },
-    });
-  }
+    actorName: "Оператор",
+    action: "replied",
+  });
 
   logBusinessEvent("feedback.replied", {
     feedbackId: updated.id,
@@ -882,33 +875,27 @@ adminRouter.patch("/trips/:id/cancel", mutationLimiter, async (c) => {
   const { trip, passengerIds } = result;
 
   // Персистентные уведомления + WS-события пассажирам — ВНЕ транзакции
-  // (паттерн водительской отмены). createNotification глотает ошибки
+  // (паттерн водительской отмены). notifyUser глотает ошибки
   // внутри, поэтому параллелим безопасно.
   await Promise.all(
     passengerIds.map(async (pid) => {
-      const notificationId = await createNotification(
-        pid,
-        "trip_cancelled",
-        "Поездка отменена",
-        `Поездка ${trip.fromCity} → ${trip.toCity} отменена администрацией`,
+      await notifyUser({
+        userId: pid,
+        type: "trip_cancelled",
+        title: "Поездка отменена",
+        body: `Поездка ${trip.fromCity} → ${trip.toCity} отменена администрацией`,
         // Тап открывает шторку деталей отменённой поездки.
-        `/trips/${trip.id}`,
+        fragment: `/trips/${trip.id}`,
         // Вторая строка — «имя • действие», третья — снапшот поездки.
-        "Администратор",
-        "cancelled",
-        tripSnapshotOf(trip),
-      );
+        actorName: "Администратор",
+        action: "cancelled",
+        tripSnapshot: tripSnapshotOf(trip),
+      });
 
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
         payload: { tripId: trip.id, status: "cancelled" },
       });
-      if (notificationId) {
-        wsManager.sendToUser(pid, {
-          type: "notification:new",
-          payload: { id: "refresh" },
-        });
-      }
     }),
   );
 
@@ -1249,25 +1236,20 @@ adminRouter.patch("/reviews/:id/approve", mutationLimiter, async (c) => {
   });
 
   // In-app уведомление автору: не критичный тип, подчиняется тумблеру
-  // notificationsEnabled (createNotification проверяет его внутри).
+  // notificationsEnabled (notifyUser проверяет его внутри).
   // Глубокая ссылка ведёт в раздел «Мои отзывы» мини-аппа.
-  const reviewApprovedNotificationId = await createNotification(
-    updated.authorId,
-    "review_approved",
-    "Отзыв опубликован",
-    "Ваш отзыв опубликован",
+  // Live-hint инбокса — внутри notifyUser, только если запись создана.
+  await notifyUser({
+    userId: updated.authorId,
+    type: "review_approved",
+    title: "Отзыв опубликован",
+    body: "Ваш отзыв опубликован",
     // Query в deep-link резолвер отбрасывает — ведём на чистый маршрут.
-    "/reviews",
+    fragment: "/reviews",
     // Вторая строка — «имя • действие» (глагол согласуется с актором).
-    "Модератор",
-    "approved",
-  );
-  if (reviewApprovedNotificationId) {
-    wsManager.sendToUser(updated.authorId, {
-      type: "notification:new",
-      payload: { id: "refresh" },
-    });
-  }
+    actorName: "Модератор",
+    action: "approved",
+  });
 
   return c.json(serializeAdminReview(updated));
 });
@@ -1364,24 +1346,19 @@ adminRouter.patch("/reviews/:id/reject", mutationLimiter, async (c) => {
   });
 
   // In-app уведомление автору: не критичный тип, подчиняется тумблеру
-  // notificationsEnabled (createNotification проверяет его внутри).
-  const reviewRejectedNotificationId = await createNotification(
-    updated.authorId,
-    "review_rejected",
-    "Отзыв отклонён",
-    "Ваш отзыв не был опубликован",
+  // notificationsEnabled (notifyUser проверяет его внутри).
+  // Live-hint инбокса — внутри notifyUser, только если запись создана.
+  await notifyUser({
+    userId: updated.authorId,
+    type: "review_rejected",
+    title: "Отзыв отклонён",
+    body: "Ваш отзыв не был опубликован",
     // Query в deep-link резолвер отбрасывает — ведём на чистый маршрут.
-    "/reviews",
+    fragment: "/reviews",
     // Вторая строка — «имя • действие» (глагол согласуется с актором).
-    "Модератор",
-    "rejected",
-  );
-  if (reviewRejectedNotificationId) {
-    wsManager.sendToUser(updated.authorId, {
-      type: "notification:new",
-      payload: { id: "refresh" },
-    });
-  }
+    actorName: "Модератор",
+    action: "rejected",
+  });
 
   return c.json(serializeAdminReview(updated));
 });

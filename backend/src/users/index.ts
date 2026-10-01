@@ -17,7 +17,7 @@ import { ERROR_CODES } from "../errors.js";
 import { DEFAULT_AVATAR_URL } from "../constants.js";
 import { logBusinessEvent } from "../logger/business.js";
 import {
-  createNotification,
+  notifyUser,
   tripSnapshotOf,
 } from "../services/notification.service.js";
 
@@ -224,52 +224,40 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
       passengersCount: trip.confirmedPassengerIds.length,
     });
     for (const pid of trip.confirmedPassengerIds) {
-      const notificationId = await createNotification(
-        pid,
-        "trip_status_changed",
-        "Поездка завершена",
-        `Поездка ${trip.fromCity} → ${trip.toCity} завершена. Вы можете оставить отзыв.`,
+      await notifyUser({
+        userId: pid,
+        type: "trip_status_changed",
+        title: "Поездка завершена",
+        body: `Поездка ${trip.fromCity} → ${trip.toCity} завершена. Вы можете оставить отзыв.`,
         // Тап открывает шторку деталей завершённой поездки.
-        `/trips/${trip.id}`,
+        fragment: `/trips/${trip.id}`,
         // Вторая строка — «имя • действие», третья — снапшот поездки.
-        user.name,
-        "completed",
-        tripSnapshotOf(trip),
-      );
+        actorName: user.name,
+        action: "completed",
+        tripSnapshot: tripSnapshotOf(trip),
+      });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
         payload: { tripId: trip.id, status: "completed" },
       });
-      if (notificationId) {
-        wsManager.sendToUser(pid, {
-          type: "notification:new",
-          payload: { id: "refresh" },
-        });
-      }
     }
     for (const pid of trip.declinedPassengerIds) {
-      const notificationId = await createNotification(
-        pid,
-        "trip_status_changed",
-        "Поездка завершена",
-        `Поездка ${trip.fromCity} → ${trip.toCity} завершена, ваша заявка отклонена.`,
+      await notifyUser({
+        userId: pid,
+        type: "trip_status_changed",
+        title: "Поездка завершена",
+        body: `Поездка ${trip.fromCity} → ${trip.toCity} завершена, ваша заявка отклонена.`,
         // Тап открывает шторку деталей завершённой поездки.
-        `/trips/${trip.id}`,
+        fragment: `/trips/${trip.id}`,
         // Вторая строка — «имя • действие», третья — снапшот поездки.
-        user.name,
-        "completed",
-        tripSnapshotOf(trip),
-      );
+        actorName: user.name,
+        action: "completed",
+        tripSnapshot: tripSnapshotOf(trip),
+      });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
         payload: { tripId: trip.id, status: "completed" },
       });
-      if (notificationId) {
-        wsManager.sendToUser(pid, {
-          type: "notification:new",
-          payload: { id: "refresh" },
-        });
-      }
     }
   }
   for (const booking of result.cancelledBookings) {

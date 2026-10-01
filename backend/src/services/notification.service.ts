@@ -16,6 +16,8 @@
 import { db } from "../db.js";
 import { logger } from "../logger.js";
 import { env } from "../env.js";
+import { NOTIFICATION_HINT_REFRESH_ID } from "@edem/contracts";
+import { wsManager } from "./wsManager.js";
 import {
   decideTelegramDelivery,
   findNotificationDuplicate,
@@ -258,4 +260,53 @@ export async function createNotification(
     logger.error({ err: error }, "Failed to create notification");
     return null;
   }
+}
+
+/** Input for {@link notifyUser} — mirrors `createNotification` params. */
+export interface NotifyUserInput {
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  /** Deep-link (маршрут Telegram-приложения) для tap-destination уведомления. */
+  fragment?: string;
+  /** Отображаемое имя второй стороны (вторая строка ячейки инбокса). */
+  actorName?: string;
+  /** Машинный код действия (третья строка ячейки, client map). */
+  action?: string;
+  /** Снапшот поездки для третьей строки («дата • цена • маршрут»). */
+  tripSnapshot?: NotificationTripSnapshot;
+}
+
+/**
+ * Создать inbox-уведомление и подсказать онлайн-клиенту обновить ленту.
+ *
+ * Обёртка над `createNotification`: WS-hint (`notification:new` с
+ * {@link NOTIFICATION_HINT_REFRESH_ID}) отправляется ТОЛЬКО когда запись
+ * реально создана (id != null). Пропуски по тумблеру/дедупу и сбои ленту
+ * впустую не дёргают. Доменное событие вызывающий шлёт отдельно, как раньше.
+ *
+ * Возвращает id созданной записи; null — пропуск или сбой (контракт
+ * `createNotification`).
+ */
+export async function notifyUser(
+  input: NotifyUserInput,
+): Promise<string | null> {
+  const id = await createNotification(
+    input.userId,
+    input.type,
+    input.title,
+    input.body,
+    input.fragment,
+    input.actorName,
+    input.action,
+    input.tripSnapshot,
+  );
+  if (id) {
+    wsManager.sendToUser(input.userId, {
+      type: "notification:new",
+      payload: { id: NOTIFICATION_HINT_REFRESH_ID },
+    });
+  }
+  return id;
 }

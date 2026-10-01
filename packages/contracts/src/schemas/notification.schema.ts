@@ -39,6 +39,15 @@ export const notificationsPageSchema = z.object({
 
 export type NotificationsPage = z.infer<typeof notificationsPageSchema>;
 
+/** Response returned by GET /notifications/unread-count. */
+export const unreadCountSchema = z
+  .object({
+    unreadCount: z.number().int().min(0),
+  })
+  .strict();
+
+export type UnreadCount = z.infer<typeof unreadCountSchema>;
+
 /**
  * Критичные типы: персистятся в inbox независимо от тумблера
  * notificationsEnabled. ЕДИНЫЙ ИСТОЧНИК для backend (notification.service,

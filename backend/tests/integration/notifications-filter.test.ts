@@ -63,6 +63,27 @@ async function getInbox(token: string, query = "") {
   } };
 }
 
+async function patchRead(token: string, id: string) {
+  const res = await app.request(`/api/v1/notifications/${id}/read`, {
+    method: "PATCH",
+    headers: bearer(token, uniqueIp()),
+  });
+  const body = (await res.json()) as {
+    id?: string;
+    isRead?: boolean;
+    message?: string;
+  };
+  return { status: res.status, body };
+}
+
+async function getUnreadCount(token: string | null) {
+  const res = await app.request("/api/v1/notifications/unread-count", {
+    headers: token ? bearer(token, uniqueIp()) : { "X-Real-IP": uniqueIp() },
+  });
+  const body = (await res.json()) as { unreadCount?: number };
+  return { status: res.status, body };
+}
+
 describe("GET /notifications/my — серверный фильтр role/unreadOnly", () => {
   it("без фильтра — всё, unreadCount глобальный", async () => {
     const { userId, accessToken } = await telegramLogin(
@@ -172,5 +193,116 @@ describe("GET /notifications/my — серверный фильтр role/unreadO
     expect(page2.body.items).toHaveLength(1);
     expect(page2.body.nextCursor).toBeNull();
     expect(page2.body.items[0].type).not.toBe(page1.body.items[0].type);
+  });
+});
+
+describe("GET /notifications/unread-count — ownership-scoped счётчик", () => {
+  it("пользователь A (2 unread + 1 read) видит 2, пользователь B (пусто) — 0", async () => {
+    const loginA = await telegramLogin(app, nextTelegramId(), "Счётчик A");
+    const loginB = await telegramLogin(app, nextTelegramId(), "Счётчик B");
+    const now = Date.now();
+    for (const [i, isRead] of [false, false, true].entries()) {
+      await db.notification.create({
+        data: {
+          userId: loginA.userId,
+          type: "booking_status_changed",
+          title: `A${i}`,
+          body: `AB${i}`,
+          isRead,
+          createdAt: new Date(now - i * 1000),
+        },
+      });
+    }
+
+    const countA = await getUnreadCount(loginA.accessToken);
+    expect(countA.status).toBe(200);
+    expect(countA.body).toEqual({ unreadCount: 2 });
+
+    const countB = await getUnreadCount(loginB.accessToken);
+    expect(countB.status).toBe(200);
+    expect(countB.body).toEqual({ unreadCount: 0 });
+  });
+
+  it("без авторизации — 401", async () => {
+    const { status } = await getUnreadCount(null);
+    expect(status).toBe(401);
+  });
+});
+
+describe("PATCH /notifications/:id/read — scoped updateMany + read-back", () => {
+  it("своя непрочитанная → 200 + isRead: true", async () => {
+    const { userId, accessToken } = await telegramLogin(
+      app,
+      nextTelegramId(),
+      "Прочтение",
+    );
+    const row = await db.notification.create({
+      data: {
+        userId,
+        type: "booking_status_changed",
+        title: "T",
+        body: "B",
+        isRead: false,
+      },
+    });
+
+    const { status, body } = await patchRead(accessToken, row.id);
+    expect(status).toBe(200);
+    expect(body.id).toBe(row.id);
+    expect(body.isRead).toBe(true);
+  });
+
+  it("уже прочитанная своя → 200 (идемпотентно)", async () => {
+    const { userId, accessToken } = await telegramLogin(
+      app,
+      nextTelegramId(),
+      "Прочтение",
+    );
+    const row = await db.notification.create({
+      data: {
+        userId,
+        type: "booking_status_changed",
+        title: "T",
+        body: "B",
+        isRead: true,
+      },
+    });
+
+    const { status, body } = await patchRead(accessToken, row.id);
+    expect(status).toBe(200);
+    expect(body.isRead).toBe(true);
+  });
+
+  it("чужая запись → 404 { message }, флаг не меняется", async () => {
+    const owner = await telegramLogin(app, nextTelegramId(), "Владелец");
+    const stranger = await telegramLogin(app, nextTelegramId(), "Чужой");
+    const row = await db.notification.create({
+      data: {
+        userId: owner.userId,
+        type: "booking_status_changed",
+        title: "T",
+        body: "B",
+        isRead: false,
+      },
+    });
+
+    const { status, body } = await patchRead(stranger.accessToken, row.id);
+    expect(status).toBe(404);
+    expect(body).toEqual({ message: "Not found" });
+
+    const after = await db.notification.findUnique({ where: { id: row.id } });
+    expect(after?.isRead).toBe(false);
+  });
+
+  it("malformed id → 404, а не 500", async () => {
+    const { accessToken } = await telegramLogin(
+      app,
+      nextTelegramId(),
+      "Прочтение",
+    );
+
+    const { status, body } = await patchRead(accessToken, "not-a-uuid");
+    expect(status).toBe(404);
+    expect(body).toEqual({ message: "Not found" });
   });
 });

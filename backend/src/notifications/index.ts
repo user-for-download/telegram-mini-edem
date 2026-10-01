@@ -11,6 +11,7 @@ import {
   NOTIFICATION_ROLE_TYPES,
   notificationsPageSchema,
   notificationsQuerySchema,
+  unreadCountSchema,
 } from "@edem/contracts";
 
 export const notificationsRouter = new Hono<AuthEnv>();
@@ -124,19 +125,38 @@ notificationsRouter.get("/my", publicReadLimiter, async (c) => {
   );
 });
 
+notificationsRouter.get("/unread-count", publicReadLimiter, async (c) => {
+  const user = c.get("user");
+  const unreadCount = await db.notification.count({
+    where: { userId: user.id, isRead: false },
+  });
+  return c.json(unreadCountSchema.parse({ unreadCount }));
+});
+
 notificationsRouter.patch("/:id/read", notificationReadLimiter, async (c) => {
   const id = c.req.param("id");
   const user = c.get("user");
 
-  const notification = await db.notification.findUnique({ where: { id } });
-  if (!notification || notification.userId !== user.id) {
+  // Fail-closed на границе: malformed id → 404 тем же контрактом
+  // { message }, без похода в БД (иначе Prisma бросит и будет 500).
+  if (!z.string().uuid().safeParse(id).success) {
     return c.json({ message: "Not found" }, 404);
   }
 
-  const updated = await db.notification.update({
-    where: { id },
+  // Один скоупадный write: ownership — в WHERE, отдельной выборки нет.
+  // count === 0 покрывает и missing id, и чужую запись.
+  const { count } = await db.notification.updateMany({
+    where: { id, userId: user.id },
     data: { isRead: true },
   });
+  if (count === 0) {
+    return c.json({ message: "Not found" }, 404);
+  }
+
+  const updated = await db.notification.findUnique({ where: { id } });
+  if (!updated) {
+    return c.json({ message: "Not found" }, 404);
+  }
 
   return c.json(
     notificationSchema.parse({

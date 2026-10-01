@@ -4,7 +4,7 @@ import { logger } from "../logger.js";
 import { wsManager } from "../ws/manager.js";
 import { logBusinessEvent } from "../logger/business.js";
 import {
-  createNotification,
+  notifyUser,
   pruneOldNotifications,
   tripSnapshotOf,
 } from "../services/notification.service.js";
@@ -246,80 +246,62 @@ async function processExpiredTrip(trip: ExpiredTrip, cutoff: Date) {
     const sideEffects: Array<Promise<unknown> | number> = [
       ...confirmedPassengerIds.flatMap((pId) => [
         (async () => {
-          const notificationId = await createNotification(
-            pId,
-            "trip_status_changed",
-            "Поездка завершена",
-            `Поездка ${trip.fromCity} → ${trip.toCity} завершена. Вы можете оставить отзыв.`,
+          await notifyUser({
+            userId: pId,
+            type: "trip_status_changed",
+            title: "Поездка завершена",
+            body: `Поездка ${trip.fromCity} → ${trip.toCity} завершена. Вы можете оставить отзыв.`,
             // Тап открывает шторку деталей завершённой поездки.
-            `/trips/${trip.id}`,
+            fragment: `/trips/${trip.id}`,
             // Вторая строка — «имя • действие», третья — снапшот поездки.
-            driver?.name,
-            "completed",
-            tripSnapshotOf(trip),
-          );
+            actorName: driver?.name,
+            action: "completed",
+            tripSnapshot: tripSnapshotOf(trip),
+          });
           wsManager.sendToUser(pId, {
             type: "trip:status_changed",
             payload: { tripId: trip.id, status: "completed" },
           });
-          if (notificationId) {
-            wsManager.sendToUser(pId, {
-              type: "notification:new",
-              payload: { id: "refresh" },
-            });
-          }
         })(),
       ]),
       ...declinedPassengerIds.flatMap((pId) => [
         (async () => {
-          const notificationId = await createNotification(
-            pId,
-            "trip_status_changed",
-            "Поездка завершена",
-            `Поездка ${trip.fromCity} → ${trip.toCity} завершена, ваша заявка отклонена.`,
+          await notifyUser({
+            userId: pId,
+            type: "trip_status_changed",
+            title: "Поездка завершена",
+            body: `Поездка ${trip.fromCity} → ${trip.toCity} завершена, ваша заявка отклонена.`,
             // Тап открывает шторку деталей завершённой поездки.
-            `/trips/${trip.id}`,
+            fragment: `/trips/${trip.id}`,
             // Вторая строка — «имя • действие», третья — снапшот поездки.
-            driver?.name,
-            "completed",
-            tripSnapshotOf(trip),
-          );
+            actorName: driver?.name,
+            action: "completed",
+            tripSnapshot: tripSnapshotOf(trip),
+          });
           wsManager.sendToUser(pId, {
             type: "trip:status_changed",
             payload: { tripId: trip.id, status: "completed" },
           });
-          if (notificationId) {
-            wsManager.sendToUser(pId, {
-              type: "notification:new",
-              payload: { id: "refresh" },
-            });
-          }
         })(),
       ]),
       // Водителя тоже уведомляем о завершении.
       (async () => {
-        const notificationId = await createNotification(
-          trip.driverId,
-          "trip_status_changed",
-          "Поездка завершена",
-          `Ваша поездка ${trip.fromCity} → ${trip.toCity} автоматически завершена.`,
+        await notifyUser({
+          userId: trip.driverId,
+          type: "trip_status_changed",
+          title: "Поездка завершена",
+          body: `Ваша поездка ${trip.fromCity} → ${trip.toCity} автоматически завершена.`,
           // Тап открывает шторку деталей завершённой поездки.
-          `/trips/${trip.id}`,
+          fragment: `/trips/${trip.id}`,
           // Вторая строка — «имя • действие», третья — снапшот поездки.
-          driver?.name,
-          "completed",
-          tripSnapshotOf(trip),
-        );
+          actorName: driver?.name,
+          action: "completed",
+          tripSnapshot: tripSnapshotOf(trip),
+        });
         wsManager.sendToUser(trip.driverId, {
           type: "trip:status_changed",
           payload: { tripId: trip.id, status: "completed" },
         });
-        if (notificationId) {
-          wsManager.sendToUser(trip.driverId, {
-            type: "notification:new",
-            payload: { id: "refresh" },
-          });
-        }
       })(),
     ];
 

@@ -5,6 +5,7 @@ import {
   notificationSchema,
   notificationsPageSchema,
   notificationsQuerySchema,
+  unreadCountSchema,
 } from "../src/index.js";
 
 const notification = {
@@ -122,6 +123,33 @@ describe("notification role/critical sets (single source, m3/m6)", () => {
     );
     expect(
       notificationsQuerySchema.safeParse({ unreadOnly: "yes" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("unreadCountSchema (GET /notifications/unread-count)", () => {
+  it("parses a valid unread count", () => {
+    expect(unreadCountSchema.parse({ unreadCount: 2 })).toEqual({
+      unreadCount: 2,
+    });
+    expect(unreadCountSchema.parse({ unreadCount: 0 })).toEqual({
+      unreadCount: 0,
+    });
+  });
+
+  it("rejects negative, non-int and extra keys (strict)", () => {
+    expect(
+      unreadCountSchema.safeParse({ unreadCount: -1 }).success,
+    ).toBe(false);
+    expect(unreadCountSchema.safeParse({ unreadCount: 1.5 }).success).toBe(
+      false,
+    );
+    expect(
+      unreadCountSchema.safeParse({ unreadCount: "2" }).success,
+    ).toBe(false);
+    expect(unreadCountSchema.safeParse({}).success).toBe(false);
+    expect(
+      unreadCountSchema.safeParse({ unreadCount: 1, extra: true }).success,
     ).toBe(false);
   });
 });

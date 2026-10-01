@@ -17,7 +17,7 @@ import { ERROR_CODES } from "../errors.js";
 import { activeBookingWhere, BookingError } from "./shared.js";
 import { logBusinessEvent } from "../logger/business.js";
 import {
-  createNotification,
+  notifyUser,
   tripSnapshotOf,
 } from "../services/notification.service.js";
 import { wsManager } from "../ws/manager.js";
@@ -273,18 +273,18 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
       driverId: user.id,
     });
 
-    const notificationId = await createNotification(
-      passengerId,
-      "booking_status_changed",
-      newStatus === "confirmed" ? "Заявка подтверждена" : "Заявка отклонена",
-      `Водитель ${newStatus === "confirmed" ? "подтвердил" : "отклонил"} вашу заявку в поездке ${updated.booking.trip.fromCity} → ${updated.booking.trip.toCity}`,
+    await notifyUser({
+      userId: passengerId,
+      type: "booking_status_changed",
+      title: newStatus === "confirmed" ? "Заявка подтверждена" : "Заявка отклонена",
+      body: `Водитель ${newStatus === "confirmed" ? "подтвердил" : "отклонил"} вашу заявку в поездке ${updated.booking.trip.fromCity} → ${updated.booking.trip.toCity}`,
       // Тап открывает шторку деталей поездки.
-      `/trips/${updated.booking.trip.id}`,
+      fragment: `/trips/${updated.booking.trip.id}`,
       // Вторая строка — «имя • действие», третья — снапшот поездки.
-      user.name,
-      newStatus,
-      tripSnapshotOf(updated.booking.trip),
-    );
+      actorName: user.name,
+      action: newStatus,
+      tripSnapshot: tripSnapshotOf(updated.booking.trip),
+    });
 
     wsManager.sendToUser(passengerId, {
       type: "booking:status_changed",
@@ -294,13 +294,6 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
         status: newStatus,
       },
     });
-
-    if (notificationId) {
-      wsManager.sendToUser(passengerId, {
-        type: "notification:new",
-        payload: { id: "refresh" },
-      });
-    }
 
     return c.json(serializeBooking(updated.booking));
   } catch (error) {

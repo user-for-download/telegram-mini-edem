@@ -6,20 +6,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
+import { QueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/api/client";
 
 const {
   mockUseInbox,
+  mockUseUnreadCount,
   mockUseMarkRead,
   mockUseMarkAll,
 } = vi.hoisted(() => ({
   mockUseInbox: vi.fn(),
+  mockUseUnreadCount: vi.fn(),
   mockUseMarkRead: vi.fn(),
   mockUseMarkAll: vi.fn(),
 }));
 
 vi.mock("@/queries/useNotificationsQuery", () => ({
   useNotificationsInboxQuery: mockUseInbox,
+  useUnreadCountQuery: mockUseUnreadCount,
   useMarkNotificationReadMutation: mockUseMarkRead,
   useMarkAllNotificationsReadMutation: mockUseMarkAll,
 }));
@@ -75,8 +79,15 @@ function mutationState(overrides: Record<string, unknown> = {}) {
   return { mutate: vi.fn(), isPending: false, error: null, ...overrides };
 }
 
-function setMocks(inbox: Record<string, unknown> = {}) {
+function setMocks(inbox: Record<string, unknown> = {}, counter?: number) {
   mockUseInbox.mockReturnValue(infiniteState(inbox));
+  mockUseUnreadCount.mockReturnValue({
+    data: counter,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  });
   mockUseMarkRead.mockReturnValue(mutationState());
   mockUseMarkAll.mockReturnValue(mutationState());
 }
@@ -519,5 +530,154 @@ describe("NotificationsPage: состояния запроса", () => {
     });
 
     expect(renderPage()).toContain("Аккаунт заблокирован");
+  });
+});
+
+describe("NotificationsPage: бейдж — авторитетный счётчик unread-count", () => {
+  it("IconButton показывает значение counter-запроса, а не page[0]", () => {
+    setMocks(pageWithItems([makeNotification()], 7), 3);
+
+    expect(renderPage()).toContain('aria-label="Прочитать все (3)"');
+  });
+
+  it("нулевой счётчик гасит кнопку, даже если page[0] врёт", () => {
+    setMocks(pageWithItems([makeNotification()], 2), 0);
+
+    const html = renderPage();
+    expect(html).toContain('aria-label="Все уведомления прочитаны"');
+    expect(html).not.toContain("Прочитать все (");
+  });
+
+  it("без счётчика (первая загрузка) — фолбэк на page[0], имя то же", () => {
+    setMocks(pageWithItems([makeNotification()], 1));
+
+    expect(renderPage()).toContain('aria-label="Прочитать все (1)"');
+  });
+
+  it("счётчик живёт в aria-live: анонс имени/числа без смены механики", () => {
+    setMocks(pageWithItems([makeNotification()], 7), 3);
+
+    const html = renderPage();
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain('aria-label="Прочитать все (3)"');
+  });
+});
+
+describe("notifications cache: read/read-all правят ОБА кэша", () => {
+  async function realQueries() {
+    return vi.importActual<
+      typeof import("@/queries/useNotificationsQuery")
+    >("@/queries/useNotificationsQuery");
+  }
+
+  function seedClient() {
+    return new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+  }
+
+  it("markRead: список + счётчик декрементируются, если запись была непрочитанной", async () => {
+    const { applyMarkReadCaches, NOTIFICATION_KEYS } = await realQueries();
+    const client = seedClient();
+    const inboxKey = [...NOTIFICATION_KEYS.inbox(20, "unread")];
+    client.setQueryData(inboxKey, {
+      pages: [
+        {
+          items: [makeNotification({ id: "n-1", isRead: false })],
+          nextCursor: null,
+          unreadCount: 1,
+        },
+      ],
+      pageParams: [undefined],
+    });
+    client.setQueryData(NOTIFICATION_KEYS.unreadCount(), 5);
+
+    const decremented = applyMarkReadCaches(client, {
+      ...makeNotification({ id: "n-1", isRead: true }),
+    } as never);
+
+    expect(decremented).toBe(true);
+    const inbox = client.getQueryData(inboxKey) as {
+      pages: Array<{ items: Array<{ isRead: boolean }>; unreadCount: number }>;
+    };
+    expect(inbox.pages[0]?.items[0]?.isRead).toBe(true);
+    expect(inbox.pages[0]?.unreadCount).toBe(0);
+    expect(client.getQueryData(NOTIFICATION_KEYS.unreadCount())).toBe(4);
+  });
+
+  it("markRead: уже прочитанная запись — ни список, ни счётчик не двигаются", async () => {
+    const { applyMarkReadCaches, NOTIFICATION_KEYS } = await realQueries();
+    const client = seedClient();
+    const inboxKey = [...NOTIFICATION_KEYS.inbox(20, "unread")];
+    client.setQueryData(inboxKey, {
+      pages: [
+        {
+          items: [makeNotification({ id: "n-1", isRead: true })],
+          nextCursor: null,
+          unreadCount: 0,
+        },
+      ],
+      pageParams: [undefined],
+    });
+    client.setQueryData(NOTIFICATION_KEYS.unreadCount(), 5);
+
+    const decremented = applyMarkReadCaches(client, {
+      ...makeNotification({ id: "n-1", isRead: true }),
+    } as never);
+
+    expect(decremented).toBe(false);
+    const inbox = client.getQueryData(inboxKey) as {
+      pages: Array<{ unreadCount: number }>;
+    };
+    expect(inbox.pages[0]?.unreadCount).toBe(0);
+    expect(client.getQueryData(NOTIFICATION_KEYS.unreadCount())).toBe(5);
+  });
+
+  it("markAllRead: все записи гаснут, счётчик — в 0", async () => {
+    const { applyMarkAllReadCaches, NOTIFICATION_KEYS } = await realQueries();
+    const client = seedClient();
+    const inboxKey = [...NOTIFICATION_KEYS.inbox(20, "unread")];
+    client.setQueryData(inboxKey, {
+      pages: [
+        {
+          items: [
+            makeNotification({ id: "n-1", isRead: false }),
+            makeNotification({ id: "n-2", isRead: false }),
+          ],
+          nextCursor: null,
+          unreadCount: 2,
+        },
+      ],
+      pageParams: [undefined],
+    });
+    client.setQueryData(NOTIFICATION_KEYS.unreadCount(), 2);
+
+    applyMarkAllReadCaches(client);
+
+    const inbox = client.getQueryData(inboxKey) as {
+      pages: Array<{ items: Array<{ isRead: boolean }>; unreadCount: number }>;
+    };
+    expect(inbox.pages[0]?.items.every((item) => item.isRead)).toBe(true);
+    expect(inbox.pages[0]?.unreadCount).toBe(0);
+    expect(client.getQueryData(NOTIFICATION_KEYS.unreadCount())).toBe(0);
+  });
+});
+
+describe("notification keys: узкий набор для WS-хинта", () => {
+  it("счётчик и префикс списков — узкие потомки all; inbox вложен в lists", async () => {
+    const { NOTIFICATION_KEYS } = await vi.importActual<
+      typeof import("@/queries/useNotificationsQuery")
+    >("@/queries/useNotificationsQuery");
+
+    // Хинт notification:new инвалидирует только эти два ключа — blanket all
+    // для него запрещён (ловим регресс расширения набора).
+    expect([...NOTIFICATION_KEYS.unreadCount()]).toEqual([
+      "notifications",
+      "unread-count",
+    ]);
+    expect([...NOTIFICATION_KEYS.lists()]).toEqual(["notifications", "inbox"]);
+    const inboxKey = [...NOTIFICATION_KEYS.inbox(20, "unread")];
+    expect(inboxKey.slice(0, 2)).toEqual([...NOTIFICATION_KEYS.lists()]);
+    // Ключ счётчика — число, он НЕ под lists: list-патчи его не задевают.
   });
 });

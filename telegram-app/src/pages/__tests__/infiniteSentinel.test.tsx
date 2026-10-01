@@ -60,6 +60,7 @@ vi.mock("@/queries/useBookingsQuery", () => ({
 
 vi.mock("@/queries/useNotificationsQuery", () => ({
   useNotificationsInboxQuery: mockUseInbox,
+  useUnreadCountQuery: () => ({ ...baseQuery(), data: undefined }),
   useMarkNotificationReadMutation: mockUseMarkRead,
   useMarkAllNotificationsReadMutation: mockUseMarkAll,
 }));

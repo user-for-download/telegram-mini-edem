@@ -1,8 +1,7 @@
 import type { Prisma } from "../generated/prisma/client.js";
 import { db } from "../db.js";
-import { wsManager } from "../ws/manager.js";
 import {
-  createNotification,
+  notifyUser,
   tripSnapshotOf,
 } from "../services/notification.service.js";
 
@@ -74,23 +73,18 @@ export async function notifyMatchingRideRequests(
     });
     if (duplicate) continue;
     // M4: live-hint инбокса, как у остальных типов (раньше match приходил
-    // только через stale/refetch). Hint — только если запись создана.
-    const notificationId = await createNotification(
-      request.userId,
+    // только через stale/refetch). Hint — внутри notifyUser, только если
+    // запись создана.
+    await notifyUser({
+      userId: request.userId,
       type,
-      "Подходящая поездка",
+      title: "Подходящая поездка",
       body,
-      `/trips/${trip.id}`,
+      fragment: `/trips/${trip.id}`,
       // Вторая строка — «имя • действие», третья — снапшот поездки.
-      driver?.name,
-      "matched",
-      tripSnapshotOf(trip),
-    );
-    if (notificationId) {
-      wsManager.sendToUser(request.userId, {
-        type: "notification:new",
-        payload: { id: "refresh" },
-      });
-    }
+      actorName: driver?.name,
+      action: "matched",
+      tripSnapshot: tripSnapshotOf(trip),
+    });
   }
 }

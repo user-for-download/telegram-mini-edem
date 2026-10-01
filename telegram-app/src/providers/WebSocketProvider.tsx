@@ -501,11 +501,19 @@ export const TelegramRealtimeListener: FC = () => {
   }, [resyncSeq, queryClient]);
 
   useWsEvent("notification:new", () => {
-    // Событие — только hint, не запись: инвалидируем inbox, UI подтянет
-    // авторитетное состояние HTTP-запросом. Тоста намеренно нет (m8):
-    // сигнал — бейдж на табе; доменные события (booking:new и др.) уже
-    // показывают свои тосты, дубль был бы шумом.
-    void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.all });
+    // Событие — только hint, не запись: счётчик бейджа обязан обновиться
+    // сразу, видимый список inbox — тоже. Остальные сегменты/страницы
+    // подтянутся по staleTime: blanket-инвалидация NOTIFICATION_KEYS.all
+    // здесь не нужна (refetchType active — только смонтированные запросы).
+    // Тоста намеренно нет (m8): сигнал — бейдж на табе; доменные события
+    // (booking:new и др.) уже показывают свои тосты, дубль был бы шумом.
+    void queryClient.invalidateQueries({
+      queryKey: NOTIFICATION_KEYS.unreadCount(),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: NOTIFICATION_KEYS.lists(),
+      refetchType: "active",
+    });
   });
 
   useWsEvent("booking:new", ({ bookingId, tripId }) => {

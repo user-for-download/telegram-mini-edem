@@ -36,6 +36,15 @@ export const wsServerEventSchema = z.discriminatedUnion("type", [
 export type WsServerEvent = z.infer<typeof wsServerEventSchema>;
 
 /**
+ * Sentinel id for the `notification:new` inbox-refresh hint.
+ *
+ * The payload carries no real notification id: clients ignore the content
+ * and treat any `notification:new` as "refetch inbox + unread counter".
+ * Call sites must use this constant instead of a magic `{ id: "refresh" }`.
+ */
+export const NOTIFICATION_HINT_REFRESH_ID = "refresh" as const;
+
+/**
  * Сообщения от клиента к серверу.
  *
  * Сервер принимает только auth и pong (ответ на keep-alive ping).

@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   notificationSchema,
   notificationsPageSchema,
+  unreadCountSchema,
   type Notification,
   type NotificationsPage,
 } from "@edem/contracts";
@@ -61,5 +62,17 @@ export const notificationsApi = {
       { method: "PATCH" },
       readAllResultSchema,
     );
+  },
+
+  /**
+   * Лёгкий счётчик непрочитанных для бейджа таба
+   * (GET /notifications/unread-count, тот же requireUser-лимитер).
+   * Возвращает число, не объект: валидация — unreadCountSchema
+   * из @edem/contracts, fail-closed как у остальных методов.
+   */
+  getUnreadCount: (signal?: AbortSignal): Promise<number> => {
+    return apiClient
+      .request("/notifications/unread-count", { signal }, unreadCountSchema)
+      .then(({ unreadCount }) => unreadCount);
   },
 };

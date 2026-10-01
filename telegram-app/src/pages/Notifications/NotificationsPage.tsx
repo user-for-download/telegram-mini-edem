@@ -35,6 +35,7 @@ import {
   useMarkAllNotificationsReadMutation,
   useMarkNotificationReadMutation,
   useNotificationsInboxQuery,
+  useUnreadCountQuery,
 } from "@/queries/useNotificationsQuery";
 
 /**
@@ -324,6 +325,9 @@ export function NotificationsPage() {
   const inbox = useNotificationsInboxQuery(20, segment);
   const markRead = useMarkNotificationReadMutation();
   const markAll = useMarkAllNotificationsReadMutation();
+  // Счётчик «Прочитать все» — авторитетный ключ unread-count (легче inbox
+  // и един для всех сегментов); page[0].unreadCount — только фолбэк до
+  // первой загрузки счётчика. Имя кнопки и aria-live не меняются.
 
   // Фильтр — серверный: бэкенд уже отдал нужный архив, клиент показывает
   // как есть (m3). «Новые» — очередь входящих (все типы, только непрочитанные).
@@ -332,7 +336,9 @@ export function NotificationsPage() {
     [inbox.data],
   );
   const visibleItems = items;
-  const unreadCount = inbox.data?.pages[0]?.unreadCount ?? 0;
+  const counter = useUnreadCountQuery();
+  const unreadCount =
+    counter.data ?? inbox.data?.pages[0]?.unreadCount ?? 0;
   // markRead.variables — id записи в полёте: блокируем только её ячейку (m1),
   // а не всю ленту.
   const markingId = markRead.isPending ? markRead.variables : undefined;

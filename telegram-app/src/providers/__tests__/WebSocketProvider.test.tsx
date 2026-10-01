@@ -330,6 +330,26 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     expect(document.body.textContent).toContain("Новая заявка на место");
   });
 
+  it("notification:new сужает инвалидацию до счётчика и текущего списка", async () => {
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+    invalidateSpy.mockClear();
+
+    await act(async () => {
+      ws.serverMessage({ type: "notification:new", payload: { id: "refresh" } });
+    });
+
+    expect(invalidateCallsFor([...NOTIFICATION_KEYS.unreadCount()])).toBe(1);
+    expect(invalidateCallsFor([...NOTIFICATION_KEYS.lists()])).toBe(1);
+    // Blanket-инвалидации всего notifications-ключа больше нет.
+    expect(invalidateCallsFor([...NOTIFICATION_KEYS.all])).toBe(0);
+  });
+
   it("повтор того же события — дубликат: без повторной инвалидации и нотиса", async () => {
     authenticate();
     await renderProvider();

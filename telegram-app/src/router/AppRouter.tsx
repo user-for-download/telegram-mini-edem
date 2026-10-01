@@ -31,7 +31,7 @@ import { RideRequestsRoute } from "@/components/Trip/RideRequestsModal";
 import { TripRequestsRoute } from "@/components/Trip/TripRequestsModal";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { EditProfileRoute } from "@/components/Profile/EditProfileModal";
-import { useNotificationsInboxQuery } from "@/queries/useNotificationsQuery";
+import { useUnreadCountQuery } from "@/queries/useNotificationsQuery";
 import { ReviewsRoute } from "@/components/Profile/ReviewsModal";
 import { SettingsRoute } from "@/components/Profile/SettingsModal";
 import { SupportPage } from "@/pages/Support/SupportPage";
@@ -110,9 +110,11 @@ export function Shell() {
   const openProfile = useCallback(() => navigate("/profile"), [navigate]);
   useSettingsButton(openProfile, isRoot && location.pathname !== "/profile");
 
-  // Бейдж непрочитанных на табе (тот же кэш inbox, что у страницы).
-  const inbox = useNotificationsInboxQuery(20);
-  const unreadCount = inbox.data?.pages[0]?.unreadCount ?? 0;
+  // Бейдж непрочитанных — лёгкий счётчик (GET /notifications/unread-count),
+  // а не первая страница inbox: таб не тянет полную ленту ради числа.
+  // Имя/анонс бейджа не меняются — тот же unreadCount проп в AppBottomBar.
+  const unreadCountQuery = useUnreadCountQuery();
+  const unreadCount = unreadCountQuery.data ?? 0;
 
   useEffect(() => {
     if (didHandleStartParam.current) return;
