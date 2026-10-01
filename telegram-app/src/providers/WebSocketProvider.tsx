@@ -31,7 +31,8 @@ import {
 /**
  * Telegram WebSocket client (ws.v1).
  *
- * Реализация контракта `docs/migration/telegram-realtime-contract.md`:
+ * Исторический контракт ws.v1 удалён из дерева — смотри git
+ * (`docs/migration/telegram-realtime-contract.md`):
  *
  * - сокет открывается только при `status === "authenticated"` и шлёт JWT
  *   ПЕРВЫМ сообщением `{"type":"auth","token"}` — никогда в URL/query;

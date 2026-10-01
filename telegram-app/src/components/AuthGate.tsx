@@ -15,7 +15,7 @@ import { SectionBody } from "@/ui/SectionBody";
 const RATE_LIMIT_COOLDOWN_S = 60;
 
 /**
- * Гейт авторизации (порт mini-app AuthGate на telegram-ui).
+ * Гейт авторизации на telegram-ui.
  * Запускает bootstrap при первом рендере, показывает спиннер до завершения,
  * терминирующие экраны для бана/удаления/ошибки, подписывается на события
  * apiClient (silent refresh, session expired, banned) и сворачивание WebView.
@@ -149,7 +149,7 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
   }
 
   if (status === "banned") {
-    // Обжалование с экрана бана (порт mini-app «Обратная связь»):
+    // Обжалование с экрана бана («Обратная связь»):
     // токена нет, отправка идёт через публичный POST /feedback/appeal
     // с raw initData из стора (submitSupportFeedback маршрутизирует сам).
     return (

@@ -9,7 +9,7 @@ import { apiClient } from "./client";
 const reportsSchema = z.array(reportSchema);
 
 /**
- * Жалобы Telegram-приложения (паритет mini-app reports.api 1:1).
+ * Жалобы Telegram-приложения (паритет reports.api 1:1).
  *
  * Backend-маршруты (`GET /reports` — последние 50 своих, `POST /reports` —
  * mutationLimiter + reportLimiter 10/час, лимит «1 жалоба навсегда» → 409)

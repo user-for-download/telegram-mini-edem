@@ -33,7 +33,7 @@ export const REPORT_STATUS_LABELS: Record<Report["status"], string> = {
 
 /**
  * Рантайм-гварды вместо cast: select возвращает произвольную строку из DOM
- * (паттерн ReportModal из mini-app). Неизвестное значение игнорируется.
+ * (паттерн ReportModal). Неизвестное значение игнорируется.
  */
 export function isReportCategory(value: string): value is ReportCategory {
   return (REPORT_CATEGORIES as readonly string[]).includes(value);
@@ -75,7 +75,7 @@ export function validateReportForm(
 /**
  * Клиентский хинт лимита «1 жалоба навсегда»: сервер — источник правды
  * (409), здесь лишь гасим кнопку, чтобы не гонять форму впустую
- * (паттерн ReportModal из mini-app).
+ * (паттерн ReportModal).
  */
 export function hasExistingReport(
   reports: ReadonlyArray<Pick<Report, "targetType" | "targetId">>,
@@ -91,7 +91,7 @@ export function hasExistingReport(
 }
 
 /**
- * Маппинг ошибок отправки жалобы (зеркалит ReportModal из mini-app):
+ * Маппинг ошибок отправки жалобы (зеркалит ReportModal):
  * 409 CONFLICT — жалоба на этот объект уже существует, 429 — лимит
  * с учётом retryAfterMs, 403 — нет связи с объектом (не участник поездки),
  * 400 — серверная санитизация/валидация, остальное — сообщение сервера.

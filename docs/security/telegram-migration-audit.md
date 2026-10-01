@@ -1,6 +1,6 @@
 # Telegram migration security & privacy audit
 
-**Scope:** tg-migration-18. Telegram Mini App migration from the frozen VK reference.
+**Scope:** tg-migration-18. Telegram Mini App.
 **Date:** 2026-09-09
 **Method:** evidence-backed checklist (`.opencode/skills/security-audit`), every row
 cites `file:line` actually read. No hypotheticals.
@@ -21,8 +21,8 @@ with owner/expiry below). One medium-adjacent test-gap fixed by new automated te
 | — | Refresh rotation | `backend/src/auth/tokens.ts:391-393,428-433` | — | Lookup by `(tokenHash, userId)`, single-flight revoke with `revokedAt IS NULL` guard; reuse → family handling (`:279,411-417`). Covered by `refresh-rotation.test.ts` |
 | — | Appeal without token | `backend/src/feedback/index.ts:135-139` | — | Banned-user appeal verifies `verifyTelegramInitData`, resolves identity by verified `telegramUserId` only; display fields ignored. Covered by `telegram-appeal.test.ts` |
 
-**Accepted risk (low):** dev-bypass accepts an arbitrary `user.id` (no allowlist),
-mirroring VK `dev-sign`. Contained: dev/test only, `ALLOW_DEV_AUTH=false` in
+**Accepted risk (low):** dev-bypass accepts an arbitrary `user.id` (no allowlist).
+Contained: dev/test only, `ALLOW_DEV_AUTH=false` in
 production, short-lived mock sessions (`DEV_MOCK_TOKEN_TTL_SECONDS`, `env.ts:215`).
 Owner: backend. Expiry: re-review if dev-bypass ever leaves non-production.
 
@@ -50,7 +50,7 @@ Owner: backend. Expiry: re-review if dev-bypass ever leaves non-production.
 | Severity | Check | File:line | What's wrong | Fix direction |
 |---|---|---|---|---|
 | — | Notification 500 (fixed) | `backend/src/notifications/index.ts` (serialized `createdAt`) | Prisma `Date` into `z.string().datetime()` threw → 500 on any non-empty inbox | Fixed in tg-migration-16: `toISOString()` before parse; covered by `telegram-parity.test.ts` notifications leg |
-| — | No secret/PII logs | `backend/src/services/telegramNotifications.ts` (deliver), `vkPush.ts`, `vkMessenger.ts` | — | Log ids/codes only; bodies/tokens/initData never logged. Covered by unit test `telegramNotifications.test.ts` (“логи не содержат…”) |
+| — | No secret/PII logs | `backend/src/services/telegramNotifications.ts` (deliver) | — | Log ids/codes only; bodies/tokens/initData never logged. Covered by unit test `telegramNotifications.test.ts` (“логи не содержат…”) |
 | — | WS token transport | `telegram-app/src/api/ws.ts:60-77`, `WebSocketProvider.tsx:166` | — | JWT never in URL (first `auth` message); `getWsUrl` builds URL without creds; regression test asserts no token/initData/query in URL |
 
 ## 5. Rate limiting & WS — PASS with notes
@@ -65,14 +65,14 @@ Owner: backend. Expiry: re-review if dev-bypass ever leaves non-production.
 
 | Severity | Check | File:line | What's wrong | Fix direction |
 |---|---|---|---|---|
-| low | `.env.example` drift | `.env.example` vs `backend/src/env.ts` | Missing: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_HOSTS`, `TG_INIT_DATA_TTL_SECONDS`, `TG_AUTH_RATE_*`, `VK_SERVICE_KEY`, `TELEGRAM_DELIVERY_ENABLED`, `TG_NOTIFICATION_DEDUPE_WINDOW_MS`, `TRUST_PROXY`, `DEV_AUTH_USER_ALLOWLIST`, JWT/dev TTLs | Document the TG/security-relevant subset (this task); full parity sweep out of scope |
+| low | `.env.example` drift | `.env.example` vs `backend/src/env.ts` | Missing: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_HOSTS`, `TG_INIT_DATA_TTL_SECONDS`, `TG_AUTH_RATE_*`, `TELEGRAM_DELIVERY_ENABLED`, `TG_NOTIFICATION_DEDUPE_WINDOW_MS`, `TRUST_PROXY`, `DEV_AUTH_USER_ALLOWLIST`, JWT/dev TTLs | Document the TG/security-relevant subset (this task); full parity sweep out of scope |
 | low | No pino redact paths | `backend/src/logger.ts:4-17` | Safety relies on call-site discipline (currently clean — §4). One future `logger.info({ body })` leaks PII/secrets silently | Add `redact: ["*.token", "*.initData", "req.headers.authorization"]` hardening; owner: backend, no expiry pressure |
 | — | Prod secrets | `backend/src/env.ts:91-109`, `docker-compose.yml:51-56` | — | `JWT_SECRET` ≥32 enforced in prod; bot token optional-with-503; compose passes through (no hardcode) |
 | — | E2E cleanup | `e2e/telegram-fixtures.mjs` (cleanupRun) | — | Idempotent deletes, failure fails run; no mass-delete scripts without guards |
 
 ## Privacy (task-18 criterion 2)
 
-- Public TG responses mask addresses from strangers (`telegram-parity.test.ts` trip leg), expose no `telegramUserId`/`vkUserId` (check serializers if extended).
+- Public TG responses mask addresses from strangers (`telegram-parity.test.ts` trip leg), expose no `telegramUserId` (check serializers if extended).
 - Notification payloads carry route/seat/status only; bodies logged nowhere.
 - `username`/`photo_url` from initData pass host-allowlist + sanitization (`telegramProfile.ts`, referenced `auth/index.ts:246`).
 - No analytics exfiltration of initData in client (initData used for `/auth/telegram` + appeal only; WS explicitly excludes it — `WebSocketProvider.test.tsx:277`).

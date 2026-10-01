@@ -21,7 +21,7 @@ import {
 } from "@/pages/Support/supportValidation";
 
 /**
- * Форма обжалования блокировки (порт FeedbackModal из mini-app для экрана
+ * Форма обжалования блокировки (порт FeedbackModal для экрана
  * бана): тема предзаполнена «Обжалование блокировки», отправка — через
  * публичный POST /feedback/appeal с raw initData (без токена).
  * Используется в AuthGate (экран бана) и SupportPage (секция обжалования,

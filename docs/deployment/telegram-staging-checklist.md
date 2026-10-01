@@ -1,8 +1,8 @@
 # Telegram staging deployment checklist
 
-**Task:** tg-migration-20 (Telegram-only staging), updated tg-migration-27 (VK removed).
+**Task:** tg-migration-20 (Telegram-only staging).
 **Smoke:** `scripts/smoke-telegram-deployment.mjs`
-**Compose:** `docker-compose.yml` (Telegram vars required, no VK vars).
+**Compose:** `docker-compose.yml` (Telegram vars required).
 **Env template:** `.env.example` (§Telegram Mini App staging).
 
 ## 1. Build
@@ -44,8 +44,8 @@ Optional (дефолты покрывают):
 - [ ] Smoke:
       `BACKEND_URL=http://<staging>:3000 TG_HOST=<telegram-host> node scripts/smoke-telegram-deployment.mjs`
       (или `sh scripts/prod-rebuild.sh --no-build --smoke`)
-      Ожидается 6/6: live, ready, TG-ассеты по Host, auth-shape,
-      VK-отсутствие (404 на `/auth/vk`), WS upgrade + 4401-timeout
+      Ожидается 5/5: live, ready, TG-ассеты по Host, auth-shape,
+      WS upgrade + 4401-timeout
 - [ ] Ручная проверка: открыть Mini App в Telegram (dev — через mockEnv
       вне Telegram), вход, создание поездки, WebSocket-обновления
 

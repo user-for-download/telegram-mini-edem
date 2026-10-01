@@ -1,4 +1,4 @@
-# AI indexing ignore — Edem (vk-mini-edem)
+# AI indexing ignore — Edem (telegram-mini-edem)
 # Не давать AI индексировать секреты, локальные env, логи и артефакты.
 # Безопасные примеры (*.example) и контракты остаются в индексе.
 
@@ -9,11 +9,6 @@ prc.json
 # --- Real env (значения только на сервере/локально, в git их нет) ---
 .env
 backend/.env
-mini-app/.env
-mini-app/index.html
-mini-app/vite.config.ts
-mini-app/dist
-mini-app/node_modules
 webapp/.env
 **/.env.local
 **/.env.production
@@ -36,7 +31,6 @@ coverage/
 node_modules/
 .opencode/node_modules/
 backend/dist/
-mini-app/dist/
 webapp/dist/
 packages/*/dist/
 dist/

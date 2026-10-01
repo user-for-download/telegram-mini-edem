@@ -13,7 +13,7 @@ export interface VehicleFormDto {
 }
 
 /**
- * Автомобильный API Telegram-приложения (порт mini-app usersApi.updateCar).
+ * Автомобильный API Telegram-приложения (порт usersApi.updateCar).
  *
  * Все ответы валидируются shared-контрактами (@edem/contracts,
  * userSchema/carSchema) через apiClient.request(..., schema) — fail-closed:

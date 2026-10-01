@@ -29,7 +29,7 @@ import {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Порт из mini-app AppConfig: детерминированные ошибки и 4xx
+      // Детерминированные ошибки и 4xx
       // (кроме 408-таймаута) не ретраим, остальное — до 3 попыток.
       retry: (failureCount, error) => {
         if (error instanceof ApiError) {

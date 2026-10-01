@@ -2,7 +2,7 @@
 
 **Status:** Accepted; Bot API option **approved for implementation** (2026-09-14, see below)
 **Date:** 2026-09-09 (parity phase), 2026-09-14 (Bot API approval)
-**Scope:** Telegram Mini App migration from the frozen VK reference
+**Scope:** Telegram Mini App
 
 ## Decision
 
@@ -15,20 +15,19 @@ Implement notification parity in this order:
 
 The first two channels are the functional-parity baseline. A closed app must still show persisted critical notifications when the user next opens it; background delivery is not assumed to be required for parity.
 
-## Frozen reference and mapping
+## Baseline behavior and mapping
 
-The VK reference has:
+The app provides:
 
 - persisted notifications with critical status events created even when optional notifications are disabled;
-- WebSocket events for booking/trip changes and `notification:new` refreshes;
-- VK-only push/message integrations for selected events.
+- WebSocket events for booking/trip changes and `notification:new` refreshes.
 
 Telegram mapping:
 
 | Reference behavior | Telegram decision |
 |---|---|
 | Notification inbox | Required: implement the Telegram route, list, unread count, mark-read and mark-all-read. |
-| Foreground VK WebSocket behavior | Required: port auth, ping/pong, reconnect, refresh/resync and event handling. |
+| Foreground WebSocket behavior | Required: auth, ping/pong, reconnect, refresh/resync and event handling. |
 | `notifications.sendMessage` / `messages.send` | Not a literal port. Bot API delivery is **blocked** pending product approval. |
 
 ## Contract rules
@@ -36,7 +35,7 @@ Telegram mapping:
 - Critical events (`booking_status_changed`, `trip_cancelled`, `trip_status_changed`) are persisted regardless of the shared optional-notification toggle.
 - Optional events follow the user preference and must not leak content through an unapproved external channel.
 - WebSocket is best effort: reconnect and resync from the inbox; it is never the source of truth.
-- Every notification has a stable event type, safe user-scoped payload, and a Telegram deep-link target defined in [`../migration/notification-parity-contract.md`](../migration/notification-parity-contract.md).
+- Every notification has a stable event type, safe user-scoped payload, and a Telegram deep-link target (серверный allowlist, см. `resolveTelegramDeepLink`).
 - Delivery failure must not roll back booking, trip, review or support operations.
 
 ## Bot API option — approved (2026-09-14)

@@ -1,6 +1,7 @@
 // telegram-app/src/router/deepLinks.ts
-// Канонические Telegram deep-links (см.
-// docs/migration/notification-parity-contract.md, раздел «Telegram deep-link format»).
+// Канонические Telegram deep-links (исторический контракт удалён из дерева —
+// смотри git: docs/migration/notification-parity-contract.md, раздел
+// «Telegram deep-link format»).
 //
 // Источники переходов:
 // - Bot API startapp-параметр (`?startapp=<token>`) — разбирает

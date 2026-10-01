@@ -2,9 +2,10 @@
  * Telegram WebSocket transport helpers (ws.v1).
  *
  * Чистые функции без React/DOM — покрыты unit-тестами
- * (`src/api/__tests__/ws.test.ts`). Канонический wire-контракт описан в
- * `docs/migration/telegram-realtime-contract.md`; схемы событий —
- * `wsServerEventSchema` / `wsClientMessageSchema` из `@edem/contracts`.
+ * (`src/api/__tests__/ws.test.ts`). Исторический wire-контракт удалён из
+ * дерева — смотри git (`docs/migration/telegram-realtime-contract.md`).
+ * Схемы событий — `wsServerEventSchema` / `wsClientMessageSchema` из
+ * `@edem/contracts`.
  * Этот модуль НЕ дублирует схемы, только транспортную политику клиента.
  */
 

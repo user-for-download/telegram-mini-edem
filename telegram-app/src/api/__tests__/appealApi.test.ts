@@ -76,7 +76,7 @@ describe("supportApi.appeal (TG-ветка POST /feedback/appeal)", () => {
   });
 });
 
-describe("submitSupportFeedback: маршрутизация как в mini-app", () => {
+describe("submitSupportFeedback: маршрутизация submitFeedback", () => {
   it("с токеном → supportApi.create с dto, appeal не вызывается", async () => {
     mockGetToken.mockReturnValue("access-token");
     requestMock.mockResolvedValue(created);

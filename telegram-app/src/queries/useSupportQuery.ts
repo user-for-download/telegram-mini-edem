@@ -10,8 +10,8 @@ export const SUPPORT_KEYS = {
 };
 
 /**
- * Список СВОИХ обращений с ответами админа (порт useMyFeedbacksQuery из
- * mini-app). Запрос активен только для авторизованных: апелляция
+ * Список СВОИХ обращений с ответами админа (порт useMyFeedbacksQuery).
+ * Запрос активен только для авторизованных: апелляция
  * забаненного — отдельный flow без токена через submitSupportFeedback
  * (публичный POST /feedback/appeal с initData из стора).
  */
@@ -34,7 +34,7 @@ export function useCreateFeedbackMutation() {
 }
 
 /**
- * Отправка обращения с маршрутизацией как в mini-app submitFeedback:
+ * Отправка обращения с маршрутизацией submitFeedback:
  * с токеном — обычный POST /feedback, без токена (забаненный) — публичный
  * POST /feedback/appeal, где личность подтверждается raw initData из стора
  * авторизации (та же строка, что в /auth/telegram). Экспортируется для

@@ -1,7 +1,7 @@
 import { REVIEW_TEXT_MAX_LENGTH } from "@edem/contracts";
 
 /**
- * Чистая валидация формы отзыва (порт CreateReviewModal из mini-app).
+ * Чистая валидация формы отзыва (порт CreateReviewModal).
  * Отдельный DOM-free модуль, чтобы покрыть unit-тестом без jsdom:
  * страница импортирует, тесты проверяют напрямую (паттерн profileValidation).
  *

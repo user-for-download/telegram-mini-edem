@@ -4,7 +4,7 @@
 // битая подпись, dev-bypass (hash=dev-hash: точное совпадение, валидный
 // user.id без дефолта), fail-closed без токена, initData без user.
 //
-// env/logger замоканы (паттерн vkSign.test.ts) — сетевых вызовов нет;
+// env/logger замоканы — сетевых вызовов нет;
 // криптография пакета @tma.js/init-data-node — настоящая.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sign } from "@tma.js/init-data-node";

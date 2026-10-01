@@ -11,7 +11,7 @@ export interface ProfileUpdateDto {
 }
 
 /**
- * Профильный API Telegram-приложения (порт mini-app users.api).
+ * Профильный API Telegram-приложения (порт users.api).
  *
  * Все ответы валидируются shared-контрактами (@edem/contracts) через
  * apiClient.request(..., schema) — fail-closed: невалидный ответ сервера

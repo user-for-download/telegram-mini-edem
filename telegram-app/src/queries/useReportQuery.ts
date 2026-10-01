@@ -8,7 +8,7 @@ export const REPORT_KEYS = {
 };
 
 /**
- * Свои жалобы (порт useMyReportsQuery из mini-app): backend отдаёт массив
+ * Свои жалобы (порт useMyReportsQuery): backend отдаёт массив
  * (cap 50 последних, новые первыми). Используется и списком, и клиентским
  * хинтом лимита «1 жалоба навсегда» (hasExistingReport).
  */

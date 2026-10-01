@@ -5,8 +5,8 @@ import {
 import { ApiError } from "@/api/client";
 
 /**
- * Чистая валидация формы обращения в поддержку (порт FeedbackModal из
- * mini-app). DOM-free модуль — покрывается unit-тестом без jsdom
+ * Чистая валидация формы обращения в поддержку (порт FeedbackModal).
+ * DOM-free модуль — покрывается unit-тестом без jsdom
  * (паттерн reviewValidation/profileValidation).
  *
  * Лимиты — единые константы FEEDBACK_*_MAX_LENGTH из @edem/contracts:

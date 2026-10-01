@@ -61,14 +61,6 @@ describe("userSchema", () => {
     const result = userSchema.safeParse({ ...validUser, onboardingVersion: 1 });
     expect(result.success).toBe(false);
   });
-
-  it("should parse user without platform id (identity lives in auth layer)", () => {
-    const result = userSchema.safeParse(validUser);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect("vkUserId" in result.data).toBe(false);
-    }
-  });
 });
 
 describe("completeOnboardingBodySchema", () => {

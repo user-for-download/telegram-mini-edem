@@ -2,8 +2,8 @@ import { ApiError } from "@/api/client";
 import type { VehicleFormDto } from "@/api/vehicle";
 
 /**
- * Чистая валидация/нормализация формы автомобиля (порт CarFormModal из
- * mini-app + backend carFormSchema). DOM-free модуль — покрыт unit-тестом
+ * Чистая валидация/нормализация формы автомобиля (порт CarFormModal
+ * + backend carFormSchema). DOM-free модуль — покрыт unit-тестом
  * без jsdom, страница импортирует, тесты проверяют напрямую.
  *
  * Лимиты зеркалят backend (backend/src/users/index.ts):

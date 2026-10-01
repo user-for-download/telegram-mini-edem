@@ -12,7 +12,7 @@ export type { Notification, NotificationsPage };
 const readAllResultSchema = z.object({ success: z.boolean() }).strict();
 
 /**
- * Inbox уведомлений Telegram-приложения (паритет mini-app notifications.api).
+ * Inbox уведомлений Telegram-приложения (паритет notifications.api).
  *
  * Backend-маршруты (`/notifications/my` cursor-пагинация, `PATCH /:id/read`,
  * `PATCH /read-all`) защищены requireUser — работают с TG JWT без изменений:

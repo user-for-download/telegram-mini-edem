@@ -12,7 +12,7 @@ import { apiClient } from "./client";
 const userFeedbackListSchema = z.array(userFeedbackDtoSchema);
 
 /**
- * Обращения в поддержку Telegram-приложения (паритет mini-app feedback.api):
+ * Обращения в поддержку Telegram-приложения (паритет feedback.api):
  * авторизованные POST /feedback и GET /feedback работают с TG JWT через
  * requireUser; апелляция забаненного — публичный POST /feedback/appeal
  * с raw initData (TG-ветка backend, подпись verifyTelegramInitData).

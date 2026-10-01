@@ -403,4 +403,4 @@ Paginated endpoints проверяют ответы shared Zod-схемами и
 
 ## Архив миграции
 
-VK Mini App удалён в задачах tg-migration-24–27 (полная копия сохранена в отдельном репозитории). Исторические записи миграции: `docs/migration/`, `docs/adr/`, `docs/security/telegram-migration-audit.md`.
+Самостоятельное Telegram-приложение «Едем» (попутчики). Исторические записи миграции удалены из дерева — смотри git; аудит безопасности: `docs/security/telegram-migration-audit.md`.

@@ -198,7 +198,6 @@ describe("GET /metrics", () => {
     expect(csp).toContain("connect-src 'self' ws: wss:");
     expect(csp).toContain("img-src 'self' data: blob: https:");
     expect(csp).toContain("frame-ancestors 'self'");
-    expect(csp).not.toContain("vk.com");
     expect(csp).toContain("object-src 'none'");
   });
 });
