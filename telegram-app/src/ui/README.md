@@ -59,8 +59,9 @@ kit (`@layer tgui`)                      ← самый низкий приор�
 проверяется: `src/ui/**` не импортирует `@/pages/*`, `@/components/*`,
 `@/queries/*`, `@/store/*`, `@/providers/*`.
 
-Исключения-обёртки: `Chip` кита используется напрямую в `RatingPill` и
-`StatusPill` (это пилюли-визуал, а не чип-действие); `Placeholder` — в
+Исключения-обёртки: `Chip` кита используется напрямую только в `RatingPill`
+(пилюля-визуал, а не чип-действие). `StatusPill` — **не** исключение: это
+`Badge` кита, не `Chip`; `Placeholder` — в
 `EnvUnsupported` (экран вне `AppRoot`) и в `Onboarding` (приветствие
 первого входа: `VisuallyHidden`-заголовок и роль не совпадают с
 `EmptyState` — граница описана в `EmptyState.tsx`).
@@ -69,20 +70,27 @@ kit (`@layer tgui`)                      ← самый низкий приор�
 
 Всё, что ниже, — сознательный отказ от нативного вида. При обновлении
 `@telegram-apps/telegram-ui` **проверять каждую строку**: тест
-`src/__tests__/kitContract.test.ts` падает, если версия кита изменилась.
+`src/__tests__/kitContract.test.tsx` падает, если версия кита изменилась.
 
 | # | Что | Кит | Мы | Почему |
 |---|---|---|---|---|
 | 1 | Паддинг `List` на iOS | `padding: 10px 18px` | `--app-page-gutter` (16px) на всех платформах | один гуттер на iOS/Android; иначе экраны разъезжаются и ломается нижний клиренс |
 | 2 | Ритм между блоками | `List > :not(:last-child) { margin-bottom: 12px }` | `margin-bottom: var(--app-space-sm)` | **pin**: значение наше, bump кита не должен молча сдвигать все экраны |
-| 3 | `Card` — поверхность | `tertiary_bg_color`, radius 20, двухслойная тень | `section_bg_color`, radius 16, `--app-card-shadow` | рецепт `FeedCard` был скопирован по ~11 модулям |
+| 3 | `Card` — поверхность | `tertiary_bg_color`, radius 20, двухслойная тень | `section_bg_color`, radius 16, `--app-card-shadow` | рецепт `FeedCard` копировался по ~11 модулям. **И главное — тема:** `--tgui--tertiary_bg_color` в ките литерал (`#f4f4f7`/`#2a2a2a`), а `--tgui--section_bg_color` = `var(--tg-theme-section_bg_color)` (Bot API 7.0+). Наш фон следует теме Telegram, дефолт кита — нет; этого требует гайдлайн Telegram «monitoring the dynamic theme-based colors provided by the API». Не «приводить к киту» |
 | 4 | `Card` — бокс | `display: inline-block` (ширина по контенту) | `width: 100%` + `box-sizing: border-box` | в блочном родителе (`Page`/`List`, `Section > div`) карточка схлопывалась бы по контенту. Побеждаем геометрией, а не `display`: `display` перебил бы `display: flex` потребителя (равная сила селектора → решает порядок инъекции, а это не контракт) |
 | 5 | `Button` — высота | `s` 36px, **`m` 42px (дефолт)**, `l` 50px | `min-height: 44px` для `m`/`l` | WCAG 2.5.5 AAA тап-таргет; `m` становится на 2px выше нативной |
 | 6 | `Button` — дефолтный `mode` | `filled` | `bezeled` (`variant="secondary"`) | главное действие обязано быть явным (`variant="primary"`) |
-| 7 | `Chip` — выбранное состояние | фон `mono`/`elevated` | `--tgui--button_color` при `aria-pressed="true"` (`tone="accent"`) | выбранный тег должен читаться как выбранный, а не как другой оттенок |
+| 7 | `Chip` — выбранное состояние | фон `mono`/`elevated` | `--tgui--button_color` при `aria-pressed="true"` (`tone="accent"`) | выбранный тег должен читаться как выбранный, а не как другой оттенок. **Тон зависит от дисциплины потребителя:** `aria-pressed` ставит **потребитель**, кит его не добавляет — без него `tone="accent"` не даёт эффекта. Пин селектора — `layoutCss.test.ts` |
 | 8 | `Sheet` — заголовок | `Modal.Header` рисует текст только на iOS | `VisuallyHidden h2` + `aria-labelledby`; видимая копия — `aria-hidden` | одно доступное имя диалога на всех платформах |
 | 9 | `Field` — заголовок | `header` рисует `FormInputTitle` вне `<label>` и только на `base` | visually-hidden `label` + `htmlFor` | доступное имя поля на всех платформах |
 | 10 | Первый экран | корень собирался руками (`<List>` + свой фон/высота/центрирование) | `ui/Page variant="hero"` | сырой `List` не гасил платформенный паддинг: iOS — бока 18px, Android — 0 |
+| 11 | `Card` — проп `type` | `type?: 'plain' \| 'ambient'` (`ambient` = фон `--tgui--plain_foreground`) | `Omit<…, "type">` + жёсткий `type="plain"` | фасад владеет поверхностью Card, поэтому выбор `ambient` через него невозможен осознанно: иначе фон уехал бы с нашего `section_bg_color` на foreground-подложку кита |
+
+Отдельно про iOS-ветку: все измерения в `kitContract.test.tsx` снимаются на
+`platform="base"` — это платформа, где **наши** переопределения no-op (кит не
+добавляет ни паддинг, ни заголовки). Живая проверка iOS-ветки есть только в
+`ui/__tests__/sheet.ios.test.tsx`; полный прогон обеих платформ — в
+`kitContract.test.tsx`, describe «фасад на обеих платформах».
 
 ## Когда какой элемент
 
@@ -110,4 +118,4 @@ kit (`@layer tgui`)                      ← самый низкий приор�
    (литералов цветов и паддингов в модулях не бывает).
 3. Отклонение от кита → строка в «Реестре отклонений» выше.
 4. Замер, на который опирается комментарий (класс/размер кита) → проверка
-   в `kitContract.test.ts`.
+   в `kitContract.test.tsx`.

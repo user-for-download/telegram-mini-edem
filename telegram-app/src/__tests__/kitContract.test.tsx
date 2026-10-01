@@ -11,6 +11,12 @@ import { dirname, join } from "node:path";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
+import {
+  Button as TguiButton,
+  Chip as TguiChip,
+  IconButton as TguiIconButton,
+  List as TguiList,
+} from "@telegram-apps/telegram-ui";
 import { describe, expect, it } from "vitest";
 
 import { Button } from "@/ui/Button";
@@ -123,6 +129,112 @@ describe("фасад: смысловые variant указывают на реа�
       expect(missing, `${name}: mode-классов нет в stylesheet кита`).toEqual([]);
     });
   }
+});
+
+describe("фасад: variant указывает на ИМЕННО тот режим кита, что задокументирован", () => {
+  // Реестр отклонений #6/#7. Матрица выше ловит только «режим существует»,
+  // поэтому замена secondary: bezeled → gray (оба валидны у кита) проходила
+  // молча. Здесь сверяем наш вариант с НАСТОЯЩИМ рендером кита в ожидаемом
+  // mode — без хэшей в тесте, значит переживает rehash кита.
+  const cases: { name: string; expectedMode: string; ours: ReactNode; kit: ReactNode }[] = [
+    {
+      name: "Button.primary",
+      expectedMode: "filled",
+      ours: <Button variant="primary">ок</Button>,
+      kit: <TguiButton mode="filled">ок</TguiButton>,
+    },
+    {
+      name: "Button.secondary",
+      expectedMode: "bezeled",
+      ours: <Button variant="secondary">ок</Button>,
+      kit: <TguiButton mode="bezeled">ок</TguiButton>,
+    },
+    {
+      name: "Button.ghost",
+      expectedMode: "plain",
+      ours: <Button variant="ghost">ок</Button>,
+      kit: <TguiButton mode="plain">ок</TguiButton>,
+    },
+    {
+      name: "Button.outline",
+      expectedMode: "outline",
+      ours: <Button variant="outline">ок</Button>,
+      kit: <TguiButton mode="outline">ок</TguiButton>,
+    },
+    {
+      name: "Button.white",
+      expectedMode: "white",
+      ours: <Button variant="white">ок</Button>,
+      kit: <TguiButton mode="white">ок</TguiButton>,
+    },
+    {
+      name: "IconButton.secondary",
+      expectedMode: "bezeled",
+      ours: <IconButton variant="secondary" aria-label="д" />,
+      kit: <TguiIconButton mode="bezeled" aria-label="д" />,
+    },
+    {
+      name: "IconButton.ghost",
+      expectedMode: "plain",
+      ours: <IconButton variant="ghost" aria-label="д" />,
+      kit: <TguiIconButton mode="plain" aria-label="д" />,
+    },
+    {
+      name: "Chip.quiet",
+      expectedMode: "mono",
+      ours: <Chip variant="quiet">тег</Chip>,
+      kit: <TguiChip mode="mono">тег</TguiChip>,
+    },
+    {
+      name: "Chip.active",
+      expectedMode: "elevated",
+      ours: <Chip variant="active">тег</Chip>,
+      kit: <TguiChip mode="elevated">тег</TguiChip>,
+    },
+  ];
+
+  for (const { name, expectedMode, ours, kit } of cases) {
+    it(`${name} = mode «${expectedMode}» кита`, () => {
+      const ourClasses = kitClasses(renderInApp(ours));
+      const kitClassesExpected = kitClasses(renderInApp(kit));
+      // Наш вариант = кит в ожидаемом режиме, класс в класс.
+      expect([...ourClasses].sort()).toEqual([...kitClassesExpected].sort());
+    });
+  }
+});
+
+describe("фасад: обе платформы (iOS-ветка не забыта)", () => {
+  // Все замеры выше сняты на platform="base" — а это платформа, где
+  // НАШИ переопределения no-op: кит не добавляет ни паддинг List, ни
+  // заголовки Modal/FormInput. Живая iOS-ветка проверяется здесь.
+  it("кит вешает iOS-паддинг List только на iOS — его и гасит ui/Page", () => {
+    const IOS_LIST_CLASS = "tgui-cfed40fe81d34ad5";
+    // Класс закреплён выше ("padding:10px 18px"); здесь проверяем, что кит
+    // реально вешает его по ветке platform==='ios'.
+    const onIos = kitClasses(renderInApp(<TguiList>x</TguiList>, "ios"));
+    const onBase = kitClasses(renderInApp(<TguiList>x</TguiList>, "base"));
+    expect(onIos.has(IOS_LIST_CLASS)).toBe(true);
+    expect(onBase.has(IOS_LIST_CLASS)).toBe(false);
+  });
+
+  it("на iOS карточка и чип рендерятся с нашими классами поверх китовых", () => {
+    const html = renderInApp(
+      <>
+        <Card>тело</Card>
+        <Chip variant="quiet">тег</Chip>
+      </>,
+      "ios",
+    );
+    expect(html).toContain("<article");
+    expect(kitClasses(html).size).toBeGreaterThan(0);
+    // Наш хэшированный класс присутствует — фасад не «исчез» на iOS.
+    expect(html).toContain(uiStyles.cardDefault);
+  });
+
+  // Sheet сюда НЕ добавляем: Modal кита рендерится через портал, поэтому в
+  // renderToString его содержимого нет физически (проверено: 41 байт на base).
+  // Имя диалога на обеих платформах покрыто в ui/__tests__/sheet.test.tsx
+  // (jsdom, портал работает) и sheet.ios.test.tsx.
 });
 
 describe("фасад Card: нативный article + бокс приложения", () => {

@@ -18,6 +18,8 @@ const readCss = (relativePath: string): string =>
 
 const indexCss = readCss("../index.css");
 const pageCss = readCss("../ui/ui.module.css");
+const textCss = readCss("../ui/text.module.css");
+const chipCss = readCss("../ui/Chip.module.css");
 const tabbarCss = readCss("../components/TabsBar/Tabbar.module.css");
 const toastCss = readCss("../components/Toast/Toast.module.css");
 
@@ -133,5 +135,46 @@ describe("каркас: бокс ui/Card — собственность фаса
     // display перебил бы display:flex потребителя (равная сила селектора →
     // решает порядок инъекции модулей, а это не контракт). См. ui/README.md.
     expect(card).not.toContain("display:");
+  });
+
+  // Реестр отклонений #3. До визита сюда смена фона на дефолт кита
+  // (tertiary_bg_color) проходила молча — весь набор тестов оставался зелёным.
+  // Суть отклонения — не «рецепт», а ТЕМА: tertiary_bg_color у кита литерал
+  // (#f4f4f7/#2a2a2a), а section_bg_color = var(--tg-theme-section-bg-color).
+  it("поверхность Card — наша (section_bg_color) и радиус 16, а не дефолт кита", () => {
+    const card = ruleBody(pageCss, ".card.card");
+    expect(card).toContain("background: var(--tgui--section_bg_color)");
+    expect(card).toContain("border-radius: var(--app-card-radius)");
+    expect(card).not.toContain("tertiary_bg_color");
+  });
+});
+
+describe("каркас: тап-таргет 44px (WCAG 2.5.5 AAA) — пин значения, а не факта", () => {
+  // ui/Button выставляет data-tap-target="44", но атрибут выводится из факта
+  // применения класса MIN_TARGET, а НЕ из CSS. Мутация 44px→30px оставляла
+  // весь набор тестов зелёным, поэтому значение пиним здесь.
+  it(".minTarget держит ровно 44px", () => {
+    const rule = ruleBody(textCss, ".minTarget");
+    expect(rule).toContain("min-height: 44px");
+    // Ровно одно объявление min-height — иначе «победит» порядок в блоке.
+    expect(rule.match(/min-height:/g)).toHaveLength(1);
+  });
+
+  it("44px выше нативных 42px кита (mode m), иначе height обнулит минимум", () => {
+    expect(44).toBeGreaterThan(42);
+  });
+});
+
+describe("каркас: рецепт выбранного тега (ui/Chip tone=accent)", () => {
+  // Реестр отклонений #7. Ловим текстом: jsdom не каскадит CSS-модули, а по
+  // DOM «горит ли тег» не проверить — aria-pressed ставит потребитель, не кит.
+  it(".accent[aria-pressed=\"true\"] переопределяет фон кита", () => {
+    expect(chipCss).toContain('.accent[aria-pressed="true"]');
+    expect(chipCss).toContain("var(--tgui--button_color");
+  });
+
+  it("фон выбранного тега — кит-токен, а не литерал", () => {
+    const rule = ruleBody(chipCss, '.accent[aria-pressed="true"]');
+    expect(rule).toContain("background: var(--tgui--button_color");
   });
 });

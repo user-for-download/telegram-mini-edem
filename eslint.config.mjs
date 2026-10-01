@@ -92,6 +92,14 @@ export default tseslint.config(
     },
   },
   {
+    // Контракт кита — часть аппарата фасада: он рендерит Button/IconButton/
+    // List кита НАПРЯМУЮ, чтобы сверить наш variant с настоящим mode кита
+    // (иначе сверять не с чем, и подмена «bezeled → gray» проходит молча).
+    // Правило выше остаётся в силе для всего остального приложения.
+    files: ["telegram-app/src/__tests__/kitContract.test.tsx"],
+    rules: { "no-restricted-imports": "off" },
+  },
+  {
     // Однонаправленность слоёв: ui/ — низ, он не знает про экраны.
     files: ["telegram-app/src/ui/**/*.{ts,tsx}"],
     rules: {

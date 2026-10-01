@@ -25,7 +25,7 @@
 
 | Слой | Пакет | Версия | Замечание |
 |---|---|---|---|
-| UI-кит | `@telegram-apps/telegram-ui` | **2.1.13 (пин)** | пропсы сверять только по `dist/**/*.d.ts`; версия запинена тестом `src/__tests__/kitContract.test.ts` |
+| UI-кит | `@telegram-apps/telegram-ui` | **2.1.13 (пин)** | пропсы сверять только по `dist/**/*.d.ts`; версия запинена тестом `src/__tests__/kitContract.test.tsx` |
 | Telegram SDK | `@tma.js/sdk-react` | **3.0.23 (пин)** | скоуп `@tma.js/*` — устаревший; канонический по докам `@telegram-apps/sdk-react` (см. Findings) |
 | Фреймворк | React | 19.0.1 | `StrictMode` (double-mount учтён везде) |
 | Роутер | react-router-dom | 7.x | **HashRouter** — обязательно для WebView/deep links |
@@ -121,7 +121,7 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
 - Токены: цвета/паддинги только из `--tgui--*` / `--app-*`. Литералы на уровнях
   экран/секция/sheet запрещены (`npm run token:check`).
 - Новый компонент: есть кит-аналог → обёртка `ui/X.tsx`; нет → свой markup на токенах;
-  отклонение от кита → строка в «Реестре отклонений»; замер → проверка в `kitContract.test.ts`.
+  отклонение от кита → строка в «Реестре отклонений»; замер → проверка в `kitContract.test.tsx`.
 
 ## 8. Тема и safe-area (самое неочевидное)
 
@@ -258,7 +258,7 @@ details(), detail(id) }`. Аналогично `BOOKING_KEYS`, `NOTIFICATION_KEY
   моки (`vi.mock`, matchMedia, ResizeObserver, `AppRoot`-обёртка для tgui) — в каждом
   файле при необходимости. Для tgui-компонентов используется SSR `renderToString`, а не
   тестирование внутренностей кита.
-- `src/__tests__/kitContract.test.ts` — **падает при смене версии tgui**: при апгрейде
+- `src/__tests__/kitContract.test.tsx` — **падает при смене версии tgui**: при апгрейде
   пройти реестр отклонений `src/ui/README.md` и обновить контракт.
 - `src/__tests__/layoutCss.test.ts` — пин каскада (слой tgui бьётся неслойными модулями).
 - `AppConfig.test.tsx` — контраст палитр темы.
@@ -315,7 +315,7 @@ details(), detail(id) }`. Аналогично `BOOKING_KEYS`, `NOTIFICATION_KEY
 
 | Severity | Файл:строка | Что | Направление |
 |---|---|---|---|
-| medium | `package.json:15` | скоуп `@tma.js/sdk-react` устарел; отстаёт по мажору | плановый апгрейд одной зависимостью, сверить changelog + `kitContract` |
+| ~~medium~~ | ~~`package.json:15`~~ | ~~скоуп `@tma.js/sdk-react` устарел~~ | **ОПРОВЕРГНУТО 2026-10-01**: стоит `3.0.23` = `npm view @tma.js/sdk-react version` → 3.0.23, т.е. актуальная. Следить только за новыми мажорами; при апгрейде — сверить changelog + `kitContract` |
 | medium | `WebSocketProvider.tsx` | транспорт + доменные подписки в одном файле (613 строк) | вынести `TelegramRealtimeListener` в `providers/` |
 | medium | `useAuthStore.ts` (`bootstrapPromise`) | нет таймаута на самом bootstrap: unsettled-промис блокирует все будущие `bootstrap()` | страхуется 15s-таймаутом `apiClient`; при смене транспорта понадобится явный |
 | low | `AppConfig.tsx` | дубль списка `THEME_VAR_NAMES`/палитр | приемлемо, покрыто тестом контраста |
