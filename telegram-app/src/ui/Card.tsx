@@ -28,9 +28,15 @@ const VARIANTS = {
  * через `ComponentProps`, как у ui/Button, ui/Chip, ui/IconButton.
  *
  * Визуал — НЕ нативный: рецепт приложения (radius 16 вместо 20, наша
- * xs-тень и фон секции — см. ui.module.css .card.card и «Реестр отклонений»
+ * xs-тень и фон секции — см. ui.module.css `.card` и «Реестр отклонений»
  * в ui/README.md). Гарантия бокса — тоже здесь: карточка всегда на всю
  * ширину родителя, потребитель владеет только внутренней раскладкой.
+ *
+ * Класс `styles.card` обязателен и ставится ЗДЕСЬ, а не потребителем: без
+ * него поверхность и `width: 100%` из `.card` не применяются вообще.
+ * Свойства `.card` (radius/border/background/shadow/width/box-sizing)
+ * дизъюнктны свойствам локальных `.card` модулей-потребителей
+ * (display/flex-direction/gap), поэтому порядок инъекции не влияет на вид.
  *
  * Исключение: интерактивные контейнеры (Tappable-кнопка ленты) и
  * Skeleton-болванки не могут быть article — там CARD_SURFACE из
@@ -47,7 +53,9 @@ function CardRoot({
     <TguiCard
       type="plain"
       className={
-        [variantClass, className].filter(Boolean).join(" ") || undefined
+        [styles.card, variantClass, className]
+          .filter(Boolean)
+          .join(" ") || undefined
       }
       {...restProps}
     >

@@ -148,8 +148,8 @@ describe("каркас: корень экрана — только ui/Page", () 
 });
 
 describe("каркас: бокс ui/Card — собственность фасада", () => {
-  it(".card.card задаёт полную ширину и border-box, но НЕ display", () => {
-    const card = ruleBody(pageCss, ".card.card");
+  it(".card задаёт полную ширину и border-box, но НЕ display", () => {
+    const card = ruleBody(pageCss, ".card");
     expect(card).toContain("width: 100%");
     expect(card).toContain("box-sizing: border-box");
     // display перебил бы display:flex потребителя (равная сила селектора →
@@ -157,12 +157,24 @@ describe("каркас: бокс ui/Card — собственность фаса
     expect(card).not.toContain("display:");
   });
 
+  // Селектор `.card` — ОДИНОЧНЫЙ, и это проверяем явно: ruleBody('.card')
+  // матчит и хвост `.card.card {`, поэтому текстовый пин свойств обманывался
+  // ровно той регрессией, которую мы чиним. Удвоение требует, чтобы класс
+  // стоял в атрибуте дважды, — тогда поверхность не применяется нигде.
+  it(".card НЕ удвоен: селектор требует класс дважды и не сматчится", () => {
+    // Без stripCssComments проверка ловит собственные комментарии файла:
+    // там намеренно описан старый `.card.card` и почему он не работал.
+    const code = stripCssComments(pageCss);
+    expect(code).not.toContain(".card.card");
+    expect(code).not.toMatch(/\.card\s+\.card/);
+  });
+
   // Реестр отклонений #3. До визита сюда смена фона на дефолт кита
   // (tertiary_bg_color) проходила молча — весь набор тестов оставался зелёным.
   // Суть отклонения — не «рецепт», а ТЕМА: tertiary_bg_color у кита литерал
   // (#f4f4f7/#2a2a2a), а section_bg_color = var(--tg-theme-section-bg-color).
   it("поверхность Card — наша (section_bg_color) и радиус 16, а не дефолт кита", () => {
-    const card = ruleBody(pageCss, ".card.card");
+    const card = ruleBody(pageCss, ".card");
     expect(card).toContain("background: var(--tgui--section_bg_color)");
     expect(card).toContain("border-radius: var(--app-card-radius)");
     expect(card).not.toContain("tertiary_bg_color");
@@ -255,7 +267,7 @@ describe("каскад: остаточные слепые зоны (докуме
   // getComputedStyle в браузере (Playwright), а не чтение текста — jsdom
   // не каскадит слои. Пока такого стенда нет, это осознанный пробел:
   //новое глобальное НЕСЛОЙНОЕ правило в index/css с теми же свойствами, что
-  // перебивает .page/.pageHero/.card.card, прошло бы молча.
+  // перебивает .page/.pageHero/.card, прошло бы молча.
   it("гипотеза о слепой зоне зафиксирована в ui/README.md", () => {
     const readme = readCss("../ui/README.md");
     expect(readme).toContain("@layer tgui");
