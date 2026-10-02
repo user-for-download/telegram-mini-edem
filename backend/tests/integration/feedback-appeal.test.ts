@@ -112,6 +112,8 @@ interface AppealCreatedBody {
 interface ErrorBody {
   code?: string;
   message: string;
+  /** Сколько ждать до следующей попытки — считает лимитер по своей корзине. */
+  retryAfterMs?: number;
 }
 
 interface ValidationFailedBody {
@@ -401,6 +403,11 @@ describe("feedback/appeal: rate limit (5 запросов в час с одно�
     const limited = (await sixth.json()) as ErrorBody;
     expect(limited.code).toBe("RATE_LIMITED");
     expect(limited.message).toBe("Too many requests");
+    // Контракт для клиента: без retryAfterMs UI вынужден угадывать длину
+    // окна (у AuthGate стояло жёсткое 60 с при окне 300 с).
+    expect(typeof limited.retryAfterMs).toBe("number");
+    expect(limited.retryAfterMs).toBeGreaterThan(0);
+    expect(sixth.headers.get("retry-after")).toMatch(/^\d+$/);
     expect(await countFeedback(userId)).toBe(5);
   });
 

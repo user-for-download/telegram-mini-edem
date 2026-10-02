@@ -60,7 +60,14 @@ function text(): string {
   return document.body.textContent ?? "";
 }
 
-function resetStore(lastAuthError: { status?: number; code?: string } | null) {
+function resetStore(
+  lastAuthError: {
+    status?: number;
+    code?: string;
+    /** Сколько ждать по ответу лимитера; без него — запасные 60 с. */
+    retryAfterMs?: number;
+  } | null,
+) {
   useAuthStore.setState({
     status: "unauthenticated",
     user: null,
@@ -120,6 +127,29 @@ describe("AuthGate: 429-cooldown (B10)", () => {
 
     expect(text()).toContain("Ошибка авторизации");
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("отсчёт берётся из retryAfterMs, а не из жёстких 60 с", async () => {
+    // Окно лимитера TG_AUTH_RATE_WINDOW_MS = 300 с. Раньше UI отсчитывал
+    // 60 с, кнопка оживала в 5 раз раньше блока, а клик тратил одну из
+    // 5 попыток — ровно то, чего cooldown должен был избежать.
+    resetStore({ status: 429, retryAfterMs: 300_000 });
+    renderGate();
+
+    expect(text()).toContain("Подождите 300 с");
+
+    await tick(60);
+    expect(text()).toContain("Подождите 240 с");
+
+    await tick(240);
+    expect(text()).toContain("Попробовать снова");
+  });
+
+  it("retryAfterMs округляется вверх до целых секунд", async () => {
+    resetStore({ status: 429, retryAfterMs: 90_400 });
+    renderGate();
+
+    expect(text()).toContain("Подождите 91 с");
   });
 });
 

@@ -61,7 +61,26 @@ export function createRateLimiter(options: RateLimiterOptions) {
     );
 
     if (bucket.timestamps.length >= options.max) {
-      return c.json({ code: ERROR_CODES.RATE_LIMITED, message: "Too many requests" }, 429);
+      // Сколько ждать до следующей попытки: окно уедет, когда истечёт самая
+      // старая метка (после filter() массив отсортирован по возрастанию).
+      // Клиент (AuthGate) отсчитывает по этому числу — без него UI обязан
+      // угадывать длину окна и врать пользователю на 60 с vs 300 с.
+      const oldestTimestamp = bucket.timestamps[0];
+      const retryAfterMs = Math.max(
+        1,
+        options.windowMs - (now - oldestTimestamp)
+      );
+
+      c.header("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
+
+      return c.json(
+        {
+          code: ERROR_CODES.RATE_LIMITED,
+          message: "Too many requests",
+          retryAfterMs,
+        },
+        429
+      );
     }
 
     bucket.timestamps.push(now);

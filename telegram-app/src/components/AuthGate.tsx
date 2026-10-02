@@ -11,10 +11,21 @@ import { AccountStatePage, RetryAction } from "@/pages/AccountStatePage/AccountS
 import { AppealForm } from "@/components/AppealForm";
 import { SectionBody } from "@/ui/SectionBody";
 
-// Пауза перед повторной попыткой после 429: каждое нажатие «Попробовать
-// снова» — это новый POST /auth/telegram, который продлевает rate-limit окно
-// (5 попыток на 5 минут, bucket общий для DEV-стенда через Vite-прокси).
+// Отсчёт берём из retryAfterMs ответа (считает лимитер по своей корзине),
+// 60 с — только запасной вариант, если сервер поле не прислал. Раньше стояло
+// жёсткое 60 с при окне сервера в 300 с (TG_AUTH_RATE_WINDOW_MS): кнопка
+// оживала в 5 раз раньше блока, клик тратил одну из 5 попыток и продлевал
+// его — ровно то, чего cooldown и должен был избежать.
 const RATE_LIMIT_COOLDOWN_S = 60;
+
+function rateLimitCooldownS(error: {
+  retryAfterMs?: number;
+}): number {
+  const fromServer = error.retryAfterMs;
+  return fromServer && fromServer > 0
+    ? Math.ceil(fromServer / 1000)
+    : RATE_LIMIT_COOLDOWN_S;
+}
 
 /**
  * Гейт авторизации на telegram-ui.
@@ -40,7 +51,7 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
   if (isRateLimited) {
     if (rateLimitEpoch !== lastAuthError) {
       setRateLimitEpoch(lastAuthError);
-      setCooldownLeft(RATE_LIMIT_COOLDOWN_S);
+      setCooldownLeft(rateLimitCooldownS(lastAuthError));
     }
   } else if (cooldownLeft !== 0) {
     setCooldownLeft(0);
@@ -204,15 +215,21 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
           title="Слишком много попыток входа"
           description="Сервер временно ограничил вход (защита от перебора). Подождите немного и попробуйте один раз — повторные нажатия продлевают блокировку."
           action={
+            // Не RetryAction: подпись меняется раз в секунду, а весь
+            // терминальный экран — aria-live="polite", без opt-out
+            // скринридер объявлял бы каждое значение (при окне 300 с это
+            // 300 объявлений за одно ожидание).
             <Button
               size="l"
               stretched
               disabled={cooldownLeft > 0}
               onClick={() => void bootstrap()}
             >
-              {cooldownLeft > 0
-                ? `Подождите ${cooldownLeft} с`
-                : "Попробовать снова"}
+              {cooldownLeft > 0 ? (
+                <span aria-live="off">{`Подождите ${cooldownLeft} с`}</span>
+              ) : (
+                "Попробовать снова"
+              )}
             </Button>
           }
         />
@@ -248,9 +265,7 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
         title="Ошибка авторизации"
         description="Не удалось проверить данные авторизации. Проверьте подключение к интернету."
         action={
-          <Button size="l" stretched onClick={() => void bootstrap()}>
-            Попробовать снова
-          </Button>
+          <RetryAction label="Попробовать снова" onClick={() => void bootstrap()} />
         }
       />
     );

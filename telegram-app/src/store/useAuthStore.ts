@@ -53,7 +53,12 @@ interface AuthState {
    * Последняя ошибка bootstrap (для различения UI: 429 rate-limit,
    * сеть, 503 not configured). Null — ошибки не было или был успех.
    */
-  lastAuthError: { status?: number; code?: string } | null;
+  lastAuthError: {
+    status?: number;
+    code?: string;
+    /** Сколько ждать по ответу лимитера (429) — AuthGate отсчитывает по нему. */
+    retryAfterMs?: number;
+  } | null;
   bootstrap: () => Promise<void>;
   refreshSession: () => Promise<void>;
   handleBackgroundState: (isHidden: boolean) => void;
@@ -165,8 +170,20 @@ function applyUnauthenticated(set: (state: Partial<AuthState>) => void, error?: 
     initData: null,
     lastAuthError:
       error instanceof ApiError
-        ? { status: error.status, code: error.code }
-        : { status: undefined, code: error instanceof Error && error.message.includes("init data") ? "INIT_DATA_UNAVAILABLE" : undefined },
+        ? {
+            status: error.status,
+            code: error.code,
+            // Без этого поле отсчёт на 429 угадывал бы длину окна.
+            retryAfterMs: error.retryAfterMs,
+          }
+        : {
+            status: undefined,
+            code:
+              error instanceof Error && error.message.includes("init data")
+                ? "INIT_DATA_UNAVAILABLE"
+                : undefined,
+            retryAfterMs: undefined,
+          },
   });
 }
 
