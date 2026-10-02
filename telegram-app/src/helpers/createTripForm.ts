@@ -34,33 +34,55 @@ export type CreateTripValidation =
   | { ok: false; error: string; field: string | null };
 
 /** Русские тексты ошибок схемы по первому issue (свои message есть только у refine). */
-function schemaErrorMessage(path: readonly (string | number | symbol)[]): {
+/**
+ * Перевод пути issue из DTO в русский текст + id поля формы.
+ *
+ * Экспортируется и для `EditTripForm`: тот разбирает `updateTripDtoSchema`
+ * и раньше показывал пользователю сырое сообщение Zod («Too big: expected
+ * number to be <=10080», замер 2026-10-02), потому что своего переводчика
+ * не имел. Разбор один на обе формы — иначе тексты разъедутся.
+ *
+ * `fieldPrefix` отличает форму создания («create-») от формы правки («edit-»):
+ * id полей у них разные при одном и том же пути DTO.
+ */
+export function schemaErrorMessage(
+  path: readonly (string | number | symbol)[],
+  fieldPrefix: "create" | "edit" = "create",
+): {
   error: string;
   field: string | null;
 } {
   const key = String(path[0] ?? "");
+  // Суффикс различается у адресов: в форме создания это create-from-address /
+  // create-to-address (там же id городов create-from / create-to), в форме
+  // правки — просто edit-from / edit-to.
+  const addrSuffix = fieldPrefix === "create" ? "-address" : "";
+  const f = (name: string) => `${fieldPrefix}-${name}`;
+  const addr = (name: string) => `${fieldPrefix}-${name}${addrSuffix}`;
   switch (key) {
     case "durationMinutes":
-      return { error: "Время в пути — от 1 до 168 часов", field: "create-duration" };
+      return { error: "Время в пути — от 1 до 168 часов", field: f("duration") };
     case "distanceKm":
-      return { error: "Укажите расстояние — от 1 до 20000 км", field: "create-distance" };
+      return { error: "Укажите расстояние — от 1 до 20000 км", field: f("distance") };
     case "price":
-      return { error: "Укажите цену — от 1 до 100000 ₽", field: "create-price" };
+      return { error: "Укажите цену — от 1 до 100000 ₽", field: f("price") };
     case "seatsTotal":
-      return { error: "Мест может быть от 1 до 3", field: "create-seats" };
+      return { error: "Мест может быть от 1 до 3", field: f("seats") };
     case "fromAddress":
-      return { error: "Адрес отправления — не длиннее 200 символов", field: "create-from-address" };
+      return { error: "Адрес отправления — не длиннее 200 символов", field: addr("from") };
     case "toAddress":
-      return { error: "Адрес назначения — не длиннее 200 символов", field: "create-to-address" };
+      return { error: "Адрес назначения — не длиннее 200 символов", field: addr("to") };
     case "comment":
-      return { error: "Комментарий — не длиннее 500 символов", field: "create-comment" };
+      return { error: "Комментарий — не длиннее 500 символов", field: f("comment") };
     case "tags":
       return { error: "Условий поездки — не больше 6", field: null };
     case "fromCity":
     case "toCity":
     case "fromCityId":
     case "toCityId":
-      return { error: "Города отправления и назначения совпадают", field: "create-to" };
+      // В форме правки маршрут неизменен (PATCH запрещает fromCity/toCity),
+      // поэтому эти пути там не приходят — адресат остаётся create-to.
+      return { error: "Города отправления и назначения совпадают", field: f("to") };
     default:
       return { error: "Проверьте данные поездки", field: null };
   }

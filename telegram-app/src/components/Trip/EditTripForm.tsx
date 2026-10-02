@@ -5,6 +5,7 @@ import { Chip } from "@/ui/Chip";
 import { Notice } from "@/ui/Notice";
 import { BTN_ROW, BTN_ROW_WRAP, HINT, INFO, SUCCESS } from "@/ui/classes";
 import { Field } from "@/ui/Field";
+import { schemaErrorMessage } from "@/helpers/createTripForm";
 import { Button } from "@/ui/Button";
 
 import { Calendar, Clock, MapPin, RussianRuble, Users } from "lucide-react";
@@ -51,7 +52,17 @@ export function EditTripForm({
   const [seats, setSeats] = useState(String(trip.seatsTotal));
   const [tags, setTags] = useState<TripTag[]>([...(trip.tags ?? [])]);
   const [comment, setComment] = useState(trip.comment ?? "");
-  const [validationError, setValidationError] = useState<string | null>(null);
+  // Ошибка приходит с полем: <Field error=…> ставит aria-invalid и
+  // aria-describedby (2026-10-02). Тексты DTO переводятся общим
+  // schemaErrorMessage — раньше здесь показывалось сырое сообщение Zod
+  // («Too big: expected number to be <=10080»).
+  const [fieldError, setFieldError] = useState<{
+    field: string | null;
+    error: string;
+  } | null>(null);
+  const validationError = fieldError?.error ?? null;
+  const errorFor = (id: string) =>
+    fieldError?.field === id ? fieldError.error : undefined;
 
   // Несохранённые правки — Telegram спросит подтверждение закрытия.
   // Сравнение с начальными значениями (см. useState выше): теги —
@@ -76,10 +87,13 @@ export function EditTripForm({
   };
 
   const submit = () => {
-    setValidationError(null);
+    setFieldError(null);
     const departureAt = new Date(departure);
     if (!Number.isFinite(departureAt.getTime()) || departureAt <= new Date()) {
-      setValidationError("Укажите будущие дату и время отправления");
+      setFieldError({
+        field: "edit-departure",
+        error: "Укажите будущие дату и время отправления",
+      });
       return;
     }
     const parsed = updateTripDtoSchema.safeParse({
@@ -94,8 +108,8 @@ export function EditTripForm({
       comment: comment.trim() ? comment.trim() : undefined,
     });
     if (!parsed.success) {
-      setValidationError(
-        parsed.error.issues[0]?.message ?? "Проверьте данные поездки",
+      setFieldError(
+        schemaErrorMessage(parsed.error.issues[0]?.path ?? [], "edit"),
       );
       return;
     }
@@ -109,7 +123,7 @@ export function EditTripForm({
     <>
       <div className={styles.form}>
         <p>Маршрут изменить нельзя — только адреса, время и условия.</p>
-        <Field label="Адрес отправления" id="edit-from">
+        <Field label="Адрес отправления" id="edit-from" error={errorFor("edit-from")}>
           {(field) => (
             <Input
               {...field}
@@ -120,7 +134,7 @@ export function EditTripForm({
             />
           )}
         </Field>
-        <Field label="Адрес назначения" id="edit-to">
+        <Field label="Адрес назначения" id="edit-to" error={errorFor("edit-to")}>
           {(field) => (
             <Input
               {...field}
@@ -131,7 +145,7 @@ export function EditTripForm({
             />
           )}
         </Field>
-        <Field label="Дата и время" id="edit-departure">
+        <Field label="Дата и время" id="edit-departure" error={errorFor("edit-departure")}>
           {(field) => (
             <Input
               {...field}
@@ -143,7 +157,7 @@ export function EditTripForm({
           )}
         </Field>
         <div className={styles.grid2}>
-          <Field label="В пути, часов" id="edit-duration">
+          <Field label="В пути, часов" id="edit-duration" error={errorFor("edit-duration")}>
             {(field) => (
               <Input
                 {...field}
@@ -156,7 +170,7 @@ export function EditTripForm({
               />
             )}
           </Field>
-          <Field label="Расстояние, км" id="edit-distance">
+          <Field label="Расстояние, км" id="edit-distance" error={errorFor("edit-distance")}>
             {(field) => (
               <Input
                 {...field}
@@ -170,7 +184,7 @@ export function EditTripForm({
           </Field>
         </div>
         <div className={styles.grid2}>
-          <Field label="Цена, ₽" id="edit-price">
+          <Field label="Цена, ₽" id="edit-price" error={errorFor("edit-price")}>
             {(field) => (
               <Input
                 {...field}
@@ -183,7 +197,7 @@ export function EditTripForm({
               />
             )}
           </Field>
-          <Field label="Места" id="edit-seats">
+          <Field label="Места" id="edit-seats" error={errorFor("edit-seats")}>
             {(field) => (
               <Input
                 {...field}
@@ -218,7 +232,7 @@ export function EditTripForm({
             })}
           </div>
         </fieldset>
-        <Field label="Комментарий пассажирам" id="edit-comment">
+        <Field label="Комментарий пассажирам" id="edit-comment" error={errorFor("edit-comment")}>
           {(field) => (
             <Textarea
               {...field}
@@ -226,12 +240,14 @@ export function EditTripForm({
               maxLength={500}
               rows={3}
               placeholder="Например: одна остановка в пути, багажник свободен"
-              status={validationError ? "error" : undefined}
+              status={errorFor("edit-comment") ? "error" : undefined}
               onChange={(event) => setComment(event.target.value)}
             />
           )}
         </Field>
-        {validationError && (
+        {/* Поле равно null для ошибок без адресата (лимит тегов, неизвестный
+            путь DTO) — тогда сообщение нужно показать здесь. */}
+        {validationError && !fieldError?.field && (
           <Notice tone="danger" variant="text">
             {validationError}
           </Notice>
