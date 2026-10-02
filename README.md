@@ -9,7 +9,7 @@
 - **Бронирование мест**: пассажиры выбирают место и бронируют в активных поездках; защита от гонки броней на уровне БД (partial unique index + Serializable-транзакции).
 - **Заявки пассажиров**: водитель подтверждает или отклоняет заявки, место удерживается в статусе `pending`.
 - **Отзывы и рейтинги**: система рейтингов водителей и пассажиров, отзывы после начала или завершения поездки в обе стороны (пассажир → водитель и водитель → пассажир). Отзывы проходят модерацию: создаются в статусе `pending` и публикуются после одобрения администратором — публичные списки и рейтинг учитывают только опубликованные; автор получает уведомление об одобрении/отклонении и видит статус в «Мои отзывы» профиля. Текст отзыва — до 150 символов.
-- **Уведомления**: персистентный in-app inbox + WebSocket-hint для foreground-клиентов (новая заявка, статус брони, отмена поездки, завершение). Критичные события persist'ятся независимо от тумблера; повторы дедуплицируются; deep-link — allowlist маршрутов Telegram-приложения. Фоновая рассылка через Bot API заблокирована продуктовым решением (см. `docs/adr/telegram-notification-delivery.md`).
+- **Уведомления**: персистентный in-app inbox + WebSocket-hint для foreground-клиентов (новая заявка, статус брони, отмена поездки, завершение) **и фоновая рассылка через Bot API** (outbox `NotificationDelivery`, утверждена 2026-09-14 — см. `docs/adr/telegram-notification-delivery.md`). Входящие постоянны независимо от настроек; отправка идёт, только если включён `TELEGRAM_DELIVERY_ENABLED` (дефолт `true`), задан `TELEGRAM_BOT_TOKEN` и есть согласие пользователя — иначе задача получает `skipped` с причиной (`channel_disabled` / `no_token` / `bot_blocked`). 429 → повтор по backoff 1m/5m/15m, максимум 3 попытки. Deep-link — allowlist маршрутов Telegram-приложения.
 - **Управление автомобилями**: добавление и редактирование информации об авто для водителей.
 - **Админ-панель** (`webapp/`): отдельное веб-приложение на React 19 + shadcn/ui — дашборд с метриками, пользователи (бан/разбан, сброс онбординга), поездки (отмена), брони (смена статуса), отзывы (модерация: одобрение/отклонение/удаление, фильтр по статусу), обратная связь (просмотр + ответ пользователю), жалобы (фильтр и moderation transitions), read-only настройки. Вход по статичному `ADMIN_TOKEN`, сессия — httpOnly cookie с JWT (12 ч).
 - **Интеграция с Telegram**: авторизация через подписанную initData (HMAC-SHA256, TTL), dev-bypass только в Dev/Test, telegram-ui, WebSocket с auth первым сообщением.
@@ -22,12 +22,14 @@
 │   ├── src/
 │   │   ├── api/                 # HTTP-клиент (таймауты, Zod-валидация ответов) + API-запросы
 │   │   ├── components/          # Компоненты интерфейса (+ ErrorBoundary, Onboarding, OfflineBanner)
+│   │   ├── ui/                  # ФАСАД над telegram-ui: вид и a11y в одном месте (16 компонентов)
 │   │   ├── hooks/               # Кастомные React-хуки
 │   │   ├── pages/               # Страницы (поиск, поездки, брони, профиль, отзывы, поддержка)
 │   │   ├── providers/           # WebSocket-провайдер
 │   │   ├── queries/             # TanStack Query-хуки
 │   │   ├── router/              # Роутинг (react-router) + deep-links (startapp)
 │   │   ├── store/               # Zustand сторы (auth/session)
+│   │   ├── consts/ helpers/ types/ utils/
 │   │   └── onboarding/          # Версионирование онбординга
 │   └── vite.config.ts           # Vite build configuration
 │
@@ -341,7 +343,7 @@ Paginated endpoints проверяют ответы shared Zod-схемами и
 - **HTTPS обязателен** в production (кроме localhost).
 - InitData проверяется HMAC-SHA256 по `TELEGRAM_BOT_TOKEN` + TTL (`TG_INIT_DATA_TTL_SECONDS`, дефолт 3600); dev-bypass `hash=dev-hash` — только вне production при `ALLOW_DEV_AUTH`.
 - Клиент передаёт initData ровно как её отдал Telegram (без пересортировки/перекодировки), иначе HMAC не сойдётся.
-- Bot API фоновая рассылка заблокирована продуктовым решением (см. `docs/adr/telegram-notification-delivery.md`).
+- Фоновая рассылка Bot API **реализована и включена по умолчанию**: гейт — `TELEGRAM_DELIVERY_ENABLED` (дефолт `true`), наличие `TELEGRAM_BOT_TOKEN` и согласие пользователя; мгновенное выключение — `TELEGRAM_DELIVERY_ENABLED=false`. Правила согласия, лимиты и backoff: `docs/adr/telegram-notification-delivery.md`.
 
 ### Шаги деплоя
 

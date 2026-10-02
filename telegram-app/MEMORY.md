@@ -124,6 +124,25 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
   — `src/__tests__/cssClassReach.test.ts`; каскад в браузере —
   `e2e/ui-cascade.mjs`. Разбор — `src/ui/README.md`, «Правило, которое не
   применяется».
+- **Фасад `ui/` — 16 компонентов.** Обёртки кита (вид держит фасад):
+  `Page`←`List`, `Button`, `IconButton`, `Chip`, `Card`, `Sheet`←`Modal`,
+  `Field`+`FieldError`←`Input`/`Textarea`/`Select`, `EmptyState`←`Placeholder`,
+  `Loading`←`Spinner`+`Placeholder`, `FetchMore`←`Button`, `Cell`. Свои
+  (свой markup на токенах): `Notice`, `Stack`, `SectionBody`, `CharCounter`.
+  ESLint запрещает прямой импорт кита для `Button`, `IconButton`, `Card`,
+  `Cell`, `List`.
+- **`ui/Cell` (2026-10-01).** Интерактивная строка обязана быть нативной
+  кнопкой: `Component="button"` — документированный способ кита (Cell.d.ts)
+  и единственный путь с фокусом, Enter/Space и ролью кнопки. Кит UA-стили
+  кнопки **не сбрасывает** (замер A/B: Arial 13.33px, чёрный цвет,
+  `appearance:auto`, `box-sizing` border-box против content-box, ширина
+  356 против 404) — сброс живёт в `ui/buttonReset.module.css` (`AS_BUTTON`),
+  одинаков для обоих корней. Пин: `src/ui/__tests__/cell.test.tsx`.
+- **`Chip` и `Accordion.Summary` с `Component="button"`** (4 + 2 места) текут
+  тем же, поэтому `ui/Chip` несёт `AS_BUTTON`, а `Accordion.Summary`
+  получает константу явно.
+
+  применяется».
 
 ## 8. Тема и safe-area (самое неочевидное)
 
@@ -339,12 +358,19 @@ details(), detail(id) }`. Аналогично `BOOKING_KEYS`, `NOTIFICATION_KEY
 | medium | `WebSocketProvider.tsx` | транспорт + доменные подписки в одном файле (613 строк) | вынести `TelegramRealtimeListener` в `providers/` |
 | medium | `useAuthStore.ts` (`bootstrapPromise`) | нет таймаута на самом bootstrap: unsettled-промис блокирует все будущие `bootstrap()` | страхуется 15s-таймаутом `apiClient`; при смене транспорта понадобится явный |
 | low | `AppConfig.tsx` | дубль списка `THEME_VAR_NAMES`/палитр | приемлемо, покрыто тестом контраста |
-| low | `backend/ENVIRONMENT.md:76` | секция уведомлений устарела: статус `disabled` не существует (реально `skipped`), лог-событие `tg_delivery_failed` выдумано, задокументированы 2 из 12 knob'ов | ✅ исправлено 2026-10-01: полный список переменных с дефолтами, реальные имена статусов и метрик |
+| ~~low~~ | ~~`backend/ENVIRONMENT.md`~~ | ~~секция уведомлений устарела~~ | **ЗАКРЫТО 2026-10-01**: переписана — реальный статус `skipped` (не `disabled`), нет несуществующего `tg_delivery_failed`, задокументированы все 12 переменных уведомлений с дефолтами |
 | low | `backend/src/admin/index.ts:654` | unban **не** переоткрывает WS: клиент после бана держит `terminalTokenRef` и разлогинится до перезапуска приложения | снимать терминал по HTTP-баунсу или документировать «перезапустите апп» |
 
-Проверено и **актуально** (правки не требуют): «Bot API заблокирован
-продуктовым решением» в `README.md:12,344` и в комментарии
-`schema.prisma:128` — канал действительно не подключён, проза верная.
+~~Проверено и актуально: «Bot API заблокирован продуктовым решением»~~ —
+**ОПРОВЕРГНУТО 2026-10-01.** Я тогда сверился с ADR и комментарием
+`schema.prisma:128`, а не с гейтом в коде, и ошибся. Факты: канал
+**реализован и включён по умолчанию** — `TELEGRAM_DELIVERY_ENABLED` (дефолт
+`true`), `telegramSend.ts` делает реальный `fetch` на
+`api.telegram.org/bot$TOKEN/sendMessage`, покрыто `backend/tests/e2e/
+botApiSend.test.ts` (200 delivered, 403 bot_blocked, 400 chat not found, 429
+retry_after, kill-switch). Условия отправки: флаг + токен + согласие.
+`README.md:12,346` исправлены. Комментарий `schema.prisma:128` тоже устарел
+(«Bot API blocked») — требует правки.
 
 Закрыто аудитом (не возвращать): `?segment=driving` вёл на «Все» вместо
 «Водитель» (3 точки входа); автодогрузка списков не работала нигде (observer

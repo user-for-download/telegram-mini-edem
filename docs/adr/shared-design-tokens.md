@@ -3,7 +3,8 @@
 **Status:** Proposed (2026-09-30) — ждёт решения владельца
 **Date:** 2026-09-30
 **Scope:** фронтенды `telegram-app` и `webapp`
-**Источник:** аудит `.tmp/sessions/2026-09-30-ui-facade-gaps` (B6)
+**Источник:** аудит `.tmp/sessions/2026-09-30-ui-facade-gaps` (B6). Каталог `.tmp/`
+вне git, поэтому артефакт в репозитории не сохраняется — ссылка историческая.
 
 ## Контекст
 
@@ -53,6 +54,17 @@ shadcn под браузер). Дублирование палитры прин�
 - Значения токенов — контракт; они защищены машинным гейтом
   (`npm run token:check`, см. `scripts/token-lint.mjs`) в telegram-app.
 - `telegram-app/src/ui/README.md` остаётся реестром отклонений от tgui.
+- Гейты фасада `telegram-app` (на 2026-10-01), все в CI-наборе:
+  - `src/__tests__/kitContract.test.tsx` — версия кита (2.1.13, пин) и
+    замеры кита, на которые опирается реестр;
+  - `src/__tests__/layoutCss.test.ts` — каскад: кит в `@layer tgui`, наши
+    модули вне слоя, `!important` не используется;
+  - `src/__tests__/cssClassReach.test.ts` — ни один класс из CSS-модулей
+    `ui/` не остался без применения (ловит «правило есть, а класс не доехал»);
+  - `src/ui/__tests__/` — контракты обёрток (`card`, `cell`, `button`,
+    `field`, `sheet`, `emptyState`, `primitives`, `notice`);
+  - `e2e/ui-cascade.mjs` — замер `getComputedStyle` в браузере: то, что
+    vitest не видит. Не покрывает снэкбар (нужен реальный триггер-тост).
 
 ## Рекомендация
 

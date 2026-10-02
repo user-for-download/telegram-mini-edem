@@ -74,20 +74,24 @@ jsdom не каскадит слои, а `getComputedStyle` в тестах не
 | `EmptyState` | `Placeholder` | один компонент на пустые/терминальные/промо-экраны |
 | `Loading` | `Spinner` + `Placeholder` | `role="status"` + `aria-label` по умолчанию |
 | `FetchMore` | `Button` | конец ленты: сентинел + скелетон + fallback-кнопка |
-| `Cell` | `Cell` | интерактивная строка всегда нативная кнопка + единый сброс UA-стилей (реестр #11) |
+| `Cell` | `Cell` | интерактивная строка всегда нативная кнопка + единый сброс UA-стилей (реестр #12) |
 | `Stack`, `SectionBody`, `CharCounter`, `classes` | — | единый ритм/токены вместо локальных копий |
 
 ## Что фасад НЕ закрывает (осознанно)
 
-Компоновочные примитивы импортируются из кита напрямую: `Cell`, `Section`,
+Компоновочные примитивы импортируются из кита напрямую: `Section`,
 `Divider`, `Text`, `Caption`, `Title`, `Headline`, `Avatar`, `Skeleton`,
 `Spinner`, `Input`, `Textarea`, `Select`, `Modal` (внутри `Sheet`),
 `Snackbar`, `TabsList`, `Placeholder` (внутри `EmptyState`/`Loading`).
 
 Гарантируется ESLint: `no-restricted-imports` запрещает прямой импорт только
-имён с обёрткой — `Button`, `IconButton`, `Card`, `List`. Обратное тоже
-проверяется: `src/ui/**` не импортирует `@/pages/*`, `@/components/*`,
+имён с обёрткой — `Button`, `IconButton`, `Card`, `Cell`, `List`. Обратное
+тоже проверяется: `src/ui/**` не импортирует `@/pages/*`, `@/components/*`,
 `@/queries/*`, `@/store/*`, `@/providers/*`.
+
+`Cell` переведён под фасад 2026-10-01: интерактивная строка обязана быть
+нативной кнопкой, а вид (сброс UA-стилей, единый `box-sizing`) решает
+фасад — иначе UA-течь правится вручную в каждом экране (реестр #12).
 
 Исключения-обёртки: `Chip` кита используется напрямую только в `RatingPill`
 (пилюля-визуал, а не чип-действие). `StatusPill` — **не** исключение: это

@@ -10,8 +10,9 @@ const { createNotification, pruneOldNotifications } = await import(
  * POST-транзакционная TG-доставка (tg-migration-15).
  *
  * Утверждённый механизм: inbox-запись + наблюдаемый исход, внешних
- * вызовов нет (Bot API заблокирован — TELEGRAM_BOT_TOKEN не требуется
- * и не используется). Проверяем сквозь createNotification:
+ * вызовов нет (этот тест про inbox и решение о постановке задачи; саму
+ * отправку проверяет tests/e2e/botApiSend.test.ts). Проверяем сквозь
+ * createNotification:
  * opt-out, critical override, дедуп повторов (для всех, m9),
  * различимые события и путь без platform-id.
  *

@@ -124,10 +124,11 @@ model Notification {
 // Outbox фоновых доставок уведомлений (bot-api-approval-package §4):
 // createNotification пишет inbox-запись (как раньше) плюс строку задачи
 // здесь; воркер-диспетчер забирает, проверяет согласие/дедуп/лимиты.
-// Shadow mode: внешних отправок нет (ADR telegram-notification-delivery —
-// Bot API blocked), воркер только размечает исход. Когда продукт
-// одобрит канал, сюда добавится реальный sendMessage-контур без смены
-// схемы.
+// Отправка РЕАЛЬНА (ADR telegram-notification-delivery, продукт утвердил
+// канал 2026-09-14): воркер забирает задачу и по условиям — флаг
+// TELEGRAM_DELIVERY_ENABLED, TELEGRAM_BOT_TOKEN, согласие — либо зовёт
+// sendMessage (services/telegramSend.ts), либо ставит skipped с причиной
+// (channel_disabled / no_token / bot_blocked).
 model NotificationDelivery {
   id             String    @id @default(uuid())
   notificationId String

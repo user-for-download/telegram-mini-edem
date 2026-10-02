@@ -65,7 +65,7 @@ Owner: backend. Expiry: re-review if dev-bypass ever leaves non-production.
 
 | Severity | Check | File:line | What's wrong | Fix direction |
 |---|---|---|---|---|
-| low | `.env.example` drift | `.env.example` vs `backend/src/env.ts` | Missing: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_HOSTS`, `TG_INIT_DATA_TTL_SECONDS`, `TG_AUTH_RATE_*`, `TELEGRAM_DELIVERY_ENABLED`, `TG_NOTIFICATION_DEDUPE_WINDOW_MS`, `TRUST_PROXY`, `DEV_AUTH_USER_ALLOWLIST`, JWT/dev TTLs | Document the TG/security-relevant subset (this task); full parity sweep out of scope |
+| low | ~~`.env.example` drift~~ | `.env.example` vs `backend/src/env.ts` | **ЗАКРЫТО 2026-10-01**: сверено машинно — в `backend/.env.example` не хватало 16 переменных (всё семейство `TG_NOTIFICATION_*`, `CLIENT_ERRORS_*`, `PORT`, `ERROR_ALERT_CHAT_ID`); добавлены с реальными дефолтами из `env.ts`. Пустое `TELEGRAM_DELIVERY_ENABLED=` в корневом `.env.example` заменено на `true` (совпадает с дефолтом `env.ts` и с `backend/.env.example`) | разность при пересоздании `.env` — проверять `diff <(env-uniq)`, гейта на равенство пока нет |
 | low | No pino redact paths | `backend/src/logger.ts:4-17` | Safety relies on call-site discipline (currently clean — §4). One future `logger.info({ body })` leaks PII/secrets silently | Add `redact: ["*.token", "*.initData", "req.headers.authorization"]` hardening; owner: backend, no expiry pressure |
 | — | Prod secrets | `backend/src/env.ts:91-109`, `docker-compose.yml:51-56` | — | `JWT_SECRET` ≥32 enforced in prod; bot token optional-with-503; compose passes through (no hardcode) |
 | — | E2E cleanup | `e2e/telegram-fixtures.mjs` (cleanupRun) | — | Idempotent deletes, failure fails run; no mass-delete scripts without guards |

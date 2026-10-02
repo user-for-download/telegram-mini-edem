@@ -75,12 +75,17 @@ ADMIN_LOGIN_RATE_MAX=5
 
 ## Telegram notification delivery
 
-Notifications are delivered **in-app**: every critical event is persisted to
-the DB (`Notification` inbox) and pushed over WebSocket while the app is open.
-There is no external push channel — Bot API delivery is blocked by product
-decision (see `docs/adr/telegram-notification-delivery.md`), the delivery
-service only resolves the deep-link and records observability
-(`src/services/telegramNotifications.ts`).
+Every event is persisted to the DB first: critical ones unconditionally, optional
+ones per the user's toggle, with duplicate suppression for Telegram users. The
+inbox row is authoritative and is pushed over WebSocket while the app is open.
+
+Background delivery through **Bot API is implemented and enabled by default**
+(approved 2026-09-14, see `docs/adr/telegram-notification-delivery.md`): the
+dispatcher (`src/workers/notificationDispatcher.ts`) sends via
+`src/services/telegramSend.ts` only when the kill-switch is on, a bot token is
+present and the user consented; otherwise the task settles as `skipped` with a
+machine-readable reason. `src/services/telegramNotifications.ts` resolves the
+deep-link (allowlisted routes) and records observability.
 
 The outbox (`NotificationDelivery`) walks
 `pending → processing → delivered | skipped | failed`. Delivery never throws:

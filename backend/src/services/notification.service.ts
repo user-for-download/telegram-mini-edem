@@ -1,7 +1,9 @@
 // backend/src/services/notification.service.ts
 //
-// Создание inbox-уведомлений + постановка фоновой доставки в outbox
-// (bot-api shadow mode, approval-package §4.3).
+// Создание inbox-уведомлений + постановка фоновой доставки в outbox.
+// Канал Bot API утверждён и работает (ADR telegram-notification-delivery,
+// 2026-09-14); сюда попадает задача, а шлёт её воркер
+// (workers/notificationDispatcher.ts).
 //
 // Контракт:
 // - inbox-запись создаётся как раньше (critical всегда, optional по
@@ -12,7 +14,8 @@
 //   согласие/kill-switch диспетчер перечитывает на месте (см. 05),
 //   здесь только предварительная разметка skip-причин;
 // - ошибка enqueue НЕ откатывает inbox (try/catch изолирован);
-// - внешних вызовов нет — Bot API заблокирован (ADR).
+// - внешних вызовов здесь нет: отправляет воркер
+//   (workers/notificationDispatcher.ts), этот модуль только кладёт задачу в outbox.
 import { db } from "../db.js";
 import { logger } from "../logger.js";
 import { env } from "../env.js";

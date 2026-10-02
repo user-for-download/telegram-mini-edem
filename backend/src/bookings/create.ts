@@ -289,8 +289,8 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
       role: "driver",
     });
 
-    // Внешняя доставка водителю — только через утверждённый канал
-    // (Bot API заблокирован, см. ADR). In-app запись выше + WS-hint ниже.
+    // Внешняя доставка водителю идёт через outbox→диспетчер (Bot API,
+    // утверждён 2026-09-14). In-app запись выше + WS-hint ниже.
 
     wsManager.sendToUser(booking.trip.driverId, {
       type: "booking:new",
