@@ -21,10 +21,8 @@ import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { DevToggles } from "@/components/DevToggles/DevToggles";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import styles from "./AppConfig.module.css";
-import {
-  WsProvider,
-  TelegramRealtimeListener,
-} from "@/providers/WebSocketProvider";
+import { WsProvider } from "@/providers/WebSocketProvider";
+import { TelegramRealtimeListener } from "@/providers/TelegramRealtimeListener";
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -81,11 +81,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { retrieveRawInitData } from "@tma.js/sdk-react";
 import {
-  TelegramRealtimeListener,
   WsProvider,
   classifyTerminalCloseReason,
   useWs,
 } from "@/providers/WebSocketProvider";
+import { TelegramRealtimeListener } from "@/providers/TelegramRealtimeListener";
 import { ApiError } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { TRIP_KEYS } from "@/queries/useTripsQuery";
