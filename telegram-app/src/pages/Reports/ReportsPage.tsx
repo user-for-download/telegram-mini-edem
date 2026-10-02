@@ -2,10 +2,10 @@ import { memo, useRef, useState } from "react";
 import {
   Caption,
   Input,
-  Section,
   Select,
   Text,
   Textarea,
+  VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
 import { EmptyState } from "@/ui/EmptyState";
@@ -26,6 +26,7 @@ import {
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { Page } from "@/ui/Page";
+import { Section } from "@/ui/Section";
 import { SectionBody } from "@/ui/SectionBody";
 import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
@@ -109,7 +110,7 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
  * уход со страницы/закрытие приложения, а не закрытие модалки. Хук
  * сам снимает флаг в cleanup при размонтировании страницы.
  *
-  * a11y: интерактив — таргеты ≥44px (нативный MIN_TARGET), счётчик и хинт лимита —
+ * a11y: интерактив — таргеты ≥44px (нативный MIN_TARGET), счётчик и хинт лимита —
  * aria-live, ошибки — role=alert, успех — role=status.
  */
 export function ReportsPage() {
@@ -198,6 +199,10 @@ export function ReportsPage() {
   return (
     <>
       <Page>
+        {/* NavHeader помечен aria-hidden («авторитетные h1 живут на
+            страницах»), а секции фасад отдаёт как h2 — имя экрана даёт
+            скрытый h1. */}
+        <VisuallyHidden Component="h1">Мои обращения</VisuallyHidden>
         <Section header="Сообщите о проблеме">
           <SectionBody>
             <MutationError error={create.error} />

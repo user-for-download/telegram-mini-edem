@@ -2,6 +2,7 @@ import {
   Badge,
   IconContainer,
   Section,
+  VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { FetchMore } from "@/ui/FetchMore";
 import { Cell } from "@/ui/Cell";
@@ -106,6 +107,10 @@ export function TripHistoryPage() {
 
   return (
     <Page>
+      {/* NavHeader помечен aria-hidden («авторитетные h1 живут на страницах»),
+          а секция здесь без заголовка (замер: 0 h1, 0 h2) — имя экрана даёт
+          скрытый h1. */}
+      <VisuallyHidden Component="h1">История поездок</VisuallyHidden>
       <QueryState
         loading={history.isLoading || driverArchive.isLoading}
         error={history.error ?? driverArchive.error}

@@ -4,7 +4,7 @@ import { FetchMore } from "@/ui/FetchMore";
 import { Button } from "@/ui/Button";
 import { Chip } from "@/ui/Chip";
 import { Page } from "@/ui/Page";
-import { Input } from "@telegram-apps/telegram-ui";
+import { Input, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Search as SearchIcon } from "lucide-react";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -204,6 +204,10 @@ export function TripActivePage() {
 
   return (
     <Page>
+      {/* NavHeader помечен aria-hidden («авторитетные h1 живут на страницах»),
+          а секций с заголовками здесь нет вовсе (замер: 0 h1, 0 h2) — имя
+          экрана даёт скрытый h1. */}
+      <VisuallyHidden Component="h1">Поездки</VisuallyHidden>
       {mutationError && (
         <Notice tone="danger" variant="text">
           {bookingErrorMessage(mutationError)}

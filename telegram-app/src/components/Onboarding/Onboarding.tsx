@@ -2,11 +2,10 @@ import { type FC, type PropsWithChildren, useRef, useState } from "react";
 import {
   Caption,
   Placeholder,
-  Section,
-  Subheadline,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { Section } from "@/ui/Section";
 import { Cell } from "@/ui/Cell";
 import { Notice } from "@/ui/Notice";
 import { Page } from "@/ui/Page";
@@ -58,16 +57,11 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
           {error}
         </Notice>
       )}
-      {/* h2 + level/weight китовской Section.Header: обёртка жёстко зашивает
-        Component:"h1", поэтому узел пропускаем мимо неё (кит оборачивает
-        только примитив) и повторяем её типографику — иначе заголовком
-        первого экрана оказывается подзаголовок секции. */}
+      {/* Заголовок секции — дефолтный h2 фасада ui/Section (у кита он
+        жёстко зашит как h1, и страница получала h1 на каждую секцию).
+        Имя первого экрана — скрытый VisuallyHidden h1 выше. */}
       <Section
-        header={
-          <Subheadline Component="h2" level="2" weight="2">
-            Прочитайте перед началом
-          </Subheadline>
-        }
+        header="Прочитайте перед началом"
         footer="Сервис доступен пользователям старше 14 лет"
       >
         <Cell

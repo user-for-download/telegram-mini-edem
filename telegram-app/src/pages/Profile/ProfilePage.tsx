@@ -5,9 +5,7 @@ import {
   Caption,
   Headline,
   IconContainer,
-  Section,
   SegmentedControl,
-  Subheadline,
   Switch,
   Text,
   VisuallyHidden,
@@ -34,6 +32,7 @@ import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
 import { FeedbackModal } from "@/components/Profile/FeedbackModal";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
+import { Section } from "@/ui/Section";
 import { Stack } from "@/ui/Stack";
 import { FetchMore } from "@/ui/FetchMore";
 import { Notice } from "@/ui/Notice";
@@ -232,8 +231,8 @@ export function ProfilePage() {
                 секций — h2. До правки было шесть h1 («Мои поездки»,
                 «Мой автомобиль», «Внешний вид», «Уведомления и звуки»,
                 «Сервис и помощь», «Опасная зона») и ни одного h1 у страницы.
-                Обёртка SectionHeader жёстко зашивает Component:"h1",
-                поэтому узел пропускаем мимо неё китовым рецептом. */}
+                Заголовок секции не может быть h1 по умолчанию — это
+                теперь гарантирует фасад (telegram-app/src/ui/Section.tsx). */}
             <VisuallyHidden Component="h1">Профиль</VisuallyHidden>
             {/* Шапка профиля: поверхность — Section без заголовка. */}
             <Section>
@@ -335,13 +334,7 @@ export function ProfilePage() {
 
             {subtab === "settings" ? (
               <Stack>
-                <Section
-                  header={
-                    <Subheadline Component="h2" level="2" weight="2">
-                      Мои поездки
-                    </Subheadline>
-                  }
-                >
+                <Section header="Мои поездки">
                   <MenuRow
                     label="История поездок"
                     icon={
@@ -357,13 +350,7 @@ export function ProfilePage() {
                     }}
                   />
                 </Section>
-                <Section
-                  header={
-                    <Subheadline Component="h2" level="2" weight="2">
-                      Мой автомобиль (для поездок)
-                    </Subheadline>
-                  }
-                >
+                <Section header="Мой автомобиль (для поездок)">
                   <MenuRow
                     label={
                       profile.data.car ? "Автомобиль" : "Добавить автомобиль"
@@ -384,13 +371,7 @@ export function ProfilePage() {
                     onClick={() => navigate("/vehicle")}
                   />
                 </Section>
-                <Section
-                  header={
-                    <Subheadline Component="h2" level="2" weight="2">
-                      Внешний вид
-                    </Subheadline>
-                  }
-                >
+                <Section header="Внешний вид">
                   <SwitchRow
                     label="Тёмная тема"
                     icon={
@@ -411,13 +392,7 @@ export function ProfilePage() {
                     }}
                   />
                 </Section>
-                <Section
-                  header={
-                    <Subheadline Component="h2" level="2" weight="2">
-                      Уведомления и звуки
-                    </Subheadline>
-                  }
-                >
+                <Section header="Уведомления и звуки">
                   <SwitchRow
                     label="Уведомления"
                     icon={
@@ -446,13 +421,7 @@ export function ProfilePage() {
                     }}
                   />
                 </Section>
-                <Section
-                  header={
-                    <Subheadline Component="h2" level="2" weight="2">
-                      Сервис и помощь
-                    </Subheadline>
-                  }
-                >
+                <Section header="Сервис и помощь">
                   <MenuRow
                     label="Служба поддержки"
                     icon={
@@ -483,11 +452,7 @@ export function ProfilePage() {
                     в ней красная надпись-кнопка, описание — в футере
                     секции. Кнопки «Выйти» нет. */}
                 <Section
-                  header={
-                    <Subheadline Component="h2" level="2" weight="2">
-                      Опасная зона
-                    </Subheadline>
-                  }
+                  header="Опасная зона"
                   footer="Ваши активные поездки завершатся (ожидающие заявки отклонятся, подтверждённые останутся историей), ваши брони на чужих поездках и заявки на поездку отменятся. Восстановление невозможно."
                 >
                   {remove.error && (

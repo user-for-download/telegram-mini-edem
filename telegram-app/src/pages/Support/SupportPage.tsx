@@ -1,12 +1,13 @@
 import { useRef, useState } from "react";
+import { VisuallyHidden } from "@telegram-apps/telegram-ui";
 import {
   Accordion,
   Caption,
   Input,
-  Section,
   Text,
   Textarea,
 } from "@telegram-apps/telegram-ui";
+import { Section } from "@/ui/Section";
 import { Notice } from "@/ui/Notice";
 import { AS_BUTTON } from "@/ui/classes";
 import { HINT, PROSE } from "@/ui/classes";
@@ -198,6 +199,10 @@ export function SupportPage() {
   return (
     <>
       <Page>
+        {/* NavHeader помечен aria-hidden («авторитетные h1 живут на
+            страницах»), а заголовки секций фасад отдаёт как h2 — имя экрана
+            даёт скрытый h1. */}
+        <VisuallyHidden Component="h1">Поддержка</VisuallyHidden>
         <Section header="Частые вопросы">
           <SectionBody>
             {SUPPORT_FAQ.map((item) => {
@@ -265,9 +270,7 @@ export function SupportPage() {
               {(field) => (
                 <Input
                   {...field}
-                  before={
-                    <MessageSquareText size={16} className={HINT} />
-                  }
+                  before={<MessageSquareText size={16} className={HINT} />}
                   placeholder="Например: не приходит уведомление"
                   value={subject}
                   maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}

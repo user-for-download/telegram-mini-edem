@@ -1,13 +1,13 @@
 import { useState } from "react";
 import {
   Input,
-  Section,
   SegmentedControl,
   Slider,
   Caption,
 } from "@telegram-apps/telegram-ui";
 
 import { Button } from "@/ui/Button";
+import { Section } from "@/ui/Section";
 import { Chip } from "@/ui/Chip";
 import { IconButton } from "@/ui/IconButton";
 import { EmptyState } from "@/ui/EmptyState";
@@ -162,7 +162,7 @@ export function SearchPage() {
         {/* Фильтр: поверхность — Section, заголовок — нативный.
             Чипы-действия — первой строкой тела (рядом с заголовком
             им не место: header принимает только текст). */}
-        <Section header="Поиск попутных поездок">
+        <Section header="Поиск попутных поездок" headingLevel="h1">
           <SectionBody>
             <div className={styles.chipRow}>
               <Chip
@@ -297,9 +297,7 @@ export function SearchPage() {
                       <Chip
                         key={tag}
                         tone="accent"
-                        variant={
-                          form.tags.includes(tag) ? "active" : "quiet"
-                        }
+                        variant={form.tags.includes(tag) ? "active" : "quiet"}
                         Component="button"
                         aria-pressed={form.tags.includes(tag)}
                         onClick={() => {

@@ -1,9 +1,7 @@
-import {
-  IconContainer,
-  Section,
-} from "@telegram-apps/telegram-ui";
+import { IconContainer } from "@telegram-apps/telegram-ui";
 import { Route, ChevronRight } from "lucide-react";
 import { Cell } from "@/ui/Cell";
+import { Section } from "@/ui/Section";
 import { POPULAR_ROUTES } from "@/consts/popularRoutes";
 
 interface PopularRoutesSectionProps {
@@ -18,7 +16,7 @@ interface PopularRoutesSectionProps {
  */
 export function PopularRoutesSection({ onSelect }: PopularRoutesSectionProps) {
   return (
-    <Section header="Популярные направления">
+    <Section header="Популярные направления" headingLevel="h1">
       {POPULAR_ROUTES.map((route) => (
         <Cell
           key={`${route.from}-${route.to}`}

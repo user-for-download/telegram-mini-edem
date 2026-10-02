@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import {
   Caption,
   Input,
-  Section,
-  Subheadline,
   Text,
   Textarea,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { Section } from "@/ui/Section";
 import { BTN_ROW_WRAP, HINT, INFO, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { FieldError } from "@/ui/FieldError";
@@ -239,16 +238,10 @@ export function CreateTripForm({
         {/* NavHeader помечен aria-hidden («авторитетные h1 живут на страницах»),
             поэтому имя экрана даёт скрытый h1, а заголовки секций — h2.
             До правки было три h1 (Маршрут/Поездка/Условия) и ни одного h1
-            у страницы. Обёртка SectionHeader жёстко зашивает Component:"h1",
-            поэтому узел пропускаем мимо неё китовым рецептом. */}
+            у страницы. Заголовок секции не может быть h1 по умолчанию —
+            теперь это гарантирует фасад (telegram-app/src/ui/Section.tsx). */}
         <VisuallyHidden Component="h1">Создание поездки</VisuallyHidden>
-        <Section
-          header={
-            <Subheadline Component="h2" level="2" weight="2">
-              Маршрут
-            </Subheadline>
-          }
-        >
+        <Section header="Маршрут">
           <SectionBody>
             <div className={styles.cityFields}>
               <CityPickerField
@@ -346,13 +339,7 @@ export function CreateTripForm({
           </SectionBody>
         </Section>
 
-        <Section
-          header={
-            <Subheadline Component="h2" level="2" weight="2">
-              Поездка
-            </Subheadline>
-          }
-        >
+        <Section header="Поездка">
           <SectionBody>
             <Field label="Дата и время" id="create-date">
               {(field) => (
@@ -509,11 +496,7 @@ export function CreateTripForm({
         </Section>
 
         <Section
-          header={
-            <Subheadline Component="h2" level="2" weight="2">
-              Условия поездки
-            </Subheadline>
-          }
+          header="Условия поездки"
           footer={`до 6 · выбрано ${tags.length}`}
         >
           <SectionBody>

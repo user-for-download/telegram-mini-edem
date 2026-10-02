@@ -4,7 +4,6 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 import {
   miniApp,
   themeParams,
-  useLaunchParams,
   useSignal,
   viewport,
 } from "@tma.js/sdk-react";
@@ -14,8 +13,8 @@ import { AuthGate } from "@/components/AuthGate";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ApiError } from "@/api/client";
 import { useAppSettings } from "@/utils/appSettings";
-import { resolveAppRootPlatform, useDevPlatform } from "@/utils/devPlatform";
 import { useTelegramChromiumFallback } from "@/hooks/useTelegramChromiumFallback";
+import { useTguiPlatform } from "@/ui/useTguiPlatform";
 import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { DevToggles } from "@/components/DevToggles/DevToggles";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
@@ -80,23 +79,6 @@ export function ErrorFallback({ error }: { error: unknown }) {
       </button>
     </div>
   );
-}
-
-/** Маппинг платформы Telegram → платформа telegram-ui AppRoot.
- * AppRoot 2.1.x принимает только 'base' | 'ios': iOS — нативный вид,
- * всё остальное (Android, десктоп, веб) — нейтральный 'base'.
- * Dev-стенд может принудительно задать платформу кнопками в шапке
- * (utils/devPlatform) — оверрайд важнее клиента. */
-function useTguiPlatform(): "base" | "ios" {
-  const devPlatform = useDevPlatform();
-  let client: "base" | "ios" = "base";
-  try {
-    const p = useLaunchParams().tgWebAppPlatform;
-    if (p === "ios") client = "ios";
-  } catch {
-    // launch params недоступны (крайний случай) — нейтральный base.
-  }
-  return resolveAppRootPlatform(devPlatform, client);
 }
 
 /** Живая тёмная тема Telegram (miniApp.isDark) с ручным переопределением
