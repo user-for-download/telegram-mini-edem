@@ -7,8 +7,10 @@ import {
   IconContainer,
   Section,
   SegmentedControl,
+  Subheadline,
   Switch,
   Text,
+  VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { Cell } from "@/ui/Cell";
@@ -225,6 +227,14 @@ export function ProfilePage() {
       >
         {profile.data && (
           <Page>
+            {/* NavHeader помечен aria-hidden («авторитетные h1 живут на
+                страницах»), поэтому имя экрана даёт скрытый h1, а заголовки
+                секций — h2. До правки было шесть h1 («Мои поездки»,
+                «Мой автомобиль», «Внешний вид», «Уведомления и звуки»,
+                «Сервис и помощь», «Опасная зона») и ни одного h1 у страницы.
+                Обёртка SectionHeader жёстко зашивает Component:"h1",
+                поэтому узел пропускаем мимо неё китовым рецептом. */}
+            <VisuallyHidden Component="h1">Профиль</VisuallyHidden>
             {/* Шапка профиля: поверхность — Section без заголовка. */}
             <Section>
               <SectionBody>
@@ -325,7 +335,13 @@ export function ProfilePage() {
 
             {subtab === "settings" ? (
               <Stack>
-                <Section header="Мои поездки">
+                <Section
+                  header={
+                    <Subheadline Component="h2" level="2" weight="2">
+                      Мои поездки
+                    </Subheadline>
+                  }
+                >
                   <MenuRow
                     label="История поездок"
                     icon={
@@ -341,7 +357,13 @@ export function ProfilePage() {
                     }}
                   />
                 </Section>
-                <Section header="Мой автомобиль (для поездок)">
+                <Section
+                  header={
+                    <Subheadline Component="h2" level="2" weight="2">
+                      Мой автомобиль (для поездок)
+                    </Subheadline>
+                  }
+                >
                   <MenuRow
                     label={
                       profile.data.car ? "Автомобиль" : "Добавить автомобиль"
@@ -362,7 +384,13 @@ export function ProfilePage() {
                     onClick={() => navigate("/vehicle")}
                   />
                 </Section>
-                <Section header="Внешний вид">
+                <Section
+                  header={
+                    <Subheadline Component="h2" level="2" weight="2">
+                      Внешний вид
+                    </Subheadline>
+                  }
+                >
                   <SwitchRow
                     label="Тёмная тема"
                     icon={
@@ -383,7 +411,13 @@ export function ProfilePage() {
                     }}
                   />
                 </Section>
-                <Section header="Уведомления и звуки">
+                <Section
+                  header={
+                    <Subheadline Component="h2" level="2" weight="2">
+                      Уведомления и звуки
+                    </Subheadline>
+                  }
+                >
                   <SwitchRow
                     label="Уведомления"
                     icon={
@@ -412,7 +446,13 @@ export function ProfilePage() {
                     }}
                   />
                 </Section>
-                <Section header="Сервис и помощь">
+                <Section
+                  header={
+                    <Subheadline Component="h2" level="2" weight="2">
+                      Сервис и помощь
+                    </Subheadline>
+                  }
+                >
                   <MenuRow
                     label="Служба поддержки"
                     icon={
@@ -443,7 +483,11 @@ export function ProfilePage() {
                     в ней красная надпись-кнопка, описание — в футере
                     секции. Кнопки «Выйти» нет. */}
                 <Section
-                  header="Опасная зона"
+                  header={
+                    <Subheadline Component="h2" level="2" weight="2">
+                      Опасная зона
+                    </Subheadline>
+                  }
                   footer="Ваши активные поездки завершатся (ожидающие заявки отклонятся, подтверждённые останутся историей), ваши брони на чужих поездках и заявки на поездку отменятся. Восстановление невозможно."
                 >
                   {remove.error && (
