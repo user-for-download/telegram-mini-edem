@@ -1,10 +1,10 @@
 import {
   Badge,
-  Cell,
   IconContainer,
   Section,
 } from "@telegram-apps/telegram-ui";
 import { FetchMore } from "@/ui/FetchMore";
+import { Cell } from "@/ui/Cell";
 import { Page } from "@/ui/Page";
 
 import { useNavigate } from "react-router-dom";

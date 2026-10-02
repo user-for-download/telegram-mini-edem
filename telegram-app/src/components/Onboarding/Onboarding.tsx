@@ -1,12 +1,12 @@
 import { type FC, type PropsWithChildren, useRef, useState } from "react";
 import {
   Caption,
-  Cell,
   Placeholder,
   Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { Cell } from "@/ui/Cell";
 import { Notice } from "@/ui/Notice";
 import { Page } from "@/ui/Page";
 

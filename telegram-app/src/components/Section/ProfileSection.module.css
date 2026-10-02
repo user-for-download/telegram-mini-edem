@@ -7,16 +7,16 @@
  * Калибровка под @telegram-apps/telegram-ui 2.1.13: при bump'е кита
  * сверить с kitContract.test.tsx (там пинуется поведение кита). */
 .cell {
-  /* Кнопка вне Section: кит Cell прозрачен сам по себе (фона/бордера
-   * у .tgui-b8df… нет — только flex + padding), но <button> по умолчанию
-   * shrink-wrap (inline-block): без width:100% строка сжимается под контент.
-   * Явные transparent/0 документируют намерение «голая строка на всю ширину»
-   * и страхуют от future-chrome при bump кита. */
+  /* Строка-профиль вне Section. У кит Cell нет ни фона, ни бордера — только
+   * flex + padding, — но строка идёт как <button>, а кнопка по умолчанию
+   * shrink-wrap (inline-block): без width:100% она сжимается под контент.
+   * Это про бокс, не про UA-вид: сброс UA-стилей живёт в фасаде
+   * (ui/buttonReset.module.css). */
   width: 100%;
   margin-top: 6px;
-  text-align: left;
-  background: transparent;
-  border: 0;
+  /* text-align / background / border больше не нужны: сброс UA-кнопки живёт
+   * в фасаде (ui/buttonReset.module.css, класс AS_BUTTON) и одинаков для
+   * button- и div-строк. Раньше компенсация дублировалась здесь вручную. */
 }
 .who {
   display: flex;

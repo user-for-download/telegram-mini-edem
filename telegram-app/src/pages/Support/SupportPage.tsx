@@ -8,6 +8,7 @@ import {
   Textarea,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { AS_BUTTON } from "@/ui/classes";
 import { HINT, PROSE } from "@/ui/classes";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
@@ -92,7 +93,7 @@ function FeedbackCard({
 }) {
   return (
     <Accordion expanded={opened} onChange={onToggle}>
-      <Accordion.Summary Component="button">
+      <Accordion.Summary Component="button" className={AS_BUTTON}>
         {feedback.subject}
         {feedback.reply && <StatusPill tone="info">Есть ответ</StatusPill>}
       </Accordion.Summary>
@@ -209,7 +210,7 @@ export function SupportPage() {
                     setOpenedFaqId(expanded ? item.id : null)
                   }
                 >
-                  <Accordion.Summary Component="button">
+                  <Accordion.Summary Component="button" className={AS_BUTTON}>
                     {item.question}
                   </Accordion.Summary>
                   <Accordion.Content>

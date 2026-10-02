@@ -1,0 +1,43 @@
+/* Сброс UA-стилей нативной кнопки для КОМПОНЕНТОВ КИТА, которые мы переключаем
+ * в `<button>` через `Component="button"` (Tappable/Cell/Accordion.Summary).
+ *
+ * ЗАЧЕМ. `Component="button"` — документированный способ кита сделать корнем
+ * элемент кнопкой (Cell.d.ts: «Custom component or HTML tag to be used as the
+ * root element of the cell, div by default»), и он же — единственный путь с
+ * нативной семантикой: фокус с клавиатуры, Enter/Space, роль кнопки у
+ * скринридера. Но кит НЕ сбрасывает UA-стили кнопки: в `dist/styles.css`
+ * `Cell` = `align-items:center;display:flex;gap:24px;padding:0 24px`,
+ * `Tappable` = `cursor:pointer;isolation:isolate;position:relative` — и всё.
+ *
+ * Замер A/B в браузере (Cell как `<button>` против клона с тегом `div` и теми
+ * же классами и содержимым), 2026-10-01 — 7 расхождений:
+ *   font-family: Arial          → -apple-system, system-ui
+ *   font-size:   13.3333px      → 16px
+ *   color:       rgb(0,0,0)     → наследуемый (в тёмной теме чёрный не виден)
+ *   box-sizing:  border-box     → content-box  (разная ширина: 356 против 404)
+ *   appearance:  auto           → none          (нативная отрисовка в webview)
+ *   unicode-bidi:normal         → isolate
+ *   + служебные border/caret/outline-color (безвредны: ширина границы 0)
+ *
+ * ЧТО НЕ ТРОГАЕМ: `padding` и раскладку — они принадлежат киту. Наш модуль
+ * неслойный и бьёт `@layer tgui` при любой специфичности, поэтому сброс
+ * `padding: 0` здесь снёс бы `padding: 0 24px` у Cell.
+ *
+ * Класс безвреден для `div`: appearance/background/border для него no-op,
+ * `font: inherit`/`text-align: inherit`/`color: inherit` — уже поведение div.
+ * Реально меняется только `box-sizing`, и это осознанно: он уравнивает
+ * button- и div-пути (кит сам использует `border-box` повсеместно). */
+
+.asButton {
+  -webkit-appearance: none;
+  appearance: none;
+  /* Шрифт/цвет/выравнивание — как у обычного блока, а не как у UA-кнопки. */
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  /* Нативная поверхность и рамка нам не нужны: фон задаёт кит. */
+  background: transparent;
+  border: 0;
+  /* Один бокс для обоих путей (см. замер выше). */
+  box-sizing: border-box;
+}

@@ -82,9 +82,14 @@ export default tseslint.config(
           paths: [
             {
               name: "@telegram-apps/telegram-ui",
-              importNames: ["Button", "IconButton", "Card", "List"],
+              // Cell добавлен 2026-10-01 вместе с фасадом ui/Cell: интерактивная
+              // строка должна быть нативной кнопкой, а вид (сброс UA-стилей,
+              // единый box-sizing) решает фасад — иначе 12 мест правят UA-течь
+              // вручную. Обходной путь `div` + role без нативного корня на
+              //NotificationsPage — не запрещаем: он осознанный и доступный.
+              importNames: ["Button", "IconButton", "Card", "List", "Cell"],
               message:
-                "Импортируйте обёртку из @/ui: Button, IconButton, Card, Page (вместо List). Фасад держит единый вид, тап-таргет и доступные имена.",
+                "Импортируйте обёртку из @/ui: Button, IconButton, Card, Cell, Page (вместо List). Фасад держит единый вид, тап-таргет, нативную семантику строки и доступные имена.",
             },
           ],
         },

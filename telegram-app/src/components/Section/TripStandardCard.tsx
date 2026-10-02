@@ -2,7 +2,6 @@ import type { KeyboardEvent, ReactNode } from "react";
 import {
   Avatar,
   Caption,
-  Cell,
   Headline,
   Subheadline,
 } from "@telegram-apps/telegram-ui";
@@ -12,6 +11,7 @@ import { formatRelativeDeparture } from "@/utils/bookingSplit";
 import { RatingPill } from "@/components/RatingPill";
 import { AvatarStack } from "@/components/Trip/AvatarStack";
 import { Card } from "@/ui/Card";
+import { Cell } from "@/ui/Cell";
 import styles from "./TripStandardCard.module.css";
 
 export interface TripStandardPerson {

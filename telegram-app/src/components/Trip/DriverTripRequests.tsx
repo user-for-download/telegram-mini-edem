@@ -1,11 +1,11 @@
 import {
   Avatar,
   Caption,
-  Cell,
   Skeleton,
   Subheadline,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { Cell } from "@/ui/Cell";
 import { IconButton } from "@/ui/IconButton";
 import { Notice } from "@/ui/Notice";
 

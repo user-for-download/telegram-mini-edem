@@ -1,6 +1,7 @@
 import styles from "./ui.module.css";
 import textStyles from "./text.module.css";
 import layoutStyles from "./layout.module.css";
+import buttonResetStyles from "./buttonReset.module.css";
 
 /**
  * Классы поверхности карточки для НЕстандартных контейнеров.
@@ -63,6 +64,22 @@ export const VISUALLY_HIDDEN = textStyles.visuallyHidden;
 
 /** Minimum 44px tap-target height (класс приложения, WCAG 2.5.5 AAA). */
 export const MIN_TARGET = textStyles.minTarget;
+
+/**
+ * Сброс UA-стилей нативной кнопки для КОМПОНЕНТОВ КИТА, переключённых в
+ * `<button>` через `Component="button"` (Tappable/Cell/Accordion.Summary).
+ *
+ * `Component="button"` — документированный способ кита (Cell.d.ts) и
+ * единственный путь с нативной семантикой: фокус, Enter/Space, роль кнопки.
+ * Но кит UA-стили не сбрасывает — замер A/B в браузере даёт Arial 13.33px,
+ * чёрный цвет, `appearance:auto` и `box-sizing` border-box против
+ * content-box у div. Подробности и замер — buttonReset.module.css.
+ *
+ * Класс безвреден для `div` (appearance/background/border — no-op, inherit
+ * уже поведение блока), поэтому его можно вешать на обе формы клетки: так
+ * box-sizing одинаков и button- и div-пути считаются одинаково.
+ */
+export const AS_BUTTON = buttonResetStyles.asButton;
 
 /** Loading pulse animation (анимация приложения, disabled under prefers-reduced-motion). */
 export const PULSE = textStyles.pulse;

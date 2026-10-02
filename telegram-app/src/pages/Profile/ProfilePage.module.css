@@ -68,7 +68,8 @@
 /* Кликабельная строка-меню на всю ширину (Cell Component="button"). */
 .menuCell {
   width: 100%;
-  text-align: left;
+  /* text-align перенесён в фасад: сброс UA-кнопки (AS_BUTTON) ставит
+   * `text-align: inherit` одинаково для button- и div-строк. */
 }
 
 /* Строка-переключатель: поверхность секции + hairline кит-обводки. */

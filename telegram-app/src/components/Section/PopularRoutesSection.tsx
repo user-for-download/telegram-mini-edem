@@ -1,9 +1,9 @@
 import {
-  Cell,
   IconContainer,
   Section,
 } from "@telegram-apps/telegram-ui";
 import { Route, ChevronRight } from "lucide-react";
+import { Cell } from "@/ui/Cell";
 import { POPULAR_ROUTES } from "@/consts/popularRoutes";
 
 interface PopularRoutesSectionProps {

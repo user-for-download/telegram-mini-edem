@@ -3,7 +3,6 @@ import {
   Avatar,
   Badge,
   Caption,
-  Cell,
   Headline,
   IconContainer,
   Section,
@@ -12,6 +11,7 @@ import {
   Text,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { Cell } from "@/ui/Cell";
 
 import {
   Bell,

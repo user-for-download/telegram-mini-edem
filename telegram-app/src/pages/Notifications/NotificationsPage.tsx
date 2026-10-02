@@ -2,12 +2,12 @@ import { useMemo, type KeyboardEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Badge,
-  Cell,
   Info,
   Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Chip } from "@/ui/Chip";
+import { Cell } from "@/ui/Cell";
 import { IconButton } from "@/ui/IconButton";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";

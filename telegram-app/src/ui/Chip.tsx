@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { Chip as TguiChip } from "@telegram-apps/telegram-ui";
+import { AS_BUTTON } from "@/ui/classes";
 import styles from "./Chip.module.css";
 
 /**
@@ -43,6 +44,10 @@ export function Chip({
   ...restProps
 }: ChipProps) {
   const merged = [
+    // Сброс UA-кнопки: `Component="button"` (теги-фильтры в 4 местах) течёт
+    // Arial/чёрным цветом/appearance:auto — кит этого не снимает. Подробности
+    // и замер A/B — buttonReset.module.css. Для div-чипа класс no-op.
+    AS_BUTTON,
     styles.chip,
     tone === "accent" ? styles.accent : undefined,
     className,
