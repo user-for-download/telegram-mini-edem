@@ -365,12 +365,8 @@ export function NotificationsPage() {
   const renderFilter = (id: NotifSegment, title: string) => (
     <Chip
       key={id}
-      // Component="button" — рецепт тегов-фильтров (ui/Chip). Без него
-      // кит рендерит div: с aria-pressed и onClick, но без роли и без
-      // tabindex — фильтр был недоступен с клавиатуры и читался скринридером
-      // как текст (замер: tag=DIV, role=null, tabindex нет).
-      Component="button"
-      type="button"
+      // Нативную кнопку даёт дефолт ui/Chip: кликабельный чип (onClick)
+      // рендерится как <button>. Явный Component не нужен.
       variant={segment === id ? "active" : "quiet"}
       tone={segment === id ? "accent" : "neutral"}
       aria-pressed={segment === id}

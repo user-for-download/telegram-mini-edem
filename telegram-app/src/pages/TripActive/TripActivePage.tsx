@@ -122,11 +122,7 @@ export function TripActivePage() {
   const segmentChip = (id: TripSegment, label: string) => (
     <Chip
       key={id}
-      // Component="button" — тот же рецепт, что в NotificationsPage: без него
-      // кит рендерит div, и сегмент был кликабелен мышью, но без роли и без
-      // tabindex (недоступен с клавиатуры, скринридером — как текст).
-      Component="button"
-      type="button"
+      // Нативную кнопку даёт дефолт ui/Chip (кликабельный чип → <button>).
       variant={segment === id ? "active" : "quiet"}
       aria-pressed={segment === id}
       onClick={() => selectSegment(id)}

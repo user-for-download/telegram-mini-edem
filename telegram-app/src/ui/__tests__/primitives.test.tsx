@@ -8,6 +8,7 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 import { describe, expect, it } from "vitest";
 
 import { CharCounter } from "@/ui/CharCounter";
+import { Chip } from "@/ui/Chip";
 import { FetchMore } from "@/ui/FetchMore";
 import { Loading } from "@/ui/Loading";
 import { Page } from "@/ui/Page";
@@ -20,6 +21,32 @@ const render = (node: ReactNode): string =>
 
 /** Текст без SSR-разделителей `<!-- -->` между соседними выражениями. */
 const textOf = (html: string): string => html.replace(/<!-- -->/g, "");
+
+describe("Chip: кликабельный по умолчанию нативная кнопка", () => {
+  it("с onClick рендерится как button с type=button (без явного Component)", () => {
+    // Кит без Component даёт div: с aria-pressed/onClick он недоступен с
+    // клавиатуры и читается скринридером как текст. Так были устроены
+    // фильтры NotificationsPage и TripActivePage.
+    const html = render(<Chip onClick={() => {}}>тег</Chip>);
+    expect(html).toContain("<button");
+    expect(html).toContain('type="button"');
+  });
+
+  it("статичный чип остаётся div — текстовая плашка, не кнопка", () => {
+    const html = render(<Chip>тег</Chip>);
+    expect(html).not.toContain("<button");
+  });
+
+  it("явный Component=a с href выигрывает у дефолта", () => {
+    const html = render(
+      <Chip Component={"a"} href="#/ride-requests">
+        Заявки
+      </Chip>,
+    );
+    expect(html).toContain('href="#/ride-requests"');
+    expect(html).not.toContain("<button");
+  });
+});
 
 describe("Stack: ритм из токенов, gap-модификаторы", () => {
   it("default — базовый .stack без gap-модификатора", () => {

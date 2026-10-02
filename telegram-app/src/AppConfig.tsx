@@ -164,8 +164,7 @@ function applyThemeOverride(override: ThemeOverride): void {
     // Возврат к теме клиента: bindCssVars одноразовый, поэтому
     // восстанавливаем значения вручную из текущего состояния SDK.
     const state = themeParams.state() as
-      | Record<string, string | undefined>
-      | undefined;
+      Record<string, string | undefined> | undefined;
     for (const name of THEME_VAR_NAMES) {
       // SDK может быть не инициализирован — тогда state undefined и все
       // кастомные проперти снимаются (фолбэк-палитра tgui).
