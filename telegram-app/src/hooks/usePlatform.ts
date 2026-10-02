@@ -1,3 +1,5 @@
+import { useContext } from "react";
+import { AppRootContext } from "@telegram-apps/telegram-ui/dist/components/Service/AppRoot/AppRootContext";
 import { useAppRootContext } from "@telegram-apps/telegram-ui/dist/hooks/useAppRootContext";
 
 /**
@@ -11,4 +13,18 @@ import { useAppRootContext } from "@telegram-apps/telegram-ui/dist/hooks/useAppR
 export function usePlatform(): "base" | "ios" {
   const context = useAppRootContext();
   return context.platform === "ios" ? "ios" : "base";
+}
+
+/**
+ * Платформа tgui с фолбэком 'base' вместо исключения.
+ *
+ * Нужна там, где отсутствие AppRoot — норма, а не ошибка: китовый `Section`
+ * вне контекста тоже просто рисуется нейтрально, и вёрстка заголовка секции не
+ * должна ронять рендер страницы (изолированные тесты рендерят страницы без
+ * AppRoot). Строгий usePlatform оставлен там, где отсутствие AppRoot — реальная
+ * поломка (ui/Sheet: без шторки диалог теряется).
+ */
+export function usePlatformOrBase(): "base" | "ios" {
+  const context = useContext(AppRootContext);
+  return context?.platform === "ios" ? "ios" : "base";
 }

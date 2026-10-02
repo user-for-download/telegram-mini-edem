@@ -4,7 +4,7 @@ import {
   Section as TguiSection,
   Subheadline,
 } from "@telegram-apps/telegram-ui";
-import { useTguiPlatform } from "@/ui/useTguiPlatform";
+import { usePlatformOrBase } from "@/hooks/usePlatform";
 import styles from "./Section.module.css";
 
 /**
@@ -24,6 +24,11 @@ import styles from "./Section.module.css";
  * типографика повторяет рецепт самого кита (useHeaderComponents):
  * iOS — `Caption caps` (13px), остальное — `Subheadline level=2 weight=2`
  * (15px/600). Обе ветки закреплены замерами в kitContract.test.tsx.
+ *
+ * Платформа берётся из контекста AppRoot (usePlatformOrBase) — того же, что
+ * читает ui/Sheet, так что расхождение с тем, что AppRoot передал, невозможно.
+ * Фолбэк 'base', а не исключение: вне AppRoot китовой Section тоже рисуется
+ * нейтрально, и заголовок секции не должен ронять рендер страницы.
  *
  * Явный `header`-узел передаётся без изменений; `headingLevel="h1"` —
  * для экрана, где секция ВИДИМО владеет единственным заголовком
@@ -45,7 +50,7 @@ export function Section({
   headingLevel = "h2",
   ...restProps
 }: SectionProps) {
-  const platform = useTguiPlatform();
+  const platform = usePlatformOrBase();
 
   // Узел пропускаем как есть: автор знает, чего хочет (уже минувший
   // рецепт с узлом — см. комментарий выше).

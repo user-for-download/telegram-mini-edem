@@ -3,10 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Badge,
   Info,
-  Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Chip } from "@/ui/Chip";
+import { Section } from "@/ui/Section";
 import { Cell } from "@/ui/Cell";
 import { IconButton } from "@/ui/IconButton";
 import { EmptyState } from "@/ui/EmptyState";

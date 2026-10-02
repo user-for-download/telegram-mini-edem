@@ -4,17 +4,18 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 import {
   miniApp,
   themeParams,
+  useLaunchParams,
   useSignal,
   viewport,
 } from "@tma.js/sdk-react";
 import type { ThemeOverride } from "@/utils/appSettings";
+import { resolveAppRootPlatform, useDevPlatform } from "@/utils/devPlatform";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthGate } from "@/components/AuthGate";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ApiError } from "@/api/client";
 import { useAppSettings } from "@/utils/appSettings";
 import { useTelegramChromiumFallback } from "@/hooks/useTelegramChromiumFallback";
-import { useTguiPlatform } from "@/ui/useTguiPlatform";
 import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { DevToggles } from "@/components/DevToggles/DevToggles";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
@@ -240,6 +241,23 @@ function useFullscreenSubscription(): void {
     }, 50);
     return () => window.clearTimeout(timer);
   }, []);
+}
+
+/** Платформа telegram-ui для AppRoot: только 'base' | 'ios' (iOS — нативный
+ * вид, Android/десктоп/веб — нейтральный 'base'). Dev-стенд переключает
+ * кнопками в шапке (utils/devPlatform) — оверрайд важнее клиента.
+ * Внутри AppRoot её читает @/hooks/usePlatform — тот же хук, что у ui/Section
+ * и ui/Sheet, поэтому фасады и каркас всегда на одной платформе. */
+function useTguiPlatform(): "base" | "ios" {
+  const devPlatform = useDevPlatform();
+  let client: "base" | "ios" = "base";
+  try {
+    const p = useLaunchParams().tgWebAppPlatform;
+    if (p === "ios") client = "ios";
+  } catch {
+    // launch params недоступны (крайний случай) — нейтральный base.
+  }
+  return resolveAppRootPlatform(devPlatform, client);
 }
 
 export const AppConfig: FC<PropsWithChildren> = ({ children }) => {

@@ -1,10 +1,10 @@
 import {
   Badge,
   IconContainer,
-  Section,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { FetchMore } from "@/ui/FetchMore";
+import { Section } from "@/ui/Section";
 import { Cell } from "@/ui/Cell";
 import { Page } from "@/ui/Page";
 

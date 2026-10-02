@@ -75,17 +75,23 @@ jsdom не каскадит слои, а `getComputedStyle` в тестах не
 | `Loading` | `Spinner` + `Placeholder` | `role="status"` + `aria-label` по умолчанию |
 | `FetchMore` | `Button` | конец ленты: сентинел + скелетон + fallback-кнопка |
 | `Cell` | `Cell` | интерактивная строка всегда нативная кнопка + единый сброс UA-стилей (реестр #12) |
+| `Section` | `Section` | заголовок секции `h2` по умолчанию; `h1` у секции невозможен (реестр #15) |
 | `Stack`, `SectionBody`, `CharCounter`, `classes` | — | единый ритм/токены вместо локальных копий |
 
 ## Что фасад НЕ закрывает (осознанно)
 
-Компоновочные примитивы импортируются из кита напрямую: `Section`,
-`Divider`, `Text`, `Caption`, `Title`, `Headline`, `Avatar`, `Skeleton`,
+Компоновочные примитивы импортируются из кита напрямую: `Divider`,
+`Text`, `Caption`, `Title`, `Headline`, `Avatar`, `Skeleton`,
 `Spinner`, `Input`, `Textarea`, `Select`, `Modal` (внутри `Sheet`),
 `Snackbar`, `TabsList`, `Placeholder` (внутри `EmptyState`/`Loading`).
 
+`Section` убран отсюда 2026-10-02: кит зашивает `Component: "h1"` в
+`SectionHeader`, поэтому страница из нескольких секций получала по `h1` на
+заголовок, а `NavHeader` помечен `aria-hidden` («авторитетные h1 живут на
+страницах») — своего `h1` у страниц не было. Реестр #15.
+
 Гарантируется ESLint: `no-restricted-imports` запрещает прямой импорт только
-имён с обёрткой — `Button`, `IconButton`, `Card`, `Cell`, `List`. Обратное
+имён с обёрткой — `Button`, `IconButton`, `Card`, `Cell`, `Section`, `List`. Обратное
 тоже проверяется: `src/ui/**` не импортирует `@/pages/*`, `@/components/*`,
 `@/queries/*`, `@/store/*`, `@/providers/*`.
 
@@ -203,3 +209,4 @@ jsdom не каскадит слои, а `getComputedStyle` в тестах не
 3. Отклонение от кита → строка в «Реестре отклонений» выше.
 4. Замер, на который опирается комментарий (класс/размер кита) → проверка
    в `kitContract.test.tsx`.
+| 15 | `Section` — уровень заголовка | `header`-строка → `<h1>` (кит жёстко зашивает `Component:"h1"` в `SectionHeader`) | `ui/Section`: строка → `h2`, `headingLevel="h1"` — явный opt-in | страница из нескольких секций получала по `h1` на заголовок (замер: 4 на Поддержке, 6 на Профиле, 3 на форме поездки), при этом `NavHeader` = `aria-hidden`, то есть имени экрана не было ни у кого. Обойти через узел можно, но теряется обёртка `<header>` с её `padding: 20px 24px 4px 22px` (iOS `16px 16px 8px`) — семантику чинили в ущерб вёрстке (замер: `left` 39 → 17). Фасад повторяет и типографику, и геометрию: рецепт кита `useHeaderComponents` (iOS `Caption caps` 13px, иначе `Subheadline level=2 weight=2` 15px/600) + своя обёртка `Section.module.css` с китовыми токенами цвета. **Замер паритета на обеих платформах: base 15px/600/none, `padding 20px 24px 4px 22px`, `left 39`; iOS 13px/400/uppercase, `padding 16px 16px 8px`, `left 33`.** Платформа — `ui/useTguiPlatform` (общий с `AppConfig`), потому что кит не экспортирует `usePlatform` из корня. Пин — `ui/__tests__/section.test.tsx` |

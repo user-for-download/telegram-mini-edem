@@ -16,6 +16,7 @@ import {
   Chip as TguiChip,
   IconButton as TguiIconButton,
   List as TguiList,
+  Section as TguiSection,
 } from "@telegram-apps/telegram-ui";
 import { describe, expect, it } from "vitest";
 
@@ -235,6 +236,46 @@ describe("фасад: обе платформы (iOS-ветка не забыт�
   // renderToString его содержимого нет физически (проверено: 41 байт на base).
   // Имя диалога на обеих платформах покрыто в ui/__tests__/sheet.test.tsx
   // (jsdom, портал работает) и sheet.ios.test.tsx.
+});
+
+describe("фасад Section: заголовок секции повторяет китовые значения", () => {
+  // Реестр #15. Фасад обходит китовый SectionHeader узлом, а значит теряет
+  // его обёртку <header> с паддингом и цветом — и обязан вернуть их сам.
+  // Эти значения сняты из styles.css кита 2.1.13; если придёт bump — падение
+  // здесь означает «перепроверь реестр #15 и калибровки в ui/Section.module.css».
+  const KIT_HEADER_CLASS = "tgui-d0251b46536ac046";
+  const KIT_HEADER_IOS_CLASS = "tgui-b7217abb24e8763a";
+  const KIT_CSS = join(dirname(new URL(import.meta.url).pathname), "..", "..", "..", "node_modules", "@telegram-apps", "telegram-ui", "dist", "styles.css");
+
+  it("кит вешает на заголовок секции свой паддинг (base и iOS разные)", () => {
+    const css = readFileSync(KIT_CSS, "utf8");
+    expect(css).toContain(`.${KIT_HEADER_CLASS}{`);
+    expect(css).toMatch(/padding:20px 24px 4px 22px/);
+    expect(css).toContain(`.${KIT_HEADER_IOS_CLASS}{`);
+    expect(css).toMatch(/padding:16px 16px 8px/);
+  });
+
+  it("наш ui/Section повторяет именно эти значения", () => {
+    // ui/Section.module.css — наш источник истины, а не китовский класс:
+    // хэш-классы кита меняются от версии к версии, значения — контракт.
+    const ours = readFileSync(
+      join(dirname(new URL(import.meta.url).pathname), "..", "ui", "Section.module.css"),
+      "utf8",
+    );
+    expect(ours).toMatch(/padding: 20px 24px 4px 22px/);
+    expect(ours).toMatch(/padding: 16px 16px 8px/);
+    expect(ours).toContain("var(--tgui--link_color)");
+    expect(ours).toContain("var(--tgui--section_header_text_color)");
+  });
+
+  it("кит действительно зашивает h1 в SectionHeader — иначе фасад не нужен", () => {
+    // Контракт, ради которого всё затевалось: строковый header кита = h1.
+    const onBase = renderInApp(
+      <TguiSection header="Заголовок">тело</TguiSection>,
+      "base",
+    );
+    expect(onBase).toContain("<h1");
+  });
 });
 
 describe("фасад Card: нативный article + бокс приложения", () => {

@@ -66,13 +66,13 @@ export default tseslint.config(
       jsxA11y.flatConfigs.recommended,
     ],
   },
-  {
+{
     // Фасад ui/: кит не импортируется напрямую там, где есть наша обёртка.
-    // Только Button/IconButton/Card/List — у них фасад владеет и видом, и
-    // a11y-инвариантами (тап-таргет, accessibility name). Компоновочные
-    // примитивы (Cell, Section, Text, Avatar, Skeleton, Placeholder…)
-    // импортируются из кита напрямую — это осознанно (см.
-    // telegram-app/src/ui/README.md, раздел «Что фасад НЕ закрывает»).
+    // Button/IconButton/Card/List/Cell/Section — у них фасад владеет и видом,
+    // и a11y-инвариантами (тап-таргет, accessibility name, уровень заголовка).
+    // Примитивы без обёртки (Text, Avatar, Skeleton, Placeholder…) импортируются
+    // из кита напрямую — это осознанно (см. telegram-app/src/ui/README.md,
+    // раздел «Что фасад НЕ закрывает»).
     files: ["telegram-app/src/**/*.{ts,tsx}"],
     ignores: ["telegram-app/src/ui/**"],
     rules: {
@@ -86,10 +86,23 @@ export default tseslint.config(
               // строка должна быть нативной кнопкой, а вид (сброс UA-стилей,
               // единый box-sizing) решает фасад — иначе 12 мест правят UA-течь
               // вручную. Обходной путь `div` + role без нативного корня на
-              //NotificationsPage — не запрещаем: он осознанный и доступный.
-              importNames: ["Button", "IconButton", "Card", "List", "Cell"],
+              // NotificationsPage — не запрещаем: он осознанный и доступный.
+              // Section добавлен 2026-10-02 вместе с фасадом ui/Section: кит
+              // зашивает Component:"h1" в SectionHeader, поэтому страница из
+              // нескольких секций получала по h1 на заголовок (замер: 4/6/3 на
+              // Поддержке/Профиле/форме поездки). Обойти можно было узлом — но
+              // терялась обёртка <header> с её паддингом, то есть семантику
+              // чинили в ущерб вёрстке. Фасад повторяет и то, и другое.
+              importNames: [
+                "Button",
+                "IconButton",
+                "Card",
+                "List",
+                "Cell",
+                "Section",
+              ],
               message:
-                "Импортируйте обёртку из @/ui: Button, IconButton, Card, Cell, Page (вместо List). Фасад держит единый вид, тап-таргет, нативную семантику строки и доступные имена.",
+                "Импортируйте обёртку из @/ui: Button, IconButton, Card, Cell, Section, Page (вместо List). Фасад держит единый вид, тап-таргет, нативную семантику строки, уровень заголовка секции и доступные имена.",
             },
           ],
         },

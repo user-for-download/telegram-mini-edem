@@ -1,6 +1,6 @@
 import { type FC, type PropsWithChildren, useEffect, useState } from "react";
-import { Section, Subheadline } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { Section } from "@/ui/Section";
 import { Loading } from "@/ui/Loading";
 import { Page } from "@/ui/Page";
 
@@ -188,16 +188,10 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
           <RetryAction label="Проверить снова" onClick={() => void bootstrap()} />
         }
       >
-        {/* h2 + рецепт китовской Section.Header: обёртка жёстко зашивает
-            Component:"h1", узел пропускает мимо неё. Иначе h1 достаётся
-            заголовку формы, а имя экрана остаётся без заголовка. */}
-        <Section
-          header={
-            <Subheadline Component="h2" level="2" weight="2">
-              Обжалование блокировки
-            </Subheadline>
-          }
-        >
+        {/* Заголовок секции — дефолтный h2 фасада ui/Section (у кита он
+            жёстко зашит как h1). Имя экрана даёт скрытый h1 внутри
+            AccountStatePage, поэтому h1 достаётся именно состоянию. */}
+        <Section header="Обжалование блокировки">
           <SectionBody>
             <AppealForm />
           </SectionBody>
