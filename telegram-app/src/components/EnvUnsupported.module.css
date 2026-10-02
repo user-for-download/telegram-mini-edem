@@ -1,0 +1,44 @@
+/* Экран «вне Telegram» рендерится ДО инициализации SDK (main.tsx, ветка
+ * catch), то есть снаружи AppRoot. Поэтому здесь чистый HTML, а не китовские
+ * компоненты: вне AppRoot telegram-ui падает с «Wrap your app with <AppRoot>»
+ * и не отдаёт разметку вовсе (замер: пустой экран, в консоли pageerror).
+ * Ровно та же причина, по которой фолбэк ErrorBoundary в AppConfig —
+ * plain-HTML (см. комментарий у .fallback). Значения повторяют .fallback*,
+ * чтобы оба вне-оболочечных экрана выглядели одинаково. */
+
+.root {
+  padding: 32px var(--app-space-md);
+  text-align: center;
+  /* По центру экрана, а не у верхнего края: содержимого мало, а экран
+   * открывают на десктопе вне Telegram. */
+  min-height: 100dvh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-space-md);
+}
+
+.title {
+  font-size: 20px;
+  margin: 0;
+}
+
+.text {
+  opacity: 0.7;
+  margin: 0;
+  max-width: 32ch;
+}
+
+.link {
+  padding: 10px 20px;
+  font-size: 16px;
+  /* Ссылка выглядит кнопкой, но остаётся ссылкой: у неё есть href,
+   * и в Телеграме она открывается штатным переходом, а не релокацией. */
+  display: inline-block;
+  text-decoration: none;
+  border-radius: 999px;
+  background: var(--tg-theme-button-color, #3ba3ec);
+  color: var(--tg-theme-button-text-color, #fff);
+}
