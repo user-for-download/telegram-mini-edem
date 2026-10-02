@@ -95,8 +95,24 @@ function MenuRow({
 }
 
 /**
- * Строка-переключатель (язык ProfileTab эталона): обычный div,
- * не кнопка — внутри интерактивный Switch. tgui Switch = checkbox.
+ * Строка-переключатель — стандартный паттерн кита: обычная `Cell`, а
+ * интерактивный `Switch` лежит в слоте `after`.
+ *
+ * Раньше это был самодельный `div` со своей рамкой и фоном, из-за чего:
+ * - строка не влезала по ширине: `width: 100%` + `padding: 12px` + `border: 1px`
+ *   при `box-sizing: content-box` давали 382px против 356px родителя —
+ *   замер в браузере: **переполнение 26px, уход за правый край экрана**;
+ * - разделители между строк не появлялись: `Section` вставляет `Divider`
+ *   между ПРЯМИМИ детьми (Section.js, `Children.map` + `Divider`), а строки
+ *   были завёрнуты в `Stack` — кит видел один дочерний узел.
+ *
+ * Теперь всё это даёт кит: секция рисует поверхность и разделители, `Cell` —
+ * раскладку строки. Собственные рамка/фон/паддинг не нужны.
+ *
+ * Строка НЕ кликабельна целиком (нет `Component="button"`): переключатель —
+ * единственный элемент управления, и нативный Switch внутри кнопки был бы
+ * невалидной вложенностью. Это же канонично: у Telegram строка настроек
+ * кликается по самому переключателю.
  */
 function SwitchRow({
   icon,
@@ -114,22 +130,19 @@ function SwitchRow({
   label: string;
 }) {
   return (
-    <div className={styles.switchRow}>
-      <span className={styles.icon}>{icon}</span>
-      <span className={GROW}>
-        <Text Component="span" className={TRUNCATE_BLOCK}>
-          {title}
-        </Text>
-        <Caption Component="span" className={TRUNCATE_BLOCK}>
-          {subtitle}
-        </Caption>
-      </span>
-      <Switch
-        aria-label={label}
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-    </div>
+    <Cell
+      before={icon}
+      subtitle={subtitle}
+      after={
+        <Switch
+          aria-label={label}
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+      }
+    >
+      {title}
+    </Cell>
   );
 }
 
@@ -361,9 +374,26 @@ export function ProfilePage() {
                   />
                 </Section>
 
-                <Section header="Внешний вид">
-                  <Stack gap="xs">
-                    <SwitchRow
+                <Section
+                  header="Внешний вид"
+                  // Кнопку сброса — в footer секции, а не отдельным ребёнком:
+                  // так её не отделяет разделитель строк (Section ставит Divider
+                  // между прямыми детьми), и это штатный слот для доп. действия.
+                  footer={
+                    themeOverride ? (
+                      <Button
+                        size="s"
+                        onClick={() => {
+                          haptic.light();
+                          setThemeOverride(null);
+                        }}
+                      >
+                        Как в Telegram
+                      </Button>
+                    ) : undefined
+                  }
+                >
+                  <SwitchRow
                       label="Тёмная тема"
                       icon={
                         <IconContainer>
@@ -377,28 +407,14 @@ export function ProfilePage() {
                           : `Включена светлая тема${themeOverride ? "" : " (как в Telegram)"}`
                       }
                       checked={dark}
-                      onChange={(next) => {
-                        setThemeOverride(next ? "dark" : "light");
-                        haptic.light();
-                      }}
-                    />
-                    {themeOverride && (
-                      <Button
-                        stretched
-                        size="s"
-                        onClick={() => {
-                          haptic.light();
-                          setThemeOverride(null);
-                        }}
-                      >
-                        Как в Telegram
-                      </Button>
-                    )}
-                  </Stack>
+                    onChange={(next) => {
+                      setThemeOverride(next ? "dark" : "light");
+                      haptic.light();
+                    }}
+                  />
                 </Section>
 
                 <Section header="Уведомления и звуки">
-                  <Stack gap="xs">
                     <SwitchRow
                       label="Уведомления"
                       icon={
@@ -426,11 +442,9 @@ export function ProfilePage() {
                         if (next) haptic.light();
                       }}
                     />
-                  </Stack>
                 </Section>
 
                 <Section header="Сервис и помощь">
-                  <Stack gap="xs">
                     <MenuRow
                       label="Служба поддержки"
                       icon={
@@ -456,7 +470,6 @@ export function ProfilePage() {
                       subtitle="Сообщить о проблеме с пользователем"
                       onClick={() => navigate("/profile/reports")}
                     />
-                  </Stack>
                 </Section>
 
                 {/* Опасная зона — как Add Account официалки: секция,

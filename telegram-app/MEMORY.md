@@ -206,6 +206,20 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
 - `notification:new` — только hint, тоста нет. Хинт **сужен**: инвалидирует
   `NOTIFICATION_KEYS.unreadCount()` + `NOTIFICATION_KEYS.lists()` (текущий список),
   НЕ blanket `all`. Остальные (`booking:*`, `trip:*`) — инвалидация + Snackbar + haptic.
+- **Строка-настройка = `Cell` + переключатель в `after`, без своих рамок.**
+  Две ловушки, обе измерены в браузере (2026-10-01):
+  1) `width: 100%` + `padding` + `border` при `box-sizing: content-box` дают
+     переполнение: у профиля было **382px против 356px** родителя, уход за
+     правый край. Дефект маскировали `box-sizing` в одних модулях и
+     отсутствие padding — в других.
+  2) `Section` вставляет `Divider` только между **прямыми** детьми
+     (`Children.map` + `Divider` в Section.js). Обёртка `Stack` прячет строки
+     от кита: разделителей не будет, вместо них свой `gap`.
+  Строка-переключатель не кликабельна целиком: нативный `Switch` внутри
+  `<button>` — невалидная вложенность и двойное срабатывание на Enter/Space.
+  Доп. действие внутри секции («Как в Telegram») — в слот `footer`, иначе
+  разделитель строк отделит и его.
+  Пин: `pages/Profile/__tests__/switchRow.test.ts`.
 - **Файл `WebSocketProvider.tsx` = 613 строк**: транспорт (WsProvider) + доменные
   подписки (TelegramRealtimeListener) + классификатор 4403. Кандидат на вынос
   listener (см. §17).

@@ -72,15 +72,10 @@
    * `text-align: inherit` одинаково для button- и div-строк. */
 }
 
-/* Строка-переключатель: поверхность секции + hairline кит-обводки. */
-.switchRow {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-sm);
-  padding: var(--app-space-sm);
-  border-radius: var(--app-card-radius);
-  background: var(--tgui--section_bg_color);
-  border: 1px solid var(--tgui--outline);
-}
+/* `.switchRow` удалён 2026-10-01 вместе с самодельной строкой-переключателем:
+   строка теперь обычная `Cell` с `Switch` в `after`, а поверхность и
+   разделители рисует `Section`. Причина была не косметической —
+   `width: 100%` + `padding: 12px` + `border: 1px` при `box-sizing:
+   content-box` давали 382px против 356px родителя: переполнение 26px и уход
+   за правый край экрана (замер в браузере). */
 
