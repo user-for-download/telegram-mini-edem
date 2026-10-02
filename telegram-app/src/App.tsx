@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { signalAppReady } from "@/utils/telegram-adapter";
-import { AppConfig } from "@/AppConfig";
+import { AppConfig, ErrorFallback } from "@/AppConfig";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppRouter } from "@/router/AppRouter";
 
 export default function App() {
@@ -12,9 +13,14 @@ export default function App() {
     signalAppReady();
   }, []);
 
+  // Граница здесь, а не внутри AppConfig: внутри она не ловила падение
+  // самого AppConfig (его хуки и вычисление темы) — пользователь получал
+  // пустой экран без единого слова. Замер: 0 символов текста, 2 узла в body.
   return (
-    <AppConfig>
-      <AppRouter />
-    </AppConfig>
+    <ErrorBoundary fallback={ErrorFallback}>
+      <AppConfig>
+        <AppRouter />
+      </AppConfig>
+    </ErrorBoundary>
   );
 }

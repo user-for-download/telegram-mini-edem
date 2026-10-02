@@ -19,6 +19,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // а не вёрстку — AppConfig/AppRouter заменяем заглушками.
 vi.mock("@/AppConfig", () => ({
   AppConfig: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  // ErrorFallback экспортируется отсюда же: граница переехала в App.tsx
+  // (иначе не ловила падение самого AppConfig) и берёт фолбэк из модуля.
+  ErrorFallback: () => <div data-testid="error-fallback-stub" />,
 }));
 
 vi.mock("@/router/AppRouter", () => ({

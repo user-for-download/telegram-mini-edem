@@ -10,7 +10,6 @@ import {
 } from "@tma.js/sdk-react";
 import type { ThemeOverride } from "@/utils/appSettings";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthGate } from "@/components/AuthGate";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ApiError } from "@/api/client";
@@ -55,7 +54,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function ErrorFallback({ error }: { error: unknown }) {
+export function ErrorFallback({ error }: { error: unknown }) {
   const message =
     error instanceof Error
       ? error.message
@@ -67,7 +66,7 @@ function ErrorFallback({ error }: { error: unknown }) {
   // Поэтому raw <button> осознанно (U3: вне скоупа кита), а инлайн-стили
   // вынесены в AppConfig.module.css (те же значения побайт).
   return (
-    <div className={styles.fallback}>
+    <div className={styles.fallback} role="alert">
       <h1 className={styles.fallbackTitle}>Что-то пошло не так</h1>
       <p className={styles.fallbackText}>
         <code>{message}</code>
@@ -272,27 +271,24 @@ export const AppConfig: FC<PropsWithChildren> = ({ children }) => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* ErrorBoundary — самый внешний рубеж, fallback без UI-кита. */}
-      <ErrorBoundary fallback={ErrorFallback}>
-        <AppRoot
-          platform={platform}
-          appearance={appearance}
-          className="app-theme"
-        >
-          <OfflineBanner />
-          {/* Dev-пилюля платформы/темы — вне Onboarding/роутера, чтобы
-              переключатели были доступны и на экране приветствия. */}
-          <DevToggles />
-          <AuthGate>
-            <Onboarding>
-              <WsProvider>
-                <TelegramRealtimeListener />
-                <ToastProvider>{children}</ToastProvider>
-              </WsProvider>
-            </Onboarding>
-          </AuthGate>
-        </AppRoot>
-      </ErrorBoundary>
+      <AppRoot
+        platform={platform}
+        appearance={appearance}
+        className="app-theme"
+      >
+        <OfflineBanner />
+        {/* Dev-пилюля платформы/темы — вне Onboarding/роутера, чтобы
+            переключатели были доступны и на экране приветствия. */}
+        <DevToggles />
+        <AuthGate>
+          <Onboarding>
+            <WsProvider>
+              <TelegramRealtimeListener />
+              <ToastProvider>{children}</ToastProvider>
+            </WsProvider>
+          </Onboarding>
+        </AuthGate>
+      </AppRoot>
     </QueryClientProvider>
   );
 };
