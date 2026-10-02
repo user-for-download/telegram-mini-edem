@@ -131,6 +131,32 @@ describe("ReportsPage: мои жалобы", () => {
     expect(html).toContain("Опасное вождение");
     expect(html).toContain("Спам в чате");
   });
+
+  it("показывает ответ модерации, когда он есть", () => {
+    // Поле resolutionNote есть в контракте и приезжает в ответе
+    // (backend/src/reports/serializers.ts), но карточка его не рендерила:
+    // пользователь видел «Отклонена» без причины (замер 2026-10-02).
+    setMocks({
+      data: [
+        report({ status: "resolved", resolutionNote: "Бронь отменена, аккаунт заблокирован." }),
+        report({
+          id: "523e4567-e89b-12d3-a456-426614174004",
+          status: "rejected",
+          resolutionNote: "Нарушений не найдено, жалоба отклонена.",
+        }),
+        // без ответа модерации заголовок не рисуется
+        report({ id: "623e4567-e89b-12d3-a456-426614174005", status: "pending" }),
+      ],
+    });
+
+    const html = renderPage();
+
+    expect(html).toContain("Ответ модерации");
+    expect(html).toContain("Бронь отменена, аккаунт заблокирован.");
+    expect(html).toContain("Нарушений не найдено, жалоба отклонена.");
+    // ровно два ответа на три жалобы
+    expect(html.match(/Ответ модерации/g)?.length ?? 0).toBe(2);
+  });
 });
 
 describe("ReportsPage: состояния запроса", () => {

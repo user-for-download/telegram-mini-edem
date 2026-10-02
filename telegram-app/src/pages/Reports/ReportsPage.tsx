@@ -92,6 +92,16 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
       <Text Component="div" className={PROSE}>
         {report.description}
       </Text>
+      {/* Ответ модерации. Поле есть в контракте и приезжает в ответе
+          (serializeReport), но на карточке не рендерилось: пользователь видел
+          «Отклонена» без причины. Замер 2026-10-02 — /api/v1/reports отдавал
+          resolutionNote, на экране его не было. */}
+      {report.resolutionNote ? (
+        <Notice tone={report.status === "resolved" ? "success" : "info"}>
+          <strong>Ответ модерации</strong>
+          {report.resolutionNote}
+        </Notice>
+      ) : null}
     </Card>
   );
 });

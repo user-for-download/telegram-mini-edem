@@ -1862,6 +1862,52 @@ const rideRequests: SeedRideRequest[] = [
 // состояния модерации: pending → in_review → resolved / rejected.
 // ─────────────────────────────────────────────────────────────
 const reports: SeedReport[] = [
+  // DEV-аккаунт: по жалобе на каждый статус из четырёх и на каждый тип цели.
+  // Третий случай подряд по same-причине (после уведомлений и rideRequest):
+  // сид раскидывает сущности по 25 юзерам, а зайти в деве можно только под
+  // 9800001 — из-за этого список жалоб показывал пустое состояние и ни один
+  // статус рассмотрения нельзя было замерить.
+  {
+    id: seedReportId("rep-dev-1"),
+    reporterId: "u-dev",
+    targetType: "trip",
+    tripRef: "t-1",
+    category: "safety",
+    description: "Водитель вёл в нетрезвом состоянии, отказался остановиться.",
+    status: "pending",
+  },
+  {
+    id: seedReportId("rep-dev-2"),
+    reporterId: "u-dev",
+    targetType: "user",
+    targetUserId: "u-16",
+    category: "harassment",
+    description: "Пассажир оскорблял меня в переписке после отмены брони.",
+    status: "in_review",
+    adminActorId: "u-2",
+  },
+  {
+    id: seedReportId("rep-dev-3"),
+    reporterId: "u-dev",
+    targetType: "booking",
+    bookingRef: { tripId: "t-dev-5", passengerId: "u-dev" },
+    category: "fraud",
+    description: "Бронь создана с поддельным номером телефона.",
+    status: "resolved",
+    adminActorId: "u-2",
+    resolutionNote: "Бронь отменена, аккаунт заблокирован.",
+  },
+  {
+    id: seedReportId("rep-dev-4"),
+    reporterId: "u-dev",
+    targetType: "user",
+    targetUserId: "u-18",
+    category: "spam",
+    description: "Рекламирует свои услуги в комментариях к поездкам.",
+    status: "rejected",
+    adminActorId: "u-2",
+    resolutionNote: "Нарушений не найдено, жалоба отклонена.",
+  },
   {
     id: seedReportId("rep-1"),
     reporterId: "u-4",
