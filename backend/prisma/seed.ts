@@ -1740,6 +1740,65 @@ const reviews: SeedReview[] = [
 // Заявки на поездку (пассажиры ищут попутку)
 // ─────────────────────────────────────────────────────────────
 const rideRequests: SeedRideRequest[] = [
+  // DEV-аккаунт: по запросу в каждом статусе. Как и с уведомлениями —
+  // mockEnv жёстко зашивает tgId 9800001, зайти под другим аккаунтом из дева
+  // нельзя, а без запросов у дев-юзера шторка «Ищу попутку» показывала только
+  // пустое состояние и ни один из четырёх статусов нельзя было замерить.
+  {
+    id: seedRideRequestId("rr-dev-1"),
+    userId: "u-dev",
+    fromCity: "Вологда",
+    toCity: "Череповец",
+    daysFromNowEarliest: 1,
+    daysFromNowLatest: 3,
+    seats: 1,
+    status: "active",
+    expiresInDays: 7,
+  },
+  {
+    id: seedRideRequestId("rr-dev-2"),
+    userId: "u-dev",
+    fromCity: "Череповец",
+    toCity: "Сокол",
+    daysFromNowEarliest: 4,
+    daysFromNowLatest: 6,
+    seats: 2,
+    status: "active",
+    expiresInDays: 14,
+  },
+  {
+    id: seedRideRequestId("rr-dev-3"),
+    userId: "u-dev",
+    fromCity: "Вологда",
+    toCity: "Грязовец",
+    daysFromNowEarliest: 2,
+    daysFromNowLatest: 2,
+    seats: 1,
+    status: "paused",
+    expiresInDays: 5,
+  },
+  {
+    id: seedRideRequestId("rr-dev-4"),
+    userId: "u-dev",
+    fromCity: "Сокол",
+    toCity: "Вологда",
+    daysFromNowEarliest: 12,
+    daysFromNowLatest: 12,
+    seats: 1,
+    status: "fulfilled",
+    expiresInDays: 30,
+  },
+  {
+    id: seedRideRequestId("rr-dev-5"),
+    userId: "u-dev",
+    fromCity: "Кадуй",
+    toCity: "Череповец",
+    daysFromNowEarliest: 8,
+    daysFromNowLatest: 9,
+    seats: 1,
+    status: "expired",
+    expiresInDays: 1,
+  },
   {
     id: seedRideRequestId("rr-1"),
     userId: "u-14",

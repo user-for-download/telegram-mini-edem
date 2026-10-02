@@ -41,6 +41,7 @@ import {
 } from "@/pages/Reviews/reviewValidation";
 import { Card } from "@/ui/Card";
 import { Stack } from "@/ui/Stack";
+import { plural } from "@/utils/plural";
 import styles from "./ProfileModals.module.css";
 
 export type ReviewsTab = "mine" | "new" | "about";
@@ -450,7 +451,7 @@ export const ReviewsBody = memo(function ReviewsBody({
           {profile.data && (
             <Card className={styles.emptyCard}>
               <Text weight="2" Component="p">
-                {`Рейтинг ${profile.data.rating.toFixed(1)} · ${profile.data.reviewsCount} отзывов`}
+                {`Рейтинг ${profile.data.rating.toFixed(1)} · ${profile.data.reviewsCount} ${plural(profile.data.reviewsCount, "отзыв", "отзыва", "отзывов")}`}
               </Text>
               <Caption Component="p" className={styles.emptyNote}>
                 Рейтинг учитывает только опубликованные отзывы

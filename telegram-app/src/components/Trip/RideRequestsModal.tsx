@@ -18,6 +18,36 @@ import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
+import { plural } from "@/utils/plural";
+import type { RideRequestStatus } from "@edem/contracts";
+
+/**
+ * Статус запроса попутчика: подпись и тон.
+ *
+ * Раньше тут стояло `status === "active" ? "Активен" : status`, поэтому
+ * остальные четыре статуса показывались пользователю сырым английским
+ * перечислением — «paused», «fulfilled», «expired» (замер 2026-10-02).
+ * Терминальные статусы бэкенд не меняет: редактирование доступно только
+ * у active/paused, но показать их всё равно нужно.
+ */
+const RIDE_REQUEST_STATUS_LABELS: Readonly<Record<RideRequestStatus, string>> =
+  {
+    active: "Активен",
+    paused: "На паузе",
+    fulfilled: "Выполнен",
+    expired: "Истёк",
+    cancelled: "Отменён",
+  };
+
+const RIDE_REQUEST_STATUS_TONES: Readonly<
+  Record<RideRequestStatus, "warning" | "danger" | "info" | "success">
+> = {
+  active: "success",
+  paused: "warning",
+  fulfilled: "info",
+  expired: "info",
+  cancelled: "danger",
+};
 import { formatMoscowDateTime } from "@/utils/date";
 import { validateRideRequestWindow } from "./rideRequestValidation";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
@@ -336,14 +366,12 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                   <Text weight="2" Component="span" className={TRUNCATE}>
                     {`${request.fromCity.name} → ${request.toCity.name}`}
                   </Text>
-                  <StatusPill
-                    tone={request.status === "active" ? "success" : "warning"}
-                  >
-                    {request.status === "active" ? "Активен" : request.status}
+                  <StatusPill tone={RIDE_REQUEST_STATUS_TONES[request.status]}>
+                    {RIDE_REQUEST_STATUS_LABELS[request.status]}
                   </StatusPill>
                 </div>
                 <Caption Component="div">
-                  {`${formatMoscowDateTime(request.earliestAt)} — ${formatMoscowDateTime(request.latestAt)} · ${request.seats} мест`}
+                  {`${formatMoscowDateTime(request.earliestAt)} — ${formatMoscowDateTime(request.latestAt)} · ${request.seats} ${plural(request.seats, "место", "места", "мест")}`}
                 </Caption>
                 {editingId === request.id ? (
                   <>
