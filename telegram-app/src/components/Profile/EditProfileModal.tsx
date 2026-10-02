@@ -13,7 +13,8 @@ import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { useProfileQuery, useProfileUpdateMutation } from "@/queries/profile";
 import {
   normalizeProfileForm,
-  validateProfileForm,
+  validateProfileFields,
+  type ProfileFieldError,
 } from "@/pages/Profile/profileValidation";
 import { Stack } from "@/ui/Stack";
 
@@ -72,7 +73,20 @@ export const EditProfileBody = memo(function EditProfileBody({
   const [name, setName] = useState(profile.data?.name ?? "");
   const [about, setAbout] = useState(profile.data?.about ?? "");
   const [phone, setPhone] = useState(profile.data?.phone ?? "");
-  const [formError, setFormError] = useState<string | null>(null);
+  // Хранится id поля, а не текст: ошибку привязывает <Field>, который ставит
+  // aria-invalid + aria-describedby (иначе скринридер, дойдя до поля, не
+  // слышал бы, что оно невалидно — замер 2026-10-02).
+  const [fieldError, setFieldError] = useState<ProfileFieldError | null>(null);
+  const [invalidField, setInvalidField] = useState<string | null>(null);
+  const errorFor = (id: string) =>
+    invalidField === id ? fieldError?.message : undefined;
+  // Ошибка поля рисуется самим <Field>; общий Notice остаётся только для
+  // ошибок сервера — иначе один и тот же текст дублировался бы дважды.
+  const formError = update.error;
+  const clearErrors = () => {
+    setFieldError(null);
+    setInvalidField(null);
+  };
 
   useClosingConfirmation(
     name !== (profile.data?.name ?? "") ||
@@ -81,13 +95,15 @@ export const EditProfileBody = memo(function EditProfileBody({
   );
 
   const save = () => {
-    const error = validateProfileForm(name, about, phone);
+    const error = validateProfileFields(name, about, phone);
     if (error) {
       haptic.error();
-      setFormError(error);
+      setFieldError(error);
+      setInvalidField(error.field);
       return;
     }
-    setFormError(null);
+    setFieldError(null);
+    setInvalidField(null);
     update.mutate(normalizeProfileForm(name, about, phone), {
       onSuccess: () => {
         haptic.success();
@@ -117,7 +133,7 @@ export const EditProfileBody = memo(function EditProfileBody({
 
   return (
     <Stack>
-      <Field label="Имя" id="profile-name">
+      <Field label="Имя" id="profile-name" error={errorFor("profile-name")}>
         {(field) => (
           <Input
             {...field}
@@ -125,12 +141,12 @@ export const EditProfileBody = memo(function EditProfileBody({
             maxLength={100}
             onChange={(event) => {
               setName(event.target.value);
-              if (formError) setFormError(null);
+              clearErrors();
             }}
           />
         )}
       </Field>
-      <Field label="О себе" id="profile-about">
+      <Field label="О себе" id="profile-about" error={errorFor("profile-about")}>
         {(field) => (
           <Textarea
             {...field}
@@ -140,12 +156,12 @@ export const EditProfileBody = memo(function EditProfileBody({
             value={about}
             onChange={(event) => {
               setAbout(event.target.value);
-              if (formError) setFormError(null);
+              clearErrors();
             }}
           />
         )}
       </Field>
-      <Field label="Телефон" id="profile-phone">
+      <Field label="Телефон" id="profile-phone" error={errorFor("profile-phone")}>
         {(field) => (
           <Input
             {...field}
@@ -157,17 +173,16 @@ export const EditProfileBody = memo(function EditProfileBody({
             value={phone}
             onChange={(event) => {
               setPhone(event.target.value);
-              if (formError) setFormError(null);
+              clearErrors();
             }}
           />
         )}
       </Field>
-      {(formError || update.error) && (
+      {formError && (
         <Notice tone="danger" variant="text">
-          {formError ??
-            (update.error instanceof Error
-              ? update.error.message
-              : "Не удалось сохранить")}
+          {formError instanceof Error
+            ? formError.message
+            : "Не удалось сохранить"}
         </Notice>
       )}
       <Stack gap="xs">
