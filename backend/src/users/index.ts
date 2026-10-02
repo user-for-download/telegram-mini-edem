@@ -322,8 +322,8 @@ usersRouter.patch(
  * (PATCH /admin/users/:id/onboarding-reset) для повторного показа.
  *
  * С версии "2" этот же вызов — фиксация акцепта правовых документов
- * (ConsentGate «Принять»): проставляем consentAcceptedAt — момент
- * согласия (152-ФЗ ст. 9, доказуемость).
+ * (экран Onboarding, кнопка «Я согласен»): проставляем consentAcceptedAt —
+ * момент согласия (152-ФЗ ст. 9, доказуемость).
  */
 usersRouter.post("/me/onboarding", requireUser, mutationLimiter, async (c) => {
   const user = c.get("user");

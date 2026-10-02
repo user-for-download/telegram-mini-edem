@@ -3,6 +3,7 @@ import {
   Caption,
   Placeholder,
   Section,
+  Subheadline,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
@@ -50,15 +51,23 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
         header="Добро пожаловать в «Едем»"
         description="Попутчики для совместных поездок: вы находите друг друга здесь, а дальше — договариваетесь напрямую."
       >
-        <VisuallyHidden Component="span">Первый вход</VisuallyHidden>
+        <VisuallyHidden Component="h1">Первый вход</VisuallyHidden>
       </Placeholder>
       {error && (
         <Notice tone="danger" variant="text">
           {error}
         </Notice>
       )}
+      {/* h2 + level/weight китовской Section.Header: обёртка жёстко зашивает
+        Component:"h1", поэтому узел пропускаем мимо неё (кит оборачивает
+        только примитив) и повторяем её типографику — иначе заголовком
+        первого экрана оказывается подзаголовок секции. */}
       <Section
-        header="Прочитайте перед началом"
+        header={
+          <Subheadline Component="h2" level="2" weight="2">
+            Прочитайте перед началом
+          </Subheadline>
+        }
         footer="Сервис доступен пользователям старше 14 лет"
       >
         <Cell
