@@ -53,12 +53,14 @@ export function normalizeSegment(raw: string | null): TripSegment {
 const timeOf = (departureAt?: string): number =>
   departureAt ? Date.parse(departureAt) : 0;
 
-function matchesQuery(fromCity: string, toCity: string, query: string): boolean {
+function matchesQuery(
+  fromCity: string,
+  toCity: string,
+  query: string,
+): boolean {
   const q = query.trim().toLowerCase();
   if (q === "") return true;
-  return (
-    fromCity.toLowerCase().includes(q) || toCity.toLowerCase().includes(q)
-  );
+  return fromCity.toLowerCase().includes(q) || toCity.toLowerCase().includes(q);
 }
 
 /**
@@ -120,6 +122,10 @@ export function TripActivePage() {
   const segmentChip = (id: TripSegment, label: string) => (
     <Chip
       key={id}
+      // Component="button" — тот же рецепт, что в NotificationsPage: без него
+      // кит рендерит div, и сегмент был кликабелен мышью, но без роли и без
+      // tabindex (недоступен с клавиатуры, скринридером — как текст).
+      Component="button"
       type="button"
       variant={segment === id ? "active" : "quiet"}
       aria-pressed={segment === id}
@@ -193,7 +199,9 @@ export function TripActivePage() {
     })),
   ].sort((a, b) => a.time - b.time);
 
-  const emptyHeader = searching ? EMPTY_STATES.searchNoResults.header : undefined;
+  const emptyHeader = searching
+    ? EMPTY_STATES.searchNoResults.header
+    : undefined;
   const emptyText = searching
     ? EMPTY_STATES.searchNoResults.description
     : EMPTY_STATES.tripActive.description;

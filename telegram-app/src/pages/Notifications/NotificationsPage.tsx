@@ -17,11 +17,7 @@ import { CheckCheck, ChevronRight } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
-import {
-  moscowDateLabel,
-  moscowDayKey,
-  moscowTimeLabel,
-} from "@/utils/date";
+import { moscowDateLabel, moscowDayKey, moscowTimeLabel } from "@/utils/date";
 import {
   NotificationCardSkeleton,
   NotificationCardsSkeleton,
@@ -283,7 +279,10 @@ function NotificationCell({
       className={styles.cell}
       titleBadge={
         !notification.isRead ? (
-          <Badge type="dot" data-testid={`notification-unread-${notification.id}`} />
+          <Badge
+            type="dot"
+            data-testid={`notification-unread-${notification.id}`}
+          />
         ) : undefined
       }
       subtitle={whoLine ?? undefined}
@@ -366,6 +365,12 @@ export function NotificationsPage() {
   const renderFilter = (id: NotifSegment, title: string) => (
     <Chip
       key={id}
+      // Component="button" — рецепт тегов-фильтров (ui/Chip). Без него
+      // кит рендерит div: с aria-pressed и onClick, но без роли и без
+      // tabindex — фильтр был недоступен с клавиатуры и читался скринридером
+      // как текст (замер: tag=DIV, role=null, tabindex нет).
+      Component="button"
+      type="button"
       variant={segment === id ? "active" : "quiet"}
       tone={segment === id ? "accent" : "neutral"}
       aria-pressed={segment === id}
@@ -431,7 +436,11 @@ export function NotificationsPage() {
             между строками (hairline-разделители, как в TripHistory).
             Пустое состояние — текст сегмента в теле Section. */}
           <div className={styles.chipRow}>
-            <div className={styles.segments} role="group" aria-label="Фильтр уведомлений">
+            <div
+              className={styles.segments}
+              role="group"
+              aria-label="Фильтр уведомлений"
+            >
               {FILTERS.map(({ id, title }) => renderFilter(id, title))}
             </div>
             <div aria-live="polite">
