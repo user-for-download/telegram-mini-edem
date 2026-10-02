@@ -24,6 +24,12 @@ import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkPrereqs, reviveDevUser } from "./telegram-fixtures.mjs";
+
+// Тот же контракт, что у ui-cascade: сценарий ждёт авторизованного дев-юзера,
+// поэтому готовим стенд до запуска браузера (тест 6 проверяет экран бана).
+checkPrereqs();
+reviveDevUser();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TG_BASE = process.env.TG_BASE_URL || "http://localhost:3012";
@@ -196,7 +202,7 @@ try {
     conn.route.send(
       JSON.stringify({ type: "booking:new", payload: { bookingId: "e2e-b-1", tripId: "e2e-t-1" } }),
     );
-    await page.getByText("Новая заявка на поездку").first().waitFor({ timeout: 10000 });
+    await page.getByText("Новая заявка на место").first().waitFor({ timeout: 10000 });
     await tripsMy;
     await shot(page, "booking-new-notice");
     return "notice + refetch ok";
@@ -208,7 +214,7 @@ try {
       JSON.stringify({ type: "booking:new", payload: { bookingId: "e2e-b-1", tripId: "e2e-t-1" } }),
     );
     await page.waitForTimeout(1500);
-    const count = await page.getByText("Новая заявка на поездку").count();
+    const count = await page.getByText("Новая заявка на место").count();
     if (count !== 1) throw new Error(`duplicate notice rendered ${count} times`);
     if (wsState.connections.length !== 1) throw new Error("unexpected parallel socket");
     return "single notice, single socket";

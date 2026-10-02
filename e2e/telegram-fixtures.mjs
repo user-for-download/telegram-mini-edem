@@ -171,6 +171,41 @@ export function checkPrereqs() {
   }
 }
 
+/**
+ * Реанимация дев-юзера одним запросом: снимает deletedAt/bannedAt,
+ * проставляет текущую версию онбординга и consentAcceptedAt. Идемпотентна.
+ * Один источник правды для подготовки стенда и для teardown.
+ */
+function reviveDevUserSql() {
+  return (
+    `UPDATE "User" SET "deletedAt" = NULL, "bannedAt" = NULL, ` +
+    `"name" = 'Dev Telegram', "avatar" = '', ` +
+    `"about" = 'Тестовый аккаунт разработчика (dev-стенд).', ` +
+    `"onboardingVersion" = '${onboardingVersion()}', "consentAcceptedAt" = NOW() ` +
+    `WHERE "telegramUserId" = ${DEV_TG_ID}`
+  );
+}
+
+/**
+ * Реанимация дев-юзера ДО прогона. Идемпотентна.
+ *
+ * Отдельная функция, а не только шаг cleanup: ремонт стоял В ТЕАРДАУНЕ,
+ * поэтому падение в середине прогона оставляло стенд сломанным, а скрипты
+ * без cleanup (ui-cascade, telegram-realtime) не чинили его вовсе. Симптом
+ * выглядел как регресс интерфейса: при onboardingVersion = NULL приложение
+ * показывает экран первого входа, и каскад падал на «нет карточек» (1/6).
+ */
+export function reviveDevUser() {
+  const sql = reviveDevUserSql();
+  const out = psql(sql);
+  if (out !== "UPDATE 1") {
+    throw new Error(
+      `reviveDevUser: ожидался "UPDATE 1", получено "${out}" ` +
+        `(юзер ${DEV_TG_ID} не найден?)`,
+    );
+  }
+}
+
 /** Чистка сущностей прогона (идемпотентна). Неудача валит прогон. */
 export async function cleanupRun({ tripId, tripIds = [], peerUserId, feedbackTexts = [] }) {
   const steps = [];
@@ -178,9 +213,8 @@ export async function cleanupRun({ tripId, tripIds = [], peerUserId, feedbackTex
   // и машину, а удаление peer-сущностей ниже может упасть на сиротах
   // убитого прогона (FK Trip_driverId) — будущие прогоны травиться
   // не должны. Пользователя НЕ удаляем: на нём висят сид-поездки (FK).
-  steps.push(
-    `UPDATE "User" SET "deletedAt" = NULL, "name" = 'Dev Telegram', "avatar" = '', "about" = 'Тестовый аккаунт разработчика (dev-стенд).', "onboardingVersion" = '${onboardingVersion()}', "consentAcceptedAt" = NOW() WHERE "telegramUserId" = ${DEV_TG_ID}`,
-  );
+  // Реанимация — тот же SQL, что готовит стенд ДО прогона.
+  steps.push(reviveDevUserSql());
   for (const id of [tripId, ...tripIds].filter(Boolean)) {
     steps.push(`DELETE FROM "Review" WHERE "tripId" = '${id}'`);
     steps.push(`DELETE FROM "Booking" WHERE "tripId" = '${id}'`);

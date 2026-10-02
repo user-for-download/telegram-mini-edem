@@ -21,6 +21,7 @@ import {
   api,
   checkPrereqs,
   cleanupRun,
+  reviveDevUser,
   createHarness,
   ensureShotsDir,
   psql,
@@ -36,6 +37,7 @@ const CITY_TO = `Е2Е-Тула-${RUN_ID}`;
 
 ensureShotsDir();
 checkPrereqs();
+reviveDevUser();
 const { runStep, watchPage, collectRejections, verdict } = createHarness();
 
 // Города — ДО запуска браузера: справочник городов кэшируется клиентом

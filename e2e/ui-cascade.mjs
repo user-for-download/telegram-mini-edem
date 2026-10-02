@@ -22,6 +22,14 @@
 // - TG_BASE_URL (default http://localhost:3012)
 // - E2E_VERBOSE=1 — подробные логи.
 import { chromium } from "playwright";
+import { checkPrereqs, reviveDevUser } from "./telegram-fixtures.mjs";
+
+// Стенд готовим сами: каскад меряет интерфейс, и без живой главной страницы
+// он падает не по делу (при onboardingVersion = NULL приложение показывает
+// экран первого входа — «нет карточек», 1/6). Раньше ремонт дев-юзера жил
+// только в teardown-е telegram-parity, сюда не доходил.
+checkPrereqs();
+reviveDevUser();
 
 const TG_BASE = process.env.TG_BASE_URL || "http://localhost:3012";
 const VERBOSE = process.env.E2E_VERBOSE === "1";
