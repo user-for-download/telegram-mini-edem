@@ -7,6 +7,7 @@ import { GROW, ROW_BETWEEN, TRUNCATE, BTN_ROW_WRAP } from "@/ui/classes";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
 import { dayLabel, formatDuration } from "@/utils/date";
+import { terminalTripStatusLabel } from "@/utils/tripStatus";
 import { hapticFeedback } from "@tma.js/sdk-react";
 import { Phone, Send, ShieldCheck, Star } from "lucide-react";
 import type { Trip } from "@edem/contracts";
@@ -43,8 +44,9 @@ export function TripHero({
         <Caption className={ROW_BETWEEN} Component="div">
           <span>{dayLabel(item.date)}</span>
           <span>
-            В пути ~ {formatDurationLocal(item.durationMinutes)} ·{" "}
-            {item.distanceKm} км
+            {terminalTripStatusLabel(item.status) ??
+              `В пути ~ ${formatDurationLocal(item.durationMinutes)}`}{" "}
+            · {item.distanceKm} км
           </span>
         </Caption>
 

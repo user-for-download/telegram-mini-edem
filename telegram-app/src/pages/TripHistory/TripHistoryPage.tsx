@@ -20,6 +20,7 @@ import { usePassengerHistoryQuery } from "@/queries/useBookingsQuery";
 import { useInfiniteMyTripsQuery } from "@/queries/useTripsQuery";
 import type { Trip } from "@edem/contracts";
 import type { PassengerBooking } from "@edem/contracts";
+import { terminalTripStatusLabel } from "@/utils/tripStatus";
 import styles from "./TripHistoryPage.module.css";
 
 type HistoryItem =
@@ -46,9 +47,7 @@ function tripTime(trip: {
  */
 function historyStatusLabel(item: HistoryItem): string {
   if (item.kind === "driving") {
-    if (item.trip.status === "completed") return "Завершена";
-    if (item.trip.status === "cancelled") return "Отменена";
-    return "В архиве";
+    return terminalTripStatusLabel(item.trip.status) ?? "В архиве";
   }
   const category = item.booking.historyCategory;
   if (category === "completed") return "Завершена";

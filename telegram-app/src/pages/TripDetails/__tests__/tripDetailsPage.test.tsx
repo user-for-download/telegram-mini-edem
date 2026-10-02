@@ -220,6 +220,26 @@ describe("TripDetailsPage parity", () => {
     expect(html).not.toContain("border-l-2");
   });
 
+  it("shows terminal trip status instead of «В пути»", () => {
+    // Баг 2026-10-02: шапка деталей печатала «В пути ~ …» безусловно, поэтому
+    // завершённая и отменённая поездки выглядели как идущие. Замер в браузере:
+    // t-c-1 (cancelled, выезд 1 окт.) → «В пути ~ 45 мин · 50 км», слова
+    // «Отменена» на экране нет; t-dev-past-1 (completed, 22 сент.) — то же.
+    setMocks(makeTrip({ status: "completed" }));
+    expect(render()).toContain("Завершена");
+
+    setMocks(makeTrip({ status: "cancelled" }));
+    const cancelled = render();
+    expect(cancelled).toContain("Отменена");
+    expect(cancelled).not.toContain("В пути");
+
+    // Активная поездка сохраняет прежнюю формулировку с оценкой длительности.
+    setMocks(makeTrip({ status: "active" }));
+    const active = render();
+    expect(active).toContain("В пути ~ 2 ч 30 мин");
+    expect(active).not.toContain("Завершена");
+  });
+
   it("offers retry on load error", () => {
     setMocks(null);
     const html = render();
