@@ -92,8 +92,10 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
 `eslint.config.mjs`:
 - Страницы/компоненты импортируют **`@/ui/*`**, не tgui напрямую.
 - `no-restricted-imports` запрещает прямой импорт из кита имён
-  `Button`, `IconButton`, `Card`, `List` (есть обёртки). Компоновочные примитивы
-  (`Cell`, `Section`, `Text`, `Caption`, `Title`, `Headline`, `Avatar`, `Skeleton`,
+  `Button`, `IconButton`, `Card`, `List`, `Cell`, `Section` (у всех есть
+  обёртки; `Page` заменяет `List`). `Cell` добавлен 2026-10-01 вместе с
+  фасадом `ui/Cell`, `Section` — 2026-10-02 вместе с `ui/Section`. Компоновочные
+  примитивы (`Text`, `Caption`, `Title`, `Headline`, `Avatar`, `Skeleton`,
   `Spinner`, `Input`, `Textarea`, `Select`, `Modal`(внутри Sheet), `Snackbar`,
   `TabsList`, `Placeholder`) — импортируются из кита **напрямую** (осознанно, см.
   `src/ui/README.md`).
@@ -124,13 +126,14 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
   — `src/__tests__/cssClassReach.test.ts`; каскад в браузере —
   `e2e/ui-cascade.mjs`. Разбор — `src/ui/README.md`, «Правило, которое не
   применяется».
-- **Фасад `ui/` — 16 компонентов.** Обёртки кита (вид держит фасад):
+- **Фасад `ui/` — 17 компонентов.** Обёртки кита (вид держит фасад):
   `Page`←`List`, `Button`, `IconButton`, `Chip`, `Card`, `Sheet`←`Modal`,
   `Field`+`FieldError`←`Input`/`Textarea`/`Select`, `EmptyState`←`Placeholder`,
-  `Loading`←`Spinner`+`Placeholder`, `FetchMore`←`Button`, `Cell`. Свои
+  `Loading`←`Spinner`+`Placeholder`, `FetchMore`←`Button`, `Cell`,
+  `Section`. Свои
   (свой markup на токенах): `Notice`, `Stack`, `SectionBody`, `CharCounter`.
   ESLint запрещает прямой импорт кита для `Button`, `IconButton`, `Card`,
-  `Cell`, `List`.
+  `Cell`, `Section`, `List`.
 - **`ui/Cell` (2026-10-01).** Интерактивная строка обязана быть нативной
   кнопкой: `Component="button"` — документированный способ кита (Cell.d.ts)
   и единственный путь с фокусом, Enter/Space и ролью кнопки. Кит UA-стили
