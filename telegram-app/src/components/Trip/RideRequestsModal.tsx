@@ -49,7 +49,11 @@ const RIDE_REQUEST_STATUS_TONES: Readonly<
   cancelled: "danger",
 };
 import { formatMoscowDateTime } from "@/utils/date";
-import { validateRideRequestWindow } from "./rideRequestValidation";
+import {
+  rideRequestErrorMessage,
+  validateRideRequestWindow,
+  type RideRequestFieldError,
+} from "./rideRequestValidation";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import {
   useCancelRideRequestMutation,
@@ -143,13 +147,26 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
   const [earliest, setEarliest] = useState("");
   const [latest, setLatest] = useState("");
   const [seats, setSeats] = useState("1");
-  const [validationError, setValidationError] = useState<string | null>(null);
+  // Ошибка приходит с полем: <Field error=…> ставит aria-invalid и
+  // aria-describedby (2026-10-02). Zod-сообщения переводятся
+  // rideRequestErrorMessage — сырыми они не показываются.
+  const [createError, setCreateError] = useState<RideRequestFieldError | null>(null);
+  const validationError = createError?.message ?? null;
+  const createErrorFor = (id: string) =>
+    createError?.field === id ? createError.message : undefined;
+  const setValidationError = (message: string) =>
+    setCreateError({ field: null, message });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editEarliest, setEditEarliest] = useState("");
   const [editLatest, setEditLatest] = useState("");
   const [editExpires, setEditExpires] = useState("");
   const [editSeats, setEditSeats] = useState("1");
-  const [editError, setEditError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<RideRequestFieldError | null>(null);
+  const editMessage = editError?.message ?? null;
+  const editErrorFor = (id: string) =>
+    editError?.field === id ? editError.message : undefined;
+  const setEditMessage = (message: string) =>
+    setEditError({ field: null, message });
 
   // Несохранённое inline-редактирование — Telegram спросит подтверждение
   // закрытия приложения (app-close; route-Back модалки хук не ловит).
@@ -186,12 +203,12 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
       seats: Number(seats),
     });
     if (!parsed.success) {
-      setValidationError(
-        parsed.error.issues[0]?.message ?? "Проверьте параметры запроса",
+      setCreateError(
+        rideRequestErrorMessage(parsed.error.issues[0]?.path ?? []),
       );
       return;
     }
-    setValidationError(null);
+    setCreateError(null);
     create.mutate(parsed.data, {
       onSuccess: () => {
         haptic.success();
@@ -225,7 +242,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
       earliestDate >= latestDate ||
       expiresDate <= new Date()
     ) {
-      setEditError(
+      setEditMessage(
         "Срок действия должен быть в будущем, а окно отправления — корректным",
       );
       return;
@@ -238,7 +255,10 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
     });
     if (!parsed.success) {
       setEditError(
-        parsed.error.issues[0]?.message ?? "Проверьте параметры запроса",
+        rideRequestErrorMessage(
+          parsed.error.issues[0]?.path ?? [],
+          requestId ?? undefined,
+        ),
       );
       return;
     }
@@ -262,7 +282,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
           <Text weight="2" Component="span">
             Новый запрос
           </Text>
-          <Field label="Откуда" id="ride-from">
+          <Field label="Откуда" id="ride-from" error={createErrorFor("ride-from")}>
             {(field) => (
               <Input
                 {...field}
@@ -274,7 +294,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
               />
             )}
           </Field>
-          <Field label="Куда" id="ride-to">
+          <Field label="Куда" id="ride-to" error={createErrorFor("ride-to")}>
             {(field) => (
               <Input
                 {...field}
@@ -292,7 +312,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             ))}
           </datalist>
           <div className={styles.grid2}>
-            <Field label="Не раньше" id="ride-earliest">
+            <Field label="Не раньше" id="ride-earliest" error={createErrorFor("ride-earliest")}>
               {(field) => (
                 <Input
                   {...field}
@@ -303,7 +323,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                 />
               )}
             </Field>
-            <Field label="Не позже" id="ride-latest">
+            <Field label="Не позже" id="ride-latest" error={createErrorFor("ride-latest")}>
               {(field) => (
                 <Input
                   {...field}
@@ -315,7 +335,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
               )}
             </Field>
           </div>
-          <Field label="Места" id="ride-seats">
+          <Field label="Места" id="ride-seats" error={createErrorFor("ride-seats")}>
             {(field) => (
               <Input
                 {...field}
@@ -328,7 +348,9 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
               />
             )}
           </Field>
-          {validationError && (
+          {/* Плашка только когда поле null: иначе текст уже нарисован
+              самим <Field> и второй раз дублировался бы. */}
+          {validationError && !createError?.field && (
             <Notice tone="danger" variant="text">
               {validationError}
             </Notice>
@@ -420,7 +442,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                         />
                       )}
                     </Field>
-                    <Field label="Места" id={`ride-edit-seats-${request.id}`}>
+                    <Field label="Места" id={`ride-edit-seats-${request.id}`} error={editErrorFor(`ride-edit-seats-${request.id}`)}>
                       {(field) => (
                         <Input
                           {...field}
@@ -432,9 +454,11 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
                         />
                       )}
                     </Field>
-                    {editError && (
+                    {/* Плашка нужна только когда поле null: иначе ошибка
+                        рисуется самим <Field>. */}
+                    {editMessage && !editError?.field && (
                       <Notice tone="danger" variant="text">
-                        {editError}
+                        {editMessage}
                       </Notice>
                     )}
                     <div className={BTN_ROW}>
