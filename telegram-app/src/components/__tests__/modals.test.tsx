@@ -137,7 +137,9 @@ describe("CreateTripForm (страница /trips/my/new)", () => {
       queryState({ data: undefined, isLoading: true }),
     );
     const html = render(<CreateTripForm onCreated={() => {}} />);
-    expect(html).toContain("Загружаем города");
+    // Подпись называет оба ожидания (города + проверка автомобиля),
+    // а Loading обёрнут в Page variant="hero" — иначе он стоит сверху.
+    expect(html).toContain("Загружаем форму");
     expect(html).not.toContain("Опубликовать");
   });
 

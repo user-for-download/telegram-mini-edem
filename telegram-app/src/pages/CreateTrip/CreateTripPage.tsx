@@ -3,8 +3,10 @@ import {
   Caption,
   Input,
   Section,
+  Subheadline,
   Text,
   Textarea,
+  VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
 import { BTN_ROW_WRAP, HINT, INFO, PROSE } from "@/ui/classes";
@@ -87,11 +89,7 @@ export function CreateTripForm({
   const [vehicleOpen, setVehicleOpen] = useState(false);
   const vehicleAutoOpenedRef = useRef(false);
   useEffect(() => {
-    if (
-      !vehicleChecking &&
-      !hasCar &&
-      !vehicleAutoOpenedRef.current
-    ) {
+    if (!vehicleChecking && !hasCar && !vehicleAutoOpenedRef.current) {
       vehicleAutoOpenedRef.current = true;
       setVehicleOpen(true);
     }
@@ -194,7 +192,14 @@ export function CreateTripForm({
   };
 
   if (cities.isLoading || vehicleChecking) {
-    return <Loading label="Загружаем города…" />;
+    // Page variant="hero" — без него Placeholder из Loading стоит сверху
+    // (замер: блок на top 76 при центре вьюпорта 422). Подпись честно
+    // называет ОБА ожидания: список городов и проверку автомобиля.
+    return (
+      <Page variant="hero">
+        <Loading label="Загружаем форму…" />
+      </Page>
+    );
   }
 
   // Без автомобиля публиковать нельзя — сервер ответил бы 400 NO_CAR
@@ -206,7 +211,8 @@ export function CreateTripForm({
           <Section header="Нужен автомобиль">
             <SectionBody>
               <Caption Component="p" className={PROSE}>
-                Чтобы публиковать поездки, добавьте автомобиль — откроется окно с тремя полями.
+                Чтобы публиковать поездки, добавьте автомобиль — откроется окно
+                с тремя полями.
               </Caption>
               <Button
                 variant="primary"
@@ -230,7 +236,19 @@ export function CreateTripForm({
   return (
     <>
       <Page>
-        <Section header="Маршрут">
+        {/* NavHeader помечен aria-hidden («авторитетные h1 живут на страницах»),
+            поэтому имя экрана даёт скрытый h1, а заголовки секций — h2.
+            До правки было три h1 (Маршрут/Поездка/Условия) и ни одного h1
+            у страницы. Обёртка SectionHeader жёстко зашивает Component:"h1",
+            поэтому узел пропускаем мимо неё китовым рецептом. */}
+        <VisuallyHidden Component="h1">Создание поездки</VisuallyHidden>
+        <Section
+          header={
+            <Subheadline Component="h2" level="2" weight="2">
+              Маршрут
+            </Subheadline>
+          }
+        >
           <SectionBody>
             <div className={styles.cityFields}>
               <CityPickerField
@@ -278,9 +296,7 @@ export function CreateTripForm({
                 <>
                   <Input
                     {...field}
-                    before={
-                      <Navigation size={16} className={HINT} />
-                    }
+                    before={<Navigation size={16} className={HINT} />}
                     value={fromAddress}
                     status={
                       errorField === "create-from-address" ? "error" : undefined
@@ -306,9 +322,7 @@ export function CreateTripForm({
                 <>
                   <Input
                     {...field}
-                    before={
-                      <Navigation size={16} className={HINT} />
-                    }
+                    before={<Navigation size={16} className={HINT} />}
                     value={toAddress}
                     status={
                       errorField === "create-to-address" ? "error" : undefined
@@ -332,7 +346,13 @@ export function CreateTripForm({
           </SectionBody>
         </Section>
 
-        <Section header="Поездка">
+        <Section
+          header={
+            <Subheadline Component="h2" level="2" weight="2">
+              Поездка
+            </Subheadline>
+          }
+        >
           <SectionBody>
             <Field label="Дата и время" id="create-date">
               {(field) => (
@@ -362,9 +382,7 @@ export function CreateTripForm({
                   <>
                     <Input
                       {...field}
-                      before={
-                        <RussianRuble size={16} className={HINT} />
-                      }
+                      before={<RussianRuble size={16} className={HINT} />}
                       type="number"
                       min="1"
                       max="100000"
@@ -491,7 +509,11 @@ export function CreateTripForm({
         </Section>
 
         <Section
-          header="Условия поездки"
+          header={
+            <Subheadline Component="h2" level="2" weight="2">
+              Условия поездки
+            </Subheadline>
+          }
           footer={`до 6 · выбрано ${tags.length}`}
         >
           <SectionBody>

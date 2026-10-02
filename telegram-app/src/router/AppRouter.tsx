@@ -54,6 +54,7 @@ const ROOT_ROUTES = new Set([
 // Уровень модуля — не пересоздаётся на каждый рендер Shell.
 const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
   [(p) => p === "/", "Главная"],
+  [(p) => p === "/trips/my/new", "Создание поездки"],
   [(p) => p.startsWith("/trips/my"), "Мои поездки"],
   [(p) => p.startsWith("/bookings"), "Поездки"],
   [(p) => p.startsWith("/trips/"), "Поездка"],
