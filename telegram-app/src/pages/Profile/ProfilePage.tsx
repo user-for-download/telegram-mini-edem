@@ -351,7 +351,6 @@ export function ProfilePage() {
                     }}
                   />
                 </Section>
-
                 <Section header="Мой автомобиль (для поездок)">
                   <MenuRow
                     label={
@@ -373,105 +372,90 @@ export function ProfilePage() {
                     onClick={() => navigate("/vehicle")}
                   />
                 </Section>
-
-                <Section
-                  header="Внешний вид"
-                  // Кнопку сброса — в footer секции, а не отдельным ребёнком:
-                  // так её не отделяет разделитель строк (Section ставит Divider
-                  // между прямыми детьми), и это штатный слот для доп. действия.
-                  footer={
-                    themeOverride ? (
-                      <Button
-                        size="s"
-                        onClick={() => {
-                          haptic.light();
-                          setThemeOverride(null);
-                        }}
-                      >
-                        Как в Telegram
-                      </Button>
-                    ) : undefined
-                  }
-                >
+                // Кнопки «Как в Telegram» здесь нет по решению продукта. //
+                Внимание: `themeOverride` живёт в localStorage //
+                (`edem:theme-override`), а переключатель ставит только //
+                light/dark — то есть после ручного выбора темы вернуться к //
+                «как в Telegram» из UI нельзя. Если понадобится, путь // обратно
+                — 3-состоянийный цикл переключателя // (auto → light → dark →
+                auto), как в «Внешнем виде» Telegram.
+                <Section header="Внешний вид">
                   <SwitchRow
-                      label="Тёмная тема"
-                      icon={
-                        <IconContainer>
-                          <Moon size={18} />
-                        </IconContainer>
-                      }
-                      title="Тёмная тема"
-                      subtitle={
-                        dark
-                          ? `Включена тёмная тема${themeOverride ? "" : " (как в Telegram)"}`
-                          : `Включена светлая тема${themeOverride ? "" : " (как в Telegram)"}`
-                      }
-                      checked={dark}
+                    label="Тёмная тема"
+                    icon={
+                      <IconContainer>
+                        <Moon size={18} />
+                      </IconContainer>
+                    }
+                    title="Тёмная тема"
+                    subtitle={
+                      dark
+                        ? `Включена тёмная тема${themeOverride ? "" : " (как в Telegram)"}`
+                        : `Включена светлая тема${themeOverride ? "" : " (как в Telegram)"}`
+                    }
+                    checked={dark}
                     onChange={(next) => {
                       setThemeOverride(next ? "dark" : "light");
                       haptic.light();
                     }}
                   />
                 </Section>
-
                 <Section header="Уведомления и звуки">
-                    <SwitchRow
-                      label="Уведомления"
-                      icon={
-                        <IconContainer>
-                          <Bell size={18} />
-                        </IconContainer>
-                      }
-                      title="Уведомления"
-                      subtitle="Брони, статусы поездок, ответы поддержки"
-                      checked={notifChecked}
-                      onChange={toggleNotifications}
-                    />
-                    <SwitchRow
-                      label="Звуковые эффекты"
-                      icon={
-                        <IconContainer>
-                          <Volume2 size={18} />
-                        </IconContainer>
-                      }
-                      title="Звуковые эффекты"
-                      subtitle="Звуковые сигналы и вибрация"
-                      checked={soundEnabled}
-                      onChange={(next) => {
-                        setSoundEnabled(next);
-                        if (next) haptic.light();
-                      }}
-                    />
+                  <SwitchRow
+                    label="Уведомления"
+                    icon={
+                      <IconContainer>
+                        <Bell size={18} />
+                      </IconContainer>
+                    }
+                    title="Уведомления"
+                    subtitle="Брони, статусы поездок, ответы поддержки"
+                    checked={notifChecked}
+                    onChange={toggleNotifications}
+                  />
+                  <SwitchRow
+                    label="Звуковые эффекты"
+                    icon={
+                      <IconContainer>
+                        <Volume2 size={18} />
+                      </IconContainer>
+                    }
+                    title="Звуковые эффекты"
+                    subtitle="Звуковые сигналы и вибрация"
+                    checked={soundEnabled}
+                    onChange={(next) => {
+                      setSoundEnabled(next);
+                      if (next) haptic.light();
+                    }}
+                  />
                 </Section>
-
                 <Section header="Сервис и помощь">
-                    <MenuRow
-                      label="Служба поддержки"
-                      icon={
-                        <IconContainer>
-                          <TriangleAlert size={18} />
-                        </IconContainer>
-                      }
-                      title="Служба поддержки"
-                      subtitle="Вопросы и обращения — ответим в течение нескольких минут"
-                      onClick={() => {
-                        haptic.light();
-                        setFeedbackOpen(true);
-                      }}
-                    />
-                    <MenuRow
-                      label="Жалобы"
-                      icon={
-                        <IconContainer>
-                          <Flag size={18} />
-                        </IconContainer>
-                      }
-                      title="Жалобы"
-                      subtitle="Сообщить о проблеме с пользователем"
-                      onClick={() => navigate("/profile/reports")}
-                    />
+                  <MenuRow
+                    label="Служба поддержки"
+                    icon={
+                      <IconContainer>
+                        <TriangleAlert size={18} />
+                      </IconContainer>
+                    }
+                    title="Служба поддержки"
+                    subtitle="Вопросы и обращения — ответим в течение нескольких минут"
+                    onClick={() => {
+                      haptic.light();
+                      setFeedbackOpen(true);
+                    }}
+                  />
+                  <MenuRow
+                    label="Жалобы"
+                    icon={
+                      <IconContainer>
+                        <Flag size={18} />
+                      </IconContainer>
+                    }
+                    title="Жалобы"
+                    subtitle="Сообщить о проблеме с пользователем"
+                    onClick={() => navigate("/profile/reports")}
+                  />
                 </Section>
-
                 {/* Опасная зона — как Add Account официалки: секция,
                     в ней красная надпись-кнопка, описание — в футере
                     секции. Кнопки «Выйти» нет. */}
