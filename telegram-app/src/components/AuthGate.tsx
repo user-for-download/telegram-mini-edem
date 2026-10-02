@@ -1,6 +1,8 @@
 import { type FC, type PropsWithChildren, useEffect, useState } from "react";
-import { Section, Spinner } from "@telegram-apps/telegram-ui";
+import { Section, Subheadline } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { Loading } from "@/ui/Loading";
+import { Page } from "@/ui/Page";
 
 import { useAuthStore } from "@/store/useAuthStore";
 import type { User } from "@/types";
@@ -146,8 +148,17 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
     };
   }, []);
 
+  // Loading, а не голый Spinner: китовский Spinner — просто div в потоке,
+  // без Page он висел в левом верхнем углу и без aria-label (кит его не
+  // принимает — у Spinner только size и className). Это первый кадр
+  // холодного старта: Page variant="hero" центрирует его по вертикали,
+  // сам Placeholder без контейнера стоит сверху.
   if (status === "idle" || status === "initializing") {
-    return <Spinner size="l" />;
+    return (
+      <Page variant="hero">
+        <Loading label="Проверяем авторизацию…" />
+      </Page>
+    );
   }
 
   if (status === "banned") {
@@ -155,17 +166,25 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
     // токена нет, отправка идёт через публичный POST /feedback/appeal
     // с raw initData из стора (submitSupportFeedback маршрутизирует сам).
     return (
-      <>
-        <AccountStatePage
-          title="Аккаунт заблокирован"
-          description={`Причина: ${banReason || "Причина не указана"}. Вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт.`}
-        />
-        <Section header="Обжалование блокировки">
+      <AccountStatePage
+        title="Аккаунт заблокирован"
+        description={`Причина: ${banReason || "Причина не указана"}. Вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт.`}
+      >
+        {/* h2 + рецепт китовской Section.Header: обёртка жёстко зашивает
+            Component:"h1", узел пропускает мимо неё. Иначе h1 достаётся
+            заголовку формы, а имя экрана остаётся без заголовка. */}
+        <Section
+          header={
+            <Subheadline Component="h2" level="2" weight="2">
+              Обжалование блокировки
+            </Subheadline>
+          }
+        >
           <SectionBody>
             <AppealForm />
           </SectionBody>
         </Section>
-      </>
+      </AccountStatePage>
     );
   }
 
