@@ -89,6 +89,38 @@ const probe = await page.evaluate(() => {
     tabWidth: tabbar
       ? Math.round(tabbar.getBoundingClientRect().width)
       : null,
+    matchedSurface: (() => {
+      // Правило, задающее нашу поверхность, узнаём по токену радиуса:
+      // иначе любое другое правило (кит, потребитель) выдаст себя за него.
+      for (const sheet of document.styleSheets) {
+        let rules;
+        try {
+          rules = sheet.cssRules;
+        } catch {
+          continue;
+        }
+        for (const rule of rules) {
+          if (!rule.selectorText || !rule.style) continue;
+          let matches = false;
+          try {
+            matches = card.matches(rule.selectorText);
+          } catch {
+            /* невалидный селектор */
+          }
+          if (!matches) continue;
+          const radius = rule.style.getPropertyValue("border-radius");
+          if (!radius.includes("--app-card-radius")) continue;
+          return {
+            selector: rule.selectorText.slice(0, 90),
+            hasRadiusToken: true,
+            width: rule.style.getPropertyValue("width").trim(),
+            boxSizing: rule.style.getPropertyValue("box-sizing").trim(),
+            declaresDisplay: Boolean(rule.style.getPropertyValue("display").trim()),
+          };
+        }
+      }
+      return null;
+    })(),
     tabParentWidth: tabbar
       ? Math.round(tabbar.parentElement.getBoundingClientRect().width)
       : null,
@@ -124,14 +156,23 @@ await step("card фон = --tg-theme-section-bg-color, а не литерал к
   return `${probe.cardBg} = тема`;
 });
 
-await step("card display:block и width = ширине родителя (реестр #4)", () => {
-  if (probe.cardDisplay !== "block")
-    throw new Error(`display=${probe.cardDisplay}, ожидался block (не inline-block кита)`);
-  if (probe.cardWidth !== probe.cardParentWidth)
-    throw new Error(
-      `ширина ${probe.cardWidth} ≠ родителя ${probe.cardParentWidth} — бокс не работает`,
-    );
-  return `${probe.cardWidth}px = ${probe.cardParentWidth}px`;
+// Реестр #4: гарантия «карточка всегда во всю ширину родителя». Проверять
+// `width === parentWidth` БЕСПОЛЕЗНО: на экране поиска ту же полную ширину
+// даёт `display: block` потребителя (TripSearchSection.searchCard), и проверка
+// проходит даже без нашего правила. Проверяем поэтому то, что относится
+// только к нему: НАШЕ правило (узнаём его по `var(--app-card-radius)`)
+// реально применяется к узлу и объявляет width + box-sizing.
+await step("правило поверхности карточки применяется и объявляет бокс", () => {
+  const surface = probe.matchedSurface;
+  if (!surface) throw new Error("поверхность карточки никем не задаётся");
+  if (!surface.hasRadiusToken)
+    throw new Error(`нет нашего правила: ${surface.selector}`);
+  if (!surface.width) throw new Error("наше правило не объявляет width");
+  if (!surface.boxSizing)
+    throw new Error("наше правило не объявляет box-sizing: border-box");
+  if (surface.declaresDisplay)
+    throw new Error("наше правило объявляет display — оно перебьёт раскладку потребителя");
+  return surface.selector.slice(0, 40);
 });
 
 await step("док таббара — парящая пилюля (radius 32, fixed, полупрозрачный)", () => {

@@ -2,6 +2,13 @@
 
 Telegram Mini App parity E2E (tg-migration-17): Playwright + Chromium journey plus realtime check.
 
+Отдельно `ui-cascade.mjs` — не journey, а проверка каскада: берёт
+`getComputedStyle` карточки и дока таббара и сверяет с «Реестром отклонений»
+в `telegram-app/src/ui/README.md`. Существует потому, что vitest читает текст
+CSS, а не результат: правило может быть корректным и при этом не применяться
+(так был сломан `ui/Card`). Требует только поднятый стенд, без сценариев и
+записей в БД.
+
 ## Prerequisites
 
 - Telegram frontend on `E2E_TG_URL` (default `http://localhost:3012`,
@@ -20,6 +27,9 @@ node e2e/telegram-parity.mjs
 
 # Realtime smoke (ws.v1 auth/ping-pong/reconnect against a live backend)
 node e2e/telegram-realtime.mjs
+
+# UI-каскад: замер getComputedStyle в браузере (Card/таббар, реестр отклонений)
+node e2e/ui-cascade.mjs
 ```
 
 ## Env overrides
