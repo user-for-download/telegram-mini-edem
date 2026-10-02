@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+
+/** Текст ошибки — как возвращал прежний validateVehicleForm. */
+const msg = (model: string, color: string, plate = "") =>
+  validateVehicleForm(model, color, plate)?.message ?? null;
 import {
   normalizeVehicleForm,
   validateVehicleForm,
@@ -16,20 +20,20 @@ describe("validateVehicleForm (порт CarFormModal)", () => {
   });
 
   it("отклоняет пустые модель и цвет (включая пробельные)", () => {
-    expect(validateVehicleForm("", "белый", "")).toBe("Укажите модель автомобиля");
-    expect(validateVehicleForm("   ", "белый", "")).toBe("Укажите модель автомобиля");
-    expect(validateVehicleForm("Lada", "", "")).toBe("Укажите цвет автомобиля");
-    expect(validateVehicleForm("Lada", "   ", "")).toBe("Укажите цвет автомобиля");
+    expect(msg("", "белый", "")).toBe("Укажите модель автомобиля");
+    expect(msg("   ", "белый", "")).toBe("Укажите модель автомобиля");
+    expect(msg("Lada", "", "")).toBe("Укажите цвет автомобиля");
+    expect(msg("Lada", "   ", "")).toBe("Укажите цвет автомобиля");
   });
 
   it("отклоняет поля длиннее backend-лимитов (model 50, color 30, plate 15)", () => {
-    expect(validateVehicleForm("м".repeat(51), "белый", "")).toBe(
+    expect(msg("м".repeat(51), "белый", "")).toBe(
       "Модель не может быть длиннее 50 символов",
     );
-    expect(validateVehicleForm("Lada", "ц".repeat(31), "")).toBe(
+    expect(msg("Lada", "ц".repeat(31), "")).toBe(
       "Цвет не может быть длиннее 30 символов",
     );
-    expect(validateVehicleForm("Lada", "белый", "x".repeat(16))).toBe(
+    expect(msg("Lada", "белый", "x".repeat(16))).toBe(
       "Номер не может быть длиннее 15 символов",
     );
   });
@@ -116,5 +120,25 @@ describe("VEHICLE_KEYS (кэш без рассинхрона)", () => {
     expect(VEHICLE_KEYS.current()).toEqual(["users", "me"]);
     expect(VEHICLE_KEYS.current()).toEqual(PROFILE_KEYS.current());
     expect(VEHICLE_KEYS.current()).toEqual(USER_KEYS.current());
+  });
+});
+
+describe("validateVehicleForm: ошибка привязана к полю", () => {
+  it("возвращает id поля, а не только текст", () => {
+    // Основание правки 2026-10-02: текст без id поля нельзя показать рядом
+    // с полем — ошибка уезжала в общий Notice, aria-invalid не ставился.
+    expect(validateVehicleForm("", "белый", "")).toEqual({
+      field: "vehicle-model",
+      message: "Укажите модель автомобиля",
+    });
+    expect(validateVehicleForm("Lada", "", "")).toEqual({
+      field: "vehicle-color",
+      message: "Укажите цвет автомобиля",
+    });
+    expect(validateVehicleForm("Lada", "белый", "x".repeat(16))).toEqual({
+      field: "vehicle-plate",
+      message: "Номер не может быть длиннее 15 символов",
+    });
+    expect(validateVehicleForm("Lada", "белый", "")).toBeNull();
   });
 });

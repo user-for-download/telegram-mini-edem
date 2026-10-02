@@ -14,27 +14,48 @@ import type { VehicleFormDto } from "@/api/vehicle";
 export const VEHICLE_LIMITS = { model: 50, color: 30, plate: 15 } as const;
 
 /**
+ * Ошибка формы с привязкой к полю: раньше возвращался только текст, и
+ * потребитель не мог показать его у нужного поля — ошибка уезжала в общий
+ * Notice, а `aria-invalid`/`aria-describedby` не ставились (замер
+ * 2026-10-02).
+ */
+export interface VehicleFieldError {
+  /** id поля формы (`vehicle-model` / `vehicle-color` / `vehicle-plate`). */
+  field: string;
+  message: string;
+}
+
+/**
  * Валидация формы: номер опционален, обязательны только модель и цвет.
  */
 export function validateVehicleForm(
   model: string,
   color: string,
   plate: string,
-): string | null {
+): VehicleFieldError | null {
   if (!model.trim()) {
-    return "Укажите модель автомобиля";
+    return { field: "vehicle-model", message: "Укажите модель автомобиля" };
   }
   if (model.trim().length > VEHICLE_LIMITS.model) {
-    return "Модель не может быть длиннее 50 символов";
+    return {
+      field: "vehicle-model",
+      message: "Модель не может быть длиннее 50 символов",
+    };
   }
   if (!color.trim()) {
-    return "Укажите цвет автомобиля";
+    return { field: "vehicle-color", message: "Укажите цвет автомобиля" };
   }
   if (color.trim().length > VEHICLE_LIMITS.color) {
-    return "Цвет не может быть длиннее 30 символов";
+    return {
+      field: "vehicle-color",
+      message: "Цвет не может быть длиннее 30 символов",
+    };
   }
   if (plate.trim().length > VEHICLE_LIMITS.plate) {
-    return "Номер не может быть длиннее 15 символов";
+    return {
+      field: "vehicle-plate",
+      message: "Номер не может быть длиннее 15 символов",
+    };
   }
   return null;
 }

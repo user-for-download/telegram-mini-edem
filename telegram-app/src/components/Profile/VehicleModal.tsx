@@ -27,6 +27,7 @@ import {
   validateVehicleForm,
   vehicleRemoveErrorMessage,
   vehicleServerErrorMessage,
+  type VehicleFieldError,
 } from "./vehicleValidation";
 import styles from "./ProfileModals.module.css";
 
@@ -161,7 +162,11 @@ function VehicleForm({
   const [model, setModel] = useState(vehicle?.model ?? "");
   const [color, setColor] = useState(vehicle?.color ?? "");
   const [plate, setPlate] = useState(vehicle?.plate ?? "");
-  const [formError, setFormError] = useState<string | null>(null);
+  // Хранится id поля, а не текст: <Field error=…> сам ставит aria-invalid и
+  // aria-describedby, иначе скринридер у поля не слышит об ошибке (2026-10-02).
+  const [fieldError, setFieldError] = useState<VehicleFieldError | null>(null);
+  const errorFor = (id: string) =>
+    fieldError?.field === id ? fieldError.message : undefined;
   useClosingConfirmation(
     model !== (vehicle?.model ?? "") ||
       color !== (vehicle?.color ?? "") ||
@@ -172,10 +177,10 @@ function VehicleForm({
     if (isSubmittingRef.current) return;
     const error = validateVehicleForm(model, color, plate);
     if (error) {
-      setFormError(error);
+      setFieldError(error);
       return;
     }
-    setFormError(null);
+    setFieldError(null);
     isSubmittingRef.current = true;
     upsert.mutate(normalizeVehicleForm(model, color, plate), {
       onSuccess: () => {
@@ -190,7 +195,7 @@ function VehicleForm({
   };
   return (
     <>
-      <Field label="Модель" id="vehicle-model">
+      <Field label="Модель" id="vehicle-model" error={errorFor("vehicle-model")}>
         {(field) => (
           <Input
             {...field}
@@ -200,12 +205,12 @@ function VehicleForm({
             placeholder="Skoda Octavia"
             onChange={(e) => {
               setModel(e.target.value.slice(0, VEHICLE_LIMITS.model));
-              if (formError) setFormError(null);
+              setFieldError(null);
             }}
           />
         )}
       </Field>
-      <Field label="Цвет" id="vehicle-color">
+      <Field label="Цвет" id="vehicle-color" error={errorFor("vehicle-color")}>
         {(field) => (
           <Input
             {...field}
@@ -215,12 +220,12 @@ function VehicleForm({
             placeholder="белый"
             onChange={(e) => {
               setColor(e.target.value.slice(0, VEHICLE_LIMITS.color));
-              if (formError) setFormError(null);
+              setFieldError(null);
             }}
           />
         )}
       </Field>
-      <Field label="Номер (необязательно)" id="vehicle-plate">
+      <Field label="Номер (необязательно)" id="vehicle-plate" error={errorFor("vehicle-plate")}>
         {(field) => (
           <Input
             {...field}
@@ -232,7 +237,7 @@ function VehicleForm({
               setPlate(
                 e.target.value.toUpperCase().slice(0, VEHICLE_LIMITS.plate),
               );
-              if (formError) setFormError(null);
+              setFieldError(null);
             }}
           />
         )}
@@ -241,9 +246,9 @@ function VehicleForm({
         Номер — примета для узнавания, видна только вам. Чтобы убрать номер,
         очистите поле и сохраните.
       </Caption>
-      {(formError || upsert.error) && (
+      {upsert.error && (
         <Notice tone="danger" variant="text">
-          {formError ?? vehicleServerErrorMessage(upsert.error)}
+          {vehicleServerErrorMessage(upsert.error)}
         </Notice>
       )}
       <Button
@@ -258,7 +263,7 @@ function VehicleForm({
         stretched
         disabled={upsert.isPending}
         onClick={() => {
-          setFormError(null);
+          setFieldError(null);
           upsert.reset();
           onDone();
         }}
