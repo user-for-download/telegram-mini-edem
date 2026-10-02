@@ -35,18 +35,38 @@ describe("report guards (рантайм вместо cast из DOM)", () => {
   });
 });
 
+/** Текст ошибки — как возвращал прежний validateReportForm. */
+const msg = (targetId: string, description: string) =>
+  validateReportForm(targetId, description)?.message ?? null;
+
 describe("validateReportForm", () => {
   it("пустой id объекта и пустое описание отклоняются", () => {
-    expect(validateReportForm("", "описание")).toBe(
-      "Укажите идентификатор объекта жалобы",
-    );
-    expect(validateReportForm("t-1", "")).toBe("Опишите проблему");
-    expect(validateReportForm("t-1", "   ")).toBe("Опишите проблему");
+    expect(msg("", "описание")).toBe("Укажите идентификатор объекта жалобы");
+    expect(msg("t-1", "")).toBe("Опишите проблему");
+    expect(msg("t-1", "   ")).toBe("Опишите проблему");
   });
 
   it("описание сверх 2000 отклоняется, граница проходит", () => {
-    expect(validateReportForm("t-1", "d".repeat(2001))).toContain("2000");
-    expect(validateReportForm("t-1", "d".repeat(2000))).toBeNull();
+    expect(msg("t-1", "d".repeat(2001))).toContain("2000");
+    expect(msg("t-1", "d".repeat(2000))).toBeNull();
+  });
+
+  it("ошибка привязана к полю", () => {
+    // Длина идентификатора — единственная ДОСТИЖИМАЯ ошибка здесь: у поля нет
+    // maxLength, а canSubmit блокирует только по непустоте (замер 2026-10-02).
+    expect(validateReportForm("x".repeat(101), "описание")).toEqual({
+      field: "report-target-id",
+      message: "Идентификатор слишком длинный",
+    });
+    expect(validateReportForm("", "описание")).toEqual({
+      field: "report-target-id",
+      message: "Укажите идентификатор объекта жалобы",
+    });
+    expect(validateReportForm("t-1", "")).toEqual({
+      field: "report-description",
+      message: "Опишите проблему",
+    });
+    expect(validateReportForm("t-1", "описание")).toBeNull();
   });
 });
 

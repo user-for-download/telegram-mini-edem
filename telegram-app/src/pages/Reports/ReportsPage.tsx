@@ -45,6 +45,7 @@ import {
   isReportTargetType,
   reportErrorMessage,
   validateReportForm,
+  type ReportFieldError,
   type ReportTargetType,
 } from "./reportValidation";
 import styles from "./ReportsPage.module.css";
@@ -129,6 +130,12 @@ export function ReportsPage() {
   const [category, setCategory] =
     useState<(typeof REPORT_CATEGORIES)[number]>("safety");
   const [description, setDescription] = useState("");
+  // Клиентская ошибка приходит с полем: <Field error=…> ставит aria-invalid и
+  // aria-describedby сам (2026-10-02). formError остаётся для ошибок, которые
+  // не принадлежат конкретному полю: лимит «одна жалоба» и ответ сервера.
+  const [fieldError, setFieldError] = useState<ReportFieldError | null>(null);
+  const errorFor = (id: string) =>
+    fieldError?.field === id ? fieldError.message : undefined;
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   // Черновик формы — dirty для нативного подтверждения ухода со страницы
@@ -152,9 +159,10 @@ export function ReportsPage() {
     if (create.isPending || submitGuard.current) return;
     const validationError = validateReportForm(targetId, description);
     if (validationError) {
-      setFormError(validationError);
+      setFieldError(validationError);
       return;
     }
+    setFieldError(null);
     if (alreadyReported) {
       setFormError(
         "Жалоба уже отправлена: повторная жалоба на этот объект недоступна.",
@@ -238,14 +246,16 @@ export function ReportsPage() {
                 </Select>
               )}
             </Field>
-            <Field label="Идентификатор объекта" id="report-target-id">
+            <Field label="Идентификатор объекта" id="report-target-id" error={errorFor("report-target-id")}>
               {(field) => (
                 <Input
                   {...field}
                   placeholder="Например: идентификатор поездки из её страницы"
                   value={targetId}
+                  status={errorFor("report-target-id") ? "error" : undefined}
                   onChange={(event) => {
                     setTargetId(event.target.value);
+                    setFieldError(null);
                     if (formError) setFormError(null);
                     if (success) setSuccess(false);
                   }}
@@ -271,7 +281,7 @@ export function ReportsPage() {
                 </Select>
               )}
             </Field>
-            <Field label="Описание" id="report-description">
+            <Field label="Описание" id="report-description" error={errorFor("report-description")}>
               {(field) => (
                 <Textarea
                   {...field}
@@ -279,8 +289,7 @@ export function ReportsPage() {
                   maxLength={REPORT_DESCRIPTION_MAX_LENGTH}
                   placeholder="Опишите, что произошло"
                   value={description}
-                  aria-invalid={Boolean(formError)}
-                  status={formError ? "error" : undefined}
+                  status={errorFor("report-description") ? "error" : undefined}
                   onChange={(event) => {
                     setDescription(event.target.value);
                     if (formError) setFormError(null);

@@ -48,26 +48,52 @@ export function isReportTargetType(value: string): value is ReportTargetType {
  * Лимит описания — REPORT_DESCRIPTION_MAX_LENGTH (2000) из @edem/contracts,
  * тот же лимит enforced backend через createReportDtoSchema.
  */
+/**
+ * Ошибка формы жалобы с привязкой к полю.
+ *
+ * Длина идентификатора единственная ДОСТИЖИМАЯ ошибка здесь: у поля нет
+ * `maxLength`, а `canSubmit` на странице блокирует только по непустоте, так
+ * что 101 символ реально вводится и проходит в submit (замер 2026-10-02).
+ * Остальные проверки срабатывают там, где кнопка уже disabled, и
+ * недостижимы: пустые поля (canSubmit) и превышение лимита описания
+ * (`maxLength` на Textarea). Их текст оставлен на месте — он пришёл сюда
+ * раньше, а удалять чужую защиту без заявки не нужно.
+ */
+export interface ReportFieldError {
+  /** id поля формы (`report-target-id` / `report-description`). */
+  field: string;
+  message: string;
+}
+
 export function validateReportForm(
   targetId: string,
   description: string,
-): string | null {
+): ReportFieldError | null {
   const trimmedId = targetId.trim();
   if (trimmedId.length === 0) {
-    return "Укажите идентификатор объекта жалобы";
+    return {
+      field: "report-target-id",
+      message: "Укажите идентификатор объекта жалобы",
+    };
   }
   // Fail-fast до серверного 400: реальные ID — UUID (36 символов), cap
   // с запасом режет вставку мусора. Формат (charset) — авторитет бэкенда,
   // здесь не дублируем, чтобы не отказывать валидным будущим форматам.
   if (trimmedId.length > 100) {
-    return "Идентификатор слишком длинный";
+    return {
+      field: "report-target-id",
+      message: "Идентификатор слишком длинный",
+    };
   }
   const trimmed = description.trim();
   if (trimmed.length === 0) {
-    return "Опишите проблему";
+    return { field: "report-description", message: "Опишите проблему" };
   }
   if (trimmed.length > REPORT_DESCRIPTION_MAX_LENGTH) {
-    return `Максимум ${REPORT_DESCRIPTION_MAX_LENGTH} символов`;
+    return {
+      field: "report-description",
+      message: `Максимум ${REPORT_DESCRIPTION_MAX_LENGTH} символов`,
+    };
   }
   return null;
 }
