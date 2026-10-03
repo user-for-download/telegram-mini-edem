@@ -197,7 +197,18 @@
    Фоны — color-mix из тех же токенов (--tgui--destructive_background в
    тёмной теме почти прозрачен, поэтому берём text-вариант). */
 .app-theme {
-  --app-success: var(--tgui--green);
+  /* Текстовые тона, где тон кита не проходит WCAG 1.4.3, затемняются
+     смешением с чёрным: коэффициент — минимальный целый процент, дающий
+     4.5+ на фоне секции (обычный текст 12px/400). Оттенок и источник цвета
+     сохраняются — это по-прежнему палитра кита, а не своя:
+       success  #31d158 2.02 → 65% → 4.53
+       danger   #ff3b30 3.55 → 87% → 4.55
+       info     #007aff 4.02 → 93% → 4.56
+       warning  #707579 4.66 — проходит, не трогаем
+     Фоны (--app-*-bg) остались чисто китовыми: тонировка фона контраста
+     текста не ухудшает, а менять её не было причины.
+     Замер и расчёт совпали; реестр #20 в src/ui/README.md. */
+  --app-success: color-mix(in srgb, var(--tgui--green) 65%, black);
   --app-success-bg: color-mix(in srgb, var(--tgui--green) 15%, transparent);
   --app-warning: var(--tgui--hint_color);
   --app-warning-bg: color-mix(
@@ -205,14 +216,39 @@
     var(--tgui--hint_color) 15%,
     transparent
   );
-  --app-danger: var(--tgui--destructive_text_color);
+  --app-danger: color-mix(
+    in srgb,
+    var(--tgui--destructive_text_color) 87%,
+    black
+  );
   --app-danger-bg: color-mix(
     in srgb,
     var(--tgui--destructive_text_color) 12%,
     transparent
   );
-  --app-info: var(--tgui--link_color);
+  --app-info: color-mix(in srgb, var(--tgui--link_color) 93%, black);
   --app-info-bg: var(--tgui--secondary_fill);
+}
+
+/* Селектор именно `.dark .app-theme`, а не только `.dark`: класс темы
+   вешается на <html> (AppConfig), а `.app-theme` — на корне AppRoot, то есть
+   вложен. Собственное объявление на элементе всегда бьёт унаследованное, и
+   `.dark` из предка не перебил бы `.app-theme` — тёмная тема получила бы
+   светлые (затемнённые с чёрным) тона: замер показал 4.21 вместо 9.70.
+   На тёмном фоне #17212b светлые смеси не нужны: success 9.70 и info 7.26
+   проходят китом как есть, а два остальных осветляем смешением с белым
+   (минимальный процент для 4.5+):
+     danger  #ec3942 4.06 → 90% → 4.51
+     warning #708499 4.23 → 96% → 4.52 */
+.dark .app-theme {
+  --app-success: var(--tgui--green);
+  --app-info: var(--tgui--link_color);
+  --app-danger: color-mix(
+    in srgb,
+    var(--tgui--destructive_text_color) 90%,
+    white
+  );
+  --app-warning: color-mix(in srgb, var(--tgui--hint_color) 96%, white);
 }
 
 .dark {
