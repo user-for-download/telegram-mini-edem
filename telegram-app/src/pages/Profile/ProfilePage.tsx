@@ -83,7 +83,11 @@ function MenuRow({
     <Cell
       Component="button"
       type="button"
-      aria-label={label}
+      // Имя = заголовок + подпись. Раньше было aria-label={label} (только
+      // заголовок), и видимая подпись в имя не входила: «История поездок»,
+      // «Автомобиль», «Служба поддержки», «Жалобы» звучали для скринридера
+      // голым заголовком без описания (замер 2026-10-02 на /profile).
+      aria-label={`${label}. ${subtitle}`}
       onClick={onClick}
       before={<span className={styles.icon}>{icon}</span>}
       after={<ChevronRight size={16} className={styles.chevron} />}
@@ -393,6 +397,19 @@ export function ProfilePage() {
                   />
                 </Section>
                 <Section header="Уведомления и звуки">
+                  {/* Ошибка сохранения настроек раньше не показывалась
+                      вообще: toggleNotifications делал haptic.error() и откатывал
+                      флаг, так что переключатель молча «отскакивал», а
+                      пользователь не знал почему (замер 2026-10-02: PATCH 500 →
+                      role=alert пуст, текста ошибки на экране нет). Ошибка удаления
+                      профиля в «Опасной зоне» рендерилась, эта — нет. */}
+                  {saveNotifications.error && (
+                    <Notice tone="danger" variant="text">
+                      {saveNotifications.error instanceof Error
+                        ? saveNotifications.error.message
+                        : "Не удалось сохранить настройки уведомлений"}
+                    </Notice>
+                  )}
                   <SwitchRow
                     label="Уведомления"
                     icon={
