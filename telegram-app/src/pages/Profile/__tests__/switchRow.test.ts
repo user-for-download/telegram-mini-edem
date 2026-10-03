@@ -29,6 +29,14 @@ const pageCss = readFileSync(
  */
 const pageCssCode = pageCss.replace(/\/\*[\s\S]*?\*\//g, "");
 
+/**
+ * Исходник страницы без комментариев. Обязательно: роль switch обсуждается
+ * в комментарии рядом с ней, и без чистки тест на `role="switch"` проходил бы
+ * на тексте комментария — ровно тот класс молчаливых тестов, который сам же
+ * ловит в CSS-части этого файла.
+ */
+const pageSrcCode = pageSrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+
 /** Тело функции SwitchRow. */
 const switchRowBody = (): string => {
   const start = pageSrc.indexOf("function SwitchRow(");
@@ -36,6 +44,14 @@ const switchRowBody = (): string => {
   const end = pageSrc.indexOf("\n}\n", start);
   return pageSrc.slice(start, end);
 };
+
+/**
+ * То же тело без комментариев. Роль switch обсуждается в комментарии прямо
+ * над атрибутом, поэтому проверять надо именно код: иначе тест находит
+ * `role="switch"` в тексте комментария и проходит, даже если атрибут убрали.
+ */
+const switchRowCode = (): string =>
+  switchRowBody().replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 
 describe("SwitchRow: стандартный паттерн (Cell + Switch в after)", () => {
   it("рендерится через ui/Cell, а не через div с собственным классом", () => {
@@ -116,5 +132,33 @@ describe("разделители секций работают", () => {
       offenders,
       "SwitchRow/MenuRow внутри Stack — разделители Section не появятся",
     ).toEqual([]);
+  });
+});
+
+describe("SwitchRow: роль switch, а не чекбокс", () => {
+  it("на переключателе стоит role=switch", () => {
+    // Замер 2026-10-03: китовский Switch — это input[type=checkbox], и роль
+    // из обёртки не приходила (role=null на всех трёх тумблерах профиля).
+    // Скринридер озвучивал «отмечено/не отмечено» вместо «включено/выключено».
+    expect(switchRowCode()).toMatch(/<Switch\b[^>]*role="switch"/);
+  });
+
+  it("Switch вне SwitchRow тоже объявлен переключателем", () => {
+    // Тумблер темы рисуется не через SwitchRow, но семантика та же: если
+    // роль проставили только в SwitchRow, тема останется чекбоксом.
+    const switches = pageSrcCode.match(/<Switch\b/g) ?? [];
+    const withRole = pageSrcCode.match(/<Switch\b[\s\S]{0,400}?role="switch"/g) ?? [];
+    expect(switches.length).toBeGreaterThan(0);
+    expect(
+      withRole.length,
+      "не все <Switch> несут role=\"switch\"",
+    ).toBe(switches.length);
+  });
+
+  it("aria-checked не задаётся руками", () => {
+    // Для input[type=checkbox] браузер выводит aria-checked из checked.
+    // Дублирование рискует разойтись с реальным состоянием — ловим молчаливый
+    // возврат через лишний атрибут.
+    expect(switchRowCode()).not.toMatch(/aria-checked/);
   });
 });

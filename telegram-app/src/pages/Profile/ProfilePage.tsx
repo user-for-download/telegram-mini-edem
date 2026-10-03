@@ -130,6 +130,13 @@ function SwitchRow({
       subtitle={subtitle}
       after={
         <Switch
+          // Настройка вкл/выкл — это.switch по APG, а не чекбокс: скринридер
+          // обязан озвучивать «включено/выключено», а не «отмечено/не отмечено».
+          // ARIA-checked не задаём руками: для input[type=checkbox] браузер
+          // выводит его из checked сам, а дублирование рискует разойтись с
+          // реальным состоянием (замер 2026-10-03 до правки: роль отсутствовала,
+          // реестр B6).
+          role="switch"
           aria-label={label}
           checked={checked}
           onChange={(event) => onChange(event.target.checked)}
