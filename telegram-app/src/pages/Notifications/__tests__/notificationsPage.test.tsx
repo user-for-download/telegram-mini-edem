@@ -238,14 +238,29 @@ describe("NotificationsPage: шапка и контракт", () => {
     expect(html).not.toContain("сохраняются всегда");
   });
 
-  it("все прочитаны — IconButton неактивна, имя без счётчика", () => {
-    // Сервер для «Новых» прочитанные не отдаёт: пустой ответ → empty-текст.
+  it("счётчик неизвестен — имя без числа и без ложного «все прочитаны»", () => {
+    // Второй аргумент setMocks не передан, поэтому глобальный счётчик
+    // НЕизвестен (данных нет), а 0 относится к сегментному счёту inbox.
+    // Утверждать «Все уведомления прочитаны» при неизвестном счётчике нельзя
+    // — это ложь о состоянии, которого приложение не знает (N-02).
     setMocks(pageWithItems([], 0));
 
     const html = renderPage();
 
-    expect(html).toContain('aria-label="Все уведомления прочитаны"');
+    expect(html).toContain('aria-label="Прочитать все"');
+    expect(html).not.toContain("Все уведомления прочитаны");
+    expect(html).not.toContain("Прочитать все (0)");
     expect(html).toContain("Пока нет уведомлений");
+  });
+
+  it("нулевой счётчик — единственное состояние, где можно сказать «все прочитаны»", () => {
+    // Контрпарный к предыдущему: число известно и равно нулю, тогда
+    // утверждение правдиво, и кнопка гаснет.
+    setMocks(pageWithItems([]), 0);
+
+    const html = renderPage();
+
+    expect(html).toContain('aria-label="Все уведомления прочитаны"');
   });
 });
 
@@ -615,14 +630,16 @@ describe("NotificationsPage: бейдж — авторитетный счётч�
     expect(html).not.toContain("Прочитать все (");
   });
 
-  it("без счётчика (первая загрузка) — 0, сегментное число не подставляется", () => {
-    // Пока глобальный счётчик не пришёл, число неизвестно: показываем 0.
-    // Сегментный page[0].unreadCount = 1 к делу не относится (B9) —
-    // кнопка помечает прочитанными ВСЁ, а не только архив.
+  it("без счётчика (первая загрузка) — число не подставляется", () => {
+    // Пока глобальный счётчик не пришёл, число неизвестно. Сегментный
+    // page[0].unreadCount = 1 к делу не относится (B9) — кнопка помечает
+    // прочитанными ВСЁ, а не только архив. И «все прочитаны» тоже нельзя:
+    // это утверждение о непрочитанных, которых мы не знаем (N-02).
     setMocks(pageWithItems([makeNotification()], 1));
 
     const html = renderPage();
-    expect(html).toContain('aria-label="Все уведомления прочитаны"');
+    expect(html).toContain('aria-label="Прочитать все"');
+    expect(html).not.toContain("Все уведомления прочитаны");
     expect(html).not.toContain("Прочитать все (1)");
   });
 
@@ -779,7 +796,8 @@ describe("счётчик «Прочитать все»: сегмент не пр
     // Сегментный unreadCount = 7, глобальный счётчик ещё грузится
     // (data === undefined). Показать «Прочитать все (7)» нельзя: это
     // число непрочитанных ТОЛЬКО в водительском архиве, а действие
-    // помечает прочитанными всё.
+    // помечает прочитанными всё. И «все прочитаны» нельзя: счётчик
+    // ещё не пришёл, то есть неизвестен (N-02).
     mockUseInbox.mockReturnValue(segmentInbox(7));
     mockUseUnreadCount.mockReturnValue({
       data: undefined,
@@ -792,7 +810,8 @@ describe("счётчик «Прочитать все»: сегмент не пр
     const html = renderPageAt("/?segment=driver");
 
     expect(html).not.toContain("Прочитать все (7)");
-    expect(html).toContain("Все уведомления прочитаны");
+    expect(html).toContain('aria-label="Прочитать все"');
+    expect(html).not.toContain("Все уведомления прочитаны");
   });
 
   it("глобальный счётчик отражается в кнопке, сегментный игнорируется", () => {
@@ -809,5 +828,32 @@ describe("счётчик «Прочитать все»: сегмент не пр
 
     expect(html).toContain("Прочитать все (12)");
     expect(html).not.toContain("Прочитать все (7)");
+  });
+
+  it("сбой счётчика: лента жива, кнопка рабочая, ложного «все прочитаны» нет", () => {
+    // Замер 2026-10-03 (N-02): GET /notifications/unread-count → 500 давал
+    // «Все уведомления прочитаны» и disabled при 9 непрочитанных.
+    mockUseInbox.mockReturnValue(segmentInbox(9));
+    mockUseUnreadCount.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new ApiError("counter unavailable", "UNAVAILABLE", 500),
+      refetch: vi.fn(),
+    });
+
+    const html = renderPageAt("/?segment=driver");
+
+    // Лента — независимый запрос, она на месте.
+    expect(html).toContain("Бронь подтверждена");
+    // Счётчик неизвестен → никаких выдуманных чисел.
+    expect(html).toContain('aria-label="Прочитать все"');
+    expect(html).not.toContain("Все уведомления прочитаны");
+    expect(html).not.toContain("Прочитать все (");
+    // Частичный сбой: плашка с ретраем, а не QueryState на весь экран —
+    // лента при сбое счётчика остаётся в силе.
+    expect(html).toContain("Не удалось загрузить счётчик непрочитанных");
+    expect(html).toContain("Повторить");
+    expect(html).toContain('role="alert"');
   });
 });

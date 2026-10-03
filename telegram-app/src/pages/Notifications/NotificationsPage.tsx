@@ -12,6 +12,7 @@ import { IconButton } from "@/ui/IconButton";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { FetchMore } from "@/ui/FetchMore";
+import { Notice } from "@/ui/Notice";
 
 import { CheckCheck, ChevronRight } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
@@ -335,16 +336,23 @@ export function NotificationsPage() {
     [inbox.data],
   );
   const visibleItems = items;
-  const counter = useUnreadCountQuery();
+const counter = useUnreadCountQuery();
   // Счётчик «Прочитать все» — ТОЛЬКО авторитетный unread-count: он один
   // для всех сегментов, тогда как inbox отдаётся с фильтром (?role=/
   // unreadOnly) и pages[0].unreadCount считает непрочитанные только
-  // В ЭТОМ архиве. Фолбэк на него показывал в действии «Прочитать
+  // в ЭТОМ архиве. Фолбэк на него показывал в действии «Прочитать
   // все (7)», хотя глобально непрочитанных 12, и кнопка при этом
-  // гасилась зря. Пока счётчик грузится — 0 (B9).
-  // Бейдж таба живёт отдельно (AppRouter → useUnreadCountQuery) и
-  // правку не затрагивает.
-  const unreadCount = counter.data ?? 0;
+  // гасилась зря (B9).
+  //
+  // НО `data ?? 0` здесь врал: при сбое счётчика (замер 2026-10-02,
+  // сломанный unread-count) кнопка объявляла «Все уведомления
+  // прочитаны» и гасилась при 9 непрочитанных — то есть лгала о
+  // состоянии, которого не знает. Поэтому null = «неизвестно», и
+  // утверждать «все прочитаны» можно ТОЛЬКО когда число известно и
+  // равно нулю. На неизвестном кнопка остаётся рабочей: markAll не
+  // зависит от счётчика, гасить её нечем.
+  // Бейдж таба живёт отдельно (AppRouter → useUnreadCountQuery).
+  const unreadCount: number | null = counter.data ?? null;
   // markRead.variables — id записи в полёте: блокируем только её ячейку (m1),
   // а не всю ленту.
   const markingId = markRead.isPending ? markRead.variables : undefined;
@@ -425,6 +433,17 @@ export function NotificationsPage() {
         onRetry={() => void inbox.refetch()}
       >
         <Page>
+          {/* Счётчик непрочитанных — независимый запрос: лента при его сбое
+            остаётся в силе, поэтому здесь НЕ QueryState (он заменил бы всю
+            страницу, как на CreateTripPage), а точечная плашка. */}
+          {counter.isError ? (
+            <Notice tone="danger" variant="banner">
+              Не удалось загрузить счётчик непрочитанных — «Прочитать все»{" "}
+              <button type="button" className={styles.retry} onClick={() => void counter.refetch()}>
+                Повторить
+              </button>
+            </Notice>
+          ) : null}
           {/* Сверху ряд пилюль: сегменты Новые / Водитель / Пассажир +
             справа IconButton «Прочитать все» (CheckCheck) — голый div под
             Page (гуттер даёт сам Page, паттерн TripActivePage).
@@ -442,9 +461,11 @@ export function NotificationsPage() {
             <div aria-live="polite">
               <IconButton
                 aria-label={
-                  unreadCount > 0
-                    ? `Прочитать все (${unreadCount})`
-                    : "Все уведомления прочитаны"
+                  unreadCount === 0
+                    ? "Все уведомления прочитаны"
+                    : unreadCount === null
+                      ? "Прочитать все"
+                      : `Прочитать все (${unreadCount})`
                 }
                 disabled={markAll.isPending || unreadCount === 0}
                 onClick={() => {

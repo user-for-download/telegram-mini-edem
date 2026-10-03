@@ -82,3 +82,30 @@
 
 /* Обёртка догрузки: вертикальная колонка болванок. */
 
+
+/* Инлайн-кнопка «Повторить» в плашке сбоя счётчика. Нативный <button>
+ * (фокус с клавиатуры и роль кнопки), но выглядит как текст-ссылка внутри
+ * тона плашки: сброс UA-стилей обязателен, иначе кнопка приедет системным
+ * Arial с рамкой. Цвет берём из того же тона, что и текст плашки, — иначе
+ * на тонированной подложке контраст уедет ниже 4.5 (реестр #20). */
+.retry {
+  -webkit-appearance: none;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: transparent;
+  border: 0;
+  box-sizing: border-box;
+  padding: 0;
+  margin-left: var(--app-space-2xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.retry:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: var(--app-radius-xs);
+}
