@@ -256,6 +256,13 @@ export function useMarkNotificationReadMutation() {
     },
     onSuccess: (updated) => {
       applyMarkReadCaches(queryClient, updated.id, updated);
+      // Патч выше достаётся из ОТВЕТА одной записи, а список целиком сервер
+      // не переотдавал: без рефетча закэшированная лента остаётся прежней.
+      // Замер 2026-10-03: после тапа запись пропадает оптимистично, но
+      // возврат на /notifications по хэшу (без reload) показывает её снова —
+      // кэш не знает, что она прочитана. Invalidate именно lists(): счётчик
+      // мы только что вычислили точно, рефетчить его тут нечего.
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.lists() });
     },
   });
 }
@@ -273,6 +280,9 @@ export function useMarkAllNotificationsReadMutation() {
     },
     onSuccess: () => {
       applyMarkAllReadCaches(queryClient);
+      // Та же причина, что и в markRead: лента целиком осталась бы прежней, и
+      // возврат по хэшу показал бы прочитанные записи как непрочитанные.
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.lists() });
     },
   });
 }
