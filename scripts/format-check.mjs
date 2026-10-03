@@ -1,4 +1,5 @@
 import { readdir, readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 const root = process.cwd();
@@ -148,9 +149,49 @@ async function collectFiles(directory) {
   return files;
 }
 
+/**
+ * Выкидывает файлы, которые git считает игнорируемыми.
+ *
+ * ЗАЧЕМ. `ignoredDirectories` выше перечисляет каталоги по имени, но
+ * `.gitignore`-файлы (в том числе вложенные, как `e2e/.gitignore`) он не читает.
+ * Из-за этого СГЕНЕРИРУЕМЫЕ артефакты роняли гейт: прогон e2e пишет
+ * `e2e/results-tg.json` без финального перевода строки, и после любого
+ * локального прогона `npm run format:check` падал на файле, которого нет в
+ * репозитории. Проверять мусор, который не коммитится, бессмысленно.
+ *
+ * Реализация — `git check-ignore` (одна пачка на все пути), потому что
+ * разбирать семантику .gitignore вручную (якорь, `**`, negation) — это
+ * источник тихих расхождений. Если git недоступен или это не репозиторий,
+ * ничего не выкидываем: поведение деградирует к прежнему, гейт не ломается.
+ */
+function dropGitIgnored(files) {
+  if (files.length === 0) return files;
+
+  try {
+    const result = spawnSync(
+      "git",
+      ["check-ignore", "--stdin", "-z"],
+      { cwd: root, input: files.map((file) => `${file.relativePath}\0`).join(""), encoding: "utf8" },
+    );
+
+    // 1 = часть путей проигнорирована, 0 = ни один, иначе (не репозиторий и т. п.).
+    if (result.status !== 0 && result.status !== 1) return files;
+
+    const ignored = new Set((result.stdout ?? "").split("\0").filter(Boolean));
+    if (ignored.size === 0) return files;
+
+    return files.filter((file) => !ignored.has(file.relativePath));
+  } catch {
+    return files;
+  }
+}
+
 const errors = [];
 
-for (const { absolutePath, relativePath } of await collectFiles(root)) {
+const collected = await collectFiles(root);
+const files = dropGitIgnored(collected);
+
+for (const { absolutePath, relativePath } of files) {
   const content = await readFile(absolutePath, "utf8");
 
   if (content.includes("\r")) errors.push(`${relativePath}: contains CRLF/CR characters`);
