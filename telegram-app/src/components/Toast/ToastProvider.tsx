@@ -58,24 +58,31 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
     <ToastContext.Provider value={value}>
       {children}
       {toast && (
-        // a11y: tgui Snackbar — голый div без live-семантики; обёртка
-        // объявляет тост скринридеру: role=status (успех/инфо, вежливо),
-        // role=alert (ошибки через assertive:true, немедленно).
-        <div role={toast.assertive ? "alert" : "status"}>
-          <Snackbar
-            className={styles.snackbar}
-            onClose={close}
-            duration={TOAST_DURATION_MS}
-            before={
-              toast.before ?? (
-                <CheckCircle2 size={20} className={`${SUCCESS} ${SHRINK}`} />
-              )
-            }
-            description={toast.description}
-          >
-            {toast.text}
-          </Snackbar>
-        </div>
+        // a11y: tgui Snackbar — голый div без live-семантики, поэтому роль
+        // даём ЕМУ САМОМУ, а не обёртке. Раньше стоял <div role=…> вокруг
+        // Snackbar, но AppRoot рендерит Snackbar через usePortalContainer:
+        // обёртка оставалась в исходном месте дерева, а тост уезжал в
+        // портал — получалось, что роль висит на ПУСТОМ узле с childCount 0,
+        // и тост скринридеру не объявлялся вовсе (замер 2026-10-02: у
+        // Snackbar не было ни одного атрибута, кроме class/style).
+        //
+        // Snackbar наследует HTMLAttributes<HTMLDivElement> и спредит
+        // ...restProps, поэтому role и aria-live приходят прямо на узел тоста.
+        <Snackbar
+          className={styles.snackbar}
+          role={toast.assertive ? "alert" : "status"}
+          aria-live={toast.assertive ? "assertive" : "polite"}
+          onClose={close}
+          duration={TOAST_DURATION_MS}
+          before={
+            toast.before ?? (
+              <CheckCircle2 size={20} className={`${SUCCESS} ${SHRINK}`} />
+            )
+          }
+          description={toast.description}
+        >
+          {toast.text}
+        </Snackbar>
       )}
     </ToastContext.Provider>
   );
