@@ -67,6 +67,7 @@ export function CityPickerField({
   cities,
   placeholder,
   status,
+  error = null,
   onSelect,
 }: {
   id: string;
@@ -75,6 +76,12 @@ export function CityPickerField({
   cities: readonly PickerCity[] | undefined;
   placeholder: string;
   status?: "default" | "error";
+  /**
+   * Текст ошибки поля. Прокидывается в `<Field error=…>`, который ставит
+   * aria-invalid + aria-describedby (замер 2026-10-02: пока пропа не было, ни
+   * одно из 10 полей формы поездки не было связано со своей ошибкой).
+   */
+  error?: string | null;
   onSelect: (name: string) => void;
 }) {
   const options = useMemo(() => toCityOptions(cities), [cities]);
@@ -88,7 +95,7 @@ export function CityPickerField({
   // placeholder/value на plain Input: тексты и связи для тестов те же.
   if (typeof document === "undefined") {
     return (
-      <Field label={label} id={id} className={styles.field}>
+      <Field label={label} id={id} className={styles.field} error={error}>
         {(field) => (
           <Input
             {...field}
@@ -107,7 +114,7 @@ export function CityPickerField({
   // платформах) и header на контрол — видимую подпись base (на iOS её нет);
   // связка htmlFor+id держит e2e getByLabel (канон вместо локальной копии).
   return (
-    <Field label={label} id={id} className={styles.field}>
+    <Field label={label} id={id} className={styles.field} error={error}>
       {(field) => (
         <Multiselect
           {...field}

@@ -10,7 +10,6 @@ import { Notice } from "@/ui/Notice";
 import { Section } from "@/ui/Section";
 import { BTN_ROW_WRAP, HINT, INFO, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
-import { FieldError } from "@/ui/FieldError";
 import { Button } from "@/ui/Button";
 import { Chip } from "@/ui/Chip";
 import { IconButton } from "@/ui/IconButton";
@@ -251,13 +250,11 @@ export function CreateTripForm({
                 cities={cities.data}
                 placeholder="Откуда едем — начните вводить"
                 status={errorField === "create-from" ? "error" : undefined}
+                error={errorField === "create-from" ? validationError : null}
                 onSelect={(name) => {
                   touch();
                   setField("from", name);
                 }}
-              />
-              <FieldError
-                error={errorField === "create-from" ? validationError : null}
               />
               <CityPickerField
                 id="create-to"
@@ -266,13 +263,11 @@ export function CreateTripForm({
                 cities={cities.data}
                 placeholder="Куда едем — начните вводить"
                 status={errorField === "create-to" ? "error" : undefined}
+                error={errorField === "create-to" ? validationError : null}
                 onSelect={(name) => {
                   touch();
                   setField("to", name);
                 }}
-              />
-              <FieldError
-                error={errorField === "create-to" ? validationError : null}
               />
               <IconButton
                 type="button"
@@ -284,7 +279,7 @@ export function CreateTripForm({
                 <ArrowRightLeft size={14} className={INFO} />
               </IconButton>
             </div>
-            <Field label="Адрес отправления" id="create-from-address">
+            <Field label="Адрес отправления" id="create-from-address" error={errorField === "create-from-address" ? validationError : null}>
               {(field) => (
                 <>
                   <Input
@@ -300,17 +295,10 @@ export function CreateTripForm({
                     }}
                     placeholder="Точка встречи"
                   />
-                  <FieldError
-                    error={
-                      errorField === "create-from-address"
-                        ? validationError
-                        : null
-                    }
-                  />
                 </>
               )}
             </Field>
-            <Field label="Адрес назначения" id="create-to-address">
+            <Field label="Адрес назначения" id="create-to-address" error={errorField === "create-to-address" ? validationError : null}>
               {(field) => (
                 <>
                   <Input
@@ -326,13 +314,6 @@ export function CreateTripForm({
                     }}
                     placeholder="Точка прибытия"
                   />
-                  <FieldError
-                    error={
-                      errorField === "create-to-address"
-                        ? validationError
-                        : null
-                    }
-                  />
                 </>
               )}
             </Field>
@@ -341,7 +322,7 @@ export function CreateTripForm({
 
         <Section header="Поездка">
           <SectionBody>
-            <Field label="Дата и время" id="create-date">
+            <Field label="Дата и время" id="create-date" error={errorField === "create-date" ? validationError : null}>
               {(field) => (
                 <>
                   <Input
@@ -355,16 +336,11 @@ export function CreateTripForm({
                       setField("date", event.target.value);
                     }}
                   />
-                  <FieldError
-                    error={
-                      errorField === "create-date" ? validationError : null
-                    }
-                  />
                 </>
               )}
             </Field>
             <div className={styles.grid2}>
-              <Field label="Цена, ₽" id="create-price">
+              <Field label="Цена, ₽" id="create-price" error={errorField === "create-price" ? validationError : null}>
                 {(field) => (
                   <>
                     <Input
@@ -381,11 +357,6 @@ export function CreateTripForm({
                         touch();
                         setField("price", event.target.value);
                       }}
-                    />
-                    <FieldError
-                      error={
-                        errorField === "create-price" ? validationError : null
-                      }
                     />
                   </>
                 )}
@@ -428,13 +399,10 @@ export function CreateTripForm({
                     <Plus size={16} />
                   </IconButton>
                 </div>
-                <FieldError
-                  error={errorField === "create-seats" ? validationError : null}
-                />
               </fieldset>
             </div>
             <div className={styles.grid2}>
-              <Field label="Расстояние, км" id="create-distance">
+              <Field label="Расстояние, км" id="create-distance" error={errorField === "create-distance" ? validationError : null}>
                 {(field) => (
                   <>
                     <Input
@@ -453,17 +421,10 @@ export function CreateTripForm({
                       }}
                       placeholder="180"
                     />
-                    <FieldError
-                      error={
-                        errorField === "create-distance"
-                          ? validationError
-                          : null
-                      }
-                    />
                   </>
                 )}
               </Field>
-              <Field label="В пути, часов" id="create-duration">
+              <Field label="В пути, часов" id="create-duration" error={errorField === "create-duration" ? validationError : null}>
                 {(field) => (
                   <>
                     <Input
@@ -480,13 +441,6 @@ export function CreateTripForm({
                         touch();
                         setField("durationHours", event.target.value);
                       }}
-                    />
-                    <FieldError
-                      error={
-                        errorField === "create-duration"
-                          ? validationError
-                          : null
-                      }
                     />
                   </>
                 )}
@@ -535,9 +489,6 @@ export function CreateTripForm({
                   touch();
                   setField("comment", event.target.value);
                 }}
-              />
-              <FieldError
-                error={errorField === "create-comment" ? validationError : null}
               />
             </div>
           </SectionBody>
