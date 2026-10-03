@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type KeyboardEvent, useState, type ReactNode } from "react";
 import {
   Avatar,
   Badge,
@@ -60,6 +60,33 @@ import styles from "./ProfilePage.module.css";
 const TRUNCATE_BLOCK = `${TRUNCATE} ${styles.truncateBlock}`;
 
 type ProfileSubtab = "settings" | "reviews";
+
+/**
+ * Связка `tab` ↔ `tabpanel` для субтабов профиля (реестр B5).
+ *
+ * Замер 2026-10-02: на странице было 2 `role="tab"`, но ни одного
+ * `role="tabpanel"`, и ни у одного таба не было `aria-controls` — то есть
+ * роли объявляли переключение, а панели под ними не существовало для
+ * скринридера. Расхождение с ARIA APG: таб без панели бессмысленен.
+ *
+ * Стабильные id обязательны: без них связь «я управляю вот этой панелью»
+ * не выражается, а сгенерированные id менялись бы между рендерами.
+ *
+ * `aria-controls` вешаем ТОЛЬКО на выбранный таб: панели рендерятся условно,
+ * и у невыбранного таба просто нет панели — ссылаться на несуществующий id
+ * было бы враньём (проверено: `document.getElementById` давал null на
+ * невыбранном табе). Отрисовывать обе панели с `hidden` ради полноты APG
+ * не стали: это заставило бы грузить отзывы при открытых настройках.
+ */
+const SUBTAB_IDS: Record<ProfileSubtab, string> = {
+  settings: "profile-subtab-settings",
+  reviews: "profile-subtab-reviews",
+};
+
+const SUBTAB_PANEL_IDS: Record<ProfileSubtab, string> = {
+  settings: "profile-subtab-panel-settings",
+  reviews: "profile-subtab-panel-reviews",
+};
 
 /**
  * Строка меню раздела — tgui Cell (учебниковый паттерн стори Playground:
@@ -226,6 +253,40 @@ export function ProfilePage() {
     setSubtab(next);
   };
 
+  /**
+   * Стрелки/Home/End по табам (ARIA APG, автоматическая активация).
+   *
+   * Замер 2026-10-03: keydown до кнопки доходил (`ArrowRight@BUTTON` в логе),
+   * но NOTHING его не обрабатывал — ArrowRight/ArrowDown/Home/End не меняли
+   * выбранный таб. Табы при этом фокусируются Tab'ом и активируются
+   * Enter/Space (нативная кнопка), то есть страница не была непроходимой
+   * для клавиатуры — но паттерн APG требует стрелки, и без них переключение
+   * «на глазок» вслепую: скринридер объявляет «выбран вкладка 1 из 2», а
+   * перейти к содержимому второй можно только Tab'ом через всю страницу.
+   */
+  const onSubtabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const order: ProfileSubtab[] = ["settings", "reviews"];
+    const current = order.indexOf(subtab);
+    let next: ProfileSubtab | undefined;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      next = order[(current + 1) % order.length];
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      next = order[(current - 1 + order.length) % order.length];
+    } else if (event.key === "Home") {
+      next = order[0];
+    } else if (event.key === "End") {
+      next = order[order.length - 1];
+    } else {
+      return;
+    }
+    if (!next) return;
+    event.preventDefault();
+    pickSubtab(next);
+    // Фокус переезжает на новый таб: без этого стрелка меняла выделение, но
+    // фокус оставался на старом, и следующий Tab уходил из списка.
+    document.getElementById(SUBTAB_IDS[next])?.focus();
+  };
+
   return (
     <>
       <QueryState
@@ -322,10 +383,18 @@ export function ProfilePage() {
             </Section>
 
             {/* Субтабы: Настройки и авто / Отзывы */}
-            <div role="tablist" aria-label="Разделы профиля">
+            <div
+              role="tablist"
+              aria-label="Разделы профиля"
+              onKeyDown={onSubtabKeyDown}
+            >
               <SegmentedControl>
                 <SegmentedControl.Item
                   role="tab"
+                  id={SUBTAB_IDS.settings}
+                  aria-controls={
+                    subtab === "settings" ? SUBTAB_PANEL_IDS.settings : undefined
+                  }
                   selected={subtab === "settings"}
                   aria-selected={subtab === "settings"}
                   onClick={() => pickSubtab("settings")}
@@ -334,6 +403,10 @@ export function ProfilePage() {
                 </SegmentedControl.Item>
                 <SegmentedControl.Item
                   role="tab"
+                  id={SUBTAB_IDS.reviews}
+                  aria-controls={
+                    subtab === "reviews" ? SUBTAB_PANEL_IDS.reviews : undefined
+                  }
                   selected={subtab === "reviews"}
                   aria-selected={subtab === "reviews"}
                   onClick={() => pickSubtab("reviews")}
@@ -344,7 +417,11 @@ export function ProfilePage() {
             </div>
 
             {subtab === "settings" ? (
-              <Stack>
+              <Stack
+                role="tabpanel"
+                id={SUBTAB_PANEL_IDS.settings}
+                aria-labelledby={SUBTAB_IDS.settings}
+              >
                 <Section header="Мои поездки">
                   <MenuRow
                     label="История поездок"
@@ -499,7 +576,11 @@ export function ProfilePage() {
                 </Section>
               </Stack>
             ) : (
-              <Stack>
+              <Stack
+                role="tabpanel"
+                id={SUBTAB_PANEL_IDS.reviews}
+                aria-labelledby={SUBTAB_IDS.reviews}
+              >
                 <Notice variant="banner" tone="info">
                   <span className={HINT}>
                     Все отзывы проходят пре-модерацию
