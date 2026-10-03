@@ -163,12 +163,29 @@ async function assertPassengersHaveNoBookingOverlap(
 export const tripsRouter = new Hono<{ Variables: { user?: AuthUser } }>();
 
 /**
+ * Имя города справочника по id, либо null, если такого города нет.
+ *
+ * Сущность читается по ДВУМ полям (id + имя), поэтому для поиска по id это
+ * единственный честный путь: имя из справочника попадает в уже проверенную
+ * ветку подстрочного поиска, а неизвестный id даёт null (см. фильтр ниже).
+ */
+async function cityNameById(id: string): Promise<string | null> {
+  const city = await db.city.findFirst({
+    where: { id },
+    select: { name: true },
+  });
+  return city?.name ?? null;
+}
+
+/**
  * Публичный список активных поездок.
  */
 tripsRouter.get("/", publicReadLimiter, async (c) => {
   const q = c.req.query("q");
   const fromCity = c.req.query("fromCity");
   const toCity = c.req.query("toCity");
+  const fromCityId = c.req.query("fromCityId");
+  const toCityId = c.req.query("toCityId");
   const dateFrom = c.req.query("dateFrom");
   const dateTo = c.req.query("dateTo");
   const maxPrice = c.req.query("maxPrice");
@@ -226,6 +243,28 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
 
   if (toCity) {
     where.toCity = { contains: toCity, mode: "insensitive" };
+  }
+
+  // Фильтр по id города справочника — точная выборка, дополнение к подстрочному
+  // поиску выше (выбор владельцем решения 2026-10-03). Подстрока остаётся для
+  // случая «пользователь ещё не выбрал город».
+  //
+  // Именно СПРАВОЧНИК, а не `Trip.fromCityId` напрямую, и НЕ «просто не
+  // добавлять фильтр»: неизвестный id без фильтра отдавал бы ВСЕ поездки
+  // (поймал тест trips-search-city-id) — то есть сломанный id молча показал
+  // бы поездки из других городов. Неизвестный id обязан давать пусто.
+  if (fromCityId) {
+    const name = await cityNameById(fromCityId);
+    where.fromCity = name
+      ? { equals: name, mode: "insensitive" }
+      : { in: [] };
+  }
+
+  if (toCityId) {
+    const name = await cityNameById(toCityId);
+    where.toCity = name
+      ? { equals: name, mode: "insensitive" }
+      : { in: [] };
   }
 
   if (dateFrom) {
