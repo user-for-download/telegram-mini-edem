@@ -32,7 +32,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--app-space-2xs);
-  color: var(--tgui--hint_color);
+  color: var(--app-muted);
   white-space: nowrap;
 }
 

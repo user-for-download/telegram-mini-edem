@@ -28,14 +28,14 @@
 .filter.filter {
   background: transparent;
   box-shadow: none;
-  color: var(--tgui--hint_color);
+  color: var(--app-muted);
 }
 
 /* Текст красит вложенный h6 кита (plain_foreground явно) — дублируем
  * цвет на потомков, приём как у .accent в ui/Chip.module.css. */
 .filter.filter,
 .filter.filter * {
-  color: var(--tgui--hint_color);
+  color: var(--app-muted);
 }
 
 .filterActive.filterActive {
@@ -63,7 +63,7 @@
 /* Шеврон deep-link (верхняя строка Info, text-align:right у кита):
  * декоративен, намекает на переход. */
 .chevron {
-  color: var(--tgui--hint_color);
+  color: var(--app-muted);
 }
 
 /* Дата второй строкой Info — компактно: мельче подписи кита и строго

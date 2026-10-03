@@ -165,5 +165,5 @@
 .hintXs {
   font-size: 12px;
   line-height: 16px;
-  color: var(--tgui--hint_color);
+  color: var(--app-muted);
 }

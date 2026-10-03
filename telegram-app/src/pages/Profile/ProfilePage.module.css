@@ -47,7 +47,7 @@
 }
 
 .statLabel {
-  color: var(--tgui--hint_color);
+  color: var(--app-muted);
 }
 
 .statRating {
@@ -61,7 +61,7 @@
 
 /* Шеврон строки меню: подсказочный цвет, не сжимается. */
 .chevron {
-  color: var(--tgui--hint_color);
+  color: var(--app-muted);
   flex-shrink: 0;
 }
 

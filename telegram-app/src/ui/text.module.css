@@ -29,7 +29,7 @@
  * .iconHint (TripModals ×2 правила, EditTripForm, CreateTrip),
  * .hintIcon (Support), VehicleModal .hint. */
 .hint {
-  color: var(--tgui--hint_color);
+  color: var(--app-muted);
 }
 
 /* Семантический акцент «информация»: цвет ссылок и иконок-подсказок.

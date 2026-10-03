@@ -6,5 +6,5 @@
 .price {
   font-size: 15px;
   font-weight: 600;
-  color: var(--tgui--hint_color, inherit);
+  color: var(--app-muted, inherit);
 }
