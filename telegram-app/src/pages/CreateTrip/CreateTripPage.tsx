@@ -10,6 +10,7 @@ import { Notice } from "@/ui/Notice";
 import { Section } from "@/ui/Section";
 import { BTN_ROW_WRAP, HINT, INFO, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
+import { QueryState } from "@/components/QueryState";
 import { Button } from "@/ui/Button";
 import { Chip } from "@/ui/Chip";
 import { IconButton } from "@/ui/IconButton";
@@ -196,6 +197,29 @@ export function CreateTripForm({
     return (
       <Page variant="hero">
         <Loading label="Загружаем форму…" />
+      </Page>
+    );
+  }
+
+  // Ошибка справочника — отдельный терминальный экран. Без него форма
+  // застревала в «Загружаем форму…» навсегда: гейт выше стоит на
+  // cities.isLoading (при ошибке он уже false), следующий гейт уводил в
+  // «Нужен автомобиль», а повторного входа в состояние загрузки у
+  // react-query не было — чинила только перезагрузка страницы (замер
+  // 2026-10-02: GET /cities → 500, на экране «Загружаем форму…», отправка
+  // формы давала «Выберите города из справочника» вместо «сервис недоступен»).
+  if (cities.isError) {
+    return (
+      <Page variant="hero">
+        <QueryState
+          loading={false}
+          error={cities.error}
+          empty={false}
+          emptyText=""
+          onRetry={() => void cities.refetch()}
+        >
+          {null}
+        </QueryState>
       </Page>
     );
   }
