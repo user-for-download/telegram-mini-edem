@@ -16,8 +16,30 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const TG_URL = process.env.E2E_TG_URL || "http://localhost:3012";
 export const API_URL =
   process.env.E2E_API_URL || "http://localhost:3011/api/v1";
-export const DB_CONTAINER =
-  process.env.E2E_DB_CONTAINER || "edem-db-dev";
+/**
+ * Контейнер dev-БД.
+ *
+ * Имя НЕ зашиваем: сервис `db-dev` живёт в compose (профиль `dev`), и compose
+ * даёт ему имя вида `<проект>-db-dev-1`, которое меняется вместе с каталогом и
+ * версией docker compose. Поэтому спрашиваем compose, а как откат берём
+ * прежнее ручное имя — на стендах, где контейнер поднят вне compose.
+ */
+function resolveDbContainer() {
+  if (process.env.E2E_DB_CONTAINER) return process.env.E2E_DB_CONTAINER;
+  try {
+    const id = execFileSync(
+      "docker",
+      ["compose", "--profile", "dev", "ps", "-q", "db-dev"],
+      { cwd: path.join(__dirname, ".."), encoding: "utf8" },
+    ).trim();
+    if (id) return id;
+  } catch {
+    // compose недоступен или сервис не поднят — падаем на проверке psql ниже.
+  }
+  return "edem-db-dev";
+}
+
+export const DB_CONTAINER = resolveDbContainer();
 export const VERBOSE = process.env.E2E_VERBOSE === "1";
 export const SHOTS = path.join(__dirname, "shots-tg");
 export const RESULTS_JSON = path.join(__dirname, "results-tg.json");

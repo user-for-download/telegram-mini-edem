@@ -26,6 +26,47 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Dev-база (профиль `dev`, в прод не поднимается) ────────────────────────
+  # Отдельный Postgres для локального стенда: backend из npm/на pm2 ходит в
+  # него по 127.0.0.1:5433, тогда как compose-`db` занят контейнерным backend
+  # (внутри сети compose он доступен как `db:5432` и наружу не выставлен).
+  #
+  # Раньше этот контейнер жил вне compose (`docker run`/удалённый сервис), и
+  # каждая команда `docker compose ...` печатала «Found orphan containers
+  # (edem-db-dev)». Опасность была не в самом предупреждении, а в
+  # `docker compose down --remove-orphans`: он УДАЛИЛ бы dev-базу вместе с
+  # сидовыми данными, и команда выглядит безобидно.
+  #
+  # Профиль `dev` означает: обычный `docker compose up -d` его не поднимает,
+  # а `down --remove-orphans` больше не видит его сиротой (сервис известен
+  # compose). Поднимать явно:
+  #     docker compose --profile dev up -d db-dev
+  db-dev:
+    image: postgres:16-alpine
+    # Профиль: не поднимается без `--profile dev` (ни up, ни rebuild).
+    profiles: ["dev"]
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: edem
+      # Пароль dev-стенда — НЕ прод-секрет: он же в backend/.env
+      # (DATABASE_URL=…:edem_local@localhost:5433/edem) и в .env.test.
+      POSTGRES_PASSWORD: ${DEV_DB_PASSWORD:-edem_local}
+      POSTGRES_DB: edem
+    volumes:
+      # Имя тома фиксировано префиксом проекта: `telegram-mini-emem_pgdata_dev`.
+      # Это ровно тот том, который уже содержит сид dev-базы, поэтому сервис
+      # ПОДХВАТЫВАЕТ существующие данные, а не создаёт пустой.
+      - pgdata_dev:/var/lib/postgresql/data
+    ports:
+      # Наружу только на loopback: тесты и локальный backend ходят по нему.
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edem -d edem"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
@@ -155,3 +196,7 @@ services:
 
 volumes:
   pgdata:
+  # Dev-стенд (профиль dev). Имя производное от имени проекта, поэтому при
+  # переименовании каталога compose создаст НОВЫЙ пустой том — это не потеря
+  # данных, но стенд окажется пустым (лечится `npm run db:seed`).
+  pgdata_dev:
