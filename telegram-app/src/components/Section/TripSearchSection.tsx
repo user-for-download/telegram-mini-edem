@@ -8,21 +8,25 @@ import { Card } from "@/ui/Card";
 import styles from "./TripSearchSection.module.css";
 
 interface TripSearchSectionProps {
-  onSearch: (from?: string, to?: string) => void;
+  /** id городов справочника (не имена) — см. CitySelectField. */
+  onSearch: (fromCityId?: string, toCityId?: string) => void;
 }
 
 /**
  * Поиск поездки карточкой (без заголовка секции — интуитивно):
  * два селекта городов и primary-кнопка, отправка формы по Enter.
+ *
+ * Состояние — id городов, не имена: селект отдаёт id, и поиск уходит в
+ * `fromCityId`/`toCityId` (решение владельца 2026-10-03).
  */
 export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
   const cities = useAllCitiesQuery();
-  const [fromCity, setFromCity] = useState("");
-  const [toCity, setToCity] = useState("");
+  const [fromCityId, setFromCityId] = useState("");
+  const [toCityId, setToCityId] = useState("");
 
   const submitSearch = (event: SubmitEvent) => {
     event.preventDefault();
-    onSearch(fromCity || undefined, toCity || undefined);
+    onSearch(fromCityId || undefined, toCityId || undefined);
   };
 
   return (
@@ -32,20 +36,20 @@ export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
           <CitySelectField
             id="home-from"
             label="Откуда"
-            value={fromCity}
+            valueId={fromCityId}
             cities={cities.data}
             placeholder="Город или село отправления"
-            onSelect={setFromCity}
-            exclude={toCity}
+            onChange={setFromCityId}
+            excludeId={toCityId}
           />
           <CitySelectField
             id="home-to"
             label="Куда"
-            value={toCity}
+            valueId={toCityId}
             cities={cities.data}
             placeholder="Город или село назначения"
-            onSelect={setToCity}
-            exclude={fromCity}
+            onChange={setToCityId}
+            excludeId={fromCityId}
           />
         </div>
         <Button

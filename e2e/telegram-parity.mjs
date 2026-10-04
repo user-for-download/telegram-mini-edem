@@ -218,15 +218,12 @@ try {
 
   await runStep("create trip: UI публикует поездку с уникальной ценой", async () => {
     await hashUrl(page, "/trips/my/new");
-    // Multiselect: печатаем и кликаем ячейку дропдауна по точному тексту
-    // (у опций tgui нет role=option — только у выбранных чипов).
-    // force: строка опции покрыта state-layer кита (absolute inset-0,
-    // всплытие клика штатное) — строгий хит-таргет Playwright её не берёт,
-    // реальный тап пользователя работает. Клик настоящий, по координатам.
-    await page.getByLabel("Город отправления").fill(CITY_FROM);
-    await page.getByText(CITY_FROM, { exact: true }).first().click({ force: true });
-    await page.getByLabel("Город назначения").fill(CITY_TO);
-    await page.getByText(CITY_TO, { exact: true }).first().click({ force: true });
+    // Города выбираются из справочника селектом (решение владельца
+    // 2026-10-03). Раньше здесь был китовский Multiselect и шаг печатал имя,
+    // затем кликал ячейку дропдауна с `force` (её перекрывал state-layer
+    // кита). С нативным селектом всё это не нужно: selectOption по id.
+    await page.getByLabel("Город отправления").selectOption(seedFromId);
+    await page.getByLabel("Город назначения").selectOption(seedToId);
     // datetime-local: формат YYYY-MM-DDTHH:mm.
     const dep = new Date(Date.now() + 86400e3);
     const pad = (n) => String(n).padStart(2, "0");
@@ -475,7 +472,9 @@ await shot(page, "notification-read");
       await page.getByText("Поиск попутных поездок").first().waitFor({ timeout: 30000 });
       // Ищем по городу отправления — карточка ЧУЖОЙ поездки (контрагент,
       // PRICE+1): свои поиск скрывает.
-      await page.locator("#search-from").fill(CITY_FROM);
+      // Город выбирается из справочника (решение владельца 2026-10-03), а не
+      // печатается: поле стало нативным селектом, fill() по id не работает.
+      await page.locator("#search-from").selectOption(seedFromId);
       await page.getByRole("button", { name: "Найти" }).click();
       await page.getByText(`${PRICE + 1} ₽`).first().waitFor({ timeout: 30000 });
       await shot(page, "mobile-search");

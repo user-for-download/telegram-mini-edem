@@ -7,13 +7,14 @@ const tomorrow = () =>
   toLocalDateTimeInputValue(new Date(Date.now() + 86_400_000));
 
 /**
- * Состояние формы создания поездки (10 полей). Ключи совпадают с
- * именами useState, из которых вынесено (from/to — короткие имена
- * страницы; в CreateTripDraft маппятся как fromName/toName).
+ * Состояние формы создания поездки (10 полей). Города хранятся как id
+ * справочника, а не именами: имя неоднозначно («Москва» входит в «Москва-…»),
+ * и резолвить его обратно в id при отправке — источник рассинхрона.
  */
 export interface TripFormState {
-  from: string;
-  to: string;
+  /** id городов справочника (не имена) — решение владельца 2026-10-03. */
+  fromCityId: string;
+  toCityId: string;
   fromAddress: string;
   toAddress: string;
   /** datetime-local значение. */
@@ -31,8 +32,8 @@ export type TripFormField = keyof TripFormState;
 /** Начальные значения — те же, что были в useState страницы. */
 export function initialTripFormState(): TripFormState {
   return {
-    from: "",
-    to: "",
+    fromCityId: "",
+    toCityId: "",
     fromAddress: "",
     toAddress: "",
     date: tomorrow().slice(0, 16),
@@ -73,8 +74,8 @@ export function tripFormReducer(
     case "swapCities":
       return {
         ...state,
-        from: state.to,
-        to: state.from,
+        fromCityId: state.toCityId,
+        toCityId: state.fromCityId,
         fromAddress: state.toAddress,
         toAddress: state.fromAddress,
       };
@@ -117,8 +118,8 @@ export function useTripForm() {
 
   const isDirty = useMemo(
     () =>
-      form.from !== initial.from ||
-      form.to !== initial.to ||
+      form.fromCityId !== initial.fromCityId ||
+      form.toCityId !== initial.toCityId ||
       form.fromAddress !== initial.fromAddress ||
       form.toAddress !== initial.toAddress ||
       form.date !== initial.date ||
@@ -134,8 +135,8 @@ export function useTripForm() {
   /** Черновик для validateCreateTripDraft (порядок полей — как в форме). */
   const draft: CreateTripDraft = useMemo(
     () => ({
-      fromName: form.from,
-      toName: form.to,
+      fromCityId: form.fromCityId,
+      toCityId: form.toCityId,
       fromAddress: form.fromAddress,
       toAddress: form.toAddress,
       date: form.date,

@@ -37,6 +37,10 @@ const {
   mockUseDriverRequests: vi.fn(),
 }));
 
+vi.mock("@/queries/useAllCities", () => ({
+  useAllCitiesQuery: () => ({ data: [{ id: "city-1", name: "Вологда" }, { id: "city-2", name: "Череповец" }] }),
+}));
+
 vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
   const original =
     await importOriginal<typeof import("@/queries/useTripsQuery")>();

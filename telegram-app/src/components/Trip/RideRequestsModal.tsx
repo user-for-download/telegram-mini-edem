@@ -8,6 +8,7 @@ import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
 
 import { StatusPill } from "@/components/StatusPill/StatusPill";
+import { CitySelectField } from "@/components/CitySelect/CitySelectField";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
@@ -142,8 +143,12 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
   const update = useUpdateRideRequestMutation();
   const status = useRideRequestStatusMutation();
   const cancel = useCancelRideRequestMutation();
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  // Города — id справочника (решение владельца 2026-10-03). Раньше хранилось
+  // имя, и город резолвился в id только при отправке — тот же антипаттерн,
+  // который в форме создания поездки давал ложную ошибку «Выберите города из
+  // справочника».
+  const [fromCityId, setFromCityId] = useState("");
+  const [toCityId, setToCityId] = useState("");
   const [earliest, setEarliest] = useState("");
   const [latest, setLatest] = useState("");
   const [seats, setSeats] = useState("1");
@@ -173,8 +178,8 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
   useClosingConfirmation(editingId !== null);
 
   const submit = () => {
-    const fromCity = cities.data?.find((city) => city.name === from);
-    const toCity = cities.data?.find((city) => city.name === to);
+    const fromCity = cities.data?.find((city) => city.id === fromCityId);
+    const toCity = cities.data?.find((city) => city.id === toCityId);
     if (!fromCity || !toCity) {
       setValidationError("Выберите города из справочника");
       return;
@@ -212,8 +217,8 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
     create.mutate(parsed.data, {
       onSuccess: () => {
         haptic.success();
-        setFrom("");
-        setTo("");
+        setFromCityId("");
+        setToCityId("");
         setEarliest("");
         setLatest("");
       },
@@ -282,35 +287,31 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
           <Text weight="2" Component="span">
             Новый запрос
           </Text>
-          <Field label="Откуда" id="ride-from" error={createErrorFor("ride-from")}>
-            {(field) => (
-              <Input
-                {...field}
-                before={<MapPin size={17} className={INFO} />}
-                list="request-cities"
-                value={from}
-                onChange={(event) => setFrom(event.target.value)}
-                placeholder="Город отправления"
-              />
-            )}
-          </Field>
-          <Field label="Куда" id="ride-to" error={createErrorFor("ride-to")}>
-            {(field) => (
-              <Input
-                {...field}
-                before={<MapPin size={17} className={SUCCESS} />}
-                list="request-cities"
-                value={to}
-                onChange={(event) => setTo(event.target.value)}
-                placeholder="Город назначения"
-              />
-            )}
-          </Field>
-          <datalist id="request-cities">
-            {cities.data?.map((city) => (
-              <option key={city.id} value={city.name} />
-            ))}
-          </datalist>
+          {/* Выбор города — тот же CitySelectField, что на главной, в поиске и
+              форме создания (решение владельца 2026-10-03). Расставались
+              `<datalist>` + резолв имени при отправке: datalist даёт
+              неявный combobox без списка для скринридера (замер: getByRole
+              combobox = 2, listbox = 0, aria-expanded нет). */}
+          <CitySelectField
+            id="ride-from"
+            label="Откуда"
+            valueId={fromCityId}
+            cities={cities.data}
+            placeholder="Город отправления"
+            excludeId={toCityId}
+            onChange={setFromCityId}
+            error={createErrorFor("ride-from")}
+          />
+          <CitySelectField
+            id="ride-to"
+            label="Куда"
+            valueId={toCityId}
+            cities={cities.data}
+            placeholder="Город назначения"
+            excludeId={fromCityId}
+            onChange={setToCityId}
+            error={createErrorFor("ride-to")}
+          />
           <div className={styles.grid2}>
             <Field label="Не раньше" id="ride-earliest" error={createErrorFor("ride-earliest")}>
               {(field) => (

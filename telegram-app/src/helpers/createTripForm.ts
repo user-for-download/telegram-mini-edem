@@ -9,8 +9,9 @@ export type CreateTripPayload = z.infer<typeof createTripDtoSchema>;
  * Чистый хелпер ради unit-тестов инвариантов без DOM.
  */
 export interface CreateTripDraft {
-  fromName: string;
-  toName: string;
+  /** id городов справочника, не имена (решение владельца 2026-10-03). */
+  fromCityId: string;
+  toCityId: string;
   fromAddress: string;
   toAddress: string;
   /** datetime-local значение. */
@@ -100,8 +101,10 @@ export function validateCreateTripDraft(
   cities: readonly DirectoryCity[] | undefined,
   now: Date = new Date(),
 ): CreateTripValidation {
-  const fromCity = cities?.find((city) => city.name === draft.fromName);
-  const toCity = cities?.find((city) => city.name === draft.toName);
+  // Поиск по id, а не по имени: имя неоднозначно («Москва» входит в
+  // «Москва-…»), и такие города остаются в справочнике от старых прогонов.
+  const fromCity = cities?.find((city) => city.id === draft.fromCityId);
+  const toCity = cities?.find((city) => city.id === draft.toCityId);
   if (!fromCity || !toCity) {
     return {
       ok: false,

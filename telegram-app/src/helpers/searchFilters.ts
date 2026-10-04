@@ -67,8 +67,9 @@ export const PRICE_SLIDER_MAX = 3000;
 export const PRICE_SLIDER_STEP = 100;
 
 export interface SearchFormState {
-  fromCity: string;
-  toCity: string;
+  /** id городов справочника, не имена (решение владельца 2026-10-03). */
+  fromCityId: string;
+  toCityId: string;
   dateSegment: DateSegment;
   /** null — без лимита («любая цена», крайнее правое положение слайдера). */
   maxPrice: number | null;
@@ -76,8 +77,8 @@ export interface SearchFormState {
 }
 
 export const EMPTY_SEARCH_FORM: SearchFormState = {
-  fromCity: "",
-  toCity: "",
+  fromCityId: "",
+  toCityId: "",
   dateSegment: "all",
   maxPrice: null,
   tags: [],
@@ -87,10 +88,10 @@ export function buildSearchFilters(
   state: SearchFormState,
 ): SearchTripsFilters | undefined {
   const result: SearchTripsFilters = {};
-  const fromCity = state.fromCity.trim();
-  const toCity = state.toCity.trim();
-  if (fromCity) result.fromCity = fromCity;
-  if (toCity) result.toCity = toCity;
+  // По id, а не по имени: «Москва» входит в «Москва-…», и такой город есть в
+  // справочнике от старых прогонов e2e — выбор по имени не различался.
+  if (state.fromCityId) result.fromCityId = state.fromCityId;
+  if (state.toCityId) result.toCityId = state.toCityId;
   const range = dateSegmentToRange(state.dateSegment);
   if (range.dateFrom) result.dateFrom = range.dateFrom;
   if (range.dateTo) result.dateTo = range.dateTo;

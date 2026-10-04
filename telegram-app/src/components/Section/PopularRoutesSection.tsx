@@ -3,9 +3,14 @@ import { Route, ChevronRight } from "lucide-react";
 import { Cell } from "@/ui/Cell";
 import { Section } from "@/ui/Section";
 import { POPULAR_ROUTES } from "@/consts/popularRoutes";
+import { useAllCitiesQuery } from "@/queries/useAllCities";
 
 interface PopularRoutesSectionProps {
-  onSelect: (from: string, to: string) => void;
+  /**
+   * id городов справочника, не имена: дальше поиск фильтрует по id
+   * (решение владельца 2026-10-03).
+   */
+  onSelect: (fromCityId: string, toCityId: string) => void;
 }
 
 /**

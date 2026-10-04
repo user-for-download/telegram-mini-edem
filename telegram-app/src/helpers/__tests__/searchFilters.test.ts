@@ -71,6 +71,10 @@ describe("parseDateSegmentParam", () => {
   });
 });
 
+// Id справочника: форма передаёт его выбранным значением, а не именем.
+const CITY_VOLOGDA = "11111111-1111-4111-8111-111111111111";
+const CITY_CHEREPOVETSK = "22222222-2222-4222-8222-222222222222";
+
 describe("buildSearchFilters", () => {
   it("returns undefined for a pristine form (backend default feed)", () => {
     expect(buildSearchFilters(EMPTY_SEARCH_FORM)).toBeUndefined();
@@ -78,20 +82,24 @@ describe("buildSearchFilters", () => {
 
   it("combines cities, date segment, price and tags", () => {
     const filters = buildSearchFilters({
-      fromCity: "Вологда",
-      toCity: "Череповец",
+      fromCityId: CITY_VOLOGDA,
+      toCityId: CITY_CHEREPOVETSK,
       dateSegment: "today",
       maxPrice: 1500,
       tags: ["Не курить"],
     });
+    // Именно id, а не имена: имя неоднозначно («Москва» входит в «Москва-…»),
+    // и backend отдаёт подстрочную выдачу с такими совпадениями.
     expect(filters).toMatchObject({
-      fromCity: "Вологда",
-      toCity: "Череповец",
+      fromCityId: CITY_VOLOGDA,
+      toCityId: CITY_CHEREPOVETSK,
       dateFrom: filters?.dateFrom,
       dateTo: filters?.dateTo,
       maxPrice: 1500,
       tags: ["Не курить"],
     });
+    expect(filters).not.toHaveProperty("fromCity");
+    expect(filters).not.toHaveProperty("toCity");
     expect(filters?.dateFrom).toBe(filters?.dateTo);
   });
 
@@ -103,12 +111,16 @@ describe("buildSearchFilters", () => {
     expect(filters).toBeUndefined();
   });
 
-  it("trims city names", () => {
+  it("передаёт id города как есть, без обрезки и подстановки имени", () => {
+    // Раньше здесь был тест «trims city names»: имя приходило из свободного
+    // текста и требовало trim. Теперь источник — справочник, обрезать нечего,
+    // а подставлять имя рядом с id нельзя (рассинхрон).
     const filters = buildSearchFilters({
       ...EMPTY_SEARCH_FORM,
-      fromCity: "  Вологда  ",
+      fromCityId: CITY_VOLOGDA,
     });
-    expect(filters).toMatchObject({ fromCity: "Вологда" });
+    expect(filters).toMatchObject({ fromCityId: CITY_VOLOGDA });
+    expect(filters).not.toHaveProperty("fromCity");
   });
 });
 

@@ -13,8 +13,8 @@ const NOW = new Date("2026-09-12T10:00:00.000Z");
 
 function draft(overrides: Partial<CreateTripDraft> = {}): CreateTripDraft {
   return {
-    fromName: "Вологда",
-    toName: "Череповец",
+    fromCityId: CITIES[0].id,
+    toCityId: CITIES[1].id,
     fromAddress: "пл. Бабушкина, 1",
     toAddress: "пр. Победы, 1",
     date: "2026-09-13T09:00",
@@ -40,16 +40,20 @@ describe("validateCreateTripDraft", () => {
     }
   });
 
-  it("город вне справочника — отказ (свободный ввод запрещён)", () => {
+  it("город вне справочника — отказ (выбрать можно только из справочника)", () => {
+    // Неизвестный id, а не «чужое имя»: раньше поле хранило имя, и отказ
+    // ловился на попытке ввести название руками. Теперь выбрать имя вне
+    // справочника нельзя в принципе — так что проверяем именно этот случай.
+    const UNKNOWN = "99999999-9999-4999-8999-999999999999";
     expect(
-      validateCreateTripDraft(draft({ fromName: "Москва" }), [...CITIES], NOW),
+      validateCreateTripDraft(draft({ fromCityId: UNKNOWN }), [...CITIES], NOW),
     ).toEqual({
       ok: false,
       error: "Выберите города из справочника",
       field: "create-from",
     });
     expect(
-      validateCreateTripDraft(draft({ toName: "" }), [...CITIES], NOW),
+      validateCreateTripDraft(draft({ toCityId: "" }), [...CITIES], NOW),
     ).toEqual({
       ok: false,
       error: "Выберите города из справочника",
@@ -94,7 +98,7 @@ describe("validateCreateTripDraft", () => {
 
   it("тот же город туда-обратно — отказ схемы", () => {
     expect(
-      validateCreateTripDraft(draft({ toName: "Вологда" }), [...CITIES], NOW),
+      validateCreateTripDraft(draft({ toCityId: CITIES[0].id }), [...CITIES], NOW),
     ).toEqual({
       ok: false,
       error: "Города отправления и назначения совпадают",

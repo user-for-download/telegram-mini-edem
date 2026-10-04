@@ -45,15 +45,17 @@ import { useModalBack } from "@/utils/modalBack";
 import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { useInfiniteTripsQuery } from "@/queries/useTripsQuery";
+import { useAllCitiesQuery } from "@/queries/useAllCities";
+import { CitySelectField } from "@/components/CitySelect/CitySelectField";
 import type { TripTag } from "@edem/contracts";
 import styles from "./SearchPage.module.css";
 
-/** Пресет из URL (?from&to&segment) — с главной/popular-routes. */
+/** Пресет из URL (?fromCityId&toCityId&segment) — с главной/popular-routes. */
 function presetFromParams(params: URLSearchParams): SearchFormState {
   return {
     ...EMPTY_SEARCH_FORM,
-    fromCity: params.get("from") ?? "",
-    toCity: params.get("to") ?? "",
+    fromCityId: params.get("fromCityId") ?? "",
+    toCityId: params.get("toCityId") ?? "",
     dateSegment: parseDateSegmentParam(params.get("segment")),
   };
 }
@@ -105,6 +107,9 @@ export function SearchPage() {
   // уводит со страницы (тот же стек modalBack, что у state-модалок).
   useModalBack(() => setShowFilters(false), showFilters);
 
+  // Справочник для селектов города. staleTime Infinity в хуке, поэтому запрос
+  // один на приложение: главная, поиск и форма создания берут общий кэш.
+  const cities = useAllCitiesQuery();
   const trips = useInfiniteTripsQuery(buildSearchFilters(submitted));
   const items = trips.data?.pages.flatMap((page) => page.items) ?? [];
   // Сентинел автодогрузки: observer тянет следующую страницу через тот же
@@ -127,8 +132,8 @@ export function SearchPage() {
     haptic.selection();
     setForm((prev) => ({
       ...prev,
-      fromCity: prev.toCity,
-      toCity: prev.fromCity,
+      fromCityId: prev.toCityId,
+      toCityId: prev.fromCityId,
     }));
   };
 
@@ -189,45 +194,28 @@ export function SearchPage() {
             </div>
 
             <div className={styles.cityFields}>
-              <Input
+              {/* Выбор города — тот же CitySelectField, что на главной и в
+                  форме создания (решение владельца 2026-10-03). Раньше здесь
+                  был свободный текст: имя уходило в `fromCity` и backend искал
+                  по подстроке, из-за чего «Москва» матчила и «Москва-…».
+                  Теперь выбор даёт id, и уходит `fromCityId`. */}
+              <CitySelectField
                 id="search-from"
-                aria-label="Откуда"
-                before={<MapPin size={17} className={INFO} />}
-                after={
-                  form.fromCity ? (
-                    <IconButton
-                      type="button"
-                      size="s"
-                      onClick={() => set("fromCity", "")}
-                      aria-label="Очистить откуда"
-                    >
-                      <X size={14} className={HINT} />
-                    </IconButton>
-                  ) : undefined
-                }
-                value={form.fromCity}
-                onChange={(event) => set("fromCity", event.target.value)}
-                placeholder="Откуда (город или село)"
+                label="Откуда"
+                valueId={form.fromCityId}
+                cities={cities.data}
+                placeholder="Город или село отправления"
+                onChange={(next) => set("fromCityId", next)}
+                excludeId={form.toCityId}
               />
-              <Input
+              <CitySelectField
                 id="search-to"
-                aria-label="Куда"
-                before={<MapPin size={17} className={SUCCESS} />}
-                after={
-                  form.toCity ? (
-                    <IconButton
-                      type="button"
-                      size="s"
-                      onClick={() => set("toCity", "")}
-                      aria-label="Очистить куда"
-                    >
-                      <X size={14} className={HINT} />
-                    </IconButton>
-                  ) : undefined
-                }
-                value={form.toCity}
-                onChange={(event) => set("toCity", event.target.value)}
-                placeholder="Куда (город или село)"
+                label="Куда"
+                valueId={form.toCityId}
+                cities={cities.data}
+                placeholder="Город или село назначения"
+                onChange={(next) => set("toCityId", next)}
+                excludeId={form.fromCityId}
               />
               <IconButton
                 type="button"
@@ -345,7 +333,7 @@ export function SearchPage() {
                 <Button
                   size="m"
                   onClick={reset}
-                  disabled={!hasActiveFilters && !form.fromCity && !form.toCity}
+                  disabled={!hasActiveFilters && !form.fromCityId && !form.toCityId}
                 >
                   Сбросить фильтры
                 </Button>

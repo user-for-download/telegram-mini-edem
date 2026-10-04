@@ -14,8 +14,8 @@ describe("initialTripFormState", () => {
   it("начальные значения как в форме (завтра, 1 час, 500 ₽, 1 место)", () => {
     const initial = initialTripFormState();
     expect(initial).toMatchObject({
-      from: "",
-      to: "",
+      fromCityId: "",
+      toCityId: "",
       fromAddress: "",
       toAddress: "",
       durationHours: "1",
@@ -48,18 +48,21 @@ describe("tripFormReducer", () => {
   });
 
   it("swapCities меняет города и адреса парами", () => {
+    // Города — id справочника, поэтому и «Вологда» здесь стоит как CITY_A.
+    const CITY_A = "11111111-1111-4111-8111-111111111111";
+    const CITY_B = "22222222-2222-4222-8222-222222222222";
     const next = tripFormReducer(
       state({
-        from: "Вологда",
-        to: "Череповец",
+        fromCityId: CITY_A,
+        toCityId: CITY_B,
         fromAddress: "A",
         toAddress: "B",
       }),
       { type: "swapCities" },
     );
     expect(next).toMatchObject({
-      from: "Череповец",
-      to: "Вологда",
+      fromCityId: CITY_B,
+      toCityId: CITY_A,
       fromAddress: "B",
       toAddress: "A",
     });

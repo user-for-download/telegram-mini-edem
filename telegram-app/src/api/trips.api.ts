@@ -24,6 +24,8 @@ function toTripsQuery(filters?: SearchTripsFilters): string {
   if (filters?.q) query.set("q", filters.q);
   if (filters?.fromCity) query.set("fromCity", filters.fromCity);
   if (filters?.toCity) query.set("toCity", filters.toCity);
+  if (filters?.fromCityId) query.set("fromCityId", filters.fromCityId);
+  if (filters?.toCityId) query.set("toCityId", filters.toCityId);
   if (filters?.dateFrom) query.set("dateFrom", filters.dateFrom);
   if (filters?.dateTo) query.set("dateTo", filters.dateTo);
   if (filters?.maxPrice !== undefined) query.set("maxPrice", String(filters.maxPrice));

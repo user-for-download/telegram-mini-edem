@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MutationError } from "@/components/MutationError";
-import { CityPickerField } from "@/components/CityPicker/CityPickerField";
+import { CitySelectField } from "@/components/CitySelect/CitySelectField";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
@@ -99,8 +99,8 @@ export function CreateTripForm({
   // в useState.
   const {
     form: {
-      from,
-      to,
+      fromCityId,
+      toCityId,
       fromAddress,
       toAddress,
       date,
@@ -267,30 +267,35 @@ export function CreateTripForm({
         <Section header="Маршрут">
           <SectionBody>
             <div className={styles.cityFields}>
-              <CityPickerField
+              {/* Тот же CitySelectField, что на главной и в поище: выбор города
+                  по всему приложению один (решение владельца 2026-10-03).
+                  Китовский Multiselect отсюда убран — у него 32 пункта без
+                  role=option/aria-selected/id (реестр #19), и он трогает
+                  document, из-за чего поле нельзя было отрендерить в тестах. */}
+              <CitySelectField
                 id="create-from"
                 label="Город отправления"
-                value={from}
+                valueId={fromCityId}
                 cities={cities.data}
-                placeholder="Откуда едем — начните вводить"
-                status={errorField === "create-from" ? "error" : undefined}
+                placeholder="Откуда едем"
                 error={errorField === "create-from" ? validationError : null}
-                onSelect={(name) => {
+                excludeId={toCityId}
+                onChange={(next) => {
                   touch();
-                  setField("from", name);
+                  setField("fromCityId", next);
                 }}
               />
-              <CityPickerField
+              <CitySelectField
                 id="create-to"
                 label="Город назначения"
-                value={to}
+                valueId={toCityId}
                 cities={cities.data}
-                placeholder="Куда едем — начните вводить"
-                status={errorField === "create-to" ? "error" : undefined}
+                placeholder="Куда едем"
                 error={errorField === "create-to" ? validationError : null}
-                onSelect={(name) => {
+                excludeId={fromCityId}
+                onChange={(next) => {
                   touch();
-                  setField("to", name);
+                  setField("toCityId", next);
                 }}
               />
               <IconButton

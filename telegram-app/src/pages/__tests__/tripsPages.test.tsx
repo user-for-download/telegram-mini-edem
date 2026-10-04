@@ -219,12 +219,22 @@ describe("TripPage parity", () => {
   });
 });
 
+// Справочник для селектов: id как в БД, имена видимы в тексте опций.
+const VOL = "11111111-1111-4111-8111-111111111111";
+const CHE = "22222222-2222-4222-8222-222222222222";
+const CITIES = [
+  { id: VOL, name: "Вологда" },
+  { id: CHE, name: "Череповец" },
+];
+
 describe("SearchPage parity", () => {
   it("exposes city inputs, date segments and filter entry", () => {
     mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
     const html = render(<SearchPage />);
-    expect(html).toContain("Откуда (город или село)");
-    expect(html).toContain("Куда (город или село)");
+    // Плейсхолдер селекта (свободного текста здесь больше нет — город
+    // выбирается из справочника, решение владельца 2026-10-03).
+    expect(html).toContain("Город или село отправления");
+    expect(html).toContain("Город или село назначения");
     expect(html).toContain("Все даты");
     expect(html).toContain("Сегодня");
     expect(html).toContain("Завтра");
@@ -236,12 +246,14 @@ describe("SearchPage parity", () => {
 
   it("applies a city preset from the URL", () => {
     mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
+    mockUseAllCities.mockReturnValue(queryState({ data: CITIES }));
     const html = render(
       <SearchPage />,
-      "/trips?from=Вологда&to=Череповец&segment=today",
+      `/trips?fromCityId=${VOL}&toCityId=${CHE}&segment=today`,
     );
-    expect(html).toContain("Вологда");
-    expect(html).toContain("Череповец");
+    // Пресет выбирает ОПЦИЮ по id: значение селекта = id, текст опции = имя.
+    expect(html).toContain(`value="${VOL}" selected`);
+    expect(html).toContain(`value="${CHE}" selected`);
   });
 });
 

@@ -27,11 +27,14 @@ export function HomePage() {
   const [pendingCreate, setPendingCreate] = useState(false);
   useModalBack(() => setVehicleOpen(false), vehicleOpen);
 
-  const goToSearch = (from?: string, to?: string) => {
+  // id городов, не имена (решение владельца 2026-10-03): параметры renamed в
+  // fromCityId/toCityId, потому что поиск фильтрует по справочнику, а имя
+  // неоднозначно («Москва» входит в «Москва-…»).
+  const goToSearch = (fromCityId?: string, toCityId?: string) => {
     haptic.light();
     const params = new URLSearchParams();
-    if (from?.trim()) params.set("from", from.trim());
-    if (to?.trim()) params.set("to", to.trim());
+    if (fromCityId) params.set("fromCityId", fromCityId);
+    if (toCityId) params.set("toCityId", toCityId);
     const query = params.toString();
     navigate(query ? `/trips?${query}` : "/trips");
   };

@@ -58,8 +58,15 @@ export type CreateTripDto = z.infer<typeof createTripDtoSchema>;
 export const tripFiltersDtoSchema = z.object({
   // Полнотекстовый поиск по городам/адресам (backend: trips GET /).
   q: z.string().max(100).optional(),
+  // Подстрочный фильтр по имени — остаётся для случая «город ещё не выбран».
   fromCity: z.string().optional(),
   toCity: z.string().optional(),
+  // Точный фильтр по справочнику (решение владельца 2026-10-03). Выбор города
+  // на всех поверхностях отдаёт id, поэтому поиск фильтрует по нему: имя
+  // неоднозначно («Москва» входит в «Москва-…», такие города остаются в
+  // справочнике от старых прогонов e2e). При обоих параметрах приоритет у id.
+  fromCityId: z.string().uuid().optional(),
+  toCityId: z.string().uuid().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   tags: z.array(tripTagSchema).optional(),
