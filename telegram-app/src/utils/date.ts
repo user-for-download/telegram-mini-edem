@@ -133,6 +133,23 @@ export function moscowDateLabel(date: Date, withYear: boolean): string {
 }
 
 /**
+ * Контекст московского дня относительно now: сегодня ли и тот же ли год.
+ * Один расчёт для «времени поездки» и «времени уведомления» — раньше это
+ * дублировалось в двух форматтерах NotificationsPage.
+ */
+export function moscowDayContext(
+  date: Date,
+  now: Date = new Date(),
+): { isToday: boolean; sameYear: boolean } {
+  const dayKey = moscowDayKey(date);
+  const todayKey = moscowDayKey(now);
+  return {
+    isToday: dayKey === todayKey,
+    sameYear: dayKey.slice(0, 4) === todayKey.slice(0, 4),
+  };
+}
+
+/**
  * ISO-момент → «30 сентября, 18:30» в московском времени. Невалидный
  * ввод — «—». Для сущностей без своих date/time-полей (запросы попуток):
  * сырой ISO в UI не показываем.

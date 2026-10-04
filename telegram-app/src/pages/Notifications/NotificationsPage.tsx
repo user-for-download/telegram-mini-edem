@@ -18,7 +18,7 @@ import { CheckCheck, ChevronRight } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
-import { moscowDateLabel, moscowDayKey, moscowTimeLabel } from "@/utils/date";
+import { moscowDateLabel, moscowDayContext, moscowTimeLabel } from "@/utils/date";
 import {
   NotificationCardSkeleton,
   NotificationCardsSkeleton,
@@ -127,19 +127,17 @@ export function formatTripDetail(input: {
   if (input.departureAt) {
     const date = new Date(input.departureAt);
     if (!Number.isNaN(date.getTime())) {
-      // Время поездок — по Москве (moscowDayKey/moscowTimeLabel из
+      // Время поездок — по Москве (moscowDayContext/moscowTimeLabel из
       // utils/date), как в карточках поездок. Раньше здесь стояли
       // toLocale*("ru-RU") без timeZone, то есть зона УСТРОЙСТВА: у
       // клиента в Лос-Анджелесе «18:00 МСК» показывалось как «08:00».
       // Сравнение дней — тоже по московским ключам, иначе «сегодня»
       // считалось по местному календарю.
       const time = moscowTimeLabel(date);
-      const dayKey = moscowDayKey(date);
-      const todayKey = moscowDayKey(new Date());
-      if (dayKey === todayKey) {
+      const { isToday, sameYear } = moscowDayContext(date);
+      if (isToday) {
         parts.push(time);
       } else {
-        const sameYear = dayKey.slice(0, 4) === todayKey.slice(0, 4);
         parts.push(`${moscowDateLabel(date, !sameYear)}, ${time}`);
       }
     }
@@ -187,12 +185,10 @@ export function formatNotifTime(createdAt: string): string {
   // в уведомлении и в карточке одна и та же минута показывалась разными
   // часами у клиента не в московской зоне.
   const now = new Date();
-  const dayKey = moscowDayKey(date);
-  const todayKey = moscowDayKey(now);
-  if (dayKey === todayKey) {
+  const { isToday, sameYear } = moscowDayContext(date, now);
+  if (isToday) {
     return moscowTimeLabel(date);
   }
-  const sameYear = dayKey.slice(0, 4) === todayKey.slice(0, 4);
   return moscowDateLabel(date, !sameYear);
 }
 

@@ -28,6 +28,7 @@ import { miniApp, useSignal } from "@tma.js/sdk-react";
 import { useNavigate } from "react-router-dom";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { QueryState } from "@/components/QueryState";
+import { MutationError } from "@/components/MutationError";
 import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
 import { FeedbackModal } from "@/components/Profile/FeedbackModal";
 import { Page } from "@/ui/Page";
@@ -489,13 +490,10 @@ export function ProfilePage() {
                       пользователь не знал почему (замер 2026-10-02: PATCH 500 →
                       role=alert пуст, текста ошибки на экране нет). Ошибка удаления
                       профиля в «Опасной зоне» рендерилась, эта — нет. */}
-                  {saveNotifications.error && (
-                    <Notice tone="danger" variant="text">
-                      {saveNotifications.error instanceof Error
-                        ? saveNotifications.error.message
-                        : "Не удалось сохранить настройки уведомлений"}
-                    </Notice>
-                  )}
+                  <MutationError
+                    error={saveNotifications.error}
+                    fallback="Не удалось сохранить настройки уведомлений"
+                  />
                   <SwitchRow
                     label="Уведомления"
                     icon={
@@ -558,13 +556,10 @@ export function ProfilePage() {
                   header="Опасная зона"
                   footer="Ваши активные поездки завершатся (ожидающие заявки отклонятся, подтверждённые останутся историей), ваши брони на чужих поездках и заявки на поездку отменятся. Восстановление невозможно."
                 >
-                  {remove.error && (
-                    <Notice tone="danger" variant="text">
-                      {remove.error instanceof Error
-                        ? remove.error.message
-                        : "Не удалось удалить профиль"}
-                    </Notice>
-                  )}
+                  <MutationError
+                    error={remove.error}
+                    fallback="Не удалось удалить профиль"
+                  />
                   <ConfirmPopup
                     label="Удалить профиль"
                     confirmLabel="Удалить окончательно"

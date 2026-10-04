@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * Стек BackButton-хендлеров для state-модалок (паттерн useTelegramBackButton
@@ -30,8 +30,16 @@ export function handleModalBack(): boolean {
 
 /** Подписка модалки на BackButton пока она открыта. */
 export function useModalBack(onBack: () => void, enabled = true): void {
+  // Свежий колбэк держим в ref, а подписку заводим один раз по `enabled`:
+  // иначе инлайн-стрелка на каждом рендере пере-регистрировала хендлер
+  // (splice+push), и уже открытая модалка каждый рендер всплывала в вершину
+  // стека — поверх той, что открыли позже.
+  const onBackRef = useRef(onBack);
+  useEffect(() => {
+    onBackRef.current = onBack;
+  });
   useEffect(() => {
     if (!enabled) return;
-    return pushModalBackHandler(onBack);
-  }, [onBack, enabled]);
+    return pushModalBackHandler(() => onBackRef.current());
+  }, [enabled]);
 }
