@@ -21,6 +21,7 @@ import {
   api,
   checkPrereqs,
   cleanupRun,
+  restoreDevStand,
   reviveDevUser,
   createHarness,
   ensureShotsDir,
@@ -508,6 +509,13 @@ await shot(page, "notification-read");
     await cleanupRun({ tripIds: [tripId, peerTripId], peerUserId, feedbackTexts: [FEEDBACK_TEXT] });
     deleteCities();
     console.log("🧹 cleanup ok");
+    // Стенд восстанавливаем ПОСЛЕ уборки прогона, а не до: сид делает полный
+    // сброс с пересборкой и вернул бы только что вычищенное обратно. Шаг
+    // удаления профиля стирает уведомления u-dev (DELETE /me чистит их по
+    // контракту), а reviveDevUser() чинит только строку пользователя — без
+    // сида после прогона у дев-юзера оставалось 0 уведомлений вместо 9.
+    restoreDevStand();
+    console.log("🌱 стенд восстановлен сидом");
   } catch (e) {
     console.error(`⛔ Cleanup failed: ${e.message}`);
     process.exitCode = 2;

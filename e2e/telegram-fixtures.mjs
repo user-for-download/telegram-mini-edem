@@ -157,6 +157,32 @@ export function psql(query) {
   ).trim();
 }
 
+/**
+ * Полное восстановление dev-стенда сидом.
+ *
+ * ЗАЧЕМ. Шаг `delete: удаление профиля` в telegram-parity проверяет
+ * `DELETE /me` на UI, а это НАСТОЯЩЕЕ удаление: backend по контракту чистит
+ * уведомления пользователя (users/index.ts:187 — deleteMany по userId),
+ * профиль и всё, что к нему привязано. Прогон идёт под u-dev, поэтому после
+ * него у дев-юзера оставалось 0 уведомлений вместо 9 сидовых — стенд «съедал
+ * сам себя», и следующий прогон начинал с неполных данных.
+ *
+ * reviveDevUser() чинит только строку пользователя (deletedAt/bannedAt/
+ * onboardingVersion): уведомления он не возвращает, а сид — полный сброс с
+ * пересборкой. Ставится в finally рядом с cleanupRun, чтобы СТЕHНД ПОСЛЕ
+ * ПРОГОНА БЫЛ ЦЕЛЫМ, а не только починенным наполовину.
+ *
+ * Сид идемпотентен по смыслу: он делает deleteMany + пересборку, поэтому
+ * повторный вызов безвреден.
+ */
+export function restoreDevStand() {
+  execFileSync("npm", ["run", "db:seed"], {
+    cwd: new URL("../backend", import.meta.url).pathname,
+    encoding: "utf-8",
+    stdio: "pipe",
+  });
+}
+
 export function checkPrereqs() {
   try {
     const out = psql("SELECT 1");
