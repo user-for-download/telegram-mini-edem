@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Input,
   SegmentedControl,
   Slider,
   Caption,
@@ -13,14 +12,12 @@ import { IconButton } from "@/ui/IconButton";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { FetchMore } from "@/ui/FetchMore";
-import { BTN_ROW_WRAP, HINT, INFO, SUCCESS } from "@/ui/classes";
+import { BTN_ROW_WRAP, INFO } from "@/ui/classes";
 
 import {
   ArrowRightLeft,
   Filter,
-  MapPin,
   Search as SearchIcon,
-  X,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";

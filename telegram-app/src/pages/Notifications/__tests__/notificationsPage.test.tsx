@@ -33,7 +33,6 @@ import {
   formatNotifTime,
   formatNotificationWho,
   formatTripDetail,
-  isCriticalNotification,
   normalizeNotifSegment,
   notificationActionLabel,
   notificationRoute,
@@ -120,15 +119,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("notificationRoute / isCriticalNotification (контракт parity)", () => {
-  it("критичные типы из notification.service.ts", () => {
-    expect(isCriticalNotification("booking_status_changed")).toBe(true);
-    expect(isCriticalNotification("trip_cancelled")).toBe(true);
-    expect(isCriticalNotification("trip_status_changed")).toBe(true);
-    expect(isCriticalNotification("booking_created")).toBe(false);
-    expect(isCriticalNotification("feedback_replied")).toBe(false);
-  });
-
+describe("notificationRoute (контракт parity)", () => {
   it("deep-links известных событий ведут на существующие TG-маршруты", () => {
     expect(notificationRoute("booking_status_changed")).toBe("/bookings");
     expect(notificationRoute("trip_cancelled")).toBe("/bookings");

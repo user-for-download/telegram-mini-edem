@@ -153,9 +153,7 @@ export function useTripForm() {
   return {
     form,
     draft,
-    initial,
     isDirty,
-    dispatch,
     setField,
     swapCities: () => dispatch({ type: "swapCities" }),
     toggleTag: (tag: TripTag) => dispatch({ type: "toggleTag", tag }),

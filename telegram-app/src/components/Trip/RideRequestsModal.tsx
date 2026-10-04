@@ -2,14 +2,14 @@ import { memo } from "react";
 import { useState } from "react";
 import { Caption, Input, Text } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
-import { BTN_ROW, BTN_ROW_WRAP, HINT, INFO, MIN_TARGET, SUCCESS, TRUNCATE } from "@/ui/classes";
+import { BTN_ROW, BTN_ROW_WRAP, HINT, MIN_TARGET, TRUNCATE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
 
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { CitySelectField } from "@/components/CitySelect/CitySelectField";
-import { Calendar, MapPin, Users } from "lucide-react";
+import { Calendar, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
 import { EMPTY_STATES } from "@/ui/emptyStates";

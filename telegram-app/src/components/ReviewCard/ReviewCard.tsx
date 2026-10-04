@@ -9,7 +9,7 @@ import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill"
 import styles from "./ReviewCard.module.css";
 
 /** Подпись и тон статус-пилюли — только для непубличных отзывов. */
-export function reviewStatusBadge(
+function reviewStatusBadge(
   status: Review["status"],
 ): { label: string; tone: StatusTone } | null {
   switch (status) {

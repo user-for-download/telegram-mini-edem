@@ -36,6 +36,7 @@ import { Section } from "@/ui/Section";
 import { Stack } from "@/ui/Stack";
 import { FetchMore } from "@/ui/FetchMore";
 import { Notice } from "@/ui/Notice";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 import { GROW, HINT, INFO, PROSE_TEXT, TRUNCATE } from "@/ui/classes";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { ACCOUNT_DELETED_MESSAGE, ApiError } from "@/api/client";
@@ -293,7 +294,7 @@ export function ProfilePage() {
         loading={profile.isLoading}
         error={profile.error}
         empty={!profile.data}
-        emptyText="Не удалось загрузить профиль."
+        emptyText={EMPTY_STATES.profileEmpty.description}
         onRetry={() => void profile.refetch()}
       >
         {profile.data && (
@@ -386,6 +387,7 @@ export function ProfilePage() {
             <div
               role="tablist"
               aria-label="Разделы профиля"
+              tabIndex={-1}
               onKeyDown={onSubtabKeyDown}
             >
               <SegmentedControl>
@@ -594,7 +596,7 @@ export function ProfilePage() {
                   loading={aboutReviews.isLoading}
                   error={aboutReviews.error}
                   empty={aboutItems.length === 0}
-                  emptyText="После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь."
+                  emptyText={EMPTY_STATES.profileReviewsEmpty.description}
                   onRetry={() => void aboutReviews.refetch()}
                 >
                   <Stack>

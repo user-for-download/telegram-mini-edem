@@ -46,11 +46,6 @@ function readPlatform(): PlatformChoice | null {
   }
 }
 
-/** Dev-оверрайд платформы (null — следовать за клиентом). */
-export function getDevPlatform(): PlatformChoice | null {
-  return readPlatform();
-}
-
 export function setDevPlatform(value: PlatformChoice | null): void {
   try {
     if (typeof localStorage === "undefined") return;

@@ -28,10 +28,7 @@ import { SectionBody } from "@/ui/SectionBody";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { ApiError } from "@/api/client";
-import {
-  CRITICAL_NOTIFICATION_TYPES,
-  type Notification,
-} from "@edem/contracts";
+import { type Notification } from "@edem/contracts";
 import styles from "./NotificationsPage.module.css";
 import {
   useMarkAllNotificationsReadMutation,
@@ -39,17 +36,6 @@ import {
   useNotificationsInboxQuery,
   useUnreadCountQuery,
 } from "@/queries/useNotificationsQuery";
-
-/**
- * Критичные типы — единый источник CRITICAL_NOTIFICATION_TYPES
- * из @edem/contracts (там же backend и тесты контракта).
- * Реэкспорт для существующих импортов страницы/тестов.
- */
-export { CRITICAL_NOTIFICATION_TYPES };
-
-export function isCriticalNotification(type: string): boolean {
-  return CRITICAL_NOTIFICATION_TYPES.has(type);
-}
 
 /**
  * Fallback-карта маршрута по типу уведомления.
@@ -60,7 +46,7 @@ export function isCriticalNotification(type: string): boolean {
  * разделов: per-entity id в самой карте не выводится.
  * Неизвестные типы — без ссылки (честно null, не выдуманный маршрут).
  */
-export const NOTIFICATION_ROUTES: Readonly<Record<string, string>> = {
+const NOTIFICATION_ROUTES: Readonly<Record<string, string>> = {
   booking_created: "/bookings?segment=requests",
   booking_status_changed: "/bookings",
   trip_cancelled: "/bookings",
@@ -94,7 +80,7 @@ export function notificationTarget(notification: {
  * в `Notification.action`). Неизвестный/пустой код — null, строка
  * скрывается (легаси-записи без кода).
  */
-export const NOTIFICATION_ACTION_LABELS: Readonly<Record<string, string>> = {
+const NOTIFICATION_ACTION_LABELS: Readonly<Record<string, string>> = {
   created: "отправил заявку",
   confirmed: "подтвердил",
   declined: "отклонил",
@@ -345,8 +331,7 @@ export function NotificationsPage() {
     () => inbox.data?.pages.flatMap((page) => page.items) ?? [],
     [inbox.data],
   );
-  const visibleItems = items;
-const counter = useUnreadCountQuery();
+  const counter = useUnreadCountQuery();
   // Счётчик «Прочитать все» — ТОЛЬКО авторитетный unread-count: он один
   // для всех сегментов, тогда как inbox отдаётся с фильтром (?role=/
   // unreadOnly) и pages[0].unreadCount считает непрочитанные только
@@ -488,7 +473,7 @@ const counter = useUnreadCountQuery();
             </div>
           </div>
 
-          {visibleItems.length === 0 ? (
+          {items.length === 0 ? (
             <Section>
               <SectionBody>
                 <EmptyState
@@ -499,7 +484,7 @@ const counter = useUnreadCountQuery();
             </Section>
           ) : (
             <Section>
-              {visibleItems.map((notification) => (
+              {items.map((notification) => (
                 <NotificationCell
                   key={notification.id}
                   notification={notification}
@@ -514,7 +499,7 @@ const counter = useUnreadCountQuery();
           {/* M1: конец ленты — по hasNextPage, а не по видимым: иначе пустой
               сегмент при непрочитанных на следующих страницах — тупик без
               кнопки и без сентинела автодогрузки. */}
-          {(visibleItems.length > 0 || inbox.hasNextPage) && (
+          {(items.length > 0 || inbox.hasNextPage) && (
             <FetchMore
               hasNextPage={inbox.hasNextPage}
               isFetchingNextPage={inbox.isFetchingNextPage}
