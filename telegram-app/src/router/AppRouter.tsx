@@ -32,7 +32,7 @@ import { TripRequestsRoute } from "@/components/Trip/TripRequestsModal";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { EditProfileRoute } from "@/components/Profile/EditProfileModal";
 import { useUnreadCountQuery } from "@/queries/useNotificationsQuery";
-import { ReviewsRoute } from "@/components/Profile/ReviewsModal";
+import { ReviewsPage } from "@/pages/Reviews/ReviewsPage";
 import { SettingsRoute } from "@/components/Profile/SettingsModal";
 import { SupportPage } from "@/pages/Support/SupportPage";
 import { ReportsPage } from "@/pages/Reports/ReportsPage";
@@ -64,6 +64,7 @@ const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
   [(p) => p.startsWith("/profile/edit"), "Редактирование профиля"],
   [(p) => p.startsWith("/profile/support"), "Поддержка"],
   [(p) => p.startsWith("/profile/reports"), "Мои обращения"],
+  [(p) => p.startsWith("/reviews"), "Отзывы"],
   [(p) => p.startsWith("/profile"), "Профиль"],
 ];
 
@@ -203,7 +204,7 @@ export function AppRouter() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/history" element={<TripHistoryPage />} />
           <Route path="/profile/edit" element={<EditProfileRoute />} />
-          <Route path="/reviews" element={<ReviewsRoute />} />
+          <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/settings" element={<SettingsRoute />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile/support" element={<SupportPage />} />

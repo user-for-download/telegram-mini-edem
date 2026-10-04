@@ -1,11 +1,10 @@
-import { useMemo, type KeyboardEvent, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Avatar,
   Badge,
   Caption,
   Headline,
   IconContainer,
-  SegmentedControl,
   Switch,
   Text,
   VisuallyHidden,
@@ -29,25 +28,20 @@ import { useNavigate } from "react-router-dom";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { QueryState } from "@/components/QueryState";
 import { MutationError } from "@/components/MutationError";
-import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
 import { FeedbackModal } from "@/components/Profile/FeedbackModal";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
 import { Section } from "@/ui/Section";
 import { Stack } from "@/ui/Stack";
-import { FetchMore } from "@/ui/FetchMore";
-import { Notice } from "@/ui/Notice";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { GROW, HINT, INFO, PROSE_TEXT, TRUNCATE } from "@/ui/classes";
+import { GROW, INFO, PROSE_TEXT, TRUNCATE } from "@/ui/classes";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { ACCOUNT_DELETED_MESSAGE, ApiError } from "@/api/client";
-import { useAuthStore } from "@/store/useAuthStore";
 import {
   useDeleteAccountMutation,
   useProfileNotificationSettingsMutation,
   useProfileQuery,
 } from "@/queries/profile";
-import { useUserReviewsInfiniteQuery } from "@/queries/useReviewsQuery";
 import {
   setSoundEnabled,
   setThemeOverride,
@@ -61,34 +55,7 @@ import styles from "./ProfilePage.module.css";
  * ellipsis-рецепт — канонный TRUNCATE из @/ui/classes, block — локальный. */
 const TRUNCATE_BLOCK = `${TRUNCATE} ${styles.truncateBlock}`;
 
-type ProfileSubtab = "settings" | "reviews";
 
-/**
- * Связка `tab` ↔ `tabpanel` для субтабов профиля (реестр B5).
- *
- * Замер 2026-10-02: на странице было 2 `role="tab"`, но ни одного
- * `role="tabpanel"`, и ни у одного таба не было `aria-controls` — то есть
- * роли объявляли переключение, а панели под ними не существовало для
- * скринридера. Расхождение с ARIA APG: таб без панели бессмысленен.
- *
- * Стабильные id обязательны: без них связь «я управляю вот этой панелью»
- * не выражается, а сгенерированные id менялись бы между рендерами.
- *
- * `aria-controls` вешаем ТОЛЬКО на выбранный таб: панели рендерятся условно,
- * и у невыбранного таба просто нет панели — ссылаться на несуществующий id
- * было бы враньём (проверено: `document.getElementById` давал null на
- * невыбранном табе). Отрисовывать обе панели с `hidden` ради полноты APG
- * не стали: это заставило бы грузить отзывы при открытых настройках.
- */
-const SUBTAB_IDS: Record<ProfileSubtab, string> = {
-  settings: "profile-subtab-settings",
-  reviews: "profile-subtab-reviews",
-};
-
-const SUBTAB_PANEL_IDS: Record<ProfileSubtab, string> = {
-  settings: "profile-subtab-panel-settings",
-  reviews: "profile-subtab-panel-reviews",
-};
 
 /**
  * Каскад удаления аккаунта — юридический текст в одном месте.
@@ -192,7 +159,12 @@ function SwitchRow({
 
 /**
  * Профиль Telegram-пользователя (язык ProfileTab примера): header-карточка
- * с рейтингом и статистикой, субтабы «Настройки и авто» / «Отзывы».
+ * с рейтингом и статистикой и плоский список секций-разделов.
+ *
+ * Отзывов здесь больше нет: они уехали в отдельную страницу `/reviews`
+ * (`pages/Reviews/ReviewsPage.tsx`) и открываются пунктом меню. До этого
+ * экран держал субтабы «Настройки и авто / «Отзывы», а список «Обо мне»
+ * дублировался ещё и в edge-шторке /reviews.
  *
  * Просмотр/редактирование имени и «О себе», переходы в разделы,
  * удаление аккаунта каскадом через ConfirmPopup (нативный алерт клиента).
@@ -204,7 +176,6 @@ function SwitchRow({
  */
 export function ProfilePage() {
   const navigate = useNavigate();
-  const me = useAuthStore((state) => state.user);
   const profile = useProfileQuery();
   const remove = useDeleteAccountMutation();
   const saveNotifications = useProfileNotificationSettingsMutation();
@@ -229,18 +200,10 @@ export function ProfilePage() {
       },
     });
   };
-  const aboutReviews = useUserReviewsInfiniteQuery(me?.id ?? "", 20);
-
-  const [subtab, setSubtab] = useState<ProfileSubtab>("settings");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   // State-модалка перехватывает Back первой (стек modalBack в Shell).
   useModalBack(() => setFeedbackOpen(false), feedbackOpen);
-
-  const aboutItems = useMemo(
-    () => aboutReviews.data?.pages.flatMap((page) => page.items) ?? [],
-    [aboutReviews.data],
-  );
 
   // Удаление — через ConfirmPopup (нативный алерт клиента):
   // нативный window.confirm ненадёжен в Telegram WebView.
@@ -261,46 +224,6 @@ export function ProfilePage() {
       />
     );
   }
-
-  const pickSubtab = (next: ProfileSubtab) => {
-    if (next === subtab) return;
-    haptic.selection();
-    setSubtab(next);
-  };
-
-  /**
-   * Стрелки/Home/End по табам (ARIA APG, автоматическая активация).
-   *
-   * Замер 2026-10-03: keydown до кнопки доходил (`ArrowRight@BUTTON` в логе),
-   * но NOTHING его не обрабатывал — ArrowRight/ArrowDown/Home/End не меняли
-   * выбранный таб. Табы при этом фокусируются Tab'ом и активируются
-   * Enter/Space (нативная кнопка), то есть страница не была непроходимой
-   * для клавиатуры — но паттерн APG требует стрелки, и без них переключение
-   * «на глазок» вслепую: скринридер объявляет «выбран вкладка 1 из 2», а
-   * перейти к содержимому второй можно только Tab'ом через всю страницу.
-   */
-  const onSubtabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const order: ProfileSubtab[] = ["settings", "reviews"];
-    const current = order.indexOf(subtab);
-    let next: ProfileSubtab | undefined;
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      next = order[(current + 1) % order.length];
-    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      next = order[(current - 1 + order.length) % order.length];
-    } else if (event.key === "Home") {
-      next = order[0];
-    } else if (event.key === "End") {
-      next = order[order.length - 1];
-    } else {
-      return;
-    }
-    if (!next) return;
-    event.preventDefault();
-    pickSubtab(next);
-    // Фокус переезжает на новый таб: без этого стрелка меняла выделение, но
-    // фокус оставался на старом, и следующий Tab уходил из списка.
-    document.getElementById(SUBTAB_IDS[next])?.focus();
-  };
 
   return (
     <>
@@ -382,62 +305,20 @@ export function ProfilePage() {
                   </div>
                 </div>
 
-                {subtab === "settings" && (
-                  <Button
-                    stretched
-                    size="s"
-                    onClick={() => {
-                      haptic.light();
-                      navigate("/profile/edit");
-                    }}
-                  >
-                    Редактировать профиль
-                  </Button>
-                )}
+                <Button
+                  stretched
+                  size="s"
+                  onClick={() => {
+                    haptic.light();
+                    navigate("/profile/edit");
+                  }}
+                >
+                  Редактировать профиль
+                </Button>
               </SectionBody>
             </Section>
 
-            {/* Субтабы: Настройки и авто / Отзывы */}
-            <div
-              role="tablist"
-              aria-label="Разделы профиля"
-              tabIndex={-1}
-              onKeyDown={onSubtabKeyDown}
-            >
-              <SegmentedControl>
-                <SegmentedControl.Item
-                  role="tab"
-                  id={SUBTAB_IDS.settings}
-                  aria-controls={
-                    subtab === "settings" ? SUBTAB_PANEL_IDS.settings : undefined
-                  }
-                  selected={subtab === "settings"}
-                  aria-selected={subtab === "settings"}
-                  onClick={() => pickSubtab("settings")}
-                >
-                  Настройки и авто
-                </SegmentedControl.Item>
-                <SegmentedControl.Item
-                  role="tab"
-                  id={SUBTAB_IDS.reviews}
-                  aria-controls={
-                    subtab === "reviews" ? SUBTAB_PANEL_IDS.reviews : undefined
-                  }
-                  selected={subtab === "reviews"}
-                  aria-selected={subtab === "reviews"}
-                  onClick={() => pickSubtab("reviews")}
-                >
-                  {`Отзывы (${profile.data.reviewsCount})`}
-                </SegmentedControl.Item>
-              </SegmentedControl>
-            </div>
-
-            {subtab === "settings" ? (
-              <Stack
-                role="tabpanel"
-                id={SUBTAB_PANEL_IDS.settings}
-                aria-labelledby={SUBTAB_IDS.settings}
-              >
+            <Stack>
                 <Section header="Мои поездки">
                   <MenuRow
                     label="История поездок"
@@ -451,6 +332,24 @@ export function ProfilePage() {
                     onClick={() => {
                       haptic.light();
                       navigate("/profile/history");
+                    }}
+                  />
+                  {/* Отзывы — отдельная страница /reviews (свои вкладки
+                      «Мои / Новая / Обо мне»). Раньше они были второй
+                      вкладкой прямо здесь, а ещё и внутри шторки /reviews —
+                      один и тот же список показывался дважды. */}
+                  <MenuRow
+                    label="Отзывы"
+                    icon={
+                      <IconContainer>
+                        <Star size={18} />
+                      </IconContainer>
+                    }
+                    title="Отзывы"
+                    subtitle={`Мои отзывы и отзывы обо мне · ${profile.data.reviewsCount}`}
+                    onClick={() => {
+                      haptic.light();
+                      navigate("/reviews");
                     }}
                   />
                 </Section>
@@ -585,41 +484,6 @@ export function ProfilePage() {
                   />
                 </Section>
               </Stack>
-            ) : (
-              <Stack
-                role="tabpanel"
-                id={SUBTAB_PANEL_IDS.reviews}
-                aria-labelledby={SUBTAB_IDS.reviews}
-              >
-                <Notice variant="banner" tone="info">
-                  <span className={HINT}>
-                    Все отзывы проходят пре-модерацию
-                  </span>
-                  <Button size="s" onClick={() => navigate("/reviews")}>
-                    Оставить отзыв
-                  </Button>
-                </Notice>
-
-                <QueryState
-                  loading={aboutReviews.isLoading}
-                  error={aboutReviews.error}
-                  empty={aboutItems.length === 0}
-                  emptyText={EMPTY_STATES.profileReviewsEmpty.description}
-                  onRetry={() => void aboutReviews.refetch()}
-                >
-                  <Stack>
-                    {aboutItems.map((review) => (
-                      <ReviewCard key={review.id} review={review} />
-                    ))}
-                    <FetchMore
-                      hasNextPage={aboutReviews.hasNextPage}
-                      isFetchingNextPage={aboutReviews.isFetchingNextPage}
-                      fetchNextPage={() => void aboutReviews.fetchNextPage()}
-                    />
-                  </Stack>
-                </QueryState>
-              </Stack>
-            )}
           </Page>
         )}
       </QueryState>

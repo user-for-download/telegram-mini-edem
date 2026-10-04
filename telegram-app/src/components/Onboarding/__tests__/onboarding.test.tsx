@@ -1,6 +1,6 @@
 // SSR-тесты Onboarding (экран согласия первого входа): ветки
 // user=null / версия актуальна (дети сквозняком) / версия устарела
-// (приветствие + кнопки, детей нет). Паттерн reviewsModal.test.tsx
+// (приветствие + кнопки, детей нет). Паттерн ReviewsPage.test.tsx
 // (SSR renderToString, без testing-library): auth-пользователь отдаётся
 // моком useAuthStore напрямую — серверный снапшот zustand начальный.
 import { beforeEach, describe, expect, it, vi } from "vitest";

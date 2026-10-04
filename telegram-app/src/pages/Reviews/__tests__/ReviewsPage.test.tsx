@@ -1,7 +1,8 @@
-// SSR-тесты ReviewsBody (route-backed ReviewsModal): Modal — портал и в
-// renderToString не попадает, поэтому тестируется экспортированное тело.
+// SSR-тесты страницы отзывов: тестируется экспортированное ReviewsBody.
 // Паттерн pages/__tests__/reviewsPage.test.tsx (SSR, без testing-library):
 // хуки данных мокаются через vi.hoisted + фабрики vi.mock.
+// Файл переехал из components/Profile/__tests__/reviewsModal.test.tsx,
+// когда /reviews стал страницей вместо edge-шторки (ReviewsModal).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
@@ -56,7 +57,7 @@ vi.mock("@/store/useAuthStore", () => ({
   ),
 }));
 
-import { ReviewsBody, type ReviewsTab } from "@/components/Profile/ReviewsModal";
+import { ReviewsBody, type ReviewsTab } from "@/pages/Reviews/ReviewsPage";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const ME = {
@@ -184,7 +185,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("ReviewsBody: вкладки без PageHeader-back (закрытие — header модалки)", () => {
+describe("ReviewsBody: три вкладки, закрытие — кнопка «Назад» NavHeader", () => {
   it("happy: три вкладки и pending+published отзывы с бейджем «На модерации»", () => {
     setQueries({
       my: {

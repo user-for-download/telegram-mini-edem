@@ -28,7 +28,6 @@ describe("EMPTY_STATES: словарь зафиксирован 1:1", () => {
         "notificationsEmpty",
         "notificationsPassengerEmpty",
         "profileEmpty",
-        "profileReviewsEmpty",
         "reportsEmpty",
         "reviewsAboutEmpty",
         "reviewsMineEmpty",
@@ -121,12 +120,11 @@ describe("EMPTY_STATES: словарь зафиксирован 1:1", () => {
     expect(EMPTY_STATES.reviewsAboutEmpty.header).toBe(
       "О вас пока нет отзывов",
     );
-    // ReviewsModal — без точки; ProfilePage — с точкой: разные записи 1:1.
+    // Ровно одна запись на экран «Обо мне»: пока отзывы жили и во вкладке
+    // ProfilePage, и в шторке /reviews, тексты отличались только точкой —
+    // после переноса отзывов в страницу запись одна.
     expect(EMPTY_STATES.reviewsAboutEmpty.description).toBe(
       "После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь",
-    );
-    expect(EMPTY_STATES.profileReviewsEmpty.description).toBe(
-      "После поездок пассажиры и водители смогут оценить вас — отзывы появятся здесь.",
     );
     expect(EMPTY_STATES.notificationsEmpty.header).toBe(
       "Пока нет уведомлений",
