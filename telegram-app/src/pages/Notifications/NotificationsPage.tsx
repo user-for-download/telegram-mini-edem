@@ -273,9 +273,19 @@ function NotificationCell({
   // время диммером снизу.
   return (
     <Cell
-      // type="button" БЕЗ Component="button": корень остаётся div (как
-      // PopularRoutesSection). Component="button" подменяет корень на
-      // нативный <button> и ломает раскладку Cell (UA-стили кнопки).
+      // Здесь div + role="button" + tabIndex СОЗНАТЕЛЬНО, в отличие от
+      // PopularRoutesSection, где это была ошибка (исправлено 2026-10-03).
+      // Две причины, и обе checked замером:
+      //   1) ниже стоит СВОЙ onKeyDown={handleKeyDown} — нативная кнопка
+      //      активировалась бы ещё и сама (Enter/Space), то есть двойной вызов;
+      //   2) утверждение «Component="button" ломает раскладку Cell (UA-стили)»
+      //      НЕ подтвердилось: сброс AS_BUTTON в ui/Cell даёт для кнопки и
+      //      div идентичный результат (16px -apple-system, appearance none,
+      //      border-box, flex, 356x80). Ложное опасение расходилось дальше
+      //      по коду и породило мышь-only строки на главной.
+      // Пока здесь div — строка фокусируется (tabIndex 0) и объявлена кнопкой;
+      // переход на нативную кнопку возможен только вместе с удалением
+      // собственного handleKeyDown.
       {...(interactive ? { type: "button" as const } : {})}
       className={styles.cell}
       titleBadge={
