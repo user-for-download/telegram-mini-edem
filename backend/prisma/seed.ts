@@ -1,4 +1,6 @@
 // backend/prisma/seed.ts
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { MAX_SEATS, tripTagSchema } from "@edem/contracts";
 import { config as loadEnv } from "dotenv";
@@ -582,11 +584,52 @@ const users: SeedUser[] = [
     tripsCount: 3,
     tgChatJoinedAtDaysAgo: 1,
     isVerified: true,
+    // Де��-юзер ходит по приложению как обычный пользователь, поэтому онбординг
+    // у него ПРИНЯТ. Без этого любой reseed (например restoreDevStand в e2e)
+    // оставлял стенд за гейтом «Первый вход»: приложение показывало вход, а
+    // инбокс и остальные экраны были недостижимы. Ставим и версию, и согласие
+    // вместе — сид-комментарий на строке 60 предупреждает ровно об этом.
+    onboardingVersion: devOnboardingVersion() ?? undefined,
+    consentAcceptedAtDaysAgo: 30,
     about: "Тестовый аккаунт разработчика (dev-стенд).",
     phone: "+79110000000",
     car: { model: "Lada Vesta", color: "графитовый", plate: "А 001 ДЕ 35" },
   },
 ];
+
+/**
+ * Версия онбординга ДЕВ-ЮЗЕРА — из исходника фронта, а не константой здесь.
+ *
+ * Единственный источник правды: `telegram-app/src/onboarding/version.ts`
+ * (его же читает e2e/telegram-fixtures.mjs → reviveDevUserSql). Дублировать
+ * число в сиде нельзя: гейт «Первый вход» сравнивает его с приложением, и
+ * расхождение молча прячет за собой весь остальной стенд — я поставил "1"
+ * вместо "3" и получил пустой инбокс при 9 непрочитанных в БД.
+ *
+ * Файл читается относительно seed.ts, поэтому путь не зависит от cwd.
+ */
+function devOnboardingVersion(): string | null {
+  try {
+    const src = readFileSync(
+      fileURLToPath(
+        new URL("../../telegram-app/src/onboarding/version.ts", import.meta.url),
+      ),
+      "utf8",
+    );
+    const match = /ONBOARDING_VERSION\s*=\s*"([^"]+)"/.exec(src);
+    if (!match?.[1]) {
+      throw new Error("ONBOARDING_VERSION не найден");
+    }
+    return match[1];
+  } catch (error) {
+    // Сид не должен падать из-за фронта: без значения вернётся null, и дев-юзер
+    // просто увидит онбординг — как это было до правки.
+    console.warn(
+      `[seed] не удалось прочитать версию онбординга: ${(error as Error).message}`,
+    );
+    return null;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // Поездки + брони

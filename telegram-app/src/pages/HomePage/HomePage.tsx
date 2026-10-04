@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { EmptyState } from "@/ui/EmptyState";
 import { PlusCircle } from "lucide-react";
@@ -76,6 +77,10 @@ export function HomePage() {
 
   return (
     <Page>
+      {/* Имя экрана — здесь, а не в заголовке секции (реестр #15). NavHeader
+          помечен aria-hidden, поэтому без этого у главной не было имени: h1
+          был у «Популярных направлений». */}
+      <VisuallyHidden Component="h1">Главная</VisuallyHidden>
       <ProfileSection />
       <TripCountersSection />
       <NextTripBanner />

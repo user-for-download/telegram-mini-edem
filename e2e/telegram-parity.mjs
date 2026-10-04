@@ -282,8 +282,17 @@ try {
     // Тап по баннеру: непрочитанную помечает прочитанной и уходит по маршруту
     // заявки (кнопок в карточке нет — паттерн NotificationBanner).
     await hashUrl(page, "/notifications");
-    await page.getByText("Новая заявка").first().waitFor({ timeout: 30000 });
-    const banner = page.getByRole("button", { name: /Новая заявка/ }).first();
+    // Баннер ищем по МАРШРУТУ этого прогона (имена городов уникальны на прогон),
+    // а не по общему заголовку «Новая заявка»: у дев-юзера сид держит своё
+    // непрочитанное «Новая заявка на место» (Вологда → Череповец), и первый
+    // по порядку — не обязательно наша. Замер: имя баннера содержит актора и
+    // маршрут, так что адресация точная.
+    const banner = page.getByRole("button", { name: new RegExp(CITY_FROM) }).first();
+    await banner.waitFor({ timeout: 30000 });
+    const counterBefore = Number(
+      (await page.getByRole("button", { name: /^Прочитать все \((\d+)\)$/ })
+        .getAttribute("aria-label"))?.match(/\((\d+)\)/)?.[1] ?? "0",
+    );
     await banner.click();
     // Уход со страницы доказывает markRead+навигацию: ждём заявки водителя.
     await page.getByText("Заявки").first().waitFor({ timeout: 15000 });
@@ -299,8 +308,22 @@ await shot(page, "notification-read");
     // инвалидирует lists(), и возврат показывает серверное состояние — на этом
     // и держится шаг (reload тут был бы обходом, скрывающим возврат бага).
     await hashUrl(page, "/notifications");
-    await page.getByText("Новая заявка").first().waitFor({ state: "hidden", timeout: 15000 });
-    return "booking_created read";
+    await page.waitForTimeout(1200);
+    // Критерий — счётчик непрочитанных: он авторитетный и не зависит от того,
+    // сколько одноимённых записей в инбоксе. Наш баннер должен уйти из «Новых».
+    const counterAfter = Number(
+      (await page.getByRole("button", { name: /^Прочитать все \((\d+)\)$/ })
+        .getAttribute("aria-label"))?.match(/\((\d+)\)/)?.[1] ?? "0",
+    );
+    if (counterAfter !== counterBefore - 1) {
+      throw new Error(
+        `счётчик не уменьшился на 1: было ${counterBefore}, стало ${counterAfter}`,
+      );
+    }
+    if (await page.getByRole("button", { name: new RegExp(CITY_FROM) }).count()) {
+      throw new Error("прочитанная заявка осталась в «Новых»");
+    }
+    return `booking_created read (счётчик ${counterBefore} → ${counterAfter})`;
   });
 
   await runStep("refresh: перезагрузка сохраняет состояние заявок", async () => {

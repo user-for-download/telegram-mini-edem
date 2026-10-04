@@ -29,7 +29,12 @@ export function PopularRoutesSection({ onSelect }: PopularRoutesSectionProps) {
   const byName = new Map((cities.data ?? []).map((city) => [city.name, city.id]));
 
   return (
-    <Section header="Популярные направления" headingLevel="h1">
+    // Без headingLevel="h1": opt-in из реестра #15 — «секция владеет именем
+    // экрана», и раньше ею был именно этот заголовок. Замер 2026-10-03 на
+    // главной: единственный h1 страницы был «Популярные направления», то есть
+    // при входе в приложение скринридер объявлял ИМЯ СЕКЦИИ как имя экрана.
+    // Имя главной теперь у самой страницы (VisuallyHidden h1 в HomePage).
+    <Section header="Популярные направления">
       {POPULAR_ROUTES.map((route) => (
         <Cell
           key={`${route.from}-${route.to}`}
