@@ -159,8 +159,6 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
   тем же, поэтому `ui/Chip` несёт `AS_BUTTON`, а `Accordion.Summary`
   получает константу явно.
 
-  применяется».
-
 ## 8. Тема и safe-area (самое неочевидное)
 
 - `AppConfig.tsx`:
