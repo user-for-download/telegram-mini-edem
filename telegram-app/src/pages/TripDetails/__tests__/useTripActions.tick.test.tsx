@@ -13,7 +13,7 @@
 // перешагнуть настоящим таймером.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
-import { act, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@tma.js/sdk-react", () => ({
@@ -72,6 +72,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // cleanup первым: размонтировать дерево надо под тем же фейковым таймером,
+  // под которым оно смонтировано. Без него пять renderHook-деревьев доживают
+  // до конца файла — у каждого свой window.setTimeout на границу отправления
+  // и подписка на модульный useAuthStore, который перезаписывает beforeEach
+  // каждого следующего теста.
+  cleanup();
   vi.useRealTimers();
   vi.clearAllMocks();
 });

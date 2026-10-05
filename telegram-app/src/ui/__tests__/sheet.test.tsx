@@ -2,8 +2,8 @@
 // A11y-контракт шторки: имя диалога связано через aria-labelledby
 // и фокус при открытии переезжает в тело (точка входа для клавиатуры
 // и скринридера). DOM-тест: Modal — портал, в SSR его не видно.
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { Sheet } from "../Sheet";
 
@@ -21,6 +21,14 @@ function show(title = "Настройки") {
     </AppRoot>,
   );
 }
+
+// Обязателен: vitest здесь без globals, поэтому авто-cleanup RTL не включается.
+// Modal — портал на Radix-примитивах, и неразмонтированная шторка держит на
+// document focusin-ловушку (FocusScope) и снятый с body pointer-events.
+// Шторка первого теста оставалась живой и перехватывала фокус в СВОЙ диалог:
+// второй тест проверял activeElement чужого дерева и проходил только потому,
+// что обе шторки одинаковые.
+afterEach(cleanup);
 
 describe("Sheet", () => {
   it("имя диалога доходит до aria-labelledby", () => {
