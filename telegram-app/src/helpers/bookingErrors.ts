@@ -20,17 +20,39 @@ const CODE_MESSAGES: Record<string, string> = {
   REQUEST_TIMEOUT: "Превышено время ожидания — проверьте соединение",
 };
 
+/**
+ * Текст ошибки по коду — ТОЛЬКО собственные ключи словаря.
+ *
+ * `error.code` приходит из тела ответа бэкенда (api/client.ts берёт любую
+ * строку) и в словаре искался прямой индексацией. Для обычного объектного
+ * литерала это опасно: `CODE_MESSAGES["toString"]`, `["constructor"]`,
+ * `["__proto__"]` разрешаются в унаследованные члены Object.prototype, они
+ * `!== undefined`, и функция возвращала НЕ строку. Такое значение уезжало
+ * в `<Notice>{bookingErrorMessage(err)}</Notice>` и роняло рендер с
+ * «Functions are not valid as a React child».
+ *
+ * Типы этого не ловили: индекс-сигнатура объявляет значение как
+ * `string | undefined`. Поэтому проверяем и собственность, и тип.
+ * Тот же класс ключей в другом месте репозитория закрыт явно
+ * (`typeof route === "string"` в router/deepLinks.ts).
+ */
+function codeMessage(code: string): string | undefined {
+  if (!Object.hasOwn(CODE_MESSAGES, code)) return undefined;
+  const message: unknown = Reflect.get(CODE_MESSAGES, code);
+  return typeof message === "string" ? message : undefined;
+}
+
 export function bookingErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 403 && isAccountDeletedError(error)) {
       return "Профиль удалён — действие недоступно";
     }
-    if (error.code && CODE_MESSAGES[error.code] !== undefined) {
+    if (error.code) {
       if (error.code === "RATE_LIMITED" && error.retryAfterMs) {
         const seconds = Math.ceil(error.retryAfterMs / 1000);
         return `Слишком много попыток — повторите через ${seconds} с`;
       }
-      const message = CODE_MESSAGES[error.code];
+      const message = codeMessage(error.code);
       if (message !== undefined) return message;
     }
     if (error.status === 401) {

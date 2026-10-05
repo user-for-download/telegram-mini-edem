@@ -33,6 +33,28 @@ describe("bookingErrorMessage", () => {
     );
   });
 
+  it("прототипный код не возвращает функцию (рендер не упал бы)", () => {
+    // Регрессия (аудит 2026-10-05): прямой индекс CODE_MESSAGES[code]
+    // разрешал унаследованные члены Object.prototype. Для "toString" это
+    // функция, она `!== undefined` — и значение уезжало в <Notice> как
+    // React-ребёнок, что роняло рендер («Functions are not valid as a
+    // React child»). Типы это не ловили: индекс-сигнатура объявляет
+    // значение как string.
+    for (const code of [
+      "toString",
+      "constructor",
+      "valueOf",
+      "hasOwnProperty",
+      "__proto__",
+    ]) {
+      const message = bookingErrorMessage(new ApiError("x", code, 500));
+      expect(typeof message).toBe("string");
+      expect(message).not.toBe("");
+      // Свой текст кода не подставляется — остаётся сообщение сервера.
+      expect(message).toContain("x");
+    }
+  });
+
   it("falls back to a retry message for unknown errors", () => {
     expect(bookingErrorMessage(null)).toContain("повторите");
     expect(bookingErrorMessage(new Error("boom"))).toBe("boom");

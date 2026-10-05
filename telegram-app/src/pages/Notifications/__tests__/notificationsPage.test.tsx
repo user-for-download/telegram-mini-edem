@@ -185,6 +185,15 @@ describe("formatNotifTime / notificationAcronym", () => {
     expect(formatNotificationWho(null, null)).toBeNull();
   });
 
+  it("formatNotificationWho: пустая строка не съедает метку действия", () => {
+    // Регрессия (аудит 2026-10-05): `??` на "" не срабатывает, поэтому
+    // actorName="" возвращал "" вместо метки — строка уведомления
+    // исчезала целиком вместе с действием.
+    expect(formatNotificationWho("", "отменил")).toBe("отменил");
+    expect(formatNotificationWho("   ", "подтвердил")).toBe("подтвердил");
+    expect(formatNotificationWho("", null)).toBeNull();
+  });
+
   it("formatTripDetail: «дата, время • цена • маршрут»", () => {
     const detail = formatTripDetail({
       from: "Вологда",

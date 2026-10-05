@@ -103,13 +103,26 @@ export function notificationActionLabel(
 /**
  * Вторая строка ячейки: «ФИО • действие» в одну строку. Части по
  * отдельности тоже валидны, обе пустые — строка скрывается.
+ *
+ * Пустая строка приравнена к отсутствию (`activeString`), потому что `??`
+ * на `""` НЕ срабатывает: при `actorName: ""` выражение
+ * `actorName ?? actionLabel` возвращало `""`, и метка действия
+ * («отменил», «подтвердил») терялась вместе со всей строкой. Значение
+ * приходит из сериализатора бэкенда, поэтому «пусто» может прийти как
+ * именно `""`, а не `null`.
  */
+function activeString(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export function formatNotificationWho(
   actorName: string | null | undefined,
   actionLabel: string | null,
 ): string | null {
-  if (actorName && actionLabel) return `${actorName} • ${actionLabel}`;
-  return actorName ?? actionLabel ?? null;
+  const actor = activeString(actorName);
+  if (actor && actionLabel) return `${actor} • ${actionLabel}`;
+  return actor ?? actionLabel ?? null;
 }
 
 /**
