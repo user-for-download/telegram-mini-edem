@@ -62,6 +62,7 @@ export function CitySelectField({
       {(field) => (
         <Select
           {...field}
+          className={styles.select}
           disabled={disabled}
           value={valueId}
           onChange={(event) => {

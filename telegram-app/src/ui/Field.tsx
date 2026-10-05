@@ -2,6 +2,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 import { FieldError } from "@/ui/FieldError";
 import { VISUALLY_HIDDEN } from "@/ui/classes";
+import styles from "./ui.module.css";
 
 export interface FieldControl {
   id: string;
@@ -71,7 +72,15 @@ export function Field({
       }
     : { id, header: label };
   return (
-    <div {...rest} className={className}>
+    <div
+      {...rest}
+      // Свой класс фасада — ALWAYS, а не только когда потребитель что-то
+      // передал: по нему живёт правило тона видимой подписи
+      // (.fieldRoot h6 в ui.module.css). Раньше обёртка оставалась без
+      // класса, если потребитель ничего не просил, и подпись поля рисовалась
+      // китовым secondary_hint_color — 2.32:1 на белом, то есть ниже AA.
+      className={className ? `${styles.fieldRoot} ${className}` : styles.fieldRoot}
+    >
       <label htmlFor={id} className={VISUALLY_HIDDEN}>
         {label}
       </label>

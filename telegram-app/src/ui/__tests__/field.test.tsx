@@ -126,7 +126,12 @@ describe("Field", () => {
         {() => null}
       </Field>,
     );
-    expect(html).toContain('class="mt-2"');
+    // Класс фасада (fieldRoot) теперь добавляется ВСЕГДА, поэтому атрибут
+    // содержит и его, и класс потребителя. Проверяем присутствие обоих, а
+    // не точную строку class="mt-2" — раньше это было равносильно проверке
+    // «обёртка без других классов», а не «класс потребителя дошёл».
+    expect(html).toContain("fieldRoot");
+    expect(html).toContain("mt-2");
     expect(html).toContain('data-testid="ride-to-field"');
   });
 });
