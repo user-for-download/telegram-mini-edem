@@ -96,16 +96,50 @@ function focusShellContent(): void {
 }
 
 /**
- * Сохраняет window.scrollY за предыдущим ключом маршрута и
- * восстанавливает позицию нового. Вызывать в Shell с ключом
+ * Сохранить scrollTop за ключом маршрута, пока он на экране, и
+ * восстановить позицию при возврате. Вызывать в Shell с ключом
  * routeScrollKey(location.pathname, location.search).
+ *
+ * ПОЧЕМУ ПОЗИЦИЯ МЕРЯЕТСЯ НЕПРЕРЫВНО, А НЕ В МОМЕНТ ПЕРЕХОДА.
+ * Старая версия читала window.scrollY в эффекте, который React запускает
+ * уже ПОСЛЕ подмены DOM. Для route-модалок (TripDetailsModal и соседние)
+ * это ломало сохранение: фон списка уходит в `hidden`, документ
+ * схлопывается до min-height контейнера, и браузер успевает обнулить
+ * scrollY ДО того, как эффект его прочитает. Сохранялось 0, и Back
+ * возвращал ленту наверх. Теперь позицию пишет scroll-listener, пока
+ * маршрут ещё видим, а в момент перехода мы её только переносим в
+ * prev-ключ и восстанавливаем.
+ *
+ * Слушатель один на весь жизненный цикл хука и пишет по КЛЮЧУ ТЕКУЩЕГО
+ * маршрута (routeKeyRef): после смены маршрута последующие события scroll
+ * (в т.ч. наш собственный scrollTo восстановления) уже относятся к
+ * новому ключу, иначе позиция уехала бы в предыдущий.
  */
 export function useScrollRestore(routeKey: string): void {
   const prevKey = useRef<string | null>(null);
+  const routeKeyRef = useRef(routeKey);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const currentY = typeof window.scrollY === "number" ? window.scrollY : 0;
+    const onScroll = () => {
+      saveScrollPosition(
+        routeKeyRef.current,
+        typeof window.scrollY === "number" ? window.scrollY : 0,
+      );
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Ключ обновляем ДО восстановления: событие scroll от нашего же
+    // scrollTo должно записаться в новый маршрут, а не в предыдущий.
+    routeKeyRef.current = routeKey;
+    // Позиция предыдущего маршрута уже в хранилище (её писал
+    // scroll-listener, пока маршрут был на экране) — перечитываем её
+    // вместо window.scrollY, который к этому моменту схлопнут DOM'ом.
+    const currentY = readScrollPosition(prevKey.current ?? "") ?? 0;
     const plan = planRouteTransition(prevKey.current, routeKey, currentY);
     prevKey.current = routeKey;
     if (plan.save) saveScrollPosition(plan.save.key, plan.save.top);
