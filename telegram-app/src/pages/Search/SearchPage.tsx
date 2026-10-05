@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import {
   SegmentedControl,
   Slider,
@@ -142,6 +142,43 @@ export function SearchPage() {
         : [...prev.tags, tag],
     }));
 
+  /**
+   * Фильтр по дате — ОДИНОЧНЫЙ выбор, а не вкладки: панели у него нет,
+   * список поездок один. Поэтому семантика APG здесь radiogroup/radio,
+   * а не tablist/tab.
+   *
+   * Замер 2026-10-04 (до правки): на `/trips` было 3 элемента `role="tab"`
+   * с `aria-selected` при **0** `role="tabpanel"`, и стрелки не меняли
+   * ничего (фокус на «Завтра», выбор оставался «Все даты») — скринридер
+   * объявлял «вкладка», а переключать было нечем и некем.
+   *
+   * Роль на корне переопределяется: кит спредит restProps ПОСЛЕ
+   * `role: "tablist"` (dist/.../SegmentedControl.js), поэтому наш
+   * `role="radiogroup"` выигрывает — проверено замером после правки.
+   * Стрелки переключают и уводят фокус, как требует APG radiogroup.
+   */
+  const onDateKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const index = DATE_SEGMENTS.findIndex(
+      (option) => option.value === form.dateSegment,
+    );
+    let next = -1;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      next = (index + 1) % DATE_SEGMENTS.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      next = (index - 1 + DATE_SEGMENTS.length) % DATE_SEGMENTS.length;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = DATE_SEGMENTS.length - 1;
+    }
+    if (next < 0) return;
+    event.preventDefault();
+    const value = DATE_SEGMENTS[next]!.value;
+    haptic.selection();
+    set("dateSegment", value);
+    document.getElementById(`search-date-${value}`)?.focus();
+  };
+
   const submit = () => {
     haptic.light();
     setSubmitted(form);
@@ -225,13 +262,18 @@ export function SearchPage() {
               </IconButton>
             </div>
 
-            <SegmentedControl aria-label="Дата поездки">
+            <SegmentedControl
+              role="radiogroup"
+              aria-label="Дата поездки"
+              onKeyDown={onDateKeyDown}
+            >
               {DATE_SEGMENTS.map((option) => (
                 <SegmentedControl.Item
                   key={option.value}
-                  role="tab"
+                  role="radio"
+                  id={`search-date-${option.value}`}
+                  aria-checked={form.dateSegment === option.value}
                   selected={form.dateSegment === option.value}
-                  aria-selected={form.dateSegment === option.value}
                   onClick={() => {
                     haptic.selection();
                     set("dateSegment", option.value);

@@ -180,7 +180,9 @@ describe("SearchPage: смена URL без перемонтирования (B3
   it("edge: локальные чипы дат не меняют URL и не сбрасываются", () => {
     renderSearch(`/trips?fromCityId=${VOL}`, `/trips?fromCityId=${MOW}`);
 
-    fireEvent.click(screen.getByRole("tab", { name: "Сегодня" }));
+    // Чипы дат объявлены role="radio" (одиночный выбор, не вкладки), поэтому
+    // ищем по радио, а не по tab.
+    fireEvent.click(screen.getByRole("radio", { name: "Сегодня" }));
 
     // Чип меняет только локальную форму — выдача всё ещё на старом
     // submitted, и параметры URL прежние.
