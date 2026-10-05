@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockRequest, mockGetToken, mockStoreGetState } = vi.hoisted(() => ({
-  mockRequest: vi.fn(),
-  mockGetToken: vi.fn(),
-  mockStoreGetState: vi.fn(),
-}));
+const { mockRequest, mockGetToken, mockStoreGetState, mockGetRawInitData } =
+  vi.hoisted(() => ({
+    mockRequest: vi.fn(),
+    mockGetToken: vi.fn(),
+    mockStoreGetState: vi.fn(),
+    mockGetRawInitData: vi.fn(),
+  }));
 
 vi.mock("@/api/client", () => ({
   apiClient: { request: mockRequest, getToken: mockGetToken },
@@ -26,6 +28,10 @@ vi.mock("@/store/useAuthStore", () => ({
   useAuthStore: { getState: mockStoreGetState },
 }));
 
+vi.mock("@/utils/telegram-adapter", () => ({
+  getRawInitData: mockGetRawInitData,
+}));
+
 import { apiClient } from "@/api/client";
 import { supportApi } from "@/api/support";
 import { submitSupportFeedback } from "@/queries/useSupportQuery";
@@ -41,6 +47,10 @@ beforeEach(() => {
   requestMock.mockReset();
   mockGetToken.mockReset();
   mockStoreGetState.mockReset();
+  mockGetRawInitData.mockReset();
+  // По умолчанию SDK initData недоступна (вне Telegram) — иначе фолбэк
+  // маскировал бы тест «initData в сторе». Кейсы с фолбэком задают сами.
+  mockGetRawInitData.mockReturnValue(undefined);
 });
 
 describe("supportApi.appeal (TG-ветка POST /feedback/appeal)", () => {
@@ -117,5 +127,39 @@ describe("submitSupportFeedback: маршрутизация submitFeedback", () 
 
     await expect(submitSupportFeedback(dto)).rejects.toThrow("Не удалось отправить обращение");
     expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it("initData в сторе null, но SDK её отдаёт → appeal уходит с SDK-строкой", async () => {
+    // Регрессия: бан в активной сессии (403 на /feedback) в стор не
+    // заходит, initData в сторе null. Раньше апелляция падала, не
+    // отправив ни одного запроса.
+    mockGetToken.mockReturnValue(null);
+    mockStoreGetState.mockReturnValue({ initData: null });
+    mockGetRawInitData.mockReturnValue(RAW_INIT_DATA);
+    requestMock.mockResolvedValue(created);
+
+    const result = await submitSupportFeedback(dto);
+
+    expect(result).toEqual(created);
+    expect(requestMock).toHaveBeenCalledWith(
+      "/feedback/appeal",
+      { method: "POST", body: JSON.stringify({ initData: RAW_INIT_DATA, ...dto }) },
+      createFeedbackResponseSchema,
+    );
+  });
+
+  it("initData в сторе приоритетнее SDK-строки", async () => {
+    mockGetToken.mockReturnValue(null);
+    mockStoreGetState.mockReturnValue({ initData: "from-store" });
+    mockGetRawInitData.mockReturnValue(RAW_INIT_DATA);
+    requestMock.mockResolvedValue(created);
+
+    await submitSupportFeedback(dto);
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "/feedback/appeal",
+      { method: "POST", body: JSON.stringify({ initData: "from-store", ...dto }) },
+      createFeedbackResponseSchema,
+    );
   });
 });

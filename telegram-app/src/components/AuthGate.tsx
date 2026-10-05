@@ -125,12 +125,10 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
    */
   useEffect(() => {
     return apiClient.onBanned((reason) => {
-      useAuthStore.setState({
-        status: "banned",
-        user: null,
-        session: null,
-        banReason: reason ?? null,
-      });
+      // Через стор, а не setState: markBanned заполняет initData для
+      // формы обжалования. Прямой setState её не заполнял, и отправка
+      // апелляции падала с «Не удалось отправить обращение».
+      useAuthStore.getState().markBanned(reason ?? null);
     });
   }, []);
 

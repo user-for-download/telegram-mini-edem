@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/api/client";
 import { supportApi } from "@/api/support";
 import { useAuthStore } from "@/store/useAuthStore";
+import { getRawInitData } from "@/utils/telegram-adapter";
 import type { CreateFeedbackDto, CreateFeedbackResponse } from "@edem/contracts";
 
 export const SUPPORT_KEYS = {
@@ -39,6 +40,12 @@ export function useCreateFeedbackMutation() {
  * POST /feedback/appeal, где личность подтверждается raw initData из стора
  * авторизации (та же строка, что в /auth/telegram). Экспортируется для
  * прямого тестирования маршрутизации (без рендера).
+ *
+ * Фолбэк на getRawInitData() — страховка границы отправки, а не костыль:
+ * стор заполняет initData при бане (markBanned) и при bootstrap, но
+ * ветка «403 на /feedback, статус сессии ещё authenticated» (SupportPage)
+ * в стор не заходит вовсе. Без фолбэка апелляция оттуда не уходила бы.
+ * Сырая строка, без пересортировки — HMAC должен сойтись.
  */
 export async function submitSupportFeedback(
   data: CreateFeedbackDto,
@@ -47,7 +54,7 @@ export async function submitSupportFeedback(
     return supportApi.create(data);
   }
 
-  const { initData } = useAuthStore.getState();
+  const initData = useAuthStore.getState().initData ?? getRawInitData();
   if (!initData) {
     throw new Error("Не удалось отправить обращение");
   }

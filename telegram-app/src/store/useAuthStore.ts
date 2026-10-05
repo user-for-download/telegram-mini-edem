@@ -69,6 +69,15 @@ interface AuthState {
    * бы: /auth/telegram отвечает удалённому аккаунту 403).
    */
   markAccountDeleted: () => void;
+  /**
+   * Переход в «забанен» из активной сессии: 403 FORBIDDEN от /auth/refresh
+   * (событие apiClient `banned`) и терминальный WS-close 4403.
+   *
+   * Отдельное действие, а не `setState` в подписчиках, чтобы заполнение
+   * initData для апелляции нельзя было забыть: раньше эти ветки писали
+   * состояние напрямую и роняли форму обжалования (см. applyBanned).
+   */
+  markBanned: (banReason: string | null) => void;
 }
 
 let bootstrapPromise: Promise<void> | null = null;
@@ -128,19 +137,33 @@ function applyAuthenticated(set: (state: Partial<AuthState>) => void, response: 
   });
 }
 
+/**
+ * Терминальный переход «забанен» — ЕДИНАЯ точка для всех путей бана.
+ *
+ * Почему initData берётся здесь, а не только в bootstrap: обжалование
+ * уходит через публичный POST /feedback/appeal БЕЗ токена, и личность
+ * подтверждается той же сырой initData-строкой. Раньше её заполнял
+ * исключительно холодный bootstrap (applyBanned), поэтому бан, пришедший
+ * в активной сессии (WS 4403 или 403 от /auth/refresh), оставлял
+ * initData=null — и форма обжалования падала с «Не удалось отправить
+ * обращение», не отправив ни одного запроса.
+ *
+ * Сырая строка, без пересортировки (HMAC), и БЕЗ purgeLaunchParamsCache:
+ * бан — не логаут, материал сессии нужен для апелляции.
+ */
 function applyBanned(
   set: (state: Partial<AuthState>) => void,
-  error: ApiError,
+  banReason: string | null,
   initData: string | null,
 ) {
-  console.error("[Auth] Bootstrap failed: account is banned");
+  console.error("[Auth] Account is banned");
   apiClient.setSession(null);
   set({
     status: "banned",
     user: null,
     session: null,
-    banReason: error.banReason ?? null,
-    initData,
+    banReason,
+    initData: initData ?? getRawInitData() ?? null,
   });
 }
 
@@ -220,7 +243,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           return;
         }
         if (isBannedError(error)) {
-          applyBanned(set, error, initData);
+          applyBanned(set, error.banReason ?? null, initData);
           return;
         }
         console.error("[Auth] Bootstrap failed:", error);
@@ -387,5 +410,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     apiClient.invalidatePendingRefresh();
     purgeLaunchParamsCache();
     applyDeleted(set);
+  },
+
+  markBanned: (banReason) => {
+    // In-flight refresh не должен воскресить сессию после бана.
+    apiClient.invalidatePendingRefresh();
+    // initData не передаём: applyBanned возьмёт сырую строку из SDK —
+    // это один путь и для bootstrap, и для бана в активной сессии.
+    applyBanned(set, banReason, null);
   },
 }));

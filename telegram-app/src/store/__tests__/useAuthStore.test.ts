@@ -52,7 +52,7 @@ vi.mock("@/api/client", async (importOriginal) => {
 import { ACCOUNT_DELETED_CODE, ApiError } from "@/api/client";
 import type { RefreshResult } from "@/api/client";
 import { authApi } from "@/api/auth.api";
-import { getRawInitData } from "@/utils/telegram-adapter";
+import { getRawInitData, purgeLaunchParamsCache } from "@/utils/telegram-adapter";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AuthResponse } from "@edem/contracts";
 
@@ -182,6 +182,36 @@ describe("useAuthStore.bootstrap (Telegram)", () => {
     const state = useAuthStore.getState();
     expect(state.status).toBe("banned");
     expect(state.banReason).toBeNull();
+  });
+
+  it("markBanned (бан в активной сессии): initData для апелляции заполнена", () => {
+    // Регрессия: WS 4403 / 403 от refresh писали состояние напрямую и
+    // оставляли initData=null — форма обжалования падала, не отправив
+    // запрос (ей нужен публичный appeal с raw initData).
+    mockedGetRawInitData.mockReturnValue(RAW_INIT_DATA);
+
+    useAuthStore.getState().markBanned("Спам");
+
+    const state = useAuthStore.getState();
+    expect(state.status).toBe("banned");
+    expect(state.banReason).toBe("Спам");
+    expect(state.initData).toBe(RAW_INIT_DATA);
+    expect(state.session).toBeNull();
+    expect(state.user).toBeNull();
+  });
+
+  it("markBanned гасит in-flight refresh и не пуржит initData-кеш", () => {
+    // Бан — не логаут: материал сессии нужен для апелляции, поэтому
+    // purgeLaunchParamsCache здесь НЕ вызывается (в отличие от logout).
+    // Мок общий на файл, поэтому обнуляем историю перед проверкой.
+    vi.mocked(purgeLaunchParamsCache).mockClear();
+    mockSetSession.mockClear();
+
+    useAuthStore.getState().markBanned(null);
+
+    expect(mockInvalidatePendingRefresh).toHaveBeenCalled();
+    expect(mockSetSession).toHaveBeenCalledWith(null);
+    expect(purgeLaunchParamsCache).not.toHaveBeenCalled();
   });
 
   it("403 по КОДУ ACCOUNT_DELETED: deleted, даже если текст переписан", async () => {
