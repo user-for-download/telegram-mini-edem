@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { hapticFeedback } from "@tma.js/sdk-react";
 import type { Trip } from "@edem/contracts";
@@ -13,6 +13,9 @@ import { formatArrivalTime } from "@/utils/date";
 export type CreateBookingMutation = ReturnType<
   typeof useCreateBookingMutation
 >;
+
+/** Верхняя граница setTimeout (int32); всё дальше — переполнение в 0. */
+const MAX_TIMEOUT_MS = 2_147_483_647;
 
 /**
  * Состояние и хендлеры TripDetails: выбор места, комментарий, режим
@@ -33,13 +36,30 @@ export function useTripActions(item: Trip | undefined) {
   const [editing, setEditing] = useState(false);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   // Снимок «сейчас» на момент монтирования (lazy-инициализатор — Date.now()
-  // напрямую в рендере запрещён react-hooks/purity). Дрейф за время viewing
-  // безвреден: бэкенд всё равно режет точку невозврата (TRIP_IN_PAST).
-  const [now] = useState(() => Date.now());
+  // напрямую в рендере запрещён react-hooks/purity).
+  const [now, setNow] = useState(() => Date.now());
 
   const isDriver = item ? item.driver.id === user?.id : false;
   const departureTime =
     item?.departureAt != null ? new Date(item.departureAt).getTime() : null;
+
+  // Граница отправления ДОЛЖНА наступить, пока страница открыта. Снимок
+  // now на маунте больше не менялся, поэтому водитель, открывший поездку
+  // ДО departureAt, не мог нажать «Завершить поездку» до перезагрузки:
+  // canCompleteTrip — чисто клиентский гейт, сервер тут не страхует (у
+  // canBook есть TRIP_IN_PAST). Обновляемся ОДИН раз, точно на границе,
+  // а не интервалом: открытая страница не должна ререндерить раз в минуту
+  // ради одного перехода.
+  useEffect(() => {
+    if (departureTime === null || departureTime <= now) return;
+    const timer = window.setTimeout(
+      () => setNow(Date.now()),
+      // setTimeout за пределами int32 переполняется и срабатывает СРАЗУ —
+      // таймер на «через месяц» нельзя вешать напрямую.
+      Math.min(departureTime - now, MAX_TIMEOUT_MS),
+    );
+    return () => window.clearTimeout(timer);
+  }, [departureTime, now]);
   const departed = departureTime !== null && departureTime <= now;
   const isActive = !item?.status || item.status === "active";
   const hasActiveBooking =
