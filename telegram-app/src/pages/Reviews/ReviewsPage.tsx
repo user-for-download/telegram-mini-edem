@@ -1,13 +1,6 @@
-import {
-  memo,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import {
   Caption,
-  SegmentedControl,
   Select,
   Text,
   Textarea,
@@ -23,6 +16,7 @@ import { FetchMore } from "@/ui/FetchMore";
 import { Button } from "@/ui/Button";
 import { Page } from "@/ui/Page";
 import { Stack } from "@/ui/Stack";
+import { Switcher } from "@/ui/Switcher";
 import { Card } from "@/ui/Card";
 
 import { haptic } from "@/utils/haptics";
@@ -58,21 +52,9 @@ const TABS: ReadonlyArray<{ value: ReviewsTab; label: string }> = [
 ];
 
 /**
- * Связка `tab` ↔ `tabpanel`. Раньше вкладки объявляли `role="tab"` без
- * `aria-controls` и без панелей — рассогласование с APG (тот же класс, что
- * лечили в субтабах профиля). Стабильные id обязательны: генерированные
- * менялись бы между рендерами.
- *
- * `aria-controls` вешаем ТОЛЬКО на выбранный таб: панели рендерятся условно,
- * и у невыбранного таба панели просто нет — ссылаться на несуществующий id
- * было бы враньём.
+ * id панели вкладки. Пункты-вкладки фасад собирает сам из `idPrefix`
+ * (`reviews-tab-<value>`), поэтому `aria-labelledby` панели — та же схема.
  */
-const TAB_IDS: Record<ReviewsTab, string> = {
-  mine: "reviews-tab-mine",
-  new: "reviews-tab-new",
-  about: "reviews-tab-about",
-};
-
 const TAB_PANEL_IDS: Record<ReviewsTab, string> = {
   mine: "reviews-panel-mine",
   new: "reviews-panel-new",
@@ -269,59 +251,26 @@ const trips = useMemo(() => available.data ?? [], [available.data]);
     text.trim().length > 0 &&
     !create.isPending;
 
-  const pickTab = (next: ReviewsTab) => {
-    if (next !== tab) {
-      haptic.selection();
-      setTab(next);
-    }
-  };
+  const pickTab = (next: ReviewsTab) => setTab(next);
 
-  /**
-   * Стрелки/Home/End по вкладкам (APG, автоматическая активация) + переезд
-   * фокуса на новую вкладку: без этого фокус оставался на старой, и следующий
-   * Tab уходил из списка — переключение вслепую.
-   */
-  const onTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const index = TABS.findIndex((option) => option.value === tab);
-    let next = -1;
-    if (event.key === "ArrowRight") next = (index + 1) % TABS.length;
-    else if (event.key === "ArrowLeft") next = (index - 1 + TABS.length) % TABS.length;
-    else if (event.key === "Home") next = 0;
-    else if (event.key === "End") next = TABS.length - 1;
-    if (next < 0) return;
-    event.preventDefault();
-    const value = TABS[next]!.value;
-    pickTab(value);
-    document.getElementById(TAB_IDS[value])?.focus();
-  };
+
 
 return (
     <Stack>
-      <SegmentedControl
-        aria-label="Разделы отзывов"
-        onKeyDown={onTabKeyDown}
-      >
-        {TABS.map((option) => (
-          <SegmentedControl.Item
-            key={option.value}
-            role="tab"
-            id={TAB_IDS[option.value]}
-            aria-controls={
-              tab === option.value ? TAB_PANEL_IDS[option.value] : undefined
-            }
-            selected={tab === option.value}
-            aria-selected={tab === option.value}
-            onClick={() => pickTab(option.value)}
-          >
-            {option.label}
-          </SegmentedControl.Item>
-        ))}
-      </SegmentedControl>
+      <Switcher
+        options={TABS}
+        value={tab}
+        onChange={pickTab}
+        ariaLabel="Разделы отзывов"
+        idPrefix="reviews-tab"
+        semantics="tabs"
+        panelId={TAB_PANEL_IDS[tab]}
+      />
 
       <div
         role="tabpanel"
         id={TAB_PANEL_IDS[tab]}
-        aria-labelledby={TAB_IDS[tab]}
+        aria-labelledby={`reviews-tab-${tab}`}
       >
         {tab === "mine" && (
           <QueryState

@@ -506,13 +506,19 @@ describe("NotificationsPage: сегменты", () => {
     expect(passenger).toContain("Отзыв принят");
   });
 
-  it("пустые сегменты — свои тексты; чипы с aria-pressed", () => {
+  it("пустые сегменты — свои тексты; переключатель объявлен radiogroup", () => {
     setMocks(pageWithItems([]));
 
     const driver = renderPageAt("/notifications?segment=driver");
     expect(driver).toContain("Нет уведомлений водителя");
     expect(driver).toContain("Заявки пассажиров и совпадения запросов появятся здесь");
-    expect(driver).toContain('aria-pressed="true"');
+    // Переключатель «одно из N» — radiogroup/radio с aria-checked
+    // (ui/Switcher). Раньше здесь был group + aria-pressed, хотя активным
+    // был ровно один сегмент.
+    expect(driver).toContain('role="radiogroup"');
+    expect(driver).toContain('aria-label="Фильтр уведомлений"');
+    expect(driver).toContain('role="radio"');
+    expect(driver).toContain('aria-checked="true"');
 
     // Пустой инбокс в пассажирском — свой empty-текст.
     const passenger = renderPageAt("/notifications?segment=passenger");

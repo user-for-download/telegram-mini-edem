@@ -14,41 +14,9 @@
   gap: 6px;
 }
 
-/* Сегменты слева: пилюли в ряд. */
-.segments {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-/* Бейджи-фильтры в стиле кошелька: неактивный — просто текст без фона
- * (сброс заливки mono/elevated кита), активный — голубая пилюля.
- * Неслойный модуль бьёт слой tgui без !important. */
-.filter.filter {
-  background: transparent;
-  box-shadow: none;
-  color: var(--app-muted);
-}
-
-/* Текст красит вложенный h6 кита (plain_foreground явно) — дублируем
- * цвет на потомков, приём как у .accent в ui/Chip.module.css. */
-.filter.filter,
-.filter.filter * {
-  color: var(--app-muted);
-}
-
-.filterActive.filterActive {
-  background: var(--tgui--secondary_fill);
-  box-shadow: none;
-  border-radius: var(--app-radius-pill);
-  font-weight: 600;
-}
-
-.filterActive.filterActive,
-.filterActive.filterActive * {
-  color: var(--tgui--link_color);
-}
+/* Стили пилюль-переключателя живут в ui/Switcher.module.css: раньше копия
+ * .filter/.filterActive стояла здесь и в TripActivePage.module.css
+ * побайтово одинаковой. Здесь остались только раскладки этого экрана. */
 
 /* Пустое состояние: центрированные тексты на поверхности Section. */
 

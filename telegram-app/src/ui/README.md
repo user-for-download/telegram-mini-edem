@@ -74,6 +74,7 @@ jsdom не каскадит слои, а `getComputedStyle` в тестах не
 | `Button` | `Button` | смысловые `variant` вместо `mode`; тап-таргет 44px для `m`/`l` |
 | `IconButton` | `IconButton` | обязательный `aria-label` (компиляция не даст забыть) |
 | `Chip` | `Chip` | `variant`/`tone`, единый focus-visible и рецепт выбранного тега |
+| `Switcher` | `Chip` | переключатель «одно из N»: одна пилюля на всех экранах, семантика по назначению — `radiogroup`/`radio` для фильтра и `tablist`/`tab`+`tabpanel` для вкладок; стабильные `id`, стрелки и `focus()` внутри фасада, `selectionChanged` на смену |
 | `Card` | `Card` | своя поверхность (radius 16 / xs-тень / фон секции) + гарантия полной ширины; `Card.Cell`/`Card.Chip` ре-экспортированы |
 | `Sheet` | `Modal` | единый заголовок и тело шторки, видимое имя диалога на всех платформах |
 | `Field` + `FieldError` | `Input`/`Textarea`/`Select` | `label`↔`htmlFor` на всех платформах, `aria-describedby`/`aria-invalid` |

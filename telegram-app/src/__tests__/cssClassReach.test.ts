@@ -91,7 +91,12 @@ describe("классы из CSS модулей реально применяют
   it("удвоенные селекторы в ui/ — только осознанные (их перечень конечен)", () => {
     // Удвоение легально (подъём специфичности), поэтому пин на КОЛИЧЕСТВО
     // бессмыслен: он кодировал бы цифру, а не инвариант. Пиняем список
-    // явно: в ui/ удвоены ровно два селектора, и оба — с обоснованием.
+    // явно, с обоснованием каждой строки.
+    //   ui.module.css:card       — поверхность карточки, бьёт кит.
+    //   Switcher.module.css:item / :active — те же два правила переехали сюда
+    //   из страниц уведомлений и поездок (там был тот же приём против
+    //   заливки mono/elevated кита); по 3 совпадения на класс, потому что
+    //   удвоение повторяется в селекторе и в правиле «… *» для потомков.
     const doubled = cssModules()
       .filter((f) => f.includes(join("src", "ui")))
       .flatMap((f) =>
@@ -99,6 +104,14 @@ describe("классы из CSS модулей реально применяют
           (m) => `${basename(f)}:${m[1]}`,
         ),
       );
-    expect(doubled.sort()).toEqual(["ui.module.css:card"]);
+    expect(doubled.sort()).toEqual([
+      "Switcher.module.css:active",
+      "Switcher.module.css:active",
+      "Switcher.module.css:active",
+      "Switcher.module.css:item",
+      "Switcher.module.css:item",
+      "Switcher.module.css:item",
+      "ui.module.css:card",
+    ]);
   });
 });

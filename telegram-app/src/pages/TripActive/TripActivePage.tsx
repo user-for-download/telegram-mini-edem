@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Notice } from "@/ui/Notice";
 import { FetchMore } from "@/ui/FetchMore";
 import { Button } from "@/ui/Button";
-import { Chip } from "@/ui/Chip";
+import { Switcher, type SwitcherOption } from "@/ui/Switcher";
 import { Page } from "@/ui/Page";
 import { Input, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Search as SearchIcon } from "lucide-react";
@@ -112,25 +112,17 @@ export function TripActivePage() {
   const driverList =
     driverWithRequests.length > 0 ? driverWithRequests : driverTrips;
 
+  const SEGMENTS = [
+    { value: "all", label: "Все" },
+    { value: "driver", label: "Водитель" },
+    { value: "passenger", label: "Пассажир" },
+  ] as const satisfies ReadonlyArray<SwitcherOption<TripSegment>>;
+
   const selectSegment = (next: TripSegment) => {
-    haptic.selection();
     setSearchParams(next === "all" ? {} : { segment: next }, {
       replace: true,
     });
   };
-
-  const segmentChip = (id: TripSegment, label: string) => (
-    <Chip
-      key={id}
-      // Нативную кнопку даёт дефолт ui/Chip (кликабельный чип → <button>).
-      variant={segment === id ? "active" : "quiet"}
-      aria-pressed={segment === id}
-      onClick={() => selectSegment(id)}
-      className={segment === id ? styles.filterActive : styles.filter}
-    >
-      {label}
-    </Chip>
-  );
 
   const onCancelBooking = (id: string) =>
     cancelBooking.mutate(id, {
@@ -224,11 +216,13 @@ export function TripActivePage() {
           className={styles.searchField}
         />
       </div>
-      <div className={styles.chipRow}>
-        {segmentChip("all", "Все")}
-        {segmentChip("driver", "Водитель")}
-        {segmentChip("passenger", "Пассажир")}
-      </div>
+      <Switcher
+        options={SEGMENTS}
+        value={segment}
+        onChange={selectSegment}
+        ariaLabel="Сегмент поездок"
+        idPrefix="booking-segment"
+      />
       {segment === "passenger" ? (
         <QueryState
           loading={bookings.isLoading}

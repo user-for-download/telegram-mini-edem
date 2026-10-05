@@ -1,0 +1,39 @@
+/* Ряд пилюль-переключателя (ui/Switcher) — единственный ряд переключателей
+ * на всех экранах. Правила .item/.active переехали сюда из двух страниц, где
+ * копия была побайтово одинаковой (NotificationsPage.module.css,
+ * TripActivePage.module.css). gap 6px — off-scale осознанно, ради визуального
+ * единства (token-lint пропускает off-scale). */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Неактивный пункт — просто текст без фона (сброс заливки mono/elevated
+ * кита). Неслойный модуль бьёт слой tgui без !important. */
+.item.item {
+  background: transparent;
+  box-shadow: none;
+  color: var(--app-muted);
+}
+
+/* Текст красит вложенный h6 кита (plain_foreground явно) — дублируем
+ * цвет на потомков, приём как у .accent в ui/Chip.module.css. */
+.item.item,
+.item.item * {
+  color: var(--app-muted);
+}
+
+/* Активный — голубая пилюля во всю ширину пункта. */
+.active.active {
+  background: var(--tgui--secondary_fill);
+  box-shadow: none;
+  border-radius: var(--app-radius-pill);
+  font-weight: 600;
+}
+
+.active.active,
+.active.active * {
+  color: var(--tgui--link_color);
+}

@@ -5,7 +5,7 @@ import {
   Info,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
-import { Chip } from "@/ui/Chip";
+import { Switcher, type SwitcherOption } from "@/ui/Switcher";
 import { Section } from "@/ui/Section";
 import { Cell } from "@/ui/Cell";
 import { IconButton } from "@/ui/IconButton";
@@ -356,33 +356,20 @@ export function NotificationsPage() {
         : EMPTY_STATES.notificationsEmpty;
 
   const FILTERS = [
-    { id: "unread", title: "Новые" },
-    { id: "driver", title: "Водитель" },
-    { id: "passenger", title: "Пассажир" },
-  ] as const;
+    { value: "unread", label: "Новые" },
+    { value: "driver", label: "Водитель" },
+    { value: "passenger", label: "Пассажир" },
+  ] as const satisfies ReadonlyArray<SwitcherOption<NotifSegment>>;
 
-  const renderFilter = (id: NotifSegment, title: string) => (
-    <Chip
-      key={id}
-      // Нативную кнопку даёт дефолт ui/Chip: кликабельный чип (onClick)
-      // рендерится как <button>. Явный Component не нужен.
-      variant={segment === id ? "active" : "quiet"}
-      tone={segment === id ? "accent" : "neutral"}
-      aria-pressed={segment === id}
-      onClick={() => {
-        haptic.light();
-        if (id === "unread") {
-          searchParams.delete("segment");
-        } else {
-          searchParams.set("segment", id);
-        }
-        setSearchParams(searchParams);
-      }}
-      className={segment === id ? styles.filterActive : styles.filter}
-    >
-      {title}
-    </Chip>
-  );
+  /** Переключение сегмента: «Новые» — канонический чистый /notifications. */
+  const selectSegment = (next: NotifSegment) => {
+    if (next === "unread") {
+      searchParams.delete("segment");
+    } else {
+      searchParams.set("segment", next);
+    }
+    setSearchParams(searchParams);
+  };
 
   // Сентинел автодогрузки inbox (тот же useNotificationsInboxQuery,
   // контракт cursor-пагинации не меняется; SSR — тихий фолбэк).
@@ -442,13 +429,13 @@ export function NotificationsPage() {
             между строками (hairline-разделители, как в TripHistory).
             Пустое состояние — текст сегмента в теле Section. */}
           <div className={styles.chipRow}>
-            <div
-              className={styles.segments}
-              role="group"
-              aria-label="Фильтр уведомлений"
-            >
-              {FILTERS.map(({ id, title }) => renderFilter(id, title))}
-            </div>
+            <Switcher
+              options={FILTERS}
+              value={segment}
+              onChange={selectSegment}
+              ariaLabel="Фильтр уведомлений"
+              idPrefix="notif-segment"
+            />
             <div aria-live="polite">
               <IconButton
                 aria-label={
