@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
-import { ERROR_CODES } from "../errors.js";
+import { ACCOUNT_DELETED_MESSAGE, ERROR_CODES } from "../errors.js";
 import { DEFAULT_AVATAR_URL } from "../constants.js";
 import { serializeUser } from "../serializers/index.js";
 
@@ -114,7 +114,7 @@ authRouter.post("/telegram", tgAuthLimiter, async (c) => {
   });
   if (tombstone?.deletedAt) {
     return c.json(
-      { code: ERROR_CODES.FORBIDDEN, message: "Account is deleted" },
+      { code: ERROR_CODES.ACCOUNT_DELETED, message: ACCOUNT_DELETED_MESSAGE },
       403,
     );
   }
@@ -164,7 +164,7 @@ authRouter.post("/telegram", tgAuthLimiter, async (c) => {
 
   if (finalUser.deletedAt) {
     return c.json(
-      { code: ERROR_CODES.FORBIDDEN, message: "Account is deleted" },
+      { code: ERROR_CODES.ACCOUNT_DELETED, message: ACCOUNT_DELETED_MESSAGE },
       403,
     );
   }
@@ -215,7 +215,7 @@ authRouter.post("/refresh", refreshLimiter, async (c) => {
       if (user.deletedAt) {
         await revokeAllActiveTokens(user.id);
         return c.json(
-          { code: ERROR_CODES.FORBIDDEN, message: "Account is deleted" },
+          { code: ERROR_CODES.ACCOUNT_DELETED, message: ACCOUNT_DELETED_MESSAGE },
           403,
         );
       }
@@ -261,7 +261,7 @@ authRouter.post("/refresh", refreshLimiter, async (c) => {
     if (user.deletedAt) {
       await revokeAllActiveTokens(user.id);
       return c.json(
-        { code: ERROR_CODES.FORBIDDEN, message: "Account is deleted" },
+        { code: ERROR_CODES.ACCOUNT_DELETED, message: ACCOUNT_DELETED_MESSAGE },
         403,
       );
     }

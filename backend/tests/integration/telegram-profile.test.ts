@@ -118,14 +118,19 @@ describe("GET /users/me (telegram)", () => {
     expect(((await res.json()) as { message: string }).message).toBe("Account is banned");
   });
 
-  it("403 удалённому (Account is deleted)", async () => {
+  it("403 удалённому: код ACCOUNT_DELETED, а не общий FORBIDDEN бана", async () => {
     const userId = await seedTelegramUser({ deletedAt: new Date() });
     const token = await signAccessToken(userId);
 
     const res = await authed("GET", "/api/v1/users/me", token);
 
     expect(res.status).toBe(403);
-    expect(((await res.json()) as { message: string }).message).toBe("Account is deleted");
+    // Код машинный: клиент обязан отличать удаление от бана НЕ по тексту —
+    // иначе переформулировка сообщения тихо уводит удалённого на «бан».
+    // Текст остаётся прежним ради старых клиентов.
+    const body = (await res.json()) as { code: string; message: string };
+    expect(body.code).toBe("ACCOUNT_DELETED");
+    expect(body.message).toBe("Account is deleted");
   });
 });
 

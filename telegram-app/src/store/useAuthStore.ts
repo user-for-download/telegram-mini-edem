@@ -4,8 +4,8 @@ import { log } from "@/utils/log";
 import type { User } from "@/types";
 import { authApi } from "@/api/auth.api";
 import {
-  ACCOUNT_DELETED_MESSAGE,
   ApiError,
+  isAccountDeletedError,
   apiClient,
 } from "@/api/client";
 import type { AuthResponse, TelegramAuthRequest } from "@edem/contracts";
@@ -104,17 +104,12 @@ function isBannedError(error: unknown): error is ApiError {
 }
 
 /**
- * Распознаёт 403 удалённого аккаунта из bootstrap: код совпадает с баном
- * (FORBIDDEN), различаем по message. Проверять ДО isBannedError, иначе
- * удалённый аккаунт попадёт на плашку бана.
+ * Распознаёт 403 удалённого аккаунта из bootstrap. Различение удаления и
+ * бана живёт в `isAccountDeletedError` (по коду ACCOUNT_DELETED, с
+ * фолбэком на текст для старого бэка). Проверять ДО isBannedError.
  */
-
 function isDeletedError(error: unknown): error is ApiError {
-  return (
-    error instanceof ApiError &&
-    error.status === 403 &&
-    error.message === ACCOUNT_DELETED_MESSAGE
-  );
+  return error instanceof ApiError && error.status === 403 && isAccountDeletedError(error);
 }
 
 function applyAuthenticated(set: (state: Partial<AuthState>) => void, response: AuthResponse) {

@@ -49,7 +49,7 @@ vi.mock("@/queries/useReviewsQuery", async (importOriginal) => {
   };
 });
 
-import { ApiError } from "@/api/client";
+import { ACCOUNT_DELETED_CODE, ACCOUNT_DELETED_MESSAGE, ApiError } from "@/api/client";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -167,7 +167,20 @@ describe("ProfilePage terminal states", () => {
       queryState({
         data: undefined,
         isError: true,
-        error: new ApiError("Account is deleted", "FORBIDDEN", 403),
+        // Новый код: текст переписан, различение обязано остаться верным.
+        error: new ApiError("Профиль удалён", ACCOUNT_DELETED_CODE, 403),
+      }),
+    );
+    const html = render(<ProfilePage />);
+    expect(html).toContain("Профиль удалён");
+  });
+
+  it("старый бэк: FORBIDDEN + текст — тоже «Профиль удалён» (фолбэк)", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({
+        data: undefined,
+        isError: true,
+        error: new ApiError(ACCOUNT_DELETED_MESSAGE, "FORBIDDEN", 403),
       }),
     );
     const html = render(<ProfilePage />);

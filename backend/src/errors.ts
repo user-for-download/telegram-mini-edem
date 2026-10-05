@@ -18,8 +18,22 @@ export const ERROR_CODES = {
   DRIVER_TRIP_OVERLAP: "DRIVER_TRIP_OVERLAP",
   PASSENGER_BOOKING_OVERLAP: "PASSENGER_BOOKING_OVERLAP",
   ACCOUNT_HAS_ACTIVE_OBLIGATIONS: "ACCOUNT_HAS_ACTIVE_OBLIGATIONS",
+  /**
+   * 403 удалённого аккаунта (`deletedAt`). Раньше делил код `FORBIDDEN` с
+   * баном, и клиент различал их ТОЛЬКО по тексту сообщения — стоило бэку
+   * переформулировать «Account is deleted», и удалённый аккаунт молча
+   * уезжал на плашку бана с предложением обжалования (восстановление при
+   * этом невозможно). Отдельный код делает ветвление машинным.
+   *
+   * `message` оставлен прежним: старые клиенты различают удаление по тексту
+   * и не должны сломаться на новом бэке.
+   */
+  ACCOUNT_DELETED: "ACCOUNT_DELETED",
   INTERNAL_ERROR: "INTERNAL_ERROR",
 } as const;
+
+/** Текст 403 удалённого аккаунта — константа вместо шести копий литерала. */
+export const ACCOUNT_DELETED_MESSAGE = "Account is deleted";
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 

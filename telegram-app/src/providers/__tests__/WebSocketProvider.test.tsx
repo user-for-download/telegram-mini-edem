@@ -33,9 +33,21 @@ const {
 
 vi.mock("@/api/client", () => ({
   // Модуль мокается целиком, поэтому повторяем и его константы:
-  // ACCOUNT_DELETED_MESSAGE читает useAuthStore (isDeletedError), и без
-  // неё в моке ветка «удалён» неотличима от «бан».
+  // ACCOUNT_DELETED_MESSAGE читает useAuthStore (isDeletedError), а
+  // WS_TERMINAL_REASON — классификатор закрытия здесь же; без них в моке
+  // ветка «удалён» неотличима от «бан», а 4403 уходит в «unknown».
   ACCOUNT_DELETED_MESSAGE: "Account is deleted",
+  ACCOUNT_DELETED_CODE: "ACCOUNT_DELETED",
+  isAccountDeletedError: (error: unknown) => {
+    if (typeof error !== "object" || error === null) return false;
+    const { code, message } = error as { code?: unknown; message?: unknown };
+    return code === "ACCOUNT_DELETED" || message === "Account is deleted";
+  },
+  WS_TERMINAL_REASON: {
+    deletedByWsAuth: "Account is deleted",
+    deletedBySelf: "Account deleted",
+    banned: "Account is banned",
+  },
   apiClient: {
     setToken: vi.fn(),
     setRefreshToken: vi.fn(),

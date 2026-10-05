@@ -36,7 +36,7 @@ import { Stack } from "@/ui/Stack";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { GROW, INFO, PROSE_TEXT, TRUNCATE } from "@/ui/classes";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
-import { ACCOUNT_DELETED_MESSAGE, ApiError } from "@/api/client";
+import { isAccountDeletedError, ApiError } from "@/api/client";
 import {
   useDeleteAccountMutation,
   useProfileNotificationSettingsMutation,
@@ -209,7 +209,7 @@ export function ProfilePage() {
   // нативный window.confirm ненадёжен в Telegram WebView.
 
   if (profile.error instanceof ApiError && profile.error.status === 403) {
-    if (profile.error.message === ACCOUNT_DELETED_MESSAGE) {
+    if (isAccountDeletedError(profile.error)) {
       return (
         <AccountStatePage
           title="Профиль удалён"

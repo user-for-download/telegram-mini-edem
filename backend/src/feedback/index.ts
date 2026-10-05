@@ -12,7 +12,7 @@ import { logger } from "../logger.js";
 import { createRateLimiter, mutationLimiter, feedbackReadLimiter } from "../middleware/rateLimit.js";
 import { devRateMax } from "../env.js";
 import { getSanitizedBody } from "../middleware/sanitize.js";
-import { ERROR_CODES } from "../errors.js";
+import { ACCOUNT_DELETED_MESSAGE, ERROR_CODES } from "../errors.js";
 import { logBusinessEvent } from "../logger/business.js";
 
 export const feedbackRouter = new Hono<AuthEnv>();
@@ -119,7 +119,7 @@ feedbackRouter.post("/appeal", appealLimiter, async (c) => {
   // Tombstone удалённых терминален: апелляция удалённого не resurrect'ит.
   if (user.deletedAt) {
     return c.json(
-      { code: ERROR_CODES.FORBIDDEN, message: "Account is deleted" },
+      { code: ERROR_CODES.ACCOUNT_DELETED, message: ACCOUNT_DELETED_MESSAGE },
       403,
     );
   }

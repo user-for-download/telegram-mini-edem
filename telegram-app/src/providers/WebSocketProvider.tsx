@@ -10,7 +10,7 @@ import {
   type PropsWithChildren,
 } from "react";
 import { wsServerEventSchema, type WsServerEvent } from "@edem/contracts";
-import { apiClient } from "@/api/client";
+import { WS_TERMINAL_REASON, apiClient } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
   classifyWsClose,
@@ -55,12 +55,14 @@ import {
  * лишь, КАКОЙ терминальный переход сделать.
  *
  * Таблица (три источника — три написания, сравнение с одной строкой
- * молча ловило бы только WS-auth путь):
- * - "Account is deleted" — backend/src/ws/index.ts:130 (WS-auth, deletedAt);
- * - "Account deleted"    — backend/src/users/index.ts:278 (DELETE /me,
+ * молча ловило бы только WS-auth путь). Строки живут в `WS_TERMINAL_REASON`
+ * (@/api/client) и проверяются тестом против исходников бэка, поэтому
+ * переименование на сервере роняет тест, а не тихо уводит экран в «бан»:
+ * - WS_TERMINAL_REASON.deletedByWsAuth — ws/index.ts:130 (WS-auth, deletedAt);
+ * - WS_TERMINAL_REASON.deletedBySelf   — users/index.ts:278 (DELETE /me,
  *                         самоудаление; без "is" — самый частый случай);
- * - "Account is banned"  — backend/src/ws/index.ts:136 (WS-auth, bannedAt)
- *                         и backend/src/admin/index.ts:646 (бан админом).
+ * - WS_TERMINAL_REASON.banned          — ws/index.ts:136 (WS-auth, bannedAt)
+ *                         и admin/index.ts:646 (бан админом).
  *
  * "unknown" — причина пуста или незнакомая (старый клиент, иной бэкенд):
  * безопасный дефолт "banned" + один HTTP-bootstrap, чтобы авторитетный
@@ -71,10 +73,13 @@ export type TerminalCloseReason = "deleted" | "banned" | "unknown";
 export function classifyTerminalCloseReason(
   reason: string | undefined,
 ): TerminalCloseReason {
-  if (reason === "Account is deleted" || reason === "Account deleted") {
+  if (
+    reason === WS_TERMINAL_REASON.deletedByWsAuth ||
+    reason === WS_TERMINAL_REASON.deletedBySelf
+  ) {
     return "deleted";
   }
-  if (reason === "Account is banned") {
+  if (reason === WS_TERMINAL_REASON.banned) {
     return "banned";
   }
   return "unknown";

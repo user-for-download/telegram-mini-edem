@@ -8,7 +8,7 @@ import { Button } from "@/ui/Button";
 
 import { Car, Hash, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ApiError } from "@/api/client";
+import { ApiError, isAccountDeletedError } from "@/api/client";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { haptic } from "@/utils/haptics";
@@ -102,7 +102,7 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
   ) {
     return (
       <VehicleTerminal
-        deleted={vehicleQuery.error.message === "Account is deleted"}
+        deleted={isAccountDeletedError(vehicleQuery.error)}
       />
     );
   }

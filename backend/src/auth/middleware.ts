@@ -3,7 +3,7 @@ import type { Context, Next } from "hono";
 import type { Prisma } from "../generated/prisma/client.js";
 import { db } from "../db.js";
 import { verifyAccessToken } from "./tokens.js";
-import { ERROR_CODES } from "../errors.js";
+import { ACCOUNT_DELETED_MESSAGE, ERROR_CODES } from "../errors.js";
 
 export type AuthUser = Prisma.UserGetPayload<{
   include: {
@@ -53,7 +53,7 @@ export async function requireAuth(c: Context<AuthEnv>, next: Next) {
   }
 
   if (user.deletedAt) {
-    return c.json({ code: ERROR_CODES.FORBIDDEN, message: "Account is deleted" }, 403);
+    return c.json({ code: ERROR_CODES.ACCOUNT_DELETED, message: ACCOUNT_DELETED_MESSAGE }, 403);
   }
 
   if (user.bannedAt) {

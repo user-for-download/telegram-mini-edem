@@ -3,7 +3,7 @@
 // конфликт мест, пересечение броней, уехавшие поездки, авторизация, офлайн.
 // Бэкенд — авторитет: маппим только его коды (backend/src/errors.ts,
 // backend/src/trips/errors.ts), тексты — RU для UI.
-import { ACCOUNT_DELETED_MESSAGE, ApiError } from "@/api/client";
+import { isAccountDeletedError, ApiError } from "@/api/client";
 
 const CODE_MESSAGES: Record<string, string> = {
   SEAT_TAKEN: "Место только что заняли — выберите другое",
@@ -22,7 +22,7 @@ const CODE_MESSAGES: Record<string, string> = {
 
 export function bookingErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 403 && error.message === ACCOUNT_DELETED_MESSAGE) {
+    if (error.status === 403 && isAccountDeletedError(error)) {
       return "Профиль удалён — действие недоступно";
     }
     if (error.code && CODE_MESSAGES[error.code] !== undefined) {

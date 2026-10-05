@@ -181,8 +181,12 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
   background | banned | deleted`. **`error` никогда не выставляется** (везде
   `unauthenticated`) — недостижимые ветки `AuthGate.tsx:73,179` (см. Findings).
 - 403 `FORBIDDEN` → бан (`banReason`, экран + форма апелляции через публичный
-  `POST /feedback/appeal` с raw initData). 403 `FORBIDDEN` + message
-  `"Account is deleted"` → «Профиль удалён». Проверять удаление **до** бана (код совпадает).
+  `POST /feedback/appeal` с raw initData). 403 `ACCOUNT_DELETED` → «Профиль
+  удалён». Проверять удаление **до** бана. Различение — **по коду**, не по
+  тексту: бэк отдаёт отдельный `ACCOUNT_DELETED` (`backend/src/errors.ts`), а
+  `isAccountDeletedError` держит фолбэк на текст `Account is deleted` ради
+  старого бэка. Раньше делили `FORBIDDEN`, и переформулировка сообщения тихо
+  уводила удалённого в «бан» с предложением апелляции.
 - 429 → cooldown 60с в `AuthGate` (повторные нажатия продлевают rate-limit окно).
 - Фон: `visibilitychange` → `handleBackgroundState`; при возврате refresh, если истёк.
 - `clearSession`/`markAccountDeleted` пуржат кэш launch params SDK
@@ -404,7 +408,9 @@ retry_after, kill-switch). Условия отправки: флаг + токе�
 
 | Инвариант | Где |
 |---|---|
-| 4403 различает удаление и бан по **трём** строкам причины: `Account is deleted` (ws-auth), `Account deleted` (DELETE /me, **без «is»**), `Account is banned`; незнакомая → `banned` + один HTTP-bootstrap с возвратом к дефолту | `WebSocketProvider.tsx` (`classifyTerminalCloseReason`) |
+| Удаление аккаунта различается с баном **по коду** `ACCOUNT_DELETED`, а не по тексту; единственное место решения — `isAccountDeletedError` (`@/api/client`), сырых строк протокола в прикладном коде нет (тест `api/__tests__/accountDeleted.test.ts`) | `client.ts`, `useAuthStore.ts`, `ProfilePage.tsx`, `bookingErrors.ts`, `VehicleModal.tsx` |
+| В ветке `performRefresh` удаление проверяется **вне** «`code === FORBIDDEN`»: с новым кодом внешняя проверка проглотила бы `emitDeleted`, и удалённый уехал бы на экран логина | `client.ts` (`performRefresh`) |
+| 4403 различает удаление и бан по **трём** строкам причины: `Account is deleted` (ws-auth), `Account deleted` (DELETE /me, **без «is»**), `Account is banned`; незнакомая → `banned` + один HTTP-bootstrap с возвратом к дефолту. Строки живут в `WS_TERMINAL_REASON` и сверяются тестом с исходниками бэка (у WS close-кадра нет поля `code`, в отличие от HTTP) | `WebSocketProvider.tsx` (`classifyTerminalCloseReason`), `client.ts` (`WS_TERMINAL_REASON`) |
 | Подписка сентинела навешивается в момент **появления** узла (эффект на каждом рендере + сверка `observedRef`), а не только на маунте | `useInfiniteSentinel.ts` |
 | Результат refresh не применяется, если сессию уже сняли: guard `if (!get().session) return` | `useAuthStore.ts` (`refreshSession`) |
 | `markRead` оптимистичен: `onMutate` + снапшот обоих кэшей; `markReadInPages` чистая; декремент счётчика ровно один на вызов | `useNotificationsQuery.ts` |

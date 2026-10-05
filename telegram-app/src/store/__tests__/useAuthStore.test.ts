@@ -49,7 +49,7 @@ vi.mock("@/api/client", async (importOriginal) => {
   };
 });
 
-import { ApiError } from "@/api/client";
+import { ACCOUNT_DELETED_CODE, ApiError } from "@/api/client";
 import type { RefreshResult } from "@/api/client";
 import { authApi } from "@/api/auth.api";
 import { getRawInitData } from "@/utils/telegram-adapter";
@@ -182,6 +182,17 @@ describe("useAuthStore.bootstrap (Telegram)", () => {
     const state = useAuthStore.getState();
     expect(state.status).toBe("banned");
     expect(state.banReason).toBeNull();
+  });
+
+  it("403 по КОДУ ACCOUNT_DELETED: deleted, даже если текст переписан", async () => {
+    // Новая ветка: код различает удаление и бан, текст больше не решает.
+    mockedLoginWithTelegram.mockRejectedValue(
+      new ApiError("Аккаунт недоступен", ACCOUNT_DELETED_CODE, 403),
+    );
+
+    await useAuthStore.getState().bootstrap();
+
+    expect(useAuthStore.getState().status).toBe("deleted");
   });
 
   it("403 Account is deleted: терминальный deleted (проверяется раньше бана)", async () => {

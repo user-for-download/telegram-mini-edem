@@ -127,6 +127,12 @@ export function createWsHandler(upgradeWebSocket: UpgradeWebSocket) {
 
             if (dbUser.deletedAt) {
               logger.warn({ connId, userId }, "ws_auth_user_deleted");
+              // Причина закрытия — свободная строка (у WS close-кадра нет
+              // структурированного поля вроде `code`), поэтому здесь НЕТ
+              // машинного ACCOUNT_DELETED, как в HTTP-ответах. Клиент
+              // различает удаление и бан по этой строке и держит оба
+              // варианта: «Account is deleted» (здесь) и «Account deleted»
+              // (DELETE /me, backend/src/users/index.ts:278).
               wsManager.close(connId, 4403, "Account is deleted");
               return;
             }
