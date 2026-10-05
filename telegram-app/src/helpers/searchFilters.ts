@@ -14,7 +14,20 @@ export const DATE_SEGMENTS: ReadonlyArray<{ value: DateSegment; label: string }>
   { value: "tomorrow", label: "Завтра" },
 ];
 
-const MS_IN_DAY = 24 * 60 * 60 * 1000;
+/**
+ * Календарное приращение дней: конструктор с числом дня, а НЕ сложение
+ * 86 400 000 мс.
+ *
+ * Почему не сложение (аудит 2026-10-05): «завтра» — это следующий
+ * КАЛЕНДАРНЫЙ день, а `local midnight + 24h` в зоне с переходом на летнее
+ * время даёт 23:00 того же дня. В дни отката/перевода (Europe/Berlin,
+ * 25–26.10) `toIsoDate` возвращал СЕГОДНЯШНЮЮ дату, и сегмент «Завтра»
+ * показывал сегодняшние поездки. Москва фиксирована по смещению, ошибка там
+ * не проявляется — и тесты, гонявшиеся на московском времени, её не видели.
+ */
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
 
 function parseSegment(value: string | null): DateSegment {
   return value === "today" || value === "tomorrow" || value === "weekend"
@@ -44,7 +57,7 @@ export function dateSegmentToRange(
     return { dateFrom: iso, dateTo: iso };
   }
   if (segment === "tomorrow") {
-    const iso = toIsoDate(new Date(today.getTime() + MS_IN_DAY));
+    const iso = toIsoDate(addDays(today, 1));
     return { dateFrom: iso, dateTo: iso };
   }
   const dayOfWeek = today.getDay(); // 0 = воскресенье, 6 = суббота
@@ -52,8 +65,8 @@ export function dateSegmentToRange(
     const iso = toIsoDate(today);
     return { dateFrom: iso, dateTo: iso };
   }
-  const saturday = new Date(today.getTime() + (6 - dayOfWeek) * MS_IN_DAY);
-  const sunday = new Date(saturday.getTime() + MS_IN_DAY);
+  const saturday = addDays(today, 6 - dayOfWeek);
+  const sunday = addDays(saturday, 1);
   return { dateFrom: toIsoDate(saturday), dateTo: toIsoDate(sunday) };
 }
 
@@ -107,6 +120,26 @@ export function buildSearchFilters(
   }
   if (state.tags.length > 0) result.tags = [...state.tags];
   return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/**
+ * Есть ли в наборе хоть что-то, что сброс снимет.
+ *
+ * Вызывается по ПРИМЕНЁННОМУ набору (submitted), а не по форме: запрос
+ * едет от submitted, и кнопка сброса в пустом состоянии обязана оставаться
+ * рабочей, пока активный запрос отфильтрован. Считая от формы, можно было
+ * получить тупик — применить фильтр, дающий 0 результатов, вернуть контролы
+ * в нейтраль (без «Найти»), и единственный выход из пустого состояния
+ * пропадал (аудит 2026-10-05).
+ */
+export function hasAnySearchFilter(state: SearchFormState): boolean {
+  return (
+    state.maxPrice !== null ||
+    state.tags.length > 0 ||
+    state.dateSegment !== "all" ||
+    state.fromCityId !== "" ||
+    state.toCityId !== ""
+  );
 }
 
 /** Подпись слайдера цены: «до 1 500 ₽» или «Любая цена» без лимита. */

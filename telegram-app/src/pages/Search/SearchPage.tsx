@@ -32,6 +32,7 @@ import {
   PRICE_SLIDER_STEP,
   buildSearchFilters,
   formatMaxPriceLabel,
+  hasAnySearchFilter,
   parseDateSegmentParam,
   type SearchFormState,
 } from "@/helpers/searchFilters";
@@ -150,10 +151,14 @@ export function SearchPage() {
     setSubmitted(EMPTY_SEARCH_FORM);
   };
 
-  const hasActiveFilters =
-    form.maxPrice !== null ||
-    form.tags.length > 0 ||
-    form.dateSegment !== "all";
+  // Счётчик кнопки сброса — по СПРИМЕНЁННОМУ набору (submitted), а не по
+  // форме: запрос выше едет именно от submitted. Считая от form, можно было
+  // получить тупик: применить фильтр, дающий 0 результатов, вернуть контролы
+  // в нейтраль (без «Найти») — и кнопка «Сбросить фильтры» гасла при всё
+  // ещё активном отфильтрованном запросе, то есть единственный выход из
+  // пустого состояния пропадал.
+  // Можно ли сбросить хоть что-то — по применённому набору, а не по форме.
+  const canReset = hasAnySearchFilter(submitted);
 
   return (
     <>
@@ -316,7 +321,7 @@ export function SearchPage() {
                 <Button
                   size="m"
                   onClick={reset}
-                  disabled={!hasActiveFilters && !form.fromCityId && !form.toCityId}
+                  disabled={!canReset}
                 >
                   Сбросить фильтры
                 </Button>

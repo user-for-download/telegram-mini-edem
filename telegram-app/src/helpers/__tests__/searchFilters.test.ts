@@ -4,6 +4,7 @@ import {
   dateSegmentToRange,
   EMPTY_SEARCH_FORM,
   formatMaxPriceLabel,
+  hasAnySearchFilter,
   parseDateSegmentParam,
   PRICE_SLIDER_MAX,
 } from "@/helpers/searchFilters";
@@ -131,5 +132,33 @@ describe("formatMaxPriceLabel", () => {
 
   it("formats the cap with roubles", () => {
     expect(formatMaxPriceLabel(1500)).toMatch(/до.*1\s?500.*₽/);
+  });
+});
+
+describe("hasAnySearchFilter", () => {
+  it("пустой набор сбрасывать нечего", () => {
+    expect(hasAnySearchFilter(EMPTY_SEARCH_FORM)).toBe(false);
+  });
+
+  it("видит любой применённый фильтр", () => {
+    expect(hasAnySearchFilter({ ...EMPTY_SEARCH_FORM, maxPrice: 1000 })).toBe(true);
+    expect(hasAnySearchFilter({ ...EMPTY_SEARCH_FORM, tags: ["Есть багаж"] })).toBe(true);
+    expect(hasAnySearchFilter({ ...EMPTY_SEARCH_FORM, dateSegment: "today" })).toBe(true);
+    expect(hasAnySearchFilter({ ...EMPTY_SEARCH_FORM, fromCityId: CITY_VOLOGDA })).toBe(true);
+    expect(hasAnySearchFilter({ ...EMPTY_SEARCH_FORM, toCityId: CITY_VOLOGDA })).toBe(true);
+  });
+
+  it("сброс доступен и по городам — раньше это считалось только формой", () => {
+    // Регрессия (аудит 2026-10-05): кнопка сброса считалась от form, где
+    // города проверялись отдельно от hasActiveFilters. Пресет из URL
+    // (deep link «Москва → Тула») при submitted-поезде давал пустое
+    // состояние с ПОГАСШЕЙ кнопкой — выхода из тупика не было.
+    expect(
+      hasAnySearchFilter({
+        ...EMPTY_SEARCH_FORM,
+        fromCityId: CITY_VOLOGDA,
+        toCityId: CITY_VOLOGDA,
+      }),
+    ).toBe(true);
   });
 });
