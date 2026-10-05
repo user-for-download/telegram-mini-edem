@@ -1,5 +1,6 @@
 import { Badge, InlineButtons } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { CarFront, Inbox, Ticket } from "lucide-react";
 import { haptic } from "@/utils/haptics";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
@@ -37,6 +38,49 @@ export function TripCountersSection() {
 
   const bookings = bookingsQuery.data ?? [];
   const requests = requestsQuery.data ?? [];
+  const ownTrips =
+    driverTrips.data?.pages.flatMap((page) => page.items ?? []) ?? [];
+  // Точный total с бэкенда (count с тем же where), а не длина загруженных
+  // страниц: при limit 20 и >20 поездках ownTrips.length врёт.
+  // Опциональная цепочка до конца: пока идёт загрузка, data может быть
+  // неполным (страница без pagination), и жёсткое `.pagination` роняло
+  // рендер на skeleton-ветке.
+  const tripsTotal =
+    driverTrips.data?.pages[0]?.pagination?.total ?? ownTrips.length;
+
+  // Сумма «Заявок» считается по ЗАГРУЖЕННЫМ активным поездкам, а первая
+  // страница — 20. Если сервер сообщает, что поездок больше, догружаем
+  // остальные: иначе водитель с >20 активными поездками видел бы
+  // заниженный счётчик (аудит 2026-10-05).
+  //
+  // Догрузка условная — только когда сумма неполна, поэтому водитель с ≤20
+  // активными поездками (подавляющее большинство) не платит ни одного
+  // лишнего запроса. Ошибка догрузки останавливает попытки: без
+  // `isFetchNextPageError` в условии был бы бесконечный цикл запросов.
+  const needsMoreTrips = tripsTotal > ownTrips.length;
+  const {
+    hasNextPage: hasMoreTripsPage,
+    isFetchingNextPage: isFetchingMoreTrips,
+    isFetchNextPageError: moreTripsFailed,
+    fetchNextPage: fetchMoreTrips,
+  } = driverTrips;
+  useEffect(() => {
+    if (
+      !needsMoreTrips ||
+      !hasMoreTripsPage ||
+      isFetchingMoreTrips ||
+      moreTripsFailed
+    ) {
+      return;
+    }
+    void fetchMoreTrips();
+  }, [
+    needsMoreTrips,
+    hasMoreTripsPage,
+    isFetchingMoreTrips,
+    moreTripsFailed,
+    fetchMoreTrips,
+  ]);
 
   const isLoading =
     bookingsQuery.isLoading || driverTrips.isLoading || requestsQuery.isLoading;
@@ -86,12 +130,6 @@ export function TripCountersSection() {
     );
   }
 
-  const ownTrips =
-    driverTrips.data?.pages.flatMap((page) => page.items ?? []) ?? [];
-  // Точный total с бэкенда (count с тем же where), а не длина загруженных
-  // страниц: при limit 20 и >20 поездках ownTrips.length врёт.
-  const tripsTotal =
-    driverTrips.data?.pages[0]?.pagination.total ?? ownTrips.length;
   const { confirmed, pending } = splitBookingsByStatus(bookings, new Date());
   const pendingCount = pending.length;
   const showPending = pendingCount > 0;
