@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   Avatar,
   Caption,
@@ -12,6 +12,7 @@ import { RatingPill } from "@/components/RatingPill";
 import { AvatarStack } from "@/components/Trip/AvatarStack";
 import { Card } from "@/ui/Card";
 import { Cell } from "@/ui/Cell";
+import { VISUALLY_HIDDEN } from "@/ui/classes";
 import styles from "./TripStandardCard.module.css";
 
 export interface TripStandardPerson {
@@ -67,29 +68,30 @@ export function TripStandardCard({
   footer,
   onOpen,
 }: TripStandardCardProps) {
-  // Без футера в карточке нет своих кнопок — тогда она сама является
-  // кнопкой (клавиатура/AT). Со слотом действий открытие только мышью/
-  // тапом: role=button с вложенными кнопками недопустим (nested interactive).
-  const asButton = footer === undefined;
   const open = () => onOpen(tripId);
-  const onKeyDown = asButton
-    ? (event: KeyboardEvent<HTMLElement>) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          open();
-        }
-      }
-    : undefined;
 
-  return (
-    <Card
-      variant="flush"
-      className={styles.card}
-      onClick={open}
-      role={asButton ? "button" : undefined}
-      tabIndex={asButton ? 0 : undefined}
-      onKeyDown={onKeyDown}
-    >
+  // Открытие поездки — НАСТОЯЩАЯ кнопка, а не div с role/tabIndex.
+  //
+  // Регрессия (аудит 2026-10-05): раньше role/tabIndex/onKeyDown вешались
+  // только когда футера нет (`asButton = footer === undefined`). У карточек
+  // /bookings футер есть всегда (поделиться + отмена), поэтому ВСЕ карточки
+  // ленты были доступны только мышью: Tab их пропускал, скринридер не видел
+  // действия. Раньше это оправдывали запретом вложенных интерактивных
+  // элементов — но запрет касается кнопок ВНУТРИ кнопки, а не соседних
+  // областей карточки.
+  //
+  // Поэтому кнопкой обёрнуто только то, что внутри гарантированно не
+  // интерактивно (шапка, маршрут и — когда personOverride не переопределён —
+  // строка персоны). Слоты с действиями (футер и personOverride со строками
+  // заявок −/+) остаются СОСЕДЯМИ кнопки, а не её потомками.
+  //
+  // Тап мышью по любой части карточки по-прежнему открывает детали: на корне
+  // остаётся onClick, а кнопка гасит всплытие, чтобы не открыть дважды.
+  // Клавиатура получила нативную кнопку: фокус, Enter/Space, роль — из коробки.
+  const hasInteractiveOverride = personOverride !== undefined;
+
+  const content = (
+    <>
       <div className={styles.head}>
         <span className={styles.when}>
           <Calendar size={14} aria-hidden />
@@ -129,7 +131,7 @@ export function TripStandardCard({
           </div>
         ))}
       </div>
-      {personOverride ?? (
+      {!hasInteractiveOverride && (
         <Cell
           className={styles.person}
           before={
@@ -160,6 +162,27 @@ export function TripStandardCard({
           </Subheadline>
         </Cell>
       )}
+    </>
+  );
+
+  return (
+    <Card variant="flush" className={styles.card} onClick={open}>
+      <button
+        type="button"
+        className={styles.open}
+        onClick={(event) => {
+          // Корневому onClick это не нужно — но без гашения тап по кнопке
+          // всплыл бы и открыл детали дважды.
+          event.stopPropagation();
+          open();
+        }}
+      >
+        {/* Видимое содержимое кнопки — и есть её имя; глагол добавляем
+            скрыто, чтобы скринридеру было ясно, что это переход. */}
+        <span className={VISUALLY_HIDDEN}>Открыть поездку</span>
+        {content}
+      </button>
+      {hasInteractiveOverride && personOverride}
       {footer && <div className={styles.footer}>{footer}</div>}
     </Card>
   );
