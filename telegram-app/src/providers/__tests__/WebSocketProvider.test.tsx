@@ -103,6 +103,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { TRIP_KEYS } from "@/queries/useTripsQuery";
 import { BOOKING_KEYS } from "@/queries/useBookingsQuery";
 import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
+import { REVIEW_KEYS } from "@/queries/useReviewsQuery";
 
 /** Управляемый дубль WebSocket: handshake, события и close — по команде. */
 class FakeWebSocket {
@@ -357,6 +358,95 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     expect(document.body.textContent).toContain("Новая заявка на место");
   });
 
+  it("booking:new инвалидирует сводку заявок водителя (BOOKING_KEYS.driver)", async () => {
+    // Регрессия (аудит 2026-10-05): сводка водителя живёт под отдельным
+    // ключом и в остальные списки не входит. Без этой инвалидации новая
+    // заявка не появлялась у водителя до перезагрузки — staleTime 60с и
+    // refetchOnWindowFocus:false рефетча не давали.
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+    invalidateSpy.mockClear();
+
+    await act(async () => {
+      ws.serverMessage({
+        type: "booking:new",
+        payload: { bookingId: "b-77", tripId: "t-1" },
+      });
+    });
+
+    expect(invalidateCallsFor([...BOOKING_KEYS.driver()])).toBe(1);
+  });
+
+  it("booking:status_changed инвалидирует сводку заявок водителя", async () => {
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+    invalidateSpy.mockClear();
+
+    await act(async () => {
+      ws.serverMessage({
+        type: "booking:status_changed",
+        payload: { bookingId: "b-78", tripId: "t-1", status: "cancelled" },
+      });
+    });
+
+    expect(invalidateCallsFor([...BOOKING_KEYS.driver()])).toBe(1);
+  });
+
+  it("trip:status_changed completed открывает поездку для отзыва", async () => {
+    // Тост «Вы можете оставить отзыв» показывался, а список доступных
+    // поездок не обновлялся: свой ключ, не лежит под trips/bookings.
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+    invalidateSpy.mockClear();
+
+    await act(async () => {
+      ws.serverMessage({
+        type: "trip:status_changed",
+        payload: { tripId: "t-9", status: "completed" },
+      });
+    });
+
+    expect(invalidateCallsFor([...REVIEW_KEYS.availableTrips()])).toBe(1);
+    expect(document.body.textContent).toContain("Поездка завершена");
+  });
+
+  it("trip:status_changed cancelled НЕ трогает список доступных отзывов", async () => {
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+    invalidateSpy.mockClear();
+
+    await act(async () => {
+      ws.serverMessage({
+        type: "trip:status_changed",
+        payload: { tripId: "t-10", status: "cancelled" },
+      });
+    });
+
+    expect(invalidateCallsFor([...REVIEW_KEYS.availableTrips()])).toBe(0);
+    // Сводка заявок водителя при отмене чистится.
+    expect(invalidateCallsFor([...BOOKING_KEYS.driver()])).toBe(1);
+  });
+
   it("notification:new сужает инвалидацию до счётчика и текущего списка", async () => {
     authenticate();
     await renderProvider();
@@ -440,6 +530,78 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     expect(invalidateCallsFor([...NOTIFICATION_KEYS.all])).toBe(1);
     // Reconnect несёт свежий auth с тем же токеном.
     expect(sentMessages(second)[0]).toEqual({ type: "auth", token: "access-1" });
+  });
+
+  it("background→foreground: reconnect после возврата ДЕЛАЕТ resync", async () => {
+    // Регрессия (аудит 2026-10-05): уход в фон ставит status="background",
+    // сокет рвётся, а флаг «уже подключались» сбрасывался на ЛЮБОМ
+    // не-authenticated статусе. Возврат из фона — самый частый переход
+    // жизненного цикла Telegram-аппа, и именно он перестал поднимать
+    // resyncSeq: события за время разрыва не восстанавливались
+    // инвалидацией, а refetchOnWindowFocus выключен.
+    authenticate();
+    await renderProvider();
+    const first = lastInstance();
+    await act(async () => {
+      first.serverOpen();
+      first.serverMessage({ type: "auth:ok" });
+    });
+    // Первый коннект — ресинк не нужен (данные и так свежие).
+    expect(probeState.resyncSeq).toBe(0);
+    invalidateSpy.mockClear();
+
+    // Уход в фон: сессия ЖИВА, статус background.
+    await act(async () => {
+      useAuthStore.setState({ status: "background" });
+    });
+    expect(FakeWebSocket.instances).toHaveLength(1);
+
+    // Возврат: клиент снова foreground, статус authenticated.
+    await act(async () => {
+      useAuthStore.setState({ status: "authenticated" });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    const second = lastInstance();
+
+    await act(async () => {
+      second.serverOpen();
+      second.serverMessage({ type: "auth:ok" });
+    });
+
+    // Ресинк обязан сработать: сокет был разорван, данные могли устареть.
+    expect(probeState.resyncSeq).toBe(1);
+    expect(invalidateCallsFor([...TRIP_KEYS.all])).toBe(1);
+    expect(invalidateCallsFor([...BOOKING_KEYS.all])).toBe(1);
+    expect(invalidateCallsFor([...NOTIFICATION_KEYS.all])).toBe(1);
+  });
+
+  it("реальный логаут по-прежнему сбрасывает признак переподключения", async () => {
+    // Сторона страховка к предыдущему тесту: после потери сессии первый
+    // коннект новой сессии НЕ должен считаться переподключением.
+    authenticate();
+    await renderProvider();
+    const first = lastInstance();
+    await act(async () => {
+      first.serverOpen();
+      first.serverMessage({ type: "auth:ok" });
+    });
+
+    // Выход: сессии нет.
+    await act(async () => {
+      useAuthStore.setState({ status: "unauthenticated", session: null });
+    });
+
+    authenticate("access-2");
+    await renderProvider();
+    const afterRelogin = lastInstance();
+    await act(async () => {
+      afterRelogin.serverOpen();
+      afterRelogin.serverMessage({ type: "auth:ok" });
+    });
+
+    // Новый пользователь/сессия — свежие данные, ресинк не поднимаем.
+    expect(probeState.resyncSeq).toBe(0);
   });
 
   it("4403 — терминально: бан-экран, ни reconnect, ни refresh-loop", async () => {

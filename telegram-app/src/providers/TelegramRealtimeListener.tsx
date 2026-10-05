@@ -9,6 +9,7 @@ import { useWs, useWsEvent } from "@/providers/WebSocketProvider";
 import { TRIP_KEYS } from "@/queries/useTripsQuery";
 import { BOOKING_KEYS } from "@/queries/useBookingsQuery";
 import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
+import { REVIEW_KEYS } from "@/queries/useReviewsQuery";
 
 
 interface RealtimeNotice {
@@ -106,6 +107,11 @@ export const TelegramRealtimeListener: FC = () => {
     // Новая бронь меняет seatsAvailable — обновляем и публичные списки.
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.lists() });
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.detail(tripId) });
+    // Сводка заявок водителя (useDriverRequestsQuery → DriverTripRequests)
+    // живёт под своим ключом и в остальные списки не входит. Без этой
+    // инвалидации новая заявка не появлялась у водителя до перезагрузки:
+    // staleTime 60с + refetchOnWindowFocus:false не давали рефетча.
+    void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.driver() });
     enqueueNotice({
       key: `ws_booking_new_${bookingId}`,
       title: "Новая заявка на место",
@@ -121,6 +127,8 @@ export const TelegramRealtimeListener: FC = () => {
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.detail(tripId) });
     // Подтверждение/отклонение брони меняет занятость мест в публичных списках.
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.lists() });
+    // У водителя из сводки уходит обработанная/отменённая заявка.
+    void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.driver() });
 
     if (status === "confirmed") {
       notifyHaptic("success");
@@ -145,6 +153,8 @@ export const TelegramRealtimeListener: FC = () => {
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.detail(tripId) });
     // Отменённая/завершённая поездка должна исчезнуть из публичного поиска.
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.lists() });
+    // Отмена/завершение поездки убирает её заявки из сводки водителя.
+    void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.driver() });
 
     if (status === "cancelled") {
       notifyHaptic("error");
@@ -154,6 +164,13 @@ export const TelegramRealtimeListener: FC = () => {
       });
     } else if (status === "completed") {
       notifyHaptic("success");
+      // Поездка завершена → она стала доступна для отзыва. Список
+      // доступных поездок — отдельный ключ; без инвалидации тост
+      // «Вы можете оставить отзыв» показывался, а поездки в списке
+      // не было (staleTime 60с, фокус не рефетчит).
+      void queryClient.invalidateQueries({
+        queryKey: REVIEW_KEYS.availableTrips(),
+      });
       enqueueNotice({
         key: `ws_trip_completed_${tripId}`,
         title: "Поездка завершена",

@@ -279,13 +279,10 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
           return;
         }
 
-        useAuthStore.setState({
-          status: "banned",
-          user: null,
-          session: null,
-          banReason: null,
-          initData: null,
-        });
+        // Переход в бан — через стор, а не setState: markBanned кладёт в
+        // состояние initData для формы обжалования (она шлёт appeal без
+        // токена, и без initData запрос не уходил бы вовсе).
+        useAuthStore.getState().markBanned(null);
 
         // Причина незнакома: единственный авторитетный источник — тело
         // 403. Ровно один bootstrap; раньше этот шаг был описан
@@ -301,13 +298,7 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
           void useAuthStore.getState().bootstrap().then(() => {
             const next = useAuthStore.getState().status;
             if (next === "banned" || next === "deleted") return;
-            useAuthStore.setState({
-              status: "banned",
-              user: null,
-              session: null,
-              banReason: null,
-              initData: null,
-            });
+            useAuthStore.getState().markBanned(null);
           });
         }
         return;
@@ -445,7 +436,19 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
       }
       connect();
     } else {
-      hasAuthedRef.current = false;
+      // Ветка «не authenticated» — это ДВА разных случая, и различать их
+      // обязательно: сокет закрываем в обоих, а флаг «мы уже подключались»
+      // сбрасываем только при реальной потере сессии.
+      //
+      // status="background" (сокет рвётся на уходе в фон, сессия ЖИВА) —
+      // это reconnect при возврате, и по контракту он обязан поднять
+      // resyncSeq, чтобы слушатель перезабрал данные за время разрыва.
+      // Раньше флаг сбрасывался на любом не-authenticated статусе, поэтому
+      // после background→foreground auth:ok уходил в ветку «первый коннект»
+      // и ресинк не срабатывал — пропущенные события не восстанавливались.
+      if (!useAuthStore.getState().session) {
+        hasAuthedRef.current = false;
+      }
       reconnectAttemptRef.current = 0;
       teardownSocket();
     }

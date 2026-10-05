@@ -10,6 +10,7 @@ import {
   type UpdateTripDto,
 } from "@/api/trips.api";
 import type { CreateTripDto } from "@edem/contracts";
+import { REVIEW_KEYS } from "./useReviewsQuery";
 
 export const TRIP_KEYS = {
   all: ["trips"] as const,
@@ -107,8 +108,15 @@ export function useCancelTripMutation() {
 
 export function useCompleteTripMutation() {
   const invalidateTripsAndBookings = useInvalidateTripsAndBookings();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => tripsApi.completeTrip(id),
-    onSuccess: invalidateTripsAndBookings,
+    onSuccess: () =>
+      Promise.all([
+        invalidateTripsAndBookings(),
+        // Завершение открывает поездку для отзыва: список доступных
+        // поездок — отдельный ключ, он не лежит под trips/bookings.
+        queryClient.invalidateQueries({ queryKey: REVIEW_KEYS.availableTrips() }),
+      ]),
   });
 }
