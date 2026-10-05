@@ -6,7 +6,7 @@ import { db } from "../db.js";
 import { env } from "../env.js";
 import { wsManager } from "../services/wsManager.js";
 import { logger } from "../logger.js";
-import { wsClientMessageSchema } from "@edem/contracts";
+import { WS_TERMINAL_REASON, wsClientMessageSchema } from "@edem/contracts";
 
 /**
  * connId, привязанный к сокету в onOpen. WSContext — чужой интерфейс без
@@ -133,13 +133,13 @@ export function createWsHandler(upgradeWebSocket: UpgradeWebSocket) {
               // различает удаление и бан по этой строке и держит оба
               // варианта: «Account is deleted» (здесь) и «Account deleted»
               // (DELETE /me, backend/src/users/index.ts:278).
-              wsManager.close(connId, 4403, "Account is deleted");
+              wsManager.close(connId, 4403, WS_TERMINAL_REASON.deletedByWsAuth);
               return;
             }
 
             if (dbUser.bannedAt) {
               logger.warn({ connId, userId }, "ws_auth_user_banned");
-              wsManager.close(connId, 4403, "Account is banned");
+              wsManager.close(connId, 4403, WS_TERMINAL_REASON.banned);
               return;
             }
 

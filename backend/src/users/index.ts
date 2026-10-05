@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
-import { completeOnboardingBodySchema } from "@edem/contracts";
+import { WS_TERMINAL_REASON, completeOnboardingBodySchema } from "@edem/contracts";
 import { db } from "../db.js";
 import { requireUser, type AuthEnv } from "../auth/middleware.js";
 import { serializeUser, serializePublicUser } from "../serializers/index.js";
@@ -275,7 +275,7 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
     });
   }
 
-  wsManager.closeUserConnections(user.id, 4403, "Account deleted");
+  wsManager.closeUserConnections(user.id, 4403, WS_TERMINAL_REASON.deletedBySelf);
   await revokeAllActiveTokens(user.id);
   return c.json({ success: true });
 });

@@ -183,9 +183,10 @@ retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffec
 - 403 `FORBIDDEN` → бан (`banReason`, экран + форма апелляции через публичный
   `POST /feedback/appeal` с raw initData). 403 `ACCOUNT_DELETED` → «Профиль
   удалён». Проверять удаление **до** бана. Различение — **по коду**, не по
-  тексту: бэк отдаёт отдельный `ACCOUNT_DELETED` (`backend/src/errors.ts`), а
-  `isAccountDeletedError` держит фолбэк на текст `Account is deleted` ради
-  старого бэка. Раньше делили `FORBIDDEN`, и переформулировка сообщения тихо
+  тексту: отдельный код `ACCOUNT_DELETED` и предикат `isAccountDeletedError`
+  живут в **контрактах** (`@edem/contracts`, `schemas/api-error.schema.ts`) —
+  их берёт и бэк, и клиент, поэтому разъехаться они не могут. Фолбэк на текст
+  `Account is deleted` — для старого бэка, у которого кода ещё нет. Раньше делили `FORBIDDEN`, и переформулировка сообщения тихо
   уводила удалённого в «бан» с предложением апелляции.
 - 429 → cooldown 60с в `AuthGate` (повторные нажатия продлевают rate-limit окно).
 - Фон: `visibilitychange` → `handleBackgroundState`; при возврате refresh, если истёк.
@@ -408,16 +409,16 @@ retry_after, kill-switch). Условия отправки: флаг + токе�
 
 | Инвариант | Где |
 |---|---|
-| Удаление аккаунта различается с баном **по коду** `ACCOUNT_DELETED`, а не по тексту; единственное место решения — `isAccountDeletedError` (`@/api/client`), сырых строк протокола в прикладном коде нет (тест `api/__tests__/accountDeleted.test.ts`) | `client.ts`, `useAuthStore.ts`, `ProfilePage.tsx`, `bookingErrors.ts`, `VehicleModal.tsx` |
+| Удаление аккаунта различается с баном **по коду** `ACCOUNT_DELETED`, а не по тексту. Код, текст-фолбэк и предикат живут в контрактах (`schemas/api-error.schema.ts`), бэк импортирует оттуда же — сверить нечего, расхождение невозможно по построению. Прикладной код берёт ре-экспорт из `@/api/client` | `useAuthStore.ts`, `ProfilePage.tsx`, `bookingErrors.ts`, `VehicleModal.tsx`, `client.ts` (ре-экспорт) |
 | В ветке `performRefresh` удаление проверяется **вне** «`code === FORBIDDEN`»: с новым кодом внешняя проверка проглотила бы `emitDeleted`, и удалённый уехал бы на экран логина | `client.ts` (`performRefresh`) |
-| 4403 различает удаление и бан по **трём** строкам причины: `Account is deleted` (ws-auth), `Account deleted` (DELETE /me, **без «is»**), `Account is banned`; незнакомая → `banned` + один HTTP-bootstrap с возвратом к дефолту. Строки живут в `WS_TERMINAL_REASON` и сверяются тестом с исходниками бэка (у WS close-кадра нет поля `code`, в отличие от HTTP) | `WebSocketProvider.tsx` (`classifyTerminalCloseReason`), `client.ts` (`WS_TERMINAL_REASON`) |
+| 4403 различает удаление и бан по **трём** строкам причины: `Account is deleted` (ws-auth), `Account deleted` (DELETE /me, **без «is»**), `Account is banned`; незнакомая → `banned` + один HTTP-bootstrap с возвратом к дефолту. У close-кадра нет поля `code`, поэтому причина — строка, но и она лежит в `WS_TERMINAL_REASON` в контрактах и импортируется бэком (ws/index.ts, users/index.ts, admin/index.ts) | `WebSocketProvider.tsx` (`classifyTerminalCloseReason`), контракты (`WS_TERMINAL_REASON`) |
 | Подписка сентинела навешивается в момент **появления** узла (эффект на каждом рендере + сверка `observedRef`), а не только на маунте | `useInfiniteSentinel.ts` |
 | Результат refresh не применяется, если сессию уже сняли: guard `if (!get().session) return` | `useAuthStore.ts` (`refreshSession`) |
 | `markRead` оптимистичен: `onMutate` + снапшот обоих кэшей; `markReadInPages` чистая; декремент счётчика ровно один на вызов | `useNotificationsQuery.ts` |
 | Время поездок и уведомлений — только через `moscowDayKey`/`moscowTimeLabel`/`moscowDateLabel` из `utils/date.ts`; `toLocale*` без `timeZone` запрещён | `utils/date.ts` |
 | Счётчик «Прочитать все» — только `useUnreadCountQuery`; сегментный `pages[0].unreadCount` как глобальное запрещён | `NotificationsPage.tsx` |
 | `closingBehavior` — общее состояние клиента: счётчик грязных форм, а не флаг | `useClosingConfirmation.ts` |
-| `ACCOUNT_DELETED_MESSAGE` определена один раз в `api/client.ts`; мок этого модуля обязан повторять её | `api/client.ts` |
+| `ACCOUNT_DELETED_MESSAGE`/`ACCOUNT_DELETED_CODE`/`WS_TERMINAL_REASON` определены один раз в контрактах; мок `@/api/client` обязан повторять их — без этого ветки «удалён» и классификатор 4403 становятся мёртвыми | `packages/contracts/src/schemas/api-error.schema.ts` |
 | `/users/me` описывает **только** `api/profile.ts`; ключи ресурса — `USER_KEYS` в `queries/profile.ts` | `api/profile.ts`, `queries/profile.ts` |
 | Тесты: TZ-зависимое поведение проверяется файлом с принудительным `process.env.TZ`; SSR разделяет соседние текстовые узлы маркером `<!-- -->` | `notificationsTime.tz.test.ts` |
 | `role`/`aria-live`, объявленные на узле **портала**, вешаются на пустую обёртку, а не на текст: `Snackbar` уходит в портал `AppRoot`, и роль досталась обёртке. Роль ставится на сам элемент, несущий текст, и проверяется DOM-тестом — зонд по рендеру её не видит | `components/Toast/ToastProvider.tsx`, `Toast/__tests__/ToastProvider.test.tsx` |

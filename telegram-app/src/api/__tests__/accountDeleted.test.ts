@@ -122,54 +122,62 @@ describe("refresh: 403 удалённого аккаунта", () => {
 
 describe("isAccountDeletedError: сырое тело ответа", () => {
   it("в ветке refresh до ApiError не доходит — принимает и запись", () => {
+    // Тело ответа бэка всегда с code (все шесть точек его шлют), поэтому
+    // фолбэк по тексту и требует code: голый Error без code не считается
+    // протокольным ответом — иначе любая ошибка с таким текстом выдавала
+    // бы себя за удалённый аккаунт.
     expect(isAccountDeletedError({ code: ACCOUNT_DELETED_CODE, message: "x" })).toBe(true);
-    expect(isAccountDeletedError({ message: ACCOUNT_DELETED_MESSAGE })).toBe(true);
+    expect(isAccountDeletedError({ code: "FORBIDDEN", message: ACCOUNT_DELETED_MESSAGE })).toBe(
+      true,
+    );
+    expect(isAccountDeletedError({ message: ACCOUNT_DELETED_MESSAGE })).toBe(false);
   });
 });
 
 describe("контракт с бэкендом", () => {
-  it("код ACCOUNT_DELETED есть в backend/src/errors.ts", () => {
-    expect(readRepoFile("backend/src/errors.ts")).toContain(
-      `ACCOUNT_DELETED: "${ACCOUNT_DELETED_CODE}"`,
+  it("бэк берёт код и текст удаления ИЗ контрактов, а не пишет литералом", () => {
+    // Раньше здесь было сравнение «бэк.src === константа клиента» по
+    // чтению файлов. Оно нужно было ровно потому, что строка жила в двух
+    // местах. Теперь единственный дом — @edem/contracts, поэтому бэк
+    // импортирует, и сверять нечего: расхождение невозможно по построению.
+    const errors = readRepoFile("backend/src/errors.ts");
+    expect(errors).toContain("ACCOUNT_DELETED: ACCOUNT_DELETED_CODE");
+    expect(errors).toContain(
+      'import { ACCOUNT_DELETED_CODE } from "@edem/contracts"',
+    );
+    expect(errors).not.toContain(`"${ACCOUNT_DELETED_CODE}"`);
+    expect(errors).not.toContain(`"${ACCOUNT_DELETED_MESSAGE}"`);
+    expect(errors).toContain(
+      'export { ACCOUNT_DELETED_MESSAGE } from "@edem/contracts"',
     );
   });
 
-  it("текст удаления в бэке — ровно один, и он равен константе клиента", () => {
-    const sources = [
-      "backend/src/auth/middleware.ts",
-      "backend/src/auth/index.ts",
-      "backend/src/feedback/index.ts",
-    ];
-    for (const file of sources) {
-      expect(readRepoFile(file)).toContain("ACCOUNT_DELETED_MESSAGE");
+  it("WS-причины в бэке берутся из контрактов, а не пишутся строкой", () => {
+    // У close-кадра нет поля code, поэтому причина — строка. Но и она
+    // теперь одна на обе стороны, а не сверка «бэк.src === клиент».
+    for (const file of [
+      "backend/src/ws/index.ts",
+      "backend/src/users/index.ts",
+      "backend/src/admin/index.ts",
+    ]) {
+      const source = readRepoFile(file);
+      expect(source).toContain("WS_TERMINAL_REASON");
+      for (const needle of [
+        WS_TERMINAL_REASON.deletedByWsAuth,
+        WS_TERMINAL_REASON.deletedBySelf,
+        WS_TERMINAL_REASON.banned,
+      ]) {
+        expect(source).not.toContain(`"${needle}"`);
+      }
     }
-    // Единственное место, где текст живёт как литерал, — errors.ts.
-    expect(readRepoFile("backend/src/errors.ts")).toContain(
-      `= "${ACCOUNT_DELETED_MESSAGE}"`,
-    );
-    expect(
-      sources.filter((file) => readRepoFile(file).includes(`"${ACCOUNT_DELETED_MESSAGE}"`)),
-    ).toEqual([]);
   });
 
-  it("WS-причины совпадают с исходниками бэка (иначе экран уедет в «бан»)", () => {
-    // Причина закрытия WS — свободная строка, машинного кода там нет.
-    // Поэтому таблицу проверяем чтением бэка: переименование на сервере
-    // должно ронять этот тест, а не молча уводить удалённого в бан.
-    expect(readRepoFile("backend/src/ws/index.ts")).toContain(
-      `"${WS_TERMINAL_REASON.deletedByWsAuth}"`,
-    );
-    expect(readRepoFile("backend/src/users/index.ts")).toContain(
-      `"${WS_TERMINAL_REASON.deletedBySelf}"`,
-    );
-    expect(readRepoFile("backend/src/ws/index.ts")).toContain(
-      `"${WS_TERMINAL_REASON.banned}"`,
-    );
-  });
-
-  it("в прикладном коде telegram-app нет сырых строк протокола", () => {
+  it("во всём приложении нет сырых строк протокола — единственный дом контракты", () => {
     // Раньше литерал «Account is deleted» жил в VehicleModal и
     // WebSocketProvider — обе копии молча уводили экран в «бан».
+    //
+    // Проверяем ОБЕ стороны (бэк и клиент) и приложение целиком: единственное
+    // разрешённое место — packages/contracts/src/schemas/api-error.schema.ts.
     //
     // Комментарии режем: они объясняют, откуда строки, и это законная
     // документация. `//` снимаем только в начале строки — иначе «съел» бы
@@ -180,20 +188,36 @@ describe("контракт с бэкендом", () => {
     const walk = (dir: string): string[] =>
       readdirSync(join(repoRoot, dir), { withFileTypes: true }).flatMap((entry) => {
         const rel = `${dir}/${entry.name}`;
-        if (entry.isDirectory()) return entry.name === "__tests__" ? [] : walk(rel);
-        return /\.tsx?$/.test(entry.name) && rel !== "telegram-app/src/api/client.ts"
-          ? [rel]
-          : [];
+        if (entry.isDirectory()) {
+          return entry.name === "__tests__" || entry.name === "dist" ? [] : walk(rel);
+        }
+        return /\.tsx?$/.test(entry.name) ? [rel] : [];
       });
+    const CONTRACT_HOME = "packages/contracts/src/schemas/api-error.schema.ts";
+    // Только ПРИЗНАКИ, по которым клиент что-то различает. Строка «Account is
+    // banned» сюда НЕ входит намеренно: в HTTP-ответах бэка она идёт как
+    // `message` — свободный человекочитаемый текст, который по контракту не
+    // часть протокола (клиент показывает свои формулировки по коду и бан
+    // определяет исключением из удаления). Запрещать её в бэке нельзя, это
+    // сломало бы честные сообщения об ошибке.
+    //
+    // Плюс «Account deleted» (WS-причина самоудаления) и код — их клиент
+    // действительно различает, поэтому копия в прикладном коде опасна.
     const needles = [
+      ACCOUNT_DELETED_CODE,
       ACCOUNT_DELETED_MESSAGE,
       WS_TERMINAL_REASON.deletedBySelf,
-      WS_TERMINAL_REASON.banned,
     ];
-    const offenders = walk("telegram-app/src").filter((file) => {
-      const code = stripComments(readRepoFile(file));
-      return needles.some((needle) => code.includes(`"${needle}"`));
-    });
+    const offenders = [
+      ...walk("telegram-app/src"),
+      ...walk("backend/src"),
+      ...walk("packages/contracts/src"),
+    ]
+      .filter((file) => file !== CONTRACT_HOME)
+      .filter((file) => {
+        const code = stripComments(readRepoFile(file));
+        return needles.some((needle) => code.includes(`"${needle}"`));
+      });
     expect(offenders).toEqual([]);
   });
 });

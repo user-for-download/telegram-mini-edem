@@ -35,7 +35,7 @@ import type {
   AdminSessionResponse,
   AdminSettingsDto,
 } from "@edem/contracts";
-import { cityNameNormalized } from "@edem/contracts";
+import { WS_TERMINAL_REASON, cityNameNormalized } from "@edem/contracts";
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { ERROR_CODES } from "../errors.js";
@@ -643,7 +643,7 @@ adminRouter.patch("/users/:id/ban", mutationLimiter, async (c) => {
 
   // Уже установленные WS-сессии не знают о бане до истечения access-токена —
   // закрываем их немедленно.
-  wsManager.closeUserConnections(updated.id, 4403, "Account is banned");
+  wsManager.closeUserConnections(updated.id, 4403, WS_TERMINAL_REASON.banned);
 
   return c.json(serializeAdminUser(updated));
 });

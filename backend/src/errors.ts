@@ -1,3 +1,5 @@
+import { ACCOUNT_DELETED_CODE } from "@edem/contracts";
+
 export const ERROR_CODES = {
   VALIDATION_FAILED: "VALIDATION_FAILED",
   UNAUTHORIZED: "UNAUTHORIZED",
@@ -25,15 +27,20 @@ export const ERROR_CODES = {
    * уезжал на плашку бана с предложением обжалования (восстановление при
    * этом невозможно). Отдельный код делает ветвление машинным.
    *
-   * `message` оставлен прежним: старые клиенты различают удаление по тексту
-   * и не должны сломаться на новом бэке.
+   * Значение берётся из контрактов, а не пишется здесь литералом: по коду
+   * ошибки клиент принимает решение, значит это часть контракта, и копия
+   * строки в бэке и в клиенте разъехалась бы снова.
    */
-  ACCOUNT_DELETED: "ACCOUNT_DELETED",
+  ACCOUNT_DELETED: ACCOUNT_DELETED_CODE,
   INTERNAL_ERROR: "INTERNAL_ERROR",
 } as const;
 
-/** Текст 403 удалённого аккаунта — константа вместо шести копий литерала. */
-export const ACCOUNT_DELETED_MESSAGE = "Account is deleted";
+/**
+ * Текст 403 удалённого аккаунта. Живёт в контрактах (там же, где клиент
+ * берёт его как фолбэк для старого бэка) и пере-экспортируется, чтобы
+ * прикладной код бэка импортировал привычный путь из ./errors.js.
+ */
+export { ACCOUNT_DELETED_MESSAGE } from "@edem/contracts";
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 

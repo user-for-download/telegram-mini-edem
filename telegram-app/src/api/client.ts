@@ -70,66 +70,28 @@ type ApiClientEvents = {
   refreshEnd: [result: RefreshResult];
 };
 
-/**
- * 403 удалённого аккаунта. Машинный код, по которому клиент отличает
- * удаление от бана: раньше делился код `FORBIDDEN`, и различать приходилось
- * ТОЛЬКО по тексту — переформулируй бэк «Account is deleted», и удалённый
- * аккаунт молча уезжал на плашку бана с предложением обжалования (при
- * удалении восстановление невозможно). Проверять удаление ДО бана.
- *
- * Соответствует `backend/src/errors.ts::ERROR_CODES.ACCOUNT_DELETED`.
- *
- * Константы ЖИВУТ ЗДЕСЬ — это единственный модуль приложения, который знает
- * протокол ошибки бэкенда. Стор, bookingErrors, ProfilePage, VehicleModal
- * импортируют `isAccountDeletedError` отсюда: копии сравнения в шести
- * местах разъезжались (две из них забыли константу — экран уезжал в «бан»).
- */
-export const ACCOUNT_DELETED_CODE = "ACCOUNT_DELETED";
+// Импорт нужен в том числе ДЛЯ СЕБЯ: `performRefresh` вызывает предикат
+// внутри класса, а ре-экспорт (`export … from`) в локальную область ничего не
+// вносит — без этого импорта был бы ReferenceError, пойманный catch'ем
+// performRefresh и выдававший «transient-failure» вместо permanent-rejection.
+import { isAccountDeletedError } from "@edem/contracts";
 
 /**
- * Текст 403 удалённого аккаунта. Оставлен как ФОЛБЭК для старого бэка,
- * который ещё не отдаёт `ACCOUNT_DELETED`: новый клиент должен понимать и
- * тот, и тот ответ. Копировать эту строку в прикладной код нельзя — бери
- * `isAccountDeletedError`.
- */
-export const ACCOUNT_DELETED_MESSAGE = "Account is deleted";
-
-/**
- * Причины терминального закрытия WebSocket (код 4403). Тоже протокол
- * бэкенда, но НЕ код ошибки: у WS close-кадра нет структурированного поля,
- * поэтому бэк по-прежнему пишет строкой — и у удаления их ДВЕ (ws-auth и
- * самоудаление, различаются на «is»).
+ * Протокол ошибок бэкенда живёт в `@edem/contracts` — там же, где бэк берёт
+ * коды, поэтому переименование не может разъехаться на две стороны.
  *
- * Первое значение — та же строка, что ACCOUNT_DELETED_MESSAGE: один текст на
- * два канала, и здесь это зафиксировано ссылкой, а не совпадением.
+ * Здесь только РЕ-ЭКСПОРТ: прикладной код (стор, ProfilePage, bookingErrors,
+ * VehicleModal, WebSocketProvider) продолжает брать всё из `@/api/client`, и
+ * его не пришлось бы трогать. Копировать эти константы в прикладной код нельзя
+ * — раньше сравнение жило в шести местах, и две копии забыли про константу
+ * (экран уезжал в «бан» вместо «Профиль удалён»).
  */
-export const WS_TERMINAL_REASON = {
-  /** ws-auth, deletedAt — backend/src/ws/index.ts:130 */
-  deletedByWsAuth: ACCOUNT_DELETED_MESSAGE,
-  /** DELETE /me, самоудаление — backend/src/users/index.ts:278, без «is» */
-  deletedBySelf: "Account deleted",
-  /** бан — backend/src/ws/index.ts:136 и backend/src/admin/index.ts:646 */
-  banned: "Account is banned",
-} as const;
-
-/**
- * Единственное место, где приложение решает, что ошибка — удалённый
- * аккаунт, а не бан.
- *
- * Принимает и `ApiError`, и сырое тело ответа: в ветке refresh сначала
- * приходит `unknown`-объект, а не готовый `ApiError`. Статус 403 проверяют
- * вызывающие — предикат отвечает только за различение удаления и бана.
- */
-export function isAccountDeletedError(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  // Голый Error — не протокольный ответ: у него есть .message, но нет .code
-  // и .status, и такой текст мог прийти откуда угодно. Без этой проверки
-  // любая ошибка с текстом «Account is deleted» выдавала бы себя за удалённый
-  // аккаунт. ApiError — потомок Error, поэтому проверяем именно «не наш».
-  if (error instanceof Error && !(error instanceof ApiError)) return false;
-  const { code, message } = error as { code?: unknown; message?: unknown };
-  return code === ACCOUNT_DELETED_CODE || message === ACCOUNT_DELETED_MESSAGE;
-}
+export {
+  ACCOUNT_DELETED_CODE,
+  ACCOUNT_DELETED_MESSAGE,
+  WS_TERMINAL_REASON,
+  isAccountDeletedError,
+} from "@edem/contracts";
 
 export class ApiClient {
   private token: string | null = null;

@@ -12,6 +12,7 @@ export * from "./schemas/ride-request.schema.js";
 export * from "./schemas/report.schema.js";
 export * from "./schemas/notification.schema.js";
 export * from "./schemas/client-error.schema.js";
+export * from "./schemas/api-error.schema.js";
 
 // DTO
 export * from "./dto/auth.dto.js";
