@@ -162,6 +162,33 @@ describe("CreateTripForm (страница /trips/my/new)", () => {
     expect(html).not.toContain("Опубликовать");
     // Шторка VehicleModal — портал: в renderToString не попадает, тело формы покрыто VehicleBody-тестами.
   });
+
+  it("ошибка профиля — терминальный экран с повтором, НЕ форма", () => {
+    // Регрессия (аудит 2026-10-05): гейт был `!vehicleQuery.error && !hasCar`,
+    // поэтому ошибка /users/me пропускала его и рендерилась ПОЛНАЯ форма без
+    // VehicleModal и без кнопки «Добавить автомобиль» — публикация гарантированно
+    // падала на NO_CAR, и выхода из тупика не было.
+    mockUseAllCities.mockReturnValue(queryState({ data: CITIES }));
+    mockUseVehicle.mockReturnValue(
+      queryState({
+        vehicle: null,
+        isError: true,
+        error: new Error("Не удалось загрузить профиль"),
+      }),
+    );
+
+    const html = render(<CreateTripForm onCreated={() => {}} />);
+
+    // Терминальный экран ошибки с повтором, форма не показывается.
+    // QueryState показывает generic-текст (сырое сообщение ошибки в UI
+    // не выводится), поэтому проверяем его, а не текст ошибки.
+    expect(html).toContain("Не удалось загрузить данные");
+    expect(html).toContain("Повторить");
+    expect(html).not.toContain("Маршрут");
+    expect(html).not.toContain("Опубликовать");
+    // И никакой шторки автомобиля: неизвестное авто — не «нужен автомобиль».
+    expect(html).not.toContain("Нужен автомобиль");
+  });
 });
 
 describe("FeedbackForm", () => {

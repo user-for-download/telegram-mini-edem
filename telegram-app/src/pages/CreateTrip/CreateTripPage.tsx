@@ -88,11 +88,19 @@ export function CreateTripForm({
   const [vehicleOpen, setVehicleOpen] = useState(false);
   const vehicleAutoOpenedRef = useRef(false);
   useEffect(() => {
-    if (!vehicleChecking && !hasCar && !vehicleAutoOpenedRef.current) {
+    // Только когда мы УВЕРЕНЫ, что авто нет. При ошибке /users/me
+    // автомобиль неизвестен (не «отсутствует»), и авто-открытие модалки
+    // было бы враньём: ветка-ошибка VehicleModal не рендерит.
+    if (
+      !vehicleChecking &&
+      !vehicleQuery.error &&
+      !hasCar &&
+      !vehicleAutoOpenedRef.current
+    ) {
       vehicleAutoOpenedRef.current = true;
       setVehicleOpen(true);
     }
-  }, [vehicleChecking, hasCar]);
+  }, [vehicleChecking, vehicleQuery.error, hasCar]);
   const closeVehicle = () => setVehicleOpen(false);
   useModalBack(closeVehicle, vehicleOpen);
   // Поля формы — в useTripForm (useReducer + isDirty); UI-флаги ниже —
@@ -231,9 +239,32 @@ export function CreateTripForm({
     );
   }
 
+  // Сбой профиля — авто НЕИЗВЕСТНО, а не отсутствует. Раньше эта ошибка
+  // молча пропускала гейт «Нужен автомобиль» (`!vehicleQuery.error`), и
+  // пользователь получал полную форму, которая гарантированно падала
+  // на сервере с NO_CAR — при этом ни кнопки «Добавить автомобиль», ни
+  // VehicleModal в этой ветке не было: тупик без выхода. Поэтому ошибка
+  // профиля — отдельный терминальный экран с повтором, а форма при
+  // неизвестном автомобиле не рендерится вовсе.
+  if (vehicleQuery.error) {
+    return (
+      <Page variant="hero">
+        <QueryState
+          loading={false}
+          error={vehicleQuery.error}
+          empty={false}
+          emptyText=""
+          onRetry={() => void vehicleQuery.refetch()}
+        >
+          {null}
+        </QueryState>
+      </Page>
+    );
+  }
+
   // Без автомобиля публиковать нельзя — сервер ответил бы 400 NO_CAR
   // после заполнения всей формы. Показываем гейт сразу, с дорогой в профиль.
-  if (!vehicleQuery.error && !hasCar) {
+  if (!hasCar) {
     return (
       <>
         <Page>
