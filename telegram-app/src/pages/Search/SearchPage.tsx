@@ -225,24 +225,22 @@ export function SearchPage() {
               </IconButton>
             </div>
 
-            <div role="tablist" aria-label="Дата поездки">
-              <SegmentedControl>
-                {DATE_SEGMENTS.map((option) => (
-                  <SegmentedControl.Item
-                    key={option.value}
-                    role="tab"
-                    selected={form.dateSegment === option.value}
-                    aria-selected={form.dateSegment === option.value}
-                    onClick={() => {
-                      haptic.selection();
-                      set("dateSegment", option.value);
-                    }}
-                  >
-                    {option.label}
-                  </SegmentedControl.Item>
-                ))}
-              </SegmentedControl>
-            </div>
+            <SegmentedControl aria-label="Дата поездки">
+              {DATE_SEGMENTS.map((option) => (
+                <SegmentedControl.Item
+                  key={option.value}
+                  role="tab"
+                  selected={form.dateSegment === option.value}
+                  aria-selected={form.dateSegment === option.value}
+                  onClick={() => {
+                    haptic.selection();
+                    set("dateSegment", option.value);
+                  }}
+                >
+                  {option.label}
+                </SegmentedControl.Item>
+              ))}
+            </SegmentedControl>
 
             {showFilters && (
               <div className={styles.filtersPanel}>

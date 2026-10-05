@@ -297,30 +297,26 @@ const trips = useMemo(() => available.data ?? [], [available.data]);
 
 return (
     <Stack>
-      <div
-        role="tablist"
+      <SegmentedControl
         aria-label="Разделы отзывов"
-        tabIndex={-1}
         onKeyDown={onTabKeyDown}
       >
-        <SegmentedControl>
-          {TABS.map((option) => (
-            <SegmentedControl.Item
-              key={option.value}
-              role="tab"
-              id={TAB_IDS[option.value]}
-              aria-controls={
-                tab === option.value ? TAB_PANEL_IDS[option.value] : undefined
-              }
-              selected={tab === option.value}
-              aria-selected={tab === option.value}
-              onClick={() => pickTab(option.value)}
-            >
-              {option.label}
-            </SegmentedControl.Item>
-          ))}
-        </SegmentedControl>
-      </div>
+        {TABS.map((option) => (
+          <SegmentedControl.Item
+            key={option.value}
+            role="tab"
+            id={TAB_IDS[option.value]}
+            aria-controls={
+              tab === option.value ? TAB_PANEL_IDS[option.value] : undefined
+            }
+            selected={tab === option.value}
+            aria-selected={tab === option.value}
+            onClick={() => pickTab(option.value)}
+          >
+            {option.label}
+          </SegmentedControl.Item>
+        ))}
+      </SegmentedControl>
 
       <div
         role="tabpanel"
