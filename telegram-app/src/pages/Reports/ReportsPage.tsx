@@ -31,6 +31,7 @@ import { SectionBody } from "@/ui/SectionBody";
 import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
 import { haptic } from "@/utils/haptics";
+import { moscowNumericDate } from "@/utils/date";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import {
   useCreateReportMutation,
@@ -50,15 +51,11 @@ import {
 } from "./reportValidation";
 import styles from "./ReportsPage.module.css";
 
-function formatDate(createdAt: string): string {
-  const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return createdAt;
-  return date.toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
+// Дата жалобы — по Москве, как всё остальное время в приложении
+// (moscowNumericDate). Локальная копия toLocaleDateString без timeZone
+// показывала дату в зоне устройства: жалоба от 01.10 22:30 UTC клиенту
+// в Лос-Анджелесе приходила как «01.10.2026» вместо «02.10.2026».
+const formatDate = moscowNumericDate;
 
 /** Тон статус-пилюли жалобы: ожидание — warning, работа — info,
  * решение — success, отказ — danger. */

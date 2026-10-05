@@ -26,7 +26,7 @@ export const DATE_SEGMENTS: ReadonlyArray<{ value: DateSegment; label: string }>
  * не проявляется — и тесты, гонявшиеся на московском времени, её не видели.
  */
 function addDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
 function parseSegment(value: string | null): DateSegment {

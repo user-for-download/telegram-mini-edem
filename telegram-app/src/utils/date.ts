@@ -63,8 +63,16 @@ export function dayLabel(dateIso: string, now: Date = new Date()): string {
   if (diffDays === 1) return "Завтра";
   if (diffDays === -1) return "Вчера";
   const [, month, day] = dateIso.split("-").map(Number);
-  if (!month || !day) return dateIso;
-  return `${day} ${MONTHS_GENITIVE[month - 1]}`;
+  // Месяц обязан быть в 1..12, иначе индекс в MONTHS_GENITIVE выходит за
+  // массив, а шаблонная подстановка даёт пользователю «1 undefined».
+  // parseDay такие даты не отсекает: `new Date(2026, 12, 1)` молча
+  // перекатывается на январь следующего года и остаётся валидным Date.
+  // `tripSchema.date` — z.string() без проверки формата, так что мусор с
+  // сервера доходит сюда.
+  if (!month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+    return dateIso;
+  }
+  return `${day} ${MONTHS_GENITIVE[month - 1] ?? ""}`.trim();
 }
 
 /** «Сегодня, 08:30». */
@@ -120,6 +128,29 @@ export function moscowTimeLabel(date: Date): string {
     minute: "2-digit",
     timeZone: MOSCOW_TZ,
   }).format(date);
+}
+
+/**
+ * Московская дата в формате «01.10.2026» — для обращений и жалоб.
+ *
+ * Общий хелпер, потому что инвариант «время показываем по Москве» должен
+ * быть один (MEMORY §18), а на этих двух экранах стояли локальные копии
+ * `toLocaleDateString("ru-RU")` БЕЗ timeZone. В зоне устройства клиент видел
+ * другую дату: обращение, созданное 01.10 в 22:30 UTC, в Лос-Анджелесе
+ * показывалось как 01.10 вместо московских 02.10 (аудит 2026-10-05).
+ *
+ * Невалидный ввод — исходная строка, чтобы UI не показывал «Invalid Date».
+ */
+export function moscowNumericDate(value: string | undefined): string {
+  if (!value) return "—";
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) return value;
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: MOSCOW_TZ,
+  }).format(new Date(time));
 }
 
 /** Московская дата даты: "2 июн." или "2 июн. 2029" (другой год — с годом). */

@@ -31,6 +31,7 @@ import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
 import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
+import { moscowNumericDate } from "@/utils/date";
 import {
   useCreateFeedbackMutation,
   useMyFeedbacksQuery,
@@ -101,7 +102,7 @@ function FeedbackCard({
       <Accordion.Content>
         <div className={styles.cardBody}>
           <Caption Component="span">
-            {new Date(feedback.createdAt).toLocaleDateString("ru-RU")}
+            {moscowNumericDate(feedback.createdAt)}
           </Caption>
           <Text Component="p" className={PROSE}>
             {feedback.text}
