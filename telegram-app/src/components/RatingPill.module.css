@@ -20,5 +20,12 @@
 .star {
   /* Золото рейтинга из темы (светлая/тёмная настроены в index.css). */
   color: var(--app-rating);
-  display: inline-flex;
+  /* Блочный flex, а не inline: иначе strut line-height родителя сажает
+   * спан на baseline и звезда уезжает выше цифр. */
+  display: flex;
+  align-items: center;
+}
+
+.star svg {
+  display: block;
 }

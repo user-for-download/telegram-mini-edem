@@ -1,7 +1,4 @@
-import {
-  Avatar,
-  Skeleton,
-} from "@telegram-apps/telegram-ui";
+import { Avatar, Skeleton } from "@telegram-apps/telegram-ui";
 import { useNavigate } from "react-router-dom";
 import { Cell } from "@/ui/Cell";
 import { haptic } from "@/utils/haptics";

@@ -17,7 +17,9 @@ interface RatingPillProps {
 export function RatingPill({ value, size = "m" }: RatingPillProps) {
   const clamped = value == null ? null : Math.min(5, Math.max(0, value));
   const label =
-    clamped == null ? "Рейтинг пока отсутствует" : `Рейтинг ${clamped.toFixed(1)} из 5`;
+    clamped == null
+      ? "Рейтинг пока отсутствует"
+      : `Рейтинг ${clamped.toFixed(1)} из 5`;
 
   return (
     <TguiChip
@@ -25,7 +27,11 @@ export function RatingPill({ value, size = "m" }: RatingPillProps) {
       mode="mono"
       before={
         <span className={styles.star} aria-hidden="true">
-          <Star size={size === "s" ? 12 : 14} fill="currentColor" strokeWidth={0} />
+          <Star
+            size={size === "s" ? 12 : 14}
+            fill="currentColor"
+            strokeWidth={0}
+          />
         </span>
       }
       className={`${styles.pill} ${size === "s" ? styles.small : ""}`}
