@@ -1,12 +1,10 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
 import { FieldError } from "@/ui/FieldError";
-import { VISUALLY_HIDDEN } from "@/ui/classes";
 import styles from "./ui.module.css";
 
 export interface FieldControl {
   id: string;
-  header: string;
   /**
    * id узла с текстом ошибки (FieldError ниже). Присутствует, только пока
    * есть ошибка: потребитель спредит контроль в Input/Textarea/Select кита
@@ -19,7 +17,7 @@ export interface FieldControl {
 
 export interface FieldProps
   extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
-  /** Текст лейбла: он же доступное имя поля и header кита. Один источник. */
+  /** Текст лейбла: он же доступное имя поля. Один источник. */
   label: string;
   /** id нативного контрола (htmlFor ↔ id). */
   id: string;
@@ -34,24 +32,19 @@ export interface FieldProps
   children: (control: FieldControl) => ReactNode;
 }
 
-import { usePlatformOrBase } from "@/hooks/usePlatform";
-
 /**
- * Поле формы: лейбл + контрол (Input/Textarea/Select кита)
+ * Поле формы: видимый лейбл + контрол (Input/Textarea/Select кита)
  * + опциональная ошибка, связанная через aria-describedby.
  *
- * Почему не kit-`header`: в ките header рисует FormInputTitle ВНЕ <label>
- * и только на platform === 'base' (на iOS текста нет вообще,
- * см. FormInput.js) — на видимом заголовке держать доступное имя нельзя.
- * Наши label+htmlFor дают имя на всех платформах.
+ * Подпись рисуем сами, а не kit-`header`: в ките header — это FormInputTitle
+ * ВНЕ <label> (доступное имя на нём держать нельзя), только на
+ * platform === 'base' (на iOS у поля не было бы видимого имени), да ещё и
+ * absolute поверх рамки — фокус-кольцо било сквозь текст. Свой label
+ * одинаков на всех платформах: имя и видимая подпись — один узел.
  *
- * Видимость лейбла — по платформе: на base он скрыт (видимую подпись
- * рисует кит), на iOS — текст (кит там header не рисует, иначе у поля
- * нет видимого имени). Один label на поле в обоих случаях.
- *
- * id и header берутся из одного источника (props label/id) — расхождение
- * подписи и заголовка поля невозможно. Обёртка не меняет раскладку и ритм
- * (className/rest — только опция для потребителя).
+ * id берётся из одного источника (props label/id) — расхождение подписи
+ * и поля невозможно. Обёртка не меняет раскладку и ритм (className/rest —
+ * только опция для потребителя).
  *
  * Обратная совместимость: места без `error` рендерятся как обычное поле —
  * ошибка не появляется, лишних aria-атрибутов у контрола нет.
@@ -65,29 +58,25 @@ export function Field({
   children,
   ...rest
 }: FieldProps) {
-  const platform = usePlatformOrBase();
   const hasError = Boolean(error);
   const describedBy = errorId ?? `${id}-error`;
   const control: FieldControl = hasError
     ? {
         id,
-        header: label,
         "aria-describedby": describedBy,
         "aria-invalid": true,
       }
-    : { id, header: label };
+    : { id };
   return (
     <div
       {...rest}
       // Свой класс фасада — ALWAYS, а не только когда потребитель что-то
-      // передал: по нему живёт правило тона видимой подписи
-      // (.fieldRoot h6 в ui.module.css). Без класса правило мёртвое.
+      // передал: по нему живут правила подписи и подложки
+      // (.fieldLabel, .fieldRoot > div > label в ui.module.css).
+      // Без класса правила мёртвые.
       className={className ? `${styles.fieldRoot} ${className}` : styles.fieldRoot}
     >
-      <label
-        htmlFor={id}
-        className={platform === "ios" ? styles.fieldLabel : VISUALLY_HIDDEN}
-      >
+      <label htmlFor={id} className={styles.fieldLabel}>
         {label}
       </label>
       {children(control)}

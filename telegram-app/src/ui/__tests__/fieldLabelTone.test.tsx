@@ -1,16 +1,15 @@
-// Контракт тона ВИДИМОЙ подписи поля (китовый FormInputTitle = <h6>).
+// Контракт тона ВИДИМОЙ подписи поля (ui/Field, класс .fieldLabel).
 //
-// Кит красит подпись в --tgui--secondary_hint_color (ниже WCAG AA 4.5:1),
-// тон задаёт общий --app-field-label: подпись рисует кит у каждого Field
-// (Select/Input/Textarea), и локальное правило оставило бы долг на
-// остальных полях.
+// Подпись рисует сам Field на всех платформах (китовый header не
+// используем). Тон — общий --app-field-label: локальное правило в модуле
+// потребителя оставило бы долг на остальных полях.
 //
 // Тест структурный, а не расчётный: color-mix не вычисляется в Node, а
 // значения токенов принадлежат киту (копировать их сюда нельзя —
 // «свойство токена должно быть одно»). Поэтому закрепляем ЧТО должно быть
 // объявлено: оба блока темы, смешение к --tgui--text_color и минимальный
-// процент для 4.5:1. Сам контраст проверен в браузере (светлая 4.52:1
-// на серой подложке и 5.18:1 на белой, тёмная 4.54 / 5.38).
+// процент для 4.5:1. Сам контраст проверен в браузере (на фоне секции:
+// светлая 5.18:1, тёмная 5.38:1).
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -64,12 +63,12 @@ describe("--app-field-label: тон видимой подписи поля", () 
     expect(percent(".dark .app-theme {")).toBeGreaterThanOrEqual(78);
   });
 
-  it("правило тона живёт в общем слое ui, а не в модуле потребителя", () => {
+  it("правило тона — на классе подписи фасада, а не в модуле потребителя", () => {
     const uiCss = readFileSync(
       path.resolve(import.meta.dirname, "../ui.module.css"),
       "utf8",
     );
-    expect(uiCss).toMatch(/\.fieldRoot\s+h6\s*\{[^}]*--app-field-label/);
+    expect(uiCss).toMatch(/\.fieldLabel\s*\{[^}]*--app-field-label/);
   });
 
   it("подложка контрола — серый фон на внутреннем label кита", () => {
@@ -82,14 +81,6 @@ describe("--app-field-label: тон видимой подписи поля", () 
     expect(uiCss).toMatch(
       /\.fieldRoot\s*>\s*div\s*>\s*label\s*\{[^}]*--tgui--secondary_bg_color/,
     );
-  });
-
-  it("фон видимой подписи прозрачный — белый h6 не вырезает пилюлю", () => {
-    const uiCss = readFileSync(
-      path.resolve(import.meta.dirname, "../ui.module.css"),
-      "utf8",
-    );
-    expect(uiCss).toMatch(/\.fieldRoot\s+h6\s*\{[^}]*background:\s*transparent/);
   });
 
   it("плейсхолдер — приглушённый тон, а не китовый hint", () => {

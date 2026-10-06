@@ -225,7 +225,7 @@ async function contrastStep({ name, route, pick, theme, requireMin = 1, pseudo =
 }
 
 // ── 1. Тон подписи поля ──────────────────────────────────────────────────
-// Подпись — это h6 внутри [class*='fieldRoot']; живой на /trips (два поля).
+// Подпись рисует сам Field (класс fieldLabel); живой на /trips (два поля).
 await step("тон подписи поля ≥ AA (светлая тема)", () =>
   contrastStep({
     name: "field-label",
@@ -233,8 +233,8 @@ await step("тон подписи поля ≥ AA (светлая тема)", ()
     theme: "light",
     requireMin: 2,
     pick: () =>
-      [...document.querySelectorAll("h6")].filter((h) =>
-        h.closest("[class*='fieldRoot']"),
+      [...document.querySelectorAll("label[class*='fieldLabel']")].filter((el) =>
+        el.textContent?.trim(),
       ),
   }),
 );
@@ -246,8 +246,8 @@ await step("тон подписи поля ≥ AA (тёмная тема)", () =
     theme: "dark",
     requireMin: 2,
     pick: () =>
-      [...document.querySelectorAll("h6")].filter((h) =>
-        h.closest("[class*='fieldRoot']"),
+      [...document.querySelectorAll("label[class*='fieldLabel']")].filter((el) =>
+        el.textContent?.trim(),
       ),
   }),
 );

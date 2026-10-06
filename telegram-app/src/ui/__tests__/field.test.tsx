@@ -1,6 +1,7 @@
 // Тесты Field/FieldError: react-dom/server renderToString.
-// Проверяем: обратную совместимость (без error — обычное поле), связку
-// ошибки через aria-describedby (+aria-invalid), className/rest-пропсы.
+// Проверяем: видимый label (for + текст), обратную совместимость
+// (без error — обычное поле), связку ошибки через aria-describedby
+// (+aria-invalid), className/rest-пропсы.
 import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
 
@@ -23,13 +24,23 @@ function probeControl(
 }
 
 describe("Field", () => {
-  it("backward compat: без error контрол — только id/header, ошибки в DOM нет", () => {
+  it("видимый label привязан к контролу", () => {
+    const html = renderToString(
+      <Field label="Имя" id="profile-name">
+        {(field) => <input {...field} />}
+      </Field>,
+    );
+    expect(html).toMatch(/<label[^>]*for="profile-name"[^>]*>Имя</);
+    expect(html).toContain("fieldLabel");
+  });
+
+  it("backward compat: без error контрол — только id, ошибки в DOM нет", () => {
     const control = probeControl({ label: "Имя", id: "profile-name" });
-    expect(control).toEqual({ id: "profile-name", header: "Имя" });
+    expect(control).toEqual({ id: "profile-name" });
 
     const html = renderToString(
       <Field label="Имя" id="profile-name">
-        {(field) => <input {...field} aria-label={field.header} />}
+        {(field) => <input {...field} />}
       </Field>,
     );
     expect(html).toContain('for="profile-name"');
@@ -46,7 +57,6 @@ describe("Field", () => {
     });
     expect(control).toEqual({
       id: "review-text",
-      header: "Комментарий",
       "aria-describedby": "review-text-error",
       "aria-invalid": true,
     });
@@ -56,7 +66,6 @@ describe("Field", () => {
         {(field) => (
           <textarea
             id={field.id}
-            aria-label={field.header}
             aria-describedby={field["aria-describedby"]}
             aria-invalid={field["aria-invalid"]}
           />
@@ -89,7 +98,6 @@ describe("Field", () => {
         {(field) => (
           <input
             id={field.id}
-            aria-label={field.header}
             aria-describedby={field["aria-describedby"]}
           />
         )}
@@ -103,7 +111,7 @@ describe("Field", () => {
   it("пустой error (''/null) — как без ошибки", () => {
     for (const error of ["", null, undefined] as const) {
       const control = probeControl({ label: "Цена", id: "x", error });
-      expect(control).toEqual({ id: "x", header: "Цена" });
+      expect(control).toEqual({ id: "x" });
     }
     const html = renderToString(
       <Field label="Цена" id="x" error="">
