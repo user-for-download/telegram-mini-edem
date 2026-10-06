@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Slider, Caption } from "@telegram-apps/telegram-ui";
 
 import { Button } from "@/ui/Button";
@@ -38,6 +38,7 @@ import {
   parseDateSegmentParam,
   type SearchFormState,
 } from "@/helpers/searchFilters";
+import { groupTripsByDay } from "@/helpers/tripGroups";
 import { useModalBack } from "@/utils/modalBack";
 import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
@@ -45,6 +46,7 @@ import { useInfiniteTripsQuery } from "@/queries/useTripsQuery";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { CitySelectField } from "@/components/CitySelect/CitySelectField";
 import type { TripTag } from "@edem/contracts";
+import { TripDateDivider } from "./TripDateDivider";
 import styles from "./SearchPage.module.css";
 
 /** Пресет из URL (?fromCityId&toCityId&segment) — с главной/popular-routes. */
@@ -110,7 +112,15 @@ export function SearchPage() {
   // один на приложение: главная, поиск и форма создания берут общий кэш.
   const cities = useAllCitiesQuery();
   const trips = useInfiniteTripsQuery(buildSearchFilters(submitted));
-  const items = trips.data?.pages.flatMap((page) => page.items) ?? [];
+  // items мемоизируем по trips.data: без этого flatMap даёт новый массив на
+  // каждом рендере и useMemo ниже пересчитывал бы группы вхолостую.
+  const items = useMemo(
+    () => trips.data?.pages.flatMap((page) => page.items) ?? [],
+    [trips.data],
+  );
+  // Группы дат для пилюль-заголовков: чисто видовая группировка уже
+  // отсортированной выдачи (бэк: departureAt asc).
+  const groups = useMemo(() => groupTripsByDay(items), [items]);
   // Сентинел автодогрузки: observer тянет следующую страницу через тот же
   // useInfiniteTripsQuery; без IntersectionObserver (SSR) тихо не работает,
   // контент виден сразу + остаётся fallback-кнопка «Показать ещё».
@@ -330,29 +340,37 @@ export function SearchPage() {
             />
           ) : (
             <Stack>
-              {items.map((trip) => {
-                const seats = feedSeats(trip);
-                return (
-                  <TripStandardCard
-                    key={trip.id}
-                    tripId={trip.id}
-                    fromCity={trip.fromCity}
-                    toCity={trip.toCity}
-                    fromAddress={trip.fromAddress}
-                    toAddress={trip.toAddress}
-                    departureAt={trip.departureAt}
-                    price={trip.price}
-                    headerStatus={
-                      <StatusPill tone={seats.tone}>{seats.label}</StatusPill>
-                    }
-                    person={feedPerson(trip)}
-                    onOpen={(id) => {
-                      haptic.light();
-                      navigate(`/trips/${id}`);
-                    }}
-                  />
-                );
-              })}
+              {groups.map((group, groupIndex) => (
+                // Номер в ключе: день — не ID. При неожиданно неотсортированной
+                // выдаче один день может попасть в две соседние группы, и
+                // повторяющийся key у React дал бы предупреждение.
+                <Stack key={`${group.key}-${groupIndex}`} gap="xs">
+                  <TripDateDivider label={group.label} />
+                  {group.trips.map((trip) => {
+                    const seats = feedSeats(trip);
+                    return (
+                      <TripStandardCard
+                        key={trip.id}
+                        tripId={trip.id}
+                        fromCity={trip.fromCity}
+                        toCity={trip.toCity}
+                        fromAddress={trip.fromAddress}
+                        toAddress={trip.toAddress}
+                        departureAt={trip.departureAt}
+                        price={trip.price}
+                        headerStatus={
+                          <StatusPill tone={seats.tone}>{seats.label}</StatusPill>
+                        }
+                        person={feedPerson(trip)}
+                        onOpen={(id) => {
+                          haptic.light();
+                          navigate(`/trips/${id}`);
+                        }}
+                      />
+                    );
+                  })}
+                </Stack>
+              ))}
               <FetchMore
                 hasNextPage={trips.hasNextPage}
                 isFetchingNextPage={trips.isFetchingNextPage}

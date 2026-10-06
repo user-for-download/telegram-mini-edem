@@ -1,0 +1,19 @@
+/* Пилюля даты в ленте поиска: центрированный h2-заголовок группы.
+ * Ритм даёт родительский Stack (gap 12) — своих внешних отступов нет.
+ * Цвета только из токенов; размеры — кегль/вес как у подписей. */
+.pill {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+}
+
+.text {
+  padding: var(--app-space-2xs) var(--app-space-sm);
+  border-radius: var(--app-radius-pill);
+  background: var(--tgui--secondary_bg_color);
+  color: var(--tgui--text_color);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}

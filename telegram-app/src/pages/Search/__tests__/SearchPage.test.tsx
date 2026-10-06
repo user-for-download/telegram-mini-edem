@@ -195,3 +195,70 @@ describe("SearchPage a11y", () => {
     expect(html).toContain('id="search-to"');
   });
 });
+
+describe("лента с пилюлями дат", () => {
+  // Фикстура как реальный ответ бэка: date — отформатированная подпись
+  // «сб, 15 марта», ISO-дата живёт в departureAt. Фикстура с ISO в `date`
+  // проверяла бы несуществующий контракт и маскировала бы группировку.
+  const trip = (id: string, departureAt: string) => ({
+    id,
+    fromCity: "Вологда",
+    toCity: "Череповец",
+    date: new Intl.DateTimeFormat("ru-RU", {
+      day: "numeric",
+      month: "long",
+      weekday: "short",
+      timeZone: "Europe/Moscow",
+    }).format(new Date(departureAt)),
+    time: "10:00",
+    departureAt,
+    durationMinutes: 60,
+    distanceKm: 100,
+    price: 500,
+    seatsTotal: 3,
+    seatsAvailable: 2,
+    driver: {
+      id: "u-driver",
+      name: "Иван Водителев",
+      avatar: "https://t.me/i/userpic/320/avatar.svg",
+      rating: 4.8,
+      reviewsCount: 1,
+      tripsCount: 5,
+    },
+    tags: [],
+  });
+
+  /** Тексты пилюль-заголовков (h2), без вложенного span. */
+  const pillsOf = (html: string): string[] =>
+    [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map((m) =>
+      (m[1] ?? "").replace(/<[^>]*>/g, "").trim(),
+    );
+
+  it("пилюля — день московский, карточки под своей датой", () => {
+    mockUseInfiniteTrips.mockReturnValue(
+      infiniteState([
+        trip("t-1", "2031-03-15T06:00:00.000Z"),
+        trip("t-2", "2031-03-16T06:00:00.000Z"),
+        trip("t-3", "2031-03-15T09:00:00.000Z"),
+      ]),
+    );
+    const html = render(<SearchPage />);
+    // Порядок карточек бэка (15, 16, 15) не переставляется: день, разорванный
+    // другим, даёт вторую группу, а не схлопывает первые две.
+    expect(pillsOf(html)).toEqual(["15 марта", "16 марта", "15 марта"]);
+    // Все три карточки на месте, ни одна не потерялась в группировке.
+    expect(html.match(/Иван Водителев/g)).toHaveLength(3);
+  });
+
+  it("в пилюле только подпись дня, без счётчика", () => {
+    // Счётчик обещал бы число по группе, разрезанной страницами инфинит-ленты.
+    mockUseInfiniteTrips.mockReturnValue(
+      infiniteState([
+        trip("t-1", "2031-03-15T06:00:00.000Z"),
+        trip("t-2", "2031-03-15T09:00:00.000Z"),
+      ]),
+    );
+    const html = render(<SearchPage />);
+    expect(pillsOf(html)).toEqual(["15 марта"]);
+  });
+});
