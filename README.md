@@ -105,7 +105,16 @@ docker compose stop backend    # остановить контейнер бэк�
 ```
 Требуется корневой `.env` с переменными `POSTGRES_PASSWORD`, `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_HOSTS`, `CORS_ORIGINS` (образец — `.env.example`). Миграции применяются автоматически при старте контейнера. Reseed внутри контейнера:
 ```bash
-docker exec -it telegram-mini-edem-backend-1 node --import tsx prisma/seed.ts
+docker compose exec -T backend npx tsx prisma/seed.ts   # сбрасывает ВСЕ таблицы
+```
+> У контейнера своя БД — сервис `db`. Хостовый dev-бэкенд (`npm run dev:backend` на :3011, которым кормится приложение на :3012) ходит в другую, `db-dev` на :5433. Данные, засеянные в контейнере, в приложении на :3012 не появятся — и наоборот.
+
+Сид вокруг конкретного пользователя (не трогает чужие данные, в отличие от полного `db:seed`):
+```bash
+# хост, dev-БД (нужен засеянный справочник городов: npm run db:seed:cities)
+SEED_USER_ID=u-dev npm run db:seed:user
+# или в контейнере
+docker compose exec -T -e SEED_USER_ID=<uuid> backend npx tsx prisma/seed-user-trips.ts
 ```
 
 Для прод-пересборки используйте `scripts/prod-rebuild.sh`: инкрементальный Docker-кэш, ожидание `/health/ready` опросом (а не `sleep`), и любая красная проверка валит скрипт (`exit 1`) с диагностикой.
@@ -130,9 +139,10 @@ npm run db:migrate        # Создать миграцию (dev) + пересо
 npm run db:migrate:deploy # Применить миграции к БД
 npm run db:seed           # Заполнить БД тестовыми данными (идемпотентно; dev/test only)
 npm run db:seed:cities    # Только справочник городов (идемпотентно; безопасен для prod)
+npm run db:seed:user      # Данные вокруг одного юзера: SEED_USER_ID=<id> npm run db:seed:user
 npm run prisma:validate   # Валидация schema.prisma
 ```
-Подключение — через pg driver-адаптер `@prisma/adapter-pg` (`backend/src/db.ts`): URL из `DATABASE_URL`. Конфигурация CLI — `backend/prisma.config.ts`. Сгенерированный клиент (`backend/src/generated/`) компилируется tsc в `dist`; после `git pull` с изменённой схемой выполните `npm run db:generate`.
+Подключение — через pg driver-адаптер `@prisma/adapter-pg` (`backend/src/db.ts`): URL из `DATABASE_URL`. Конфигурация CLI — `backend/prisma.config.ts`. Сгенерированный клиент (`backend/src/generated/`) компилируется tsc в `dist`; после `git pull` с изменённой схемой выполните `npm run db:generate`. В Docker-образе исходников нет, поэтому скрипты из `backend/prisma/` находят клиент по симлинку `/app/src/generated → /app/dist/src/generated` (см. `backend/Dockerfile`).
 
 Быстрый старт на свежей БД:
 ```bash

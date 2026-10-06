@@ -47,6 +47,14 @@ RUN apk add --no-cache openssl
 # --chown на каждом COPY: владелец node фиксируется в метаданных слоя
 # (мгновенно) вместо отдельного RUN chown -R по всему /app (~40с на 700МБ).
 COPY --from=builder --chown=node:node /app/backend/dist ./dist
+# Скрипты в prisma/ импортируют клиент по исходному пути
+# (`../src/generated/prisma/client.js` — seed.ts, seed-cities.ts,
+# seed-user-trips.ts, drop-tables.ts), а исходников в образе нет: tsc
+# компилирует сгенерированный клиент в dist. Без этого симлинка любой
+# запуск сида в контейнере падал с ERR_MODULE_NOT_FOUND, и команда из
+# README «docker exec … node --import tsx prisma/seed.ts» не работала.
+# Симлинк вместо COPY: восстанавливает ожидаемый путь без +1.2М TS-исходников.
+RUN mkdir -p /app/src && ln -s /app/dist/src/generated /app/src/generated
 # В npm workspaces ВСЕ пакеты поднимаются в корневой node_modules;
 # backend/node_modules содержит только symlink'и — копировать его поверх нельзя.
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules

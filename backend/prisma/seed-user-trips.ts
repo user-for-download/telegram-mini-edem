@@ -7,12 +7,28 @@
 // dev-сидом (u-N/t-N), чужие данные НЕ трогает. Идемпотентен: повторный
 // прогон чистит только свои id и создаёт заново.
 //
-// Использование (repo root, ПРОД-контейнер — там DATABASE_URL уже на прод-БД):
-//   docker compose exec -T -e SEED_USER_ID=<uuid> backend npx tsx prisma/seed-user-trips.ts
-// (файл должен попасть в контейнер: docker cp backend/prisma/seed-user-trips.ts
-//  telegram-mini-edem-backend-1:/app/prisma/seed-user-trips.ts)
+// Использование:
+//   1) Хост, dev-БД (DATABASE_URL из backend/.env → db-dev на :5433):
+//        SEED_USER_ID=u-dev npm run db:seed:user --workspace=backend
+//   2) Контейнер backend (DATABASE_URL из compose → сервис `db`):
+//        docker compose exec -T -e SEED_USER_ID=<uuid> backend \
+//          npx tsx prisma/seed-user-trips.ts
+//      Внимание: у контейнера СВОЯ БД (`db`), не та, что у хостового dev-бэка.
+//      Засеянное там не видно в приложении на :3012 (оно ходит через :3011).
+//   Требуется справочник городов, иначе падает «город «Вологда» отсутствует»:
+//        npm run db:seed:cities        # хост
+//        docker compose exec -T backend npx tsx prisma/seed-cities.ts
+//   НЕ путать с полным `db:seed`: он сбрасывает ВСЕ таблицы (см. seed.ts).
+//   Путь к сгенерированному клиенту (`../src/generated/prisma/client.js`)
+//   одинаково работает на хосте и в контейнере: в образе его восстанавливает
+//   симлинк /app/src/generated → /app/dist/src/generated (backend/Dockerfile).
 import { PrismaPg } from "@prisma/adapter-pg";
+import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "../src/generated/prisma/client.js";
+
+// Prisma 7 больше не подгружает .env автоматически — путь относительно файла
+// (как в seed.ts), иначе хостовый запуск без экспорта DATABASE_URL падал бы.
+loadEnv({ path: new URL("../.env", import.meta.url) });
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("[seed-user-trips] DATABASE_URL не задан");

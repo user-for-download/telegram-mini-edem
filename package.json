@@ -27,6 +27,7 @@
     "db:generate": "npm run db:generate --workspace=backend",
     "db:seed": "npm run db:seed --workspace=backend",
     "db:seed:cities": "npm run db:seed:cities --workspace=backend",
+    "db:seed:user": "npm run db:seed:user --workspace=backend",
     "prisma:validate": "npm run prisma:validate --workspace=backend",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",

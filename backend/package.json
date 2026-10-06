@@ -15,6 +15,7 @@
     "db:test:push": "dotenv -e .env.test -- prisma db push --accept-data-loss && prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:cities": "tsx prisma/seed-cities.ts",
+    "db:seed:user": "tsx prisma/seed-user-trips.ts",
     "db:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "db:test:migrate": "dotenv -e .env.test -- prisma migrate deploy",
