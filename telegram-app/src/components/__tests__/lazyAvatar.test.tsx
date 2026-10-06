@@ -1,6 +1,4 @@
 // SSR-тесты P1 LazyAvatar + внедрение в ReviewCard/заявки.
-// TripFeedCard теперь — тонкая обёртка эталона TripStandardCard (нативный
-// Avatar кита), здесь остаётся smoke на её публичный контракт.
 // Паттерн tripRequestsModal.test.tsx: renderToString, моки хуков через
 // vi.hoisted, без testing-library. Эффекты в renderToString не выполняются,
 // поэтому: без IntersectionObserver LazyAvatar сразу показывает контент
@@ -9,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
-import type { Review, Trip } from "@edem/contracts";
+import type { Review } from "@edem/contracts";
 
 const { mockUseTripBookings, mockUseUpdateBooking } = vi.hoisted(() => ({
   mockUseTripBookings: vi.fn(),
@@ -22,7 +20,6 @@ vi.mock("@/queries/useBookingsQuery", () => ({
 }));
 
 import { LazyAvatar, type LazyAvatarProps } from "@/components/LazyAvatar";
-import { TripFeedCard } from "@/components/Trip/TripFeedCard";
 import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
 import { TripRequestsBody } from "@/components/Trip/TripRequestsModal";
 
@@ -34,31 +31,6 @@ function renderLazy(props: LazyAvatarProps): string {
       <LazyAvatar {...props} />
     </AppRoot>,
   );
-}
-
-function makeTrip(): Trip {
-  return {
-    id: "trip-1",
-    fromCity: "Москва",
-    toCity: "Тула",
-    date: "2026-09-20",
-    time: "10:00",
-    durationMinutes: 120,
-    distanceKm: 180,
-    price: 900,
-    seatsTotal: 3,
-    seatsAvailable: 2,
-    driver: {
-      id: "u-driver",
-      name: "Иван Водителев",
-      avatar: AVATAR_SRC,
-      rating: 4.8,
-      reviewsCount: 12,
-      tripsCount: 30,
-      isVerified: true,
-    },
-    tags: [],
-  };
 }
 
 function makeReview(): Review {
@@ -205,54 +177,6 @@ describe("LazyAvatar SSR: happy/edge", () => {
 });
 
 describe("LazyAvatar в карточках SSR", () => {
-  it("TripFeedCard: имя водителя, src аватара и контракт эталона не сломаны", () => {
-    withoutObserver();
-
-    const html = renderToString(
-      <AppRoot platform="base">
-        <MemoryRouter initialEntries={["/"]}>
-          <TripFeedCard trip={makeTrip()} />
-        </MemoryRouter>
-      </AppRoot>,
-    );
-
-    expect(html).toContain("Иван Водителев");
-    expect(html).toContain(AVATAR_SRC);
-    expect(html).toContain("Москва");
-    expect(html).toContain("Тула");
-    // Эталон TripStandardCard: раскладка шапка-маршрут-персона.
-    // Открытие поездки — НАСТОЯЩАЯ кнопка: фокус, Enter/Space и роль
-    // без ручных tabIndex/onKeyDown.
-    expect(html).toContain("<button");
-    expect(html).toContain("Открыть поездку");
-    expect(html).toContain("Осталось мест:");
-  });
-
-  it("TripFeedCard: пилюля мест — StatusPill с тоном по остатку (0=danger, 1=warning, 2+=success)", () => {
-    withoutObserver();
-
-    const renderTripCard = (seatsAvailable: number): string =>
-      renderToString(
-        <AppRoot platform="base">
-          <MemoryRouter initialEntries={["/"]}>
-            <TripFeedCard trip={{ ...makeTrip(), seatsAvailable }} />
-          </MemoryRouter>
-        </AppRoot>,
-      );
-
-    const soldOut = renderTripCard(0);
-    expect(soldOut).toContain("Мест нет");
-    expect(soldOut).toContain('data-tone="danger"');
-
-    const lastSeat = renderTripCard(1);
-    expect(lastSeat).toContain("Осталось мест: 1");
-    expect(lastSeat).toContain('data-tone="warning"');
-
-    const plenty = renderTripCard(2);
-    expect(plenty).toContain("Осталось мест: 2");
-    expect(plenty).toContain('data-tone="success"');
-  });
-
   it("ReviewCard: автор, текст и оценка видны, аватар с src", () => {
     withoutObserver();
 

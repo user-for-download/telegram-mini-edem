@@ -16,10 +16,12 @@ import {
   Filter,
   Search as SearchIcon,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { QueryState } from "@/components/QueryState";
 import { TripCardsSkeleton } from "@/components/Skeletons";
-import { TripFeedCard } from "@/components/Trip/TripFeedCard";
+import { TripStandardCard } from "@/components/Section/TripStandardCard";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
+import { feedPerson, feedSeats } from "@/components/Trip/feedCardProps";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
 import { Stack } from "@/ui/Stack";
@@ -60,10 +62,12 @@ function presetFromParams(params: URLSearchParams): SearchFormState {
  * сегменты дат, сворачиваемый drawer фильтров (цена + теги). Пустые
  * фильтры — общая лента (бэкенд скрывает уехавшие: departureAt > now).
  * Стиль фильтров — SearchPage.module.css (миграция папка/компонент),
- * лента — TripFeedCard (тонкая обёртка над эталоном TripStandardCard).
+ * лента — эталон TripStandardCard с feed-наполнением (feedCardProps:
+ * пилюля мест + водитель).
  */
 export function SearchPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [form, setForm] = useState<SearchFormState>(() =>
     presetFromParams(searchParams),
   );
@@ -326,9 +330,29 @@ export function SearchPage() {
             />
           ) : (
             <Stack>
-              {items.map((trip) => (
-                <TripFeedCard key={trip.id} trip={trip} />
-              ))}
+              {items.map((trip) => {
+                const seats = feedSeats(trip);
+                return (
+                  <TripStandardCard
+                    key={trip.id}
+                    tripId={trip.id}
+                    fromCity={trip.fromCity}
+                    toCity={trip.toCity}
+                    fromAddress={trip.fromAddress}
+                    toAddress={trip.toAddress}
+                    departureAt={trip.departureAt}
+                    price={trip.price}
+                    headerStatus={
+                      <StatusPill tone={seats.tone}>{seats.label}</StatusPill>
+                    }
+                    person={feedPerson(trip)}
+                    onOpen={(id) => {
+                      haptic.light();
+                      navigate(`/trips/${id}`);
+                    }}
+                  />
+                );
+              })}
               <FetchMore
                 hasNextPage={trips.hasNextPage}
                 isFetchingNextPage={trips.isFetchingNextPage}
