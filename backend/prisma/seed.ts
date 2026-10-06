@@ -2647,7 +2647,7 @@ async function main() {
       title: "Найдена поездка под ваш запрос",
       body: "По вашему запросу Вологда → Череповец нашлась поездка с тремя свободными местами.",
       isRead: false,
-      deepLink: "/ride-requests",
+      deepLink: "/profile/ride-requests",
       actorName: "Сергей Кузнецов",
       action: "matched",
       tripFrom: "Вологда",

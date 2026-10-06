@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
-// CTA «Ищу попутку» на главной ведёт в шторку заявок (/ride-requests).
+// CTA «Ищу попутку» на главной открывает всплывающее окно создания заявки,
+// а не страницу истории: создание — быстрое действие, список живёт отдельно
+// («История запросов» в профиле).
 //
 // SSR-тест главной (HomePage.test.tsx) проверяет наличие кнопки, но не
-// переход: там нет ни кликов, ни смены состояния роутера. Здесь jsdom и
-// настоящий MemoryRouter с двумя маршрутами — иначе кнопка может быть
-// нарисована и ничего не делать.
+// открытие окна: там нет кликов, а здесь портал ещё и не переживает jsdom
+// (tgui `useAppRootContext` падает вне провайдера в портале). Поэтому окно
+// замокано маркером: проверяем контракт главной (кнопка → open), а саму форму
+// тестирует SSR-тест RideRequestCreateForm и живая проверка в браузере.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 
 const {
@@ -41,6 +44,13 @@ vi.mock("@/queries/useTripsQuery", () => ({
   useInfiniteMyTripsQuery: mockUseMyTrips,
 }));
 vi.mock("@/queries/vehicle", () => ({ useVehicleQuery: mockUseVehicle }));
+// Окно создания монтируется порталом, который в jsdom не переживает контекст
+// AppRoot (tgui useAppRootContext) — замокано маркером: проверяем контракт
+// главной, форму тестируют SSR-тесты и браузер.
+vi.mock("@/components/Trip/RideRequestCreateModal", () => ({
+  RideRequestCreateModal: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="create-request-modal" /> : null,
+}));
 vi.mock("@tma.js/sdk-react", () => ({
   backButton: { onClick: vi.fn(), offClick: vi.fn() },
   hapticFeedback: {
@@ -80,38 +90,36 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("HomePage: CTA «Ищу попутку»", () => {
-  it("переводит на маршрут заявок /ride-requests", () => {
+  it("открывает окно создания заявки, а не уводит со страницы", () => {
     render(
       <AppRoot platform="base">
         <MemoryRouter initialEntries={["/"]}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/ride-requests" element={<div>Шторка заявок</div>} />
-          </Routes>
+          <HomePage />
         </MemoryRouter>
       </AppRoot>,
     );
 
+    // До клика окно закрыто.
+    expect(screen.queryByTestId("create-request-modal")).toBeNull();
+
     fireEvent.click(screen.getByRole("button", { name: /Ищу попутку/ }));
 
-    expect(screen.getByText("Шторка заявок")).toBeTruthy();
+    // Окно — состояние, а не роут: маркер появился, адрес не сменился.
+    expect(screen.getByTestId("create-request-modal")).toBeTruthy();
   });
 
-  it("кнопка водительского CTA остаётся отдельной: «Создать поездку» не ведёт в заявки", () => {
-    // Регресс на смешение двух сценариев, если ихCTAкогда-нибудь объединят.
+  it("кнопка водительского CTA не открывает окно заявки", () => {
+    // Регресс на смешение двух сценариев, если их CTA когда-нибудь объединят.
     render(
       <AppRoot platform="base">
         <MemoryRouter initialEntries={["/"]}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/trips/my/new" element={<div>Форма поездки</div>} />
-          </Routes>
+          <HomePage />
         </MemoryRouter>
       </AppRoot>,
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Создать поездку/ }));
 
-    expect(screen.getByText("Форма поездки")).toBeTruthy();
+    expect(screen.queryByTestId("create-request-modal")).toBeNull();
   });
 });

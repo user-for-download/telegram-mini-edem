@@ -151,6 +151,15 @@ describe("resolveTelegramDeepLink — allowlist маршрутов", () => {
       "/profile/support",
     );
     expect(resolveTelegramDeepLink("/reviews")).toBe("/reviews");
+    // Заявки на попутку уехали в поддерево профиля (/ride-requests
+    // больше нет): без этой строки тап по уведомлению о матче заявки
+    // уходил бы в /notifications.
+    expect(resolveTelegramDeepLink("/profile/ride-requests")).toBe(
+      "/profile/ride-requests",
+    );
+    expect(resolveTelegramDeepLink("/ride-requests")).toBe(
+      TELEGRAM_FALLBACK_ROUTE,
+    );
   });
 
   it("параметризованные маршруты — только с UUID", () => {

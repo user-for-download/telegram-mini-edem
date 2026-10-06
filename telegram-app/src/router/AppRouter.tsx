@@ -27,7 +27,7 @@ import { NotificationsPage } from "@/pages/Notifications/NotificationsPage";
 import { VehicleRoute } from "@/components/Profile/VehicleModal";
 import { TripPage } from "@/pages/Trip/TripPage";
 import { TripHistoryPage } from "@/pages/TripHistory/TripHistoryPage";
-import { RideRequestsRoute } from "@/components/Trip/RideRequestsModal";
+import { RideRequestHistoryPage } from "@/pages/RideRequestHistory/RideRequestHistoryPage";
 import { TripRequestsRoute } from "@/components/Trip/TripRequestsModal";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { EditProfileRoute } from "@/components/Profile/EditProfileModal";
@@ -61,6 +61,7 @@ const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
   [(p) => p.startsWith("/trips"), "Поиск"],
   [(p) => p.startsWith("/notifications"), "Уведомления"],
   [(p) => p.startsWith("/profile/history"), "История поездок"],
+  [(p) => p.startsWith("/profile/ride-requests"), "История запросов"],
   [(p) => p.startsWith("/profile/edit"), "Редактирование профиля"],
   [(p) => p.startsWith("/profile/support"), "Поддержка"],
   [(p) => p.startsWith("/profile/reports"), "Мои обращения"],
@@ -114,10 +115,13 @@ export function Shell() {
   // backButton прячется.
   //
   // Не-корневые маршруты делятся на два вида, и кнопка там лишняя:
-  // поддерево профиля (`/profile/history|edit|support|reports`, `/vehicle`) —
-  // переход вёл бы на родителя, и экранный «назад» тут уместнее;
-  // углублённые сценарии (`/trips/:id`, `/trips/my/new`, `/reviews`,
-  // `/ride-requests`) — сфокусированная задача с возвратом назад.
+  // поддерево профиля (`/profile/history|edit|support|reports|ride-requests`,
+  // `/vehicle`) — переход вёл бы на родителя, и экранный «назад» тут
+  // уместнее; углублённые сценарии (`/trips/:id`, `/trips/my/new`,
+  // `/reviews`) — сфокусированная задача с возвратом назад.
+  //
+  // Окно создания заявки (`RideRequestCreateModal`) роутом не стало: Back
+  // перехватывает `useModalBack`, фон у окна тот, где его открыли.
   //
   // `/profile` исключён отдельно: тап привёл бы на тот же экран.
   const openProfile = useCallback(() => navigate("/profile"), [navigate]);
@@ -211,9 +215,12 @@ export function AppRouter() {
             path="/bookings/history"
             element={<Navigate to="/profile/history" replace />}
           />
-          <Route path="/ride-requests" element={<RideRequestsRoute />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/history" element={<TripHistoryPage />} />
+          <Route
+            path="/profile/ride-requests"
+            element={<RideRequestHistoryPage />}
+          />
           <Route path="/profile/edit" element={<EditProfileRoute />} />
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/settings" element={<SettingsRoute />} />

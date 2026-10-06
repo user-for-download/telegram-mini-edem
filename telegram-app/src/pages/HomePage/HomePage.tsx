@@ -10,6 +10,7 @@ import { ProfileSection } from "@/components/Section/ProfileSection";
 import { TripCountersSection } from "@/components/Section/TripCountersSection";
 import { TripSearchSection } from "@/components/Section/TripSearchSection";
 import { VehicleModal } from "@/components/Profile/VehicleModal";
+import { RideRequestCreateModal } from "@/components/Trip/RideRequestCreateModal";
 import { useVehicleQuery } from "@/queries/vehicle";
 import { useModalBack } from "@/utils/modalBack";
 import { haptic } from "@/utils/haptics";
@@ -51,13 +52,15 @@ export function HomePage() {
     navigate("/trips/my/new");
   };
 
-  // Заявка на попутку — route-backed шторка поверх «Поиска»: роут
-  // /ride-requests (AppRouter), а не локальный state, чтобы точка входа
-  // была ссылкой, а Back закрывал шторку.
-  const goToRideRequests = () => {
+  // Создание заявки на попутку — быстрое действие, поэтому окно, а не
+  // переход: Back перехватывает useModalBack, фон — главная. Список своих
+  // заявок живёт отдельно, «История запросов» в профиле.
+  const [createOpen, setCreateOpen] = useState(false);
+  const openCreate = () => {
     haptic.light();
-    navigate("/ride-requests");
+    setCreateOpen(true);
   };
+  useModalBack(() => setCreateOpen(false), createOpen);
 
   useEffect(() => {
     // Авто появилось после сохранения в шторке (кэш ["users","me"]
@@ -115,13 +118,17 @@ export function HomePage() {
           <Button
             size="l"
             before={<Users size={16} />}
-            onClick={goToRideRequests}
+            onClick={openCreate}
           >
             Ищу попутку
           </Button>
         }
       />
       <VehicleModal open={vehicleOpen} onClose={closeVehicle} />
+      <RideRequestCreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+      />
     </Page>
   );
 }

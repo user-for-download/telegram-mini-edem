@@ -16,6 +16,7 @@ import {
   Bell,
   Car,
   ChevronRight,
+  ClipboardList,
   Flag,
   History,
   Moon,
@@ -320,6 +321,24 @@ export function ProfilePage() {
                     onClick={() => {
                       haptic.light();
                       navigate("/profile/history");
+                    }}
+                  />
+                  {/* Заявки на попутку — отдельная страница /profile/ride-requests.
+                      Список заявок (статусы, пауза, отмена) — это
+                      управление сущностью, ему нужна страница, а не
+                      всплывающее окно; создание заявки живёт в окне. */}
+                  <MenuRow
+                    label="История запросов"
+                    icon={
+                      <IconContainer>
+                        <ClipboardList size={18} />
+                      </IconContainer>
+                    }
+                    title="История запросов"
+                    subtitle="Мои заявки на попутку"
+                    onClick={() => {
+                      haptic.light();
+                      navigate("/profile/ride-requests");
                     }}
                   />
                   {/* Отзывы — отдельная страница /reviews (свои вкладки

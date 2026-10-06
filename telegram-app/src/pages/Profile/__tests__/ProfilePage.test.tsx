@@ -138,6 +138,10 @@ describe("ProfilePage header", () => {
     const html = render(<ProfilePage />);
     expect(html).toContain("Мои поездки");
     expect(html).toContain("История поездок");
+    // Заявки на попутку — отдельная страница /profile/ride-requests,
+    // вторая строка рядом с историей поездок (иконка другая).
+    expect(html).toContain("История запросов");
+    expect(html).toContain("Мои заявки на попутку");
     expect(html).toContain("Автомобиль");
     expect(html).toContain("Octavia");
     expect(html).toContain("Служба поддержки");

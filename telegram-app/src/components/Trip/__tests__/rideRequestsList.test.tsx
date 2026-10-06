@@ -1,41 +1,39 @@
-// SSR-тесты RideRequestsBody (тело route-backed модалки /ride-requests).
-// Modal — портал и в renderToString не попадает, поэтому тестируется
-// экспортированное тело. Паттерн notificationsModal.test.tsx (SSR, моки
+// SSR-тесты списка своих заявок (тело страницы «История запросов»
+// /profile/ride-requests). Паттерн notificationsModal.test.tsx (SSR, моки
 // хуков через vi.hoisted, без testing-library).
+//
+// Список вынесен из бывшей шторки «Ищу попутку» без изменений поведения:
+// те же статусы, те же кнопки паузы/редактирования/отмены.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
-import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 
 const {
   mockUseRequests,
-  mockUseCities,
-  mockUseCreate,
   mockUseUpdate,
   mockUseStatus,
   mockUseCancel,
 } = vi.hoisted(() => ({
   mockUseRequests: vi.fn(),
-  mockUseCities: vi.fn(),
-  mockUseCreate: vi.fn(),
   mockUseUpdate: vi.fn(),
   mockUseStatus: vi.fn(),
   mockUseCancel: vi.fn(),
 }));
 
-vi.mock("@/queries/useRideRequestsQuery", () => ({
-  useRideRequestsQuery: mockUseRequests,
-  useCreateRideRequestMutation: mockUseCreate,
-  useUpdateRideRequestMutation: mockUseUpdate,
-  useRideRequestStatusMutation: mockUseStatus,
-  useCancelRideRequestMutation: mockUseCancel,
-}));
+vi.mock("@/queries/useRideRequestsQuery", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("@/queries/useRideRequestsQuery")>();
+  return {
+    ...original,
+    useRideRequestsQuery: mockUseRequests,
+    useUpdateRideRequestMutation: mockUseUpdate,
+    useRideRequestStatusMutation: mockUseStatus,
+    useCancelRideRequestMutation: mockUseCancel,
+    useCreateRideRequestMutation: vi.fn(),
+  };
+});
 
-vi.mock("@/queries/useAllCities", () => ({
-  useAllCitiesQuery: mockUseCities,
-}));
-
-import { RideRequestsBody } from "@/components/Trip/RideRequestsModal";
+import { RideRequestsList } from "@/components/Trip/RideRequestsList";
 
 function makeRequest(overrides: Record<string, unknown> = {}) {
   return {
@@ -65,26 +63,26 @@ function queryState(overrides: Record<string, unknown> = {}) {
 }
 
 function mutationState(overrides: Record<string, unknown> = {}) {
-  return { mutate: vi.fn(), isPending: false, error: null, variables: undefined, ...overrides };
+  return {
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+    variables: undefined,
+    ...overrides,
+  };
 }
 
 function setMocks(requests: Record<string, unknown> = {}) {
   mockUseRequests.mockReturnValue(queryState(requests));
-  mockUseCities.mockReturnValue(
-    queryState({ data: [{ id: "c-1", name: "Москва" }, { id: "c-2", name: "Тула" }] }),
-  );
-  mockUseCreate.mockReturnValue(mutationState());
   mockUseUpdate.mockReturnValue(mutationState());
   mockUseStatus.mockReturnValue(mutationState());
   mockUseCancel.mockReturnValue(mutationState());
 }
 
-function renderBody(): string {
+function renderList(): string {
   return renderToString(
     <AppRoot platform="base">
-      <MemoryRouter initialEntries={["/ride-requests"]}>
-        <RideRequestsBody />
-      </MemoryRouter>
+      <RideRequestsList />
     </AppRoot>,
   );
 }
@@ -97,34 +95,11 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("RideRequestsBody: форма и контракт", () => {
-  it("форма создания: заголовок, поля, кнопка публикации", () => {
-    const html = renderBody();
-
-    expect(html).toContain("Новый запрос");
-    expect(html).toContain('for="ride-from"');
-    expect(html).toContain('for="ride-to"');
-    expect(html).toContain('for="ride-earliest"');
-    expect(html).toContain('for="ride-latest"');
-    expect(html).toContain('for="ride-seats"');
-    expect(html).toContain("Опубликовать запрос");
-  });
-
-  it("PageHeader внутрь модалки не рендерится (закрытие — header модалки)", () => {
-    setMocks({ data: [makeRequest()] });
-
-    const html = renderBody();
-
-    // PageHeader — header с Title level=1; в теле модалки его нет.
-    expect(html).not.toContain("pt-5 pb-3");
-  });
-});
-
-describe("RideRequestsBody: список", () => {
+describe("RideRequestsList: карточки и действия", () => {
   it("активный запрос: маршрут, бейдж «Активен», пауза/редактирование/отмена", () => {
     setMocks({ data: [makeRequest()] });
 
-    const html = renderBody();
+    const html = renderList();
 
     expect(html).toContain("Москва → Тула");
     expect(html).toContain("Активен");
@@ -136,7 +111,7 @@ describe("RideRequestsBody: список", () => {
   it("приостановленный запрос: кнопка «Возобновить» вместо паузы", () => {
     setMocks({ data: [makeRequest({ status: "paused" })] });
 
-    const html = renderBody();
+    const html = renderList();
 
     expect(html).toContain("Возобновить");
     expect(html).not.toContain("Поставить на паузу");
@@ -145,7 +120,7 @@ describe("RideRequestsBody: список", () => {
   it("завершённый запрос: без действий пауза/редактирование/отмена", () => {
     setMocks({ data: [makeRequest({ status: "fulfilled" })] });
 
-    const html = renderBody();
+    const html = renderList();
 
     expect(html).toContain("Москва → Тула");
     expect(html).not.toContain("Поставить на паузу");
@@ -154,39 +129,36 @@ describe("RideRequestsBody: список", () => {
     expect(html).not.toContain("Отменить запрос");
   });
 
+  it("список не содержит формы создания: окно и страница разделены", () => {
+    setMocks({ data: [makeRequest()] });
+
+    const html = renderList();
+
+    expect(html).not.toContain("Новый запрос");
+    expect(html).not.toContain("Опубликовать запрос");
+  });
+});
+
+describe("RideRequestsList: состояния", () => {
   it("пустой список — пустое состояние", () => {
     setMocks({ data: [] });
 
-    expect(renderBody()).toContain("Активных запросов нет.");
-  });
-});
-
-describe("RideRequestsBody: a11y", () => {
-  it("секция с именем, ошибки — role=alert, таргеты ≥44px", () => {
-    setMocks({ data: [makeRequest()] });
-
-    const html = renderBody();
-
-    expect(html).toContain('aria-label="Ищу попутку"');
-    expect(html).toContain('data-tap-target="44"');
+    expect(renderList()).toContain("Активных запросов нет.");
   });
 
-  it("ошибка создания рендерится с role=alert", () => {
-    setMocks({ data: [] });
-    mockUseCreate.mockReturnValue(mutationState({ error: new Error("boom") }));
-
-    expect(renderBody()).toContain('role="alert"');
-  });
-});
-
-describe("RideRequestsBody: состояния запроса", () => {
   it("loading — спиннер, ошибка — повтор", () => {
     setMocks({ isLoading: true });
-    expect(renderBody()).toContain('aria-label="Загрузка"');
+    expect(renderList()).toContain('aria-label="Загрузка"');
 
     setMocks({ isError: true, error: new Error("Нет соединения") });
-    const html = renderBody();
+    const html = renderList();
     expect(html).toContain("Не удалось загрузить данные");
     expect(html).toContain("Повторить");
+  });
+
+  it("тап-таргеты ≥44px", () => {
+    setMocks({ data: [makeRequest()] });
+
+    expect(renderList()).toContain('data-tap-target="44"');
   });
 });
