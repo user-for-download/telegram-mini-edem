@@ -2,8 +2,7 @@
 // Рендер-тесты ConfirmPopup: триггер с label, описание скрыто до клика
 // (нативный popup вне SSR), пропсы один в один как у ConfirmAction.
 // Фолбэк: вне Telegram popup.show.isAvailable() false — клик по триггеру
-// переключает на инлайн ConfirmAction (регрессия: ifAvailable отдаёт
-// кортеж [called, promise], await кортежа никогда не звал onConfirm).
+// переключает на инлайн ConfirmAction.
 import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";

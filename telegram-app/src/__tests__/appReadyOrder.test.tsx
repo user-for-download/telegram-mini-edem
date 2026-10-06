@@ -11,8 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * Инвариант запуска: `init → render(<App/>) → effect(signalAppReady)`.
  * Скелетон Telegram должен гаснуть только после первой отрисовки:
  * `signalAppReady()` живёт в `useEffect` App (после маунта), а НЕ рядом
- * с `await init()` в main.tsx. Тест ловит регрессию «ready до рендера»:
- * до render вызова нет, после первого paint — ровно один.
+ * с `await init()` в main.tsx. Проверяем: до render вызова нет, после
+ * первого paint — ровно один.
  */
 
 // Тяжёлое дерево App здесь не нужно: проверяем порядок ready,

@@ -2,8 +2,7 @@
  * Типизированный мини-эмиттер для подписок вида on/emit.
  *
  * Ошибка в одном слушателе изолируется (остальные всё равно вызываются)
- * и уходит в `console.error` — та же семантика, что раньше была
- * в `ApiClient` (try/catch + `console.error` вокруг каждого `Set`).
+ * и уходит в `console.error`.
  */
 export class MiniEmitter<Events extends Record<string, unknown[]>> {
   private readonly sets = new Map<keyof Events, Set<(...args: never[]) => void>>();

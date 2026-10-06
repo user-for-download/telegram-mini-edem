@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
  *
  * Факт (.d.ts + рантайм 3.0.23): themeParams.state() и launchParams
  * уже snake_case — проход идемпотентен. Конвертер страхует от
- * camelCase-источника (так было в @telegram-apps 3.3.x).
+ * camelCase-источника.
  */
 
 vi.mock("@tma.js/sdk-react", () => ({

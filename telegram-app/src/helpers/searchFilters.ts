@@ -18,12 +18,10 @@ export const DATE_SEGMENTS: ReadonlyArray<{ value: DateSegment; label: string }>
  * Календарное приращение дней: конструктор с числом дня, а НЕ сложение
  * 86 400 000 мс.
  *
- * Почему не сложение (аудит 2026-10-05): «завтра» — это следующий
- * КАЛЕНДАРНЫЙ день, а `local midnight + 24h` в зоне с переходом на летнее
- * время даёт 23:00 того же дня. В дни отката/перевода (Europe/Berlin,
- * 25–26.10) `toIsoDate` возвращал СЕГОДНЯШНЮЮ дату, и сегмент «Завтра»
- * показывал сегодняшние поездки. Москва фиксирована по смещению, ошибка там
- * не проявляется — и тесты, гонявшиеся на московском времени, её не видели.
+ * «Завтра» — следующий КАЛЕНДАРНЫЙ день, а `local midnight + 24h` в зоне
+ * с переходом на летнее/зимнее время даёт 23:00 того же дня. Дефект не
+ * виден на московском времени (фиксированное смещение) — TZ-кейсы
+ * проверяются отдельным файлом с принудительным `process.env.TZ`.
  */
 function addDays(date: Date, days: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
@@ -80,7 +78,7 @@ export const PRICE_SLIDER_MAX = 3000;
 export const PRICE_SLIDER_STEP = 100;
 
 export interface SearchFormState {
-  /** id городов справочника, не имена (решение владельца 2026-10-03). */
+  /** id городов справочника, не имена. */
   fromCityId: string;
   toCityId: string;
   dateSegment: DateSegment;
@@ -101,8 +99,8 @@ export function buildSearchFilters(
   state: SearchFormState,
 ): SearchTripsFilters | undefined {
   const result: SearchTripsFilters = {};
-  // По id, а не по имени: «Москва» входит в «Москва-…», и такой город есть в
-  // справочнике от старых прогонов e2e — выбор по имени не различался.
+  // По id, а не по имени: подстрока имени неоднозначна
+  // («Москва» входит в «Москва-…»).
   if (state.fromCityId) result.fromCityId = state.fromCityId;
   if (state.toCityId) result.toCityId = state.toCityId;
   const range = dateSegmentToRange(state.dateSegment);
@@ -125,12 +123,9 @@ export function buildSearchFilters(
 /**
  * Есть ли в наборе хоть что-то, что сброс снимет.
  *
- * Вызывается по ПРИМЕНЁННОМУ набору (submitted), а не по форме: запрос
- * едет от submitted, и кнопка сброса в пустом состоянии обязана оставаться
- * рабочей, пока активный запрос отфильтрован. Считая от формы, можно было
- * получить тупик — применить фильтр, дающий 0 результатов, вернуть контролы
- * в нейтраль (без «Найти»), и единственный выход из пустого состояния
- * пропадал (аудит 2026-10-05).
+ * Считается по ПРИМЕНЁННОМУ набору (submitted), а не по форме: запрос
+ * едет от submitted, и кнопка сброса обязана оставаться рабочей, пока
+ * активный запрос отфильтрован.
  */
 export function hasAnySearchFilter(state: SearchFormState): boolean {
   return (

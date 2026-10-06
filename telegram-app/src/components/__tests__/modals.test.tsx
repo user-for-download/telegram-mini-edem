@@ -164,10 +164,9 @@ describe("CreateTripForm (страница /trips/my/new)", () => {
   });
 
   it("ошибка профиля — терминальный экран с повтором, НЕ форма", () => {
-    // Регрессия (аудит 2026-10-05): гейт был `!vehicleQuery.error && !hasCar`,
-    // поэтому ошибка /users/me пропускала его и рендерилась ПОЛНАЯ форма без
-    // VehicleModal и без кнопки «Добавить автомобиль» — публикация гарантированно
-    // падала на NO_CAR, и выхода из тупика не было.
+    // Ошибка /users/me не должна пропускать гейт «Нужен автомобиль»:
+    // иначе рендерилась бы полная форма без VehicleModal, и публикация
+    // гарантированно падала бы на NO_CAR.
     mockUseAllCities.mockReturnValue(queryState({ data: CITIES }));
     mockUseVehicle.mockReturnValue(
       queryState({

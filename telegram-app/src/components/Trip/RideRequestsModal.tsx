@@ -24,10 +24,8 @@ import type { RideRequestStatus } from "@edem/contracts";
 
 /**
  * Статус запроса попутчика: подпись и тон.
- *
- * Раньше тут стояло `status === "active" ? "Активен" : status`, поэтому
- * остальные четыре статуса показывались пользователю сырым английским
- * перечислением — «paused», «fulfilled», «expired» (замер 2026-10-02).
+ * Все статусы — русскими словами: сырое перечисление бэкенда
+ * («paused», «fulfilled», «expired») пользователю не показываем.
  * Терминальные статусы бэкенд не меняет: редактирование доступно только
  * у active/paused, но показать их всё равно нужно.
  */
@@ -143,18 +141,15 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
   const update = useUpdateRideRequestMutation();
   const status = useRideRequestStatusMutation();
   const cancel = useCancelRideRequestMutation();
-  // Города — id справочника (решение владельца 2026-10-03). Раньше хранилось
-  // имя, и город резолвился в id только при отправке — тот же антипаттерн,
-  // который в форме создания поездки давал ложную ошибку «Выберите города из
-  // справочника».
+  // Города — id справочника: имя резолвится в id только при отправке —
+  // тот же антипаттерн давал ложную ошибку «Выберите города из справочника».
   const [fromCityId, setFromCityId] = useState("");
   const [toCityId, setToCityId] = useState("");
   const [earliest, setEarliest] = useState("");
   const [latest, setLatest] = useState("");
   const [seats, setSeats] = useState("1");
   // Ошибка приходит с полем: <Field error=…> ставит aria-invalid и
-  // aria-describedby (2026-10-02). Zod-сообщения переводятся
-  // rideRequestErrorMessage — сырыми они не показываются.
+  // aria-describedby. Zod-сообщения переводятся rideRequestErrorMessage.
   const [createError, setCreateError] = useState<RideRequestFieldError | null>(null);
   const validationError = createError?.message ?? null;
   const createErrorFor = (id: string) =>
@@ -288,10 +283,7 @@ export const RideRequestsBody = memo(function RideRequestsBody() {
             Новый запрос
           </Text>
           {/* Выбор города — тот же CitySelectField, что на главной, в поиске и
-              форме создания (решение владельца 2026-10-03). Расставались
-              `<datalist>` + резолв имени при отправке: datalist даёт
-              неявный combobox без списка для скринридера (замер: getByRole
-              combobox = 2, listbox = 0, aria-expanded нет). */}
+              форме создания. */}
           <CitySelectField
             id="ride-from"
             label="Откуда"

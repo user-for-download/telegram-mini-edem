@@ -21,9 +21,6 @@ import {
 /**
  * Telegram WebSocket client (ws.v1).
  *
- * Исторический контракт ws.v1 удалён из дерева — смотри git
- * (`docs/migration/telegram-realtime-contract.md`):
- *
  * - сокет открывается только при `status === "authenticated"` и шлёт JWT
  *   ПЕРВЫМ сообщением `{"type":"auth","token"}` — никогда в URL/query;
  *   сырая Telegram initData по этому каналу не передаётся;
@@ -43,30 +40,28 @@ import {
 /**
  * Классификация терминального close 4403 по строке причины.
  *
- * Различаем «удалён» и «забанен», потому что это РАЗНЫЕ терминальные
- * экраны: бан — плашка с формой обжалования, удаление — «Профиль удалён»
- * без надежды на восстановление. Раньше оба случая сводились к
- * status="banned", и удалённый аккаунт получал бан-экран.
+ * «Удалён» и «забанен» — РАЗНЫЕ терминальные экраны: бан — плашка
+ * с формой обжалования, удаление — «Профиль удалён» без надежды
+ * на восстановление.
  *
  * Строка причины — наш собственный фиксированный литерал (не PII и не
  * данные авторизации), но в banReason она НЕ попадает: причина остаётся
- * только из тела HTTP 403 (readBanReason). Принципиал прежний — «причины
- * это диагностика, авторизация по телу ответа»; здесь reason решает
- * лишь, КАКОЙ терминальный переход сделать.
+ * только из тела HTTP 403 (readBanReason). Здесь reason решает лишь,
+ * КАКОЙ терминальный переход сделать.
  *
- * Таблица (три источника — три написания, сравнение с одной строкой
- * молча ловило бы только WS-auth путь). Строки живут в `WS_TERMINAL_REASON`
- * (@/api/client) и проверяются тестом против исходников бэка, поэтому
- * переименование на сервере роняет тест, а не тихо уводит экран в «бан»:
+ * Таблица (три источника — три написания). Строки живут в
+ * `WS_TERMINAL_REASON` (@/api/client) и проверяются тестом против
+ * исходников бэка, поэтому переименование на сервере роняет тест,
+ * а не тихо уводит экран в «бан»:
  * - WS_TERMINAL_REASON.deletedByWsAuth — ws/index.ts:130 (WS-auth, deletedAt);
  * - WS_TERMINAL_REASON.deletedBySelf   — users/index.ts:278 (DELETE /me,
  *                         самоудаление; без "is" — самый частый случай);
  * - WS_TERMINAL_REASON.banned          — ws/index.ts:136 (WS-auth, bannedAt)
  *                         и admin/index.ts:646 (бан админом).
  *
- * "unknown" — причина пуста или незнакомая (старый клиент, иной бэкенд):
- * безопасный дефолт "banned" + один HTTP-bootstrap, чтобы авторитетный
- * 403 сам уточнил, deleted это или ban.
+ * "unknown" — причина пуста или незнакомая: безопасный дефолт "banned"
+ * + один HTTP-bootstrap, чтобы авторитетный 403 сам уточнил, deleted
+ * это или ban.
  */
 export type TerminalCloseReason = "deleted" | "banned" | "unknown";
 
@@ -285,8 +280,7 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
         useAuthStore.getState().markBanned(null);
 
         // Причина незнакома: единственный авторитетный источник — тело
-        // 403. Ровно один bootstrap; раньше этот шаг был описан
-        // комментарием, но не выполнялся.
+        // 403. Ровно один bootstrap.
         //
         // bootstrap() на время полёта ставит status="initializing"
         // (AuthGate показывает спиннер), а при недоступной сети уводит в
@@ -443,9 +437,6 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
       // status="background" (сокет рвётся на уходе в фон, сессия ЖИВА) —
       // это reconnect при возврате, и по контракту он обязан поднять
       // resyncSeq, чтобы слушатель перезабрал данные за время разрыва.
-      // Раньше флаг сбрасывался на любом не-authenticated статусе, поэтому
-      // после background→foreground auth:ok уходил в ветку «первый коннект»
-      // и ресинк не срабатывал — пропущенные события не восстанавливались.
       if (!useAuthStore.getState().session) {
         hasAuthedRef.current = false;
       }
@@ -464,8 +455,7 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
       ) {
         reconnectAttemptRef.current = 0;
         // Гасим pending backoff-таймер перед немедленным connect — иначе
-        // старый таймер выстрелит вторым connect (guard спасёт, но
-        // дисциплина файла: таймер всегда чистят перед connect).
+        // старый таймер выстрелит вторым connect.
         if (reconnectTimeoutRef.current) {
           window.clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = null;

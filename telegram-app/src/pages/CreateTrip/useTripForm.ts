@@ -12,7 +12,7 @@ const tomorrow = () =>
  * и резолвить его обратно в id при отправке — источник рассинхрона.
  */
 export interface TripFormState {
-  /** id городов справочника (не имена) — решение владельца 2026-10-03. */
+  /** id городов справочника (не имена). */
   fromCityId: string;
   toCityId: string;
   fromAddress: string;
@@ -104,9 +104,8 @@ export function tripFormReducer(
  * errorField) остаются в useState страницы.
  */
 export function useTripForm() {
-  // Снимок начальных значений на момент монтирования: date
-  // фиксируется один раз (раньше сравнение шло со свежим
-  // tomorrow() каждый рендер — в пределах минуты то же самое).
+  // Снимок начальных значений на момент монтирования: date фиксируется
+  // один раз.
   const [initial] = useState(initialTripFormState);
   const [form, dispatch] = useReducer(tripFormReducer, initial);
 

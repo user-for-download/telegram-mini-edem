@@ -231,8 +231,7 @@ describe("SearchPage parity", () => {
   it("exposes city inputs, date segments and filter entry", () => {
     mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
     const html = render(<SearchPage />);
-    // Плейсхолдер селекта (свободного текста здесь больше нет — город
-    // выбирается из справочника, решение владельца 2026-10-03).
+    // Плейсхолдер селекта (город выбирается из справочника).
     expect(html).toContain("Город или село отправления");
     expect(html).toContain("Город или село назначения");
     expect(html).toContain("Все даты");
@@ -285,9 +284,8 @@ describe("normalizeSegment: таблица токенов ?segment", () => {
   });
 
   it("?segment=driving рендерит только водительское (бронь пассажира не попадает)", () => {
-    // Регрессия B7 на уровне страницы: при старе маппинге «driving» уезжал
-    // в «Все», где список смешивает поездки за рулём и брони пассажира —
-    // и счётчик «Поездки» с главной вёл на смешанный список.
+    // Маппинг «driving» → «Водитель», а не «Все»: список не должен смешивать
+    // поездки за рулём и брони пассажира.
     mockUseInfiniteMyTrips.mockReturnValue(
       infiniteState([makeTrip({ pendingRequestsCount: 0 })]),
     );

@@ -1,15 +1,10 @@
 // @vitest-environment jsdom
 // Счётчик «Заявки» на главной (TripCountersSection).
 //
-// Регрессия (аудит 2026-10-05): сумма server-side pendingRequestsCount
-// считалась только по загруженным активным поездкам, а первая страница —
-// limit 20. Водитель с >20 активными поездками видел заниженный счётчик
-// (tripStatusLabel в карточке при этом показывал верное число поездки —
-// расхождение двух источников).
-//
-// Решение владельца: догружать остальные страницы ТОЛЬКО когда сумма заведомо
-// неполна (tripsTotal > загружено). При ≤20 активных поездках лишних
-// запросов нет.
+// Сумма server-side pendingRequestsCount считается по загруженным активным
+// поездкам, а первая страница — limit 20. Догружаем остальные страницы
+// ТОЛЬКО когда сумма заведомо неполна (tripsTotal > загружено): при ≤20
+// активных поездках лишних запросов нет.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";

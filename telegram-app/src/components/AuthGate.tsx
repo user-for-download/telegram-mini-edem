@@ -11,11 +11,8 @@ import { AccountStatePage, RetryAction } from "@/pages/AccountStatePage/AccountS
 import { AppealForm } from "@/components/AppealForm";
 import { SectionBody } from "@/ui/SectionBody";
 
-// Отсчёт берём из retryAfterMs ответа (считает лимитер по своей корзине),
-// 60 с — только запасной вариант, если сервер поле не прислал. Раньше стояло
-// жёсткое 60 с при окне сервера в 300 с (TG_AUTH_RATE_WINDOW_MS): кнопка
-// оживала в 5 раз раньше блока, клик тратил одну из 5 попыток и продлевал
-// его — ровно то, чего cooldown и должен был избежать.
+// Отсчёт берём из retryAfterMs ответа (лимитер считает по своей корзине),
+// 60 с — только запасной вариант, если сервер поле не прислал.
 const RATE_LIMIT_COOLDOWN_S = 60;
 
 function rateLimitCooldownS(error: {
@@ -126,8 +123,7 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
   useEffect(() => {
     return apiClient.onBanned((reason) => {
       // Через стор, а не setState: markBanned заполняет initData для
-      // формы обжалования. Прямой setState её не заполнял, и отправка
-      // апелляции падала с «Не удалось отправить обращение».
+      // формы обжалования.
       useAuthStore.getState().markBanned(reason ?? null);
     });
   }, []);

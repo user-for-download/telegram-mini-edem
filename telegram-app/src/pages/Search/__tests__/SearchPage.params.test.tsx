@@ -90,8 +90,7 @@ function lastFilters(): Record<string, unknown> | undefined {
  * assertions. Здесь тип проверяет наличие полей сам.
  */
 function cityInputs(): [from: HTMLSelectElement, to: HTMLSelectElement] {
-  // Роль combobox, а не textbox: поля города — нативные <select> (решение
-  // владельца 2026-10-03), и getAllByRole("textbox") их больше не находит.
+  // Роль combobox, а не textbox: поля города — нативные <select>.
   const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
   const from = selects[0];
   const to = selects[1];
@@ -127,7 +126,7 @@ describe("SearchPage: смена URL без перемонтирования (B3
 
     fireEvent.click(screen.getByRole("button", { name: "перейти" }));
 
-    // Регрессия B3: без синхронизации остались бы Вологда/Череповец.
+    // Без синхронизации остались бы Вологда/Череповец.
     expect(lastFilters()).toMatchObject({
       fromCityId: MOW,
       toCityId: TUL,
@@ -164,10 +163,8 @@ describe("SearchPage: смена URL без перемонтирования (B3
     // по объекту URLSearchParams (новый объект каждый рендер).
     renderSearch(`/trips?fromCityId=${VOL}`, `/trips?fromCityId=${VOL}`);
 
-    // Раньше здесь был свободный текст и `value: "Псков"`. Теперь поле —
-    // селект, поэтому «набор» это выбор другого id из справочника, и
-    // проверять надо именно его (ввод произвольной строки стал невозможен —
-    // это и есть смысл перехода на справочник).
+    // Поле — селект: «набор» это выбор другого id из справочника
+    // (ввод произвольной строки невозможен).
     const [from] = cityInputs();
     fireEvent.change(from, { target: { value: CHE } });
     expect(from.value).toBe(CHE);

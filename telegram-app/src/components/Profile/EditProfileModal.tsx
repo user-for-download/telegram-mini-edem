@@ -74,8 +74,7 @@ export const EditProfileBody = memo(function EditProfileBody({
   const [about, setAbout] = useState(profile.data?.about ?? "");
   const [phone, setPhone] = useState(profile.data?.phone ?? "");
   // Хранится id поля, а не текст: ошибку привязывает <Field>, который ставит
-  // aria-invalid + aria-describedby (иначе скринридер, дойдя до поля, не
-  // слышал бы, что оно невалидно — замер 2026-10-02).
+  // aria-invalid + aria-describedby.
   const [fieldError, setFieldError] = useState<ProfileFieldError | null>(null);
   const [invalidField, setInvalidField] = useState<string | null>(null);
   const errorFor = (id: string) =>

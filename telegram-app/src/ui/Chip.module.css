@@ -3,10 +3,7 @@
  * — виден фокус клавиатуры (outline 2px --app-info, только :focus-visible —
  *   канон WCAG 2.4.7);
  * — тональные чипы-теги (tone="accent") при aria-pressed=true становятся
- *   синими (цвета кита).
- *
- * Раньше этот рецепт жил КОПИЯМИ в трёх модулях (CreateTrip, Search,
- * EditTripForm: .tagChips + .tagChip + focus-within) — здесь он один. */
+ *   синими (цвета кита). */
 
 .chip:focus-visible {
   outline: 2px solid var(--app-info);

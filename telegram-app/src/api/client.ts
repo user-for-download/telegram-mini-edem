@@ -70,21 +70,17 @@ type ApiClientEvents = {
   refreshEnd: [result: RefreshResult];
 };
 
-// Импорт нужен в том числе ДЛЯ СЕБЯ: `performRefresh` вызывает предикат
-// внутри класса, а ре-экспорт (`export … from`) в локальную область ничего не
-// вносит — без этого импорта был бы ReferenceError, пойманный catch'ем
-// performRefresh и выдававший «transient-failure» вместо permanent-rejection.
+// Импорт для локального использования в `performRefresh`: ре-экспорт
+// (`export … from`) в локальную область ничего не вносит.
 import { isAccountDeletedError } from "@edem/contracts";
 
 /**
  * Протокол ошибок бэкенда живёт в `@edem/contracts` — там же, где бэк берёт
- * коды, поэтому переименование не может разъехаться на две стороны.
+ * коды, поэтому расхождение невозможно по построению.
  *
- * Здесь только РЕ-ЭКСПОРТ: прикладной код (стор, ProfilePage, bookingErrors,
- * VehicleModal, WebSocketProvider) продолжает брать всё из `@/api/client`, и
- * его не пришлось бы трогать. Копировать эти константы в прикладной код нельзя
- * — раньше сравнение жило в шести местах, и две копии забыли про константу
- * (экран уезжал в «бан» вместо «Профиль удалён»).
+ * Здесь только РЕ-ЭКСПОРТ: прикладной код продолжает брать всё из
+ * `@/api/client`. Копировать эти константы в прикладной код нельзя —
+ * единый источник в контрактах.
  */
 export {
   ACCOUNT_DELETED_CODE,
@@ -157,9 +153,8 @@ export class ApiClient {
 
   /**
    * Подписка на обнаружение УДАЛЁННОГО аккаунта при refresh (403 +
-   * FORBIDDEN + "Account is deleted" от /auth/refresh — тот же ответ, что
-   * isDeletedError в bootstrap). Без этого удалённый аккаунт уходил на
-   * плашку бана через emitBanned ниже.
+   * ACCOUNT_DELETED от /auth/refresh). Проверяется раньше бана, иначе
+   * удалённый аккаунт уйдёт на экран бана.
    */
   onDeleted(listener: DeletedListener): () => void {
     return this.emitter.on("deleted", listener);
@@ -373,20 +368,15 @@ export class ApiClient {
             if (response.status === 403) {
               const errorBody = await response.json().catch(() => ({}));
               const record = toErrorRecord(errorBody);
-              // Удаление проверяем ДО бана и НЕЗАВИСИМО от кода FORBIDDEN:
-              // раньше удаление делило этот код с баном, поэтому проверка
-              // стояла внутри «code === FORBIDDEN». Теперь у удаления свой код
-              // ACCOUNT_DELETED, и внешняя проверка проглотила бы его молча —
-              // удалённый аккаунт получил бы обычный session-expired вместо
-              // emitDeleted и уехал на экран логина.
+              // Удаление проверяем ДО бана и ВНЕ «code === FORBIDDEN»:
+              // у удаления свой код ACCOUNT_DELETED — внутренняя проверка
+              // его не увидит, и удалённый аккаунт уехал бы на экран
+              // логина вместо «Профиль удалён».
               if (isAccountDeletedError(record)) {
                 this.emitDeleted();
                 this.emitSessionExpired();
                 return "permanent-rejection";
               }
-              // 403 с кодом FORBIDDEN = бан. Дополнительно уведомляем
-              // подписчиков о бане с banReason из тела ответа, чтобы стор
-              // сразу показал плашку без ожидания повторного bootstrap.
               if (record.code === "FORBIDDEN") {
                 this.emitBanned(readBanReason(errorBody));
                 this.emitSessionExpired();

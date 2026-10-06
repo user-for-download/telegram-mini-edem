@@ -221,9 +221,7 @@ describe("LazyAvatar в карточках SSR", () => {
     expect(html).toContain("Москва");
     expect(html).toContain("Тула");
     // Эталон TripStandardCard: раскладка шапка-маршрут-персона.
-    // Открытие поездки — НАСТОЯЩАЯ кнопка (аудит 2026-10-05): раньше здесь
-    // стоял role="button" на корне, и он проверял реализацию, а не
-    // доступность; нативная кнопка даёт и фокус, и Enter/Space, и роль
+    // Открытие поездки — НАСТОЯЩАЯ кнопка: фокус, Enter/Space и роль
     // без ручных tabIndex/onKeyDown.
     expect(html).toContain("<button");
     expect(html).toContain("Открыть поездку");

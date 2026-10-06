@@ -16,10 +16,7 @@ export interface ProfileUpdateDto {
 
 /**
  * Профильный API Telegram-приложения — ЕДИНСТВЕННЫЙ источник ресурса
- * /users/me. Раньше тот же ресурс описывали ещё api/users.api.ts
- * (GET/PATCH /users/me, notification-settings, DELETE) и мёртвый
- * getCurrentVehicle в api/vehicle.ts; типы разъехались — users.api
- * не знал про phone, который есть в контракте. Дубли удалены.
+ * /users/me.
  *
  * Все ответы валидируются shared-контрактами (@edem/contracts) через
  * apiClient.request(..., schema) — fail-closed: невалидный ответ сервера
@@ -51,10 +48,7 @@ export const profileApi = {
   deleteAccount: (): Promise<{ success: boolean }> =>
     apiClient.request("/users/me", { method: "DELETE" }, successSchema),
 
-  /**
-   * Отметка прохождения онбординга (POST /users/me/onboarding). Раньше жил
-   * в api/users.api.ts — второй модуль на тот же ресурс /users/me.
-   */
+  /** Отметка прохождения онбординга (POST /users/me/onboarding). */
   completeOnboarding: (version: string): Promise<User> =>
     apiClient.request(
       "/users/me/onboarding",

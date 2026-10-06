@@ -9,8 +9,8 @@
  * `Cell` = `align-items:center;display:flex;gap:24px;padding:0 24px`,
  * `Tappable` = `cursor:pointer;isolation:isolate;position:relative` — и всё.
  *
- * Замер A/B в браузере (Cell как `<button>` против клона с тегом `div` и теми
- * же классами и содержимым), 2026-10-01 — 7 расхождений:
+ * Расхождения кнопки против div с теми же классами и содержимым
+ * (7 пунктов — причина каждого свойства ниже):
  *   font-family: Arial          → -apple-system, system-ui
  *   font-size:   13.3333px      → 16px
  *   color:       rgb(0,0,0)     → наследуемый (в тёмной теме чёрный не виден)
@@ -38,6 +38,6 @@
   /* Нативная поверхность и рамка нам не нужны: фон задаёт кит. */
   background: transparent;
   border: 0;
-  /* Один бокс для обоих путей (см. замер выше). */
+  /* Один бокс для обоих путей. */
   box-sizing: border-box;
 }

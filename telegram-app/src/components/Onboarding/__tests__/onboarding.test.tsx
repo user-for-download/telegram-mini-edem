@@ -91,9 +91,8 @@ describe("Onboarding", () => {
     expect(html).toContain("Я согласен");
   });
 
-  // Регрессия: корень собирался сырым <List> в обход ui/Page, поэтому
-  // платформенный паддинг кита не гасился — на iOS бока 18px, на Android 0.
-  // Теперь гуттер/высота/центрирование — контракт ui/Page variant="hero".
+  // Корень — ui/Page variant="hero": гуттер/высота/центрирование —
+  // контракт фасада.
   it("корень — ui/Page variant=hero на обеих платформах (гуттер не плывёт)", () => {
     authState.user = { onboardingVersion: null };
     for (const platform of ["ios", "base"] as const) {

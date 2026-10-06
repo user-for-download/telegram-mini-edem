@@ -144,7 +144,7 @@ describe("TripCard driving cancel guard", () => {
   });
 });
 
-describe("TripCard booking guard (регрессия)", () => {
+describe("TripCard booking guard", () => {
   it("pending: «Отменить бронь» есть", () => {
     expect(renderBooking(makeBooking("pending"))).toContain("Отменить бронь");
   });

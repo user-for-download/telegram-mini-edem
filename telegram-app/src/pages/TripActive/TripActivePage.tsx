@@ -196,9 +196,8 @@ export function TripActivePage() {
 
   return (
     <Page>
-      {/* NavHeader помечен aria-hidden («авторитетные h1 живут на страницах»),
-          а секций с заголовками здесь нет вовсе (замер: 0 h1, 0 h2) — имя
-          экрана даёт скрытый h1. */}
+      {/* NavHeader помечен aria-hidden («авторитетные h1 живут на страницах») —
+          имя экрана даёт скрытый h1. */}
       <VisuallyHidden Component="h1">Поездки</VisuallyHidden>
       {mutationError && (
         <Notice tone="danger" variant="text">

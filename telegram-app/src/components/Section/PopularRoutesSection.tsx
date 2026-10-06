@@ -6,10 +6,7 @@ import { POPULAR_ROUTES } from "@/consts/popularRoutes";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 
 interface PopularRoutesSectionProps {
-  /**
-   * id городов справочника, не имена: дальше поиск фильтрует по id
-   * (решение владельца 2026-10-03).
-   */
+  /** id городов справочника, не имена: поиск фильтрует по id. */
   onSelect: (fromCityId: string, toCityId: string) => void;
 }
 
@@ -21,35 +18,23 @@ interface PopularRoutesSectionProps {
  */
 export function PopularRoutesSection({ onSelect }: PopularRoutesSectionProps) {
   const cities = useAllCitiesQuery();
-  // POPULAR_ROUTES хранит ИМЕНА (так их и писали в cities-data), а наружу
-  // уходят id. Резолвим здесь: типы у строк совпадают, поэтому передать имя
-  // в параметр, означающий id, компилятор не помешал бы — «всё скомпилировалось»
-  // не значит «правильно». Замер 2026-10-03 поймал именно это: в URL уезжало
-  // `fromCityId=Вологда`, и оба селекта на поиске схлопывались на один город.
+  // POPULAR_ROUTES хранит ИМЕНА, а наружу уходят id. Резолвим здесь: типы
+  // у строк совпадают, поэтому передать имя в параметр-id компилятор не
+  // помешает — «скомпилировалось» не значит «правильно».
   const byName = new Map((cities.data ?? []).map((city) => [city.name, city.id]));
 
   return (
-    // Без headingLevel="h1": opt-in из реестра #15 — «секция владеет именем
-    // экрана», и раньше ею был именно этот заголовок. Замер 2026-10-03 на
-    // главной: единственный h1 страницы был «Популярные направления», то есть
-    // при входе в приложение скринридер объявлял ИМЯ СЕКЦИИ как имя экрана.
-    // Имя главной теперь у самой страницы (VisuallyHidden h1 в HomePage).
+    // Без headingLevel="h1": имя главной — у самой страницы
+    // (VisuallyHidden h1 в HomePage), а не у секции.
     <Section header="Популярные направления">
       {POPULAR_ROUTES.map((route) => (
         <Cell
           key={`${route.from}-${route.to}`}
-          // Нативная кнопка — обязательна (фасад, реестр #12). Без
-          // Component="button" кит рендерит div: строка не фокусируется
-          // Tab'ом и не опознаётся скринридером как кнопка. Замер ДО правки
-          // (2026-10-03): 5 строк, tag=DIV, role=null, tabindex=null,
-          // focusable=false, фокусируемых строк на секции 0 — то есть все
-          // «популярные направления» были доступны только мышью.
-          //
-          // Ложного опасения нет: утверждение «Component="button" ломает
-          // раскладку Cell (UA-стили кнопки)» не подтвердилось — сброс
-          // AS_BUTTON в ui/Cell даёт для кнопки и div ИДЕНТИЧНЫЙ результат
-          // (замер на /profile: 16px -apple-system, appearance none,
-          // box-sizing border-box, display flex, бокс 356x80, без переполнения).
+          // Нативная кнопка обязательна (фасад, реестр #12): без
+          // Component="button" строка не фокусируется Tab'ом и не
+          // опознаётся скринридером как кнопка. `Component="button"`
+          // раскладку не ломает: сброс AS_BUTTON в ui/Cell даёт для
+          // кнопки и div идентичный результат.
           Component="button"
           type="button"
           onClick={() => {

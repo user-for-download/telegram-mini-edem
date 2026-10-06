@@ -1,7 +1,5 @@
-// Тесты Field/FieldError без @testing-library/react (не установлен):
-// react-dom/server renderToString — паттерн
-// telegram-app/src/components/__tests__/statusPill.test.tsx.
-// Проверяем: обратную совместимость (без error — как раньше), связку
+// Тесты Field/FieldError: react-dom/server renderToString.
+// Проверяем: обратную совместимость (без error — обычное поле), связку
 // ошибки через aria-describedby (+aria-invalid), className/rest-пропсы.
 import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
@@ -126,10 +124,8 @@ describe("Field", () => {
         {() => null}
       </Field>,
     );
-    // Класс фасада (fieldRoot) теперь добавляется ВСЕГДА, поэтому атрибут
-    // содержит и его, и класс потребителя. Проверяем присутствие обоих, а
-    // не точную строку class="mt-2" — раньше это было равносильно проверке
-    // «обёртка без других классов», а не «класс потребителя дошёл».
+    // Класс фасада (fieldRoot) добавляется ВСЕГДА, поэтому атрибут
+    // содержит и его, и класс потребителя. Проверяем присутствие обоих.
     expect(html).toContain("fieldRoot");
     expect(html).toContain("mt-2");
     expect(html).toContain('data-testid="ride-to-field"');

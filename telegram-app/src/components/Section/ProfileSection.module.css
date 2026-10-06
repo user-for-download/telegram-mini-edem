@@ -14,9 +14,9 @@
    * (ui/buttonReset.module.css). */
   width: 100%;
   margin-top: 6px;
-  /* text-align / background / border больше не нужны: сброс UA-кнопки живёт
+  /* text-align / background / border не нужны: сброс UA-кнопки живёт
    * в фасаде (ui/buttonReset.module.css, класс AS_BUTTON) и одинаков для
-   * button- и div-строк. Раньше компенсация дублировалась здесь вручную. */
+   * button- и div-строк. */
 }
 .who {
   display: flex;

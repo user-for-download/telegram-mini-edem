@@ -9,8 +9,8 @@ import { AS_BUTTON } from "@/ui/classes";
  * Интерактивная строка обязана быть нативной кнопкой — `Component="button"`
  * документирован китом (Cell.d.ts) и даёт фокус, Enter/Space и роль кнопки.
  * Кит при этом не сбрасывает UA-стили кнопки, поэтому вид (шрифт, цвет,
- * `appearance`, `box-sizing`) держит сброс `AS_BUTTON`; замер расхождений и
- * rationale — в `buttonReset.module.css`.
+ * `appearance`, `box-sizing`) держит сброс `AS_BUTTON` (расхождения и
+ * rationale — в `buttonReset.module.css`).
  *
  * Сброс одинаков для обоих корней (button и div), иначе строки считались бы
  * по-разному. Паддинг и раскладку не трогаем — они принадлежат киту.

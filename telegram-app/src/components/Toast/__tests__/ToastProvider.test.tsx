@@ -7,14 +7,9 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 import { ToastProvider, useToast } from "@/components/Toast/ToastProvider";
 
 /**
- * Роль и aria-live живут на самом Snackbar, а не на обёртке вокруг него.
- *
- * Баг 2026-10-02: роль стояла на `<div role=…>` вокруг Snackbar, но
- * AppRoot рендерит Snackbar через usePortalContainer — обёртка оставалась
- * в исходном месте дерева, а тост уезжал в портал. Замер показал: у
- * Snackbar не было ни одного атрибута кроме class/style, а узел с ролью
- * имел childCount 0 и пустой текст, то есть тост скринридеру не
- * объявлялся вовсе.
+ * Роль и aria-live живут на самом Snackbar, а не на обёртке вокруг него:
+ * AppRoot рендерит Snackbar через портал, и роль на обёртке висела бы
+ * на пустом узле — тост скринридеру не объявлялся бы вовсе.
  *
  * Рендер в jsdom, а не renderToString: важно проверить, что роль стоит
  * на узле с ТЕКСТОМ, а не рядом с ним.

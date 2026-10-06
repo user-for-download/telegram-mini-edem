@@ -71,9 +71,8 @@ export const MIN_TARGET = textStyles.minTarget;
  *
  * `Component="button"` — документированный способ кита (Cell.d.ts) и
  * единственный путь с нативной семантикой: фокус, Enter/Space, роль кнопки.
- * Но кит UA-стили не сбрасывает — замер A/B в браузере даёт Arial 13.33px,
- * чёрный цвет, `appearance:auto` и `box-sizing` border-box против
- * content-box у div. Подробности и замер — buttonReset.module.css.
+ * Кит UA-стили не сбрасывает (шрифт, цвет, `appearance`, расхождение
+ * `box-sizing` с div-путём) — подробности в buttonReset.module.css.
  *
  * Класс безвреден для `div` (appearance/background/border — no-op, inherit
  * уже поведение блока), поэтому его можно вешать на обе формы клетки: так

@@ -9,7 +9,7 @@
 //    (e2e/ui-cascade.mjs) и в card/cell-тестах по class-атрибуту.
 //
 // 2. ФАСАД. ui/Cell обязан навесить сброс на оба варианта корня (button и
-//    div) — иначе строки будут считаться по-разному (замер: 356 против 404).
+//    div) — иначе строки считаются по-разному.
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -47,9 +47,7 @@ const render = (node: ReactNode): string =>
 
 /**
  * Тег КОРНЯ клетки, а не обёртки AppRoot: ищем элемент с китовым
- * классом Cell. Раньше здесь был `html.match(/^<(\w+)/)`, и он всегда
- * возвращал `div` — то есть тест «button-корень» проходил бы, никогда не
- * проверив ничего.
+ * классом Cell.
  */
 const rootTagOf = (html: string): string => {
   // В шаблонной строке `\w` без экранирования превращается в `w`

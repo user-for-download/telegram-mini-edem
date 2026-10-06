@@ -53,9 +53,7 @@ export function EditTripForm({
   const [tags, setTags] = useState<TripTag[]>([...(trip.tags ?? [])]);
   const [comment, setComment] = useState(trip.comment ?? "");
   // Ошибка приходит с полем: <Field error=…> ставит aria-invalid и
-  // aria-describedby (2026-10-02). Тексты DTO переводятся общим
-  // schemaErrorMessage — раньше здесь показывалось сырое сообщение Zod
-  // («Too big: expected number to be <=10080»).
+  // aria-describedby. Тексты DTO переводятся общим schemaErrorMessage.
   const [fieldError, setFieldError] = useState<{
     field: string | null;
     error: string;

@@ -185,9 +185,7 @@ describe("useAuthStore.bootstrap (Telegram)", () => {
   });
 
   it("markBanned (бан в активной сессии): initData для апелляции заполнена", () => {
-    // Регрессия: WS 4403 / 403 от refresh писали состояние напрямую и
-    // оставляли initData=null — форма обжалования падала, не отправив
-    // запрос (ей нужен публичный appeal с raw initData).
+    // Форма обжалования шлёт публичный appeal с raw initData.
     mockedGetRawInitData.mockReturnValue(RAW_INIT_DATA);
 
     useAuthStore.getState().markBanned("Спам");

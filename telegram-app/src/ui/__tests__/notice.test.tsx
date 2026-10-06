@@ -82,7 +82,7 @@ describe("Notice", () => {
     // Порядок/состав детей не меняется — раскладку держит CSS (см. ниже).
   });
 
-  it("banner CSS has no space-between (регрессия)", () => {
+  it("banner CSS has no space-between", () => {
     const bannerRule = cssText.match(
       /\.notice\[data-variant="banner"\]\s*\{[^}]*\}/,
     )?.[0];

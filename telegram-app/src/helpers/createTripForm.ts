@@ -9,7 +9,7 @@ export type CreateTripPayload = z.infer<typeof createTripDtoSchema>;
  * Чистый хелпер ради unit-тестов инвариантов без DOM.
  */
 export interface CreateTripDraft {
-  /** id городов справочника, не имена (решение владельца 2026-10-03). */
+  /** id городов справочника, не имена. */
   fromCityId: string;
   toCityId: string;
   fromAddress: string;
@@ -38,10 +38,8 @@ export type CreateTripValidation =
 /**
  * Перевод пути issue из DTO в русский текст + id поля формы.
  *
- * Экспортируется и для `EditTripForm`: тот разбирает `updateTripDtoSchema`
- * и раньше показывал пользователю сырое сообщение Zod («Too big: expected
- * number to be <=10080», замер 2026-10-02), потому что своего переводчика
- * не имел. Разбор один на обе формы — иначе тексты разъедутся.
+ * Разбор один на обе формы (создание и правка) — иначе тексты разъедутся.
+ * Сырые сообщения Zod пользователю не показываем.
  *
  * `fieldPrefix` отличает форму создания («create-») от формы правки («edit-»):
  * id полей у них разные при одном и том же пути DTO.

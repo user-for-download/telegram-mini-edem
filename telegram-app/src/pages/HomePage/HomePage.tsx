@@ -28,8 +28,7 @@ export function HomePage() {
   const [pendingCreate, setPendingCreate] = useState(false);
   useModalBack(() => setVehicleOpen(false), vehicleOpen);
 
-  // id городов, не имена (решение владельца 2026-10-03): параметры renamed в
-  // fromCityId/toCityId, потому что поиск фильтрует по справочнику, а имя
+  // id городов, не имена: поиск фильтрует по справочнику, а имя
   // неоднозначно («Москва» входит в «Москва-…»).
   const goToSearch = (fromCityId?: string, toCityId?: string) => {
     haptic.light();
@@ -77,9 +76,8 @@ export function HomePage() {
 
   return (
     <Page>
-      {/* Имя экрана — здесь, а не в заголовке секции (реестр #15). NavHeader
-          помечен aria-hidden, поэтому без этого у главной не было имени: h1
-          был у «Популярных направлений». */}
+      {/* Имя экрана — здесь, а не в заголовке секции (реестр #15):
+          NavHeader помечен aria-hidden. */}
       <VisuallyHidden Component="h1">Главная</VisuallyHidden>
       <ProfileSection />
       <TripCountersSection />

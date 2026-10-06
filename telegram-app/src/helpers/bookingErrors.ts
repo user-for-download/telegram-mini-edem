@@ -23,18 +23,12 @@ const CODE_MESSAGES: Record<string, string> = {
 /**
  * Текст ошибки по коду — ТОЛЬКО собственные ключи словаря.
  *
- * `error.code` приходит из тела ответа бэкенда (api/client.ts берёт любую
- * строку) и в словаре искался прямой индексацией. Для обычного объектного
- * литерала это опасно: `CODE_MESSAGES["toString"]`, `["constructor"]`,
- * `["__proto__"]` разрешаются в унаследованные члены Object.prototype, они
- * `!== undefined`, и функция возвращала НЕ строку. Такое значение уезжало
- * в `<Notice>{bookingErrorMessage(err)}</Notice>` и роняло рендер с
- * «Functions are not valid as a React child».
- *
- * Типы этого не ловили: индекс-сигнатура объявляет значение как
- * `string | undefined`. Поэтому проверяем и собственность, и тип.
- * Тот же класс ключей в другом месте репозитория закрыт явно
- * (`typeof route === "string"` в router/deepLinks.ts).
+ * `error.code` приходит из тела ответа бэкенда. Прямая индексация
+ * объектного литерала опасна: `CODE_MESSAGES["toString"]`,
+ * `["constructor"]`, `["__proto__"]` разрешаются в унаследованные члены
+ * Object.prototype — это не строки, и такое значение роняет рендер
+ * («Functions are not valid as a React child»). Типы этого не ловят,
+ * поэтому проверяем и собственность ключа, и тип значения.
  */
 function codeMessage(code: string): string | undefined {
   if (!Object.hasOwn(CODE_MESSAGES, code)) return undefined;

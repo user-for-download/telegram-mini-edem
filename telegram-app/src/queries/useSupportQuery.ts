@@ -41,11 +41,10 @@ export function useCreateFeedbackMutation() {
  * авторизации (та же строка, что в /auth/telegram). Экспортируется для
  * прямого тестирования маршрутизации (без рендера).
  *
- * Фолбэк на getRawInitData() — страховка границы отправки, а не костыль:
- * стор заполняет initData при бане (markBanned) и при bootstrap, но
- * ветка «403 на /feedback, статус сессии ещё authenticated» (SupportPage)
- * в стор не заходит вовсе. Без фолбэка апелляция оттуда не уходила бы.
- * Сырая строка, без пересортировки — HMAC должен сойтись.
+ * Фолбэк на getRawInitData() — страховка границы отправки:
+ * ветка «403 на /feedback, статус сессии ещё authenticated»
+ * (SupportPage) в стор не заходит, поэтому сырую строку берём из SDK
+ * напрямую. Без пересортировки — HMAC должен сойтись.
  */
 export async function submitSupportFeedback(
   data: CreateFeedbackDto,

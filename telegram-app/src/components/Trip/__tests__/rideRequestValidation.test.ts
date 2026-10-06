@@ -28,9 +28,8 @@ describe("validateRideRequestWindow", () => {
 });
 
 describe("rideRequestErrorMessage: перевод zod в русский + поле", () => {
-  // Основание 2026-10-02: сырое сообщение Zod показывалось пользователю —
-  // «Too big: expected number to be <=3». min/max на <input type="number">
-  // не запрещают ввод, только ограничивают крутилки, так что ветка живая.
+  // min/max на <input type="number"> не запрещают ввод, только ограничивают
+  // крутилки, так что ветка zod живая — сырое сообщение пользователю нельзя.
   it("seats → поле «Места» формы создания", () => {
     expect(rideRequestErrorMessage(["seats"])).toEqual({
       field: "ride-seats",

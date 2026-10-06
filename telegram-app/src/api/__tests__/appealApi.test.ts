@@ -130,9 +130,7 @@ describe("submitSupportFeedback: маршрутизация submitFeedback", () 
   });
 
   it("initData в сторе null, но SDK её отдаёт → appeal уходит с SDK-строкой", async () => {
-    // Регрессия: бан в активной сессии (403 на /feedback) в стор не
-    // заходит, initData в сторе null. Раньше апелляция падала, не
-    // отправив ни одного запроса.
+    // Ветка «403 на /feedback» в стор не заходит: initData берём из SDK.
     mockGetToken.mockReturnValue(null);
     mockStoreGetState.mockReturnValue({ initData: null });
     mockGetRawInitData.mockReturnValue(RAW_INIT_DATA);

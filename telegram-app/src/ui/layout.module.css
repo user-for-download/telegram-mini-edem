@@ -9,36 +9,27 @@
  * - TripModals .rowInfo (ряд с min-width:0, прицел под заявки);
  * - TripCards .requestSkeleton* (зеркало requestCell под Skeleton-overlay);
  * - TripDetails .nameRow (ряд с gap 6 под имя+значок).
- *
- * ProfilePage .flexText удалён (2026-09-30): это был дубль GROW 1:1 —
- * страница берёт GROW/TRUNCATE из @/ui/classes.
  */
 
-/* Обрезка в одну строку (было truncate).
- * Заменяет копии .truncate (TripModals, TripCards,
- * TripDetails, ProfilePage — там ещё display:block для span). */
+/* Обрезка в одну строку. */
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Не сжимать элемент во флекс-ряду (пилюля статуса, аватар).
- * Заменяет копии .shrink (ReviewCard, TripModals, TripCards),
- * .pill (ProfileModals, Notifications — тот же flex-shrink:0). */
+/* Не сжимать элемент во флекс-ряду (пилюля статуса, аватар). */
 .shrink {
   flex-shrink: 0;
 }
 
-/* Растущий блок с нулевой min-width — даёт работать ellipsis рядом.
- * Заменяет копии .grow (TripModals ×2 правила, TripDetails). */
+/* Растущий блок с нулевой min-width — даёт работать ellipsis рядом. */
 .grow {
   min-width: 0;
   flex: 1 1 0%;
 }
 
-/* Ряд кнопок действия (зазор 8px).
- * Заменяет .btnRow (TripModals, EditTripForm, RideRequestsModal). */
+/* Ряд кнопок действия (зазор 8px). */
 .btnRow {
   display: flex;
   gap: var(--app-space-xs);
@@ -51,9 +42,7 @@
   gap: var(--app-space-xs);
 }
 
-/* Ряд «шапка слева — статус справа»: space-between + зазор 8px.
- * Заменяет TripCards .rowBetween, TripDetails .rowBetween,
- * ProfileModals .reportHead (та же тройка правил). */
+/* Ряд «шапка слева — статус справа»: space-between + зазор 8px. */
 .rowBetween {
   display: flex;
   align-items: center;

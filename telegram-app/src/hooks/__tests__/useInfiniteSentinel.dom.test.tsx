@@ -3,15 +3,8 @@
 // infiniteSentinel.test.tsx (node/renderToString, IntersectionObserver
 // отсутствует). Здесь observer РЕАЛЬНЫЙ (стаб с ручным триггером),
 // поэтому проверяется то, что SSR-ветка увидеть не может: подписка
-// навешивается на узел, который появляется ПОСЛЕ загрузки данных.
-//
-// Регрессия B1: эффект подписки имел deps [disabled, rootMargin] и
-// выходил при sentinelRef.current === null. Сентинел рендерит
-// ui/FetchMore, а тот — только при hasNextPage, т.е. узел появлялся
-// на следующем рендере, когда эффект уже не перезапускался:
-// IntersectionObserver не создавался НИКОГДА, автодогрузка не
-// работала ни на одном из 4 экранов (работала только кнопка
-// «Показать ещё»). Тесты ниже обязаны падать на старом коде.
+// навешивается на узел, который появляется ПОСЛЕ загрузки данных
+// (сентинел рендерит ui/FetchMore только при hasNextPage).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import type { ReactNode } from "react";

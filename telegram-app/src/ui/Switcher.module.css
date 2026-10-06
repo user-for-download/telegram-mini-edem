@@ -1,7 +1,5 @@
 /* Ряд пилюль-переключателя (ui/Switcher) — единственный ряд переключателей
- * на всех экранах. Правила .item/.active переехали сюда из двух страниц, где
- * копия была побайтово одинаковой (NotificationsPage.module.css,
- * TripActivePage.module.css). gap 6px — off-scale осознанно, ради визуального
+ * на всех экранах. gap 6px — off-scale осознанно, ради визуального
  * единства (token-lint пропускает off-scale). */
 .row {
   display: flex;

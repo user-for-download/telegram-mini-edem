@@ -125,7 +125,7 @@ describe("ProfilePage header", () => {
     expect(html).toContain("Александр");
     expect(html).toContain("4.9");
     // Значок «Telegram верифицирован» и счётчик отзывов в бейдже убраны
-    // осознанно (UI-правка 2026-09-30): бейдж показывает только оценку.
+    // осознанно: бейдж показывает только оценку.
     expect(html).not.toContain("Telegram верифицирован");
     expect(html).not.toContain("4.9 (12)");
     expect(html).toContain("Поездок");

@@ -13,12 +13,7 @@ import type { VehicleFormDto } from "@/api/vehicle";
 /** Клиентские лимиты длины (зеркало backend carFormSchema). */
 export const VEHICLE_LIMITS = { model: 50, color: 30, plate: 15 } as const;
 
-/**
- * Ошибка формы с привязкой к полю: раньше возвращался только текст, и
- * потребитель не мог показать его у нужного поля — ошибка уезжала в общий
- * Notice, а `aria-invalid`/`aria-describedby` не ставились (замер
- * 2026-10-02).
- */
+/** Ошибка формы с привязкой к полю. */
 export interface VehicleFieldError {
   /** id поля формы (`vehicle-model` / `vehicle-color` / `vehicle-plate`). */
   field: string;

@@ -17,7 +17,7 @@ interface TripSearchSectionProps {
  * два селекта городов и primary-кнопка, отправка формы по Enter.
  *
  * Состояние — id городов, не имена: селект отдаёт id, и поиск уходит в
- * `fromCityId`/`toCityId` (решение владельца 2026-10-03).
+ * `fromCityId`/`toCityId`.
  */
 export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
   const cities = useAllCitiesQuery();

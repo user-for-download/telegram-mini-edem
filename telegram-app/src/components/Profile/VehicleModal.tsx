@@ -163,7 +163,7 @@ function VehicleForm({
   const [color, setColor] = useState(vehicle?.color ?? "");
   const [plate, setPlate] = useState(vehicle?.plate ?? "");
   // Хранится id поля, а не текст: <Field error=…> сам ставит aria-invalid и
-  // aria-describedby, иначе скринридер у поля не слышит об ошибке (2026-10-02).
+  // aria-describedby.
   const [fieldError, setFieldError] = useState<VehicleFieldError | null>(null);
   const errorFor = (id: string) =>
     fieldError?.field === id ? fieldError.message : undefined;

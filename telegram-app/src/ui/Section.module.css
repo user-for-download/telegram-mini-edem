@@ -1,6 +1,6 @@
 /* Обёртка заголовка секции: повторяет геометрию китовского SectionHeader,
- * который мы обходим (см. ui/Section.tsx). Значения сняты замером из
- * styles.css кита v2.1.13 и закреплены в kitContract.test.tsx:
+ * который мы обходим (см. ui/Section.tsx). Значения — из styles.css кита
+ * v2.1.13, закреплены в kitContract.test.tsx:
  *   base: padding 20px 24px 4px 22px, цвет --tgui--link_color
  *   iOS:  padding 16px 16px 8px, цвет --tgui--section_header_text_color
  * Переменные кита берём напрямую, чтобы тема реактивно меняла цвет. */

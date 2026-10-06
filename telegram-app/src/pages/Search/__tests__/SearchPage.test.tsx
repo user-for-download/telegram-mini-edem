@@ -165,14 +165,10 @@ describe("SearchPage query states", () => {
   });
 });
 
-// P0 (2026-09-30): у полей города не было доступного имени — только
-// placeholder (китовский header рисуется лишь на base и на iOS не читается).
-//
-// Имя теперь задаётся связкой visually-hidden `<label for>` + id поля — канон
-// фасада (ui/Field, реестр #9), а не aria-label на контроле: у поля есть
-// ВИДИМАЯ подпись, и дублировать её в aria-label значило бы держать текст в двух
-// местах. Поля стали CitySelectField (решение владельца 2026-10-03), раньше
-// здесь был свободный текст с aria-label.
+// У полей города есть доступное имя на всех платформах: связка
+// visually-hidden `<label for>` + id поля — канон фасада (ui/Field,
+// реестр #9), а не aria-label на контроле: у поля есть ВИДИМАЯ подпись,
+// и дублировать её в aria-label значило бы держать текст в двух местах.
 describe("SearchPage a11y", () => {
   it("поля городов имеют доступное имя на всех платформах", () => {
     mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
@@ -184,9 +180,7 @@ describe("SearchPage a11y", () => {
   });
 
   it("выбор города — нативный select с настоящими option (реестр #19)", () => {
-    // Китовский Multiselect давал 32 пункта без role=option; у селекта option —
-    // настоящий элемент, доступный скринридеру. И никакого datalist, который
-    // давал неявный combobox без списка.
+    // У селекта option — настоящий элемент, доступный скринридеру.
     mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
     const html = render(<SearchPage />);
     expect(html).toMatch(/<select[^>]*id="search-from"/);

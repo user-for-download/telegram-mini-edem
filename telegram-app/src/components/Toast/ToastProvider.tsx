@@ -59,12 +59,8 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
       {children}
       {toast && (
         // a11y: tgui Snackbar — голый div без live-семантики, поэтому роль
-        // даём ЕМУ САМОМУ, а не обёртке. Раньше стоял <div role=…> вокруг
-        // Snackbar, но AppRoot рендерит Snackbar через usePortalContainer:
-        // обёртка оставалась в исходном месте дерева, а тост уезжал в
-        // портал — получалось, что роль висит на ПУСТОМ узле с childCount 0,
-        // и тост скринридеру не объявлялся вовсе (замер 2026-10-02: у
-        // Snackbar не было ни одного атрибута, кроме class/style).
+        // даём ЕМУ САМОМУ, а не обёртке: AppRoot рендерит Snackbar через
+        // портал, и роль на обёртке висела бы на пустом узле.
         //
         // Snackbar наследует HTMLAttributes<HTMLDivElement> и спредит
         // ...restProps, поэтому role и aria-live приходят прямо на узел тоста.

@@ -67,8 +67,7 @@ describe("normalizeProfileForm", () => {
 
 describe("validateProfileFields: ошибка привязана к полю", () => {
   it("возвращает id поля, а не только текст", () => {
-    // Основание правки 2026-10-02: текст без поля невозможно показать рядом
-    // с полем — ошибка уезжала в общий Notice, а aria-invalid не ставился.
+    // Текст без поля невозможно показать рядом с полем.
     expect(validateProfileFields("A", "")).toEqual({
       field: "profile-name",
       message: "Имя должно содержать минимум 2 символа",

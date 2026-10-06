@@ -359,10 +359,9 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
   });
 
   it("booking:new инвалидирует сводку заявок водителя (BOOKING_KEYS.driver)", async () => {
-    // Регрессия (аудит 2026-10-05): сводка водителя живёт под отдельным
-    // ключом и в остальные списки не входит. Без этой инвалидации новая
-    // заявка не появлялась у водителя до перезагрузки — staleTime 60с и
-    // refetchOnWindowFocus:false рефетча не давали.
+    // Сводка водителя живёт под отдельным ключом и в остальные списки
+    // не входит: без этой инвалидации новая заявка не появлялась у
+    // водителя до перезагрузки.
     authenticate();
     await renderProvider();
     const ws = lastInstance();
@@ -533,12 +532,9 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
   });
 
   it("background→foreground: reconnect после возврата ДЕЛАЕТ resync", async () => {
-    // Регрессия (аудит 2026-10-05): уход в фон ставит status="background",
-    // сокет рвётся, а флаг «уже подключались» сбрасывался на ЛЮБОМ
-    // не-authenticated статусе. Возврат из фона — самый частый переход
-    // жизненного цикла Telegram-аппа, и именно он перестал поднимать
-    // resyncSeq: события за время разрыва не восстанавливались
-    // инвалидацией, а refetchOnWindowFocus выключен.
+    // Уход в фон рвёт сокет, но сессия жива: возврат обязан поднять
+    // resyncSeq, иначе события за время разрыва не восстанавливаются
+    // (refetchOnWindowFocus выключен).
     authenticate();
     await renderProvider();
     const first = lastInstance();

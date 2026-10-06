@@ -186,9 +186,7 @@ describe("formatNotifTime / notificationAcronym", () => {
   });
 
   it("formatNotificationWho: пустая строка не съедает метку действия", () => {
-    // Регрессия (аудит 2026-10-05): `??` на "" не срабатывает, поэтому
-    // actorName="" возвращал "" вместо метки — строка уведомления
-    // исчезала целиком вместе с действием.
+    // `??` на "" не срабатывает: actorName="" должен давать метку, а не "".
     expect(formatNotificationWho("", "отменил")).toBe("отменил");
     expect(formatNotificationWho("   ", "подтвердил")).toBe("подтвердил");
     expect(formatNotificationWho("", null)).toBeNull();
@@ -220,9 +218,8 @@ describe("formatNotifTime / notificationAcronym", () => {
 
 describe("NotificationsPage: шапка и контракт", () => {
   it("пилюли сегментов + IconButton «Прочитать все» со счётчиком", () => {
-    // Счётчик задаётся ЯВНО (глобальный unread-count). Раньше число
-    // подставлялось фолбэком из page[0].unreadCount сегментного ответа —
-    // это и был B9.
+    // Счётчик задаётся ЯВНО (глобальный unread-count), а не фолбэком
+    // из page[0].unreadCount сегментного ответа.
     setMocks(pageWithItems([makeNotification()], 1), 1);
 
     const html = renderPage();
@@ -324,7 +321,7 @@ describe("NotificationsPage: карточки", () => {
 
     const html = renderPage();
 
-    // Аватара нет (раньше был акроним ">БР<").
+    // Аватара нет.
     expect(html).not.toContain(">БР<");
     // Время — вторая строка штатного Info (текст зависит от TZ,
     // фикстура сентябрьская — месяц стабилен в любом TZ).
@@ -522,8 +519,7 @@ describe("NotificationsPage: сегменты", () => {
     expect(driver).toContain("Нет уведомлений водителя");
     expect(driver).toContain("Заявки пассажиров и совпадения запросов появятся здесь");
     // Переключатель «одно из N» — radiogroup/radio с aria-checked
-    // (ui/Switcher). Раньше здесь был group + aria-pressed, хотя активным
-    // был ровно один сегмент.
+    // (ui/Switcher).
     expect(driver).toContain('role="radiogroup"');
     expect(driver).toContain('aria-label="Фильтр уведомлений"');
     expect(driver).toContain('role="radio"');
@@ -837,8 +833,8 @@ describe("счётчик «Прочитать все»: сегмент не пр
   });
 
   it("сбой счётчика: лента жива, кнопка рабочая, ложного «все прочитаны» нет", () => {
-    // Замер 2026-10-03 (N-02): GET /notifications/unread-count → 500 давал
-    // «Все уведомления прочитаны» и disabled при 9 непрочитанных.
+    // При сбое unread-count (500) кнопка не должна утверждать «все прочитаны»
+    // и гаснуть при непрочитанных.
     mockUseInbox.mockReturnValue(segmentInbox(9));
     mockUseUnreadCount.mockReturnValue({
       data: undefined,

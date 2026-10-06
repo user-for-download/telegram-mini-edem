@@ -25,8 +25,7 @@ export interface IconButtonProps
   extends Omit<ComponentProps<typeof TguiIconButton>, "mode"> {
   /**
    * Обязателен: у кнопки-иконки нет текста, поэтому доступное имя задаётся
-   * явно (WCAG 1.1.1 / 4.1.2). Раньше об этом думало каждое из 13 мест
-   * само — теперь забытый label не компилируется.
+   * явно (WCAG 1.1.1 / 4.1.2). Забытый label не компилируется.
    */
   "aria-label": string;
   variant?: IconButtonVariant;
@@ -35,10 +34,9 @@ export interface IconButtonProps
 /**
  * Единая иконкная кнопка приложения.
  *
- * Прямой китовый `IconButton` использовался в 5 файлах (13 мест) с руками
- * подобранными `mode`/`size`/`aria-label` — здесь эти решения закреплены в
- * одном месте. Пропсы кита (size, disabled, type, title, ref, before/after)
- * прокидываются без изменений.
+ * Решения по `mode` закреплены здесь, в одном месте. Пропсы кита
+ * (size, disabled, type, title, ref, before/after) прокидываются
+ * без изменений.
  */
 export function IconButton({
   variant = "ghost",

@@ -34,12 +34,10 @@ describe("bookingErrorMessage", () => {
   });
 
   it("прототипный код не возвращает функцию (рендер не упал бы)", () => {
-    // Регрессия (аудит 2026-10-05): прямой индекс CODE_MESSAGES[code]
-    // разрешал унаследованные члены Object.prototype. Для "toString" это
-    // функция, она `!== undefined` — и значение уезжало в <Notice> как
-    // React-ребёнок, что роняло рендер («Functions are not valid as a
-    // React child»). Типы это не ловили: индекс-сигнатура объявляет
-    // значение как string.
+    // Прямой индекс CODE_MESSAGES[code] разрешает унаследованные члены
+    // Object.prototype: для "toString" это функция, она `!== undefined` —
+    // и значение уезжало в <Notice> как React-ребёнок, роняя рендер.
+    // Типы это не ловят: индекс-сигнатура объявляет значение как string.
     for (const code of [
       "toString",
       "constructor",

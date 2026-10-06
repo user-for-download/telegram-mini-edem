@@ -194,10 +194,7 @@ export function SearchPage() {
 
             <div className={styles.cityFields}>
               {/* Выбор города — тот же CitySelectField, что на главной и в
-                  форме создания (решение владельца 2026-10-03). Раньше здесь
-                  был свободный текст: имя уходило в `fromCity` и backend искал
-                  по подстроке, из-за чего «Москва» матчила и «Москва-…».
-                  Теперь выбор даёт id, и уходит `fromCityId`. */}
+                  форме создания: выбор даёт id, уходит `fromCityId`. */}
               <CitySelectField
                 id="search-from"
                 label="Откуда"

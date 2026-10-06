@@ -90,10 +90,7 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
       <Text Component="div" className={PROSE}>
         {report.description}
       </Text>
-      {/* Ответ модерации. Поле есть в контракте и приезжает в ответе
-          (serializeReport), но на карточке не рендерилось: пользователь видел
-          «Отклонена» без причины. Замер 2026-10-02 — /api/v1/reports отдавал
-          resolutionNote, на экране его не было. */}
+      {/* Ответ модерации (resolutionNote из контракта). */}
       {report.resolutionNote ? (
         <Notice tone={report.status === "resolved" ? "success" : "info"}>
           <strong>Ответ модерации</strong>
@@ -128,7 +125,7 @@ export function ReportsPage() {
     useState<(typeof REPORT_CATEGORIES)[number]>("safety");
   const [description, setDescription] = useState("");
   // Клиентская ошибка приходит с полем: <Field error=…> ставит aria-invalid и
-  // aria-describedby сам (2026-10-02). formError остаётся для ошибок, которые
+  // aria-describedby сам. formError остаётся для ошибок, которые
   // не принадлежат конкретному полю: лимит «одна жалоба» и ответ сервера.
   const [fieldError, setFieldError] = useState<ReportFieldError | null>(null);
   const errorFor = (id: string) =>

@@ -34,15 +34,12 @@ export interface ChipProps extends Omit<
 /**
  * Единая чип-кнопка.
  *
- * Прямой китовский `Chip` использовался в 4 файлах (16 мест), а рецепт
- * выбранного тега продублировался тремя модулями CSS — здесь он один
- * (см. Chip.module.css). Пропсы кита (Component, type, href, before,
- * aria-pressed, onClick, disabled, className) прокидываются без изменений.
+ * Рецепт выбранного тега — один, здесь (см. Chip.module.css). Пропсы кита
+ * (Component, type, href, before, aria-pressed, onClick, disabled,
+ * className) прокидываются без изменений.
  *
- * Кликабельный чип по умолчанию `<button>`. Кит без Component рендерит
- * `div`, а div с onClick/aria-pressed недоступен с клавиатуры и читается
- * скринридером как текст — ровно это было в фильтрах NotificationsPage и
- * TripActivePage (замер: tag=DIV, role=null, tabindex нет). Явный
+ * Кликабельный чип по умолчанию `<button>`: `div` с onClick/aria-pressed
+ * недоступен с клавиатуры и читается скринридером как текст. Явный
  * Component всегда выигрывает: `Component="a" href` остаётся ссылкой.
  */
 export function Chip({
@@ -62,9 +59,9 @@ export function Chip({
     (component === "button" ? ("button" as const) : undefined);
 
   const merged = [
-    // Сброс UA-кнопки: `Component="button"` (теги-фильтры в 4 местах) течёт
-    // Arial/чёрным цветом/appearance:auto — кит этого не снимает. Подробности
-    // и замер A/B — buttonReset.module.css. Для div-чипа класс no-op.
+    // Сброс UA-кнопки: `Component="button"` течёт шрифтом/цветом/appearance —
+    // кит этого не снимает (подробности — buttonReset.module.css).
+    // Для div-чипа класс no-op.
     AS_BUTTON,
     styles.chip,
     tone === "accent" ? styles.accent : undefined,

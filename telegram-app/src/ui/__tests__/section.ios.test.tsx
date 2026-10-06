@@ -12,8 +12,7 @@ import styles from "../Section.module.css";
 // Платформа берётся из контекста AppRoot глубоким импортом кита; в vitest
 // этот импорт даёт вторую копию модуля AppRootContext, поэтому контекст от
 // <AppRoot> из корня пакета до фасада не доходит и всё рисуется в 'base'.
-// В браузере Vite резолвит оба в один модуль, там всё сходится (замер в
-// ui/README, реестр #15). Тот же приём, что в sheet.ios.test.tsx.
+// Тот же приём, что в sheet.ios.test.tsx.
 vi.mock("@/hooks/usePlatform", () => ({ usePlatformOrBase: () => "ios" }));
 
 // Китовый класс Subheadline — маркер базовой ветки рецепта заголовка.

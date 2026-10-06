@@ -11,11 +11,10 @@ import {
 import type { AuthResponse, TelegramAuthRequest } from "@edem/contracts";
 
 /**
- * Статусы авторизации. Значения "error" здесь НЕТ намеренно: сбой
- * авторизации — это либо терминальный экран (banned/deleted), либо
- * обычный "unauthenticated" с lastAuthError для различения причины
- * (429 / SESSION_EXPIRED / INIT_DATA_UNAVAILABLE). Отдельного
- * состояния не было никогда, и его проверки были недостижимыми.
+ * Статусы авторизации. Состояния "error" нет: сбой авторизации — это
+ * либо терминальный экран (banned/deleted), либо обычный
+ * "unauthenticated" с lastAuthError для различения причины
+ * (429 / SESSION_EXPIRED / INIT_DATA_UNAVAILABLE).
  */
 export type AuthStatus =
   | "idle"
@@ -73,9 +72,8 @@ interface AuthState {
    * Переход в «забанен» из активной сессии: 403 FORBIDDEN от /auth/refresh
    * (событие apiClient `banned`) и терминальный WS-close 4403.
    *
-   * Отдельное действие, а не `setState` в подписчиках, чтобы заполнение
-   * initData для апелляции нельзя было забыть: раньше эти ветки писали
-   * состояние напрямую и роняли форму обжалования (см. applyBanned).
+   * Отдельное действие, а не `setState` в подписчиках: заполнение
+   * initData для апелляции нельзя забыть (см. applyBanned).
    */
   markBanned: (banReason: string | null) => void;
 }
@@ -140,13 +138,11 @@ function applyAuthenticated(set: (state: Partial<AuthState>) => void, response: 
 /**
  * Терминальный переход «забанен» — ЕДИНАЯ точка для всех путей бана.
  *
- * Почему initData берётся здесь, а не только в bootstrap: обжалование
- * уходит через публичный POST /feedback/appeal БЕЗ токена, и личность
- * подтверждается той же сырой initData-строкой. Раньше её заполнял
- * исключительно холодный bootstrap (applyBanned), поэтому бан, пришедший
- * в активной сессии (WS 4403 или 403 от /auth/refresh), оставлял
- * initData=null — и форма обжалования падала с «Не удалось отправить
- * обращение», не отправив ни одного запроса.
+ * initData берётся здесь же: обжалование уходит через публичный
+ * POST /feedback/appeal БЕЗ токена, и личность подтверждается той же
+ * сырой initData-строкой. Бан из активной сессии (WS 4403 или 403
+ * от /auth/refresh) обязан заполнить её так же, как bootstrap,
+ * иначе форма обжалования падает, не отправив ни одного запроса.
  *
  * Сырая строка, без пересортировки (HMAC), и БЕЗ purgeLaunchParamsCache:
  * бан — не логаут, материал сессии нужен для апелляции.
@@ -310,9 +306,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // refresh нечего применять — нужное состояние уже установлено,
           // и трогать его нельзя. Сторожит именно session: проверка
           // refreshGeneration в apiClient отсекает подмену токенов, но
-          // статус не сторожит (B6 — без этой проверки транзиентный сбой
-          // возвращал status="authenticated" при session === null, и
-          // приложение рендерилось без токена, с 401-циклом).
+          // статус не сторожит, поэтому без этой проверки транзиентный
+          // сбой возвращал бы status="authenticated" при session === null.
           if (!get().session) return;
 
           if (refreshResult === "permanent-rejection") {
