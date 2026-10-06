@@ -65,12 +65,43 @@ describe("--app-field-label: тон видимой подписи поля", () 
   });
 
   it("правило тона живёт в общем слое ui, а не в модуле потребителя", () => {
-    // Иначе долг вернётся на поля, которые не CitySelectField.
     const uiCss = readFileSync(
       path.resolve(import.meta.dirname, "../ui.module.css"),
       "utf8",
     );
     expect(uiCss).toMatch(/\.fieldRoot\s+h6\s*\{[^}]*--app-field-label/);
+  });
+
+  it("подложка контрола — серый фон на внутреннем label кита", () => {
+    // Все редактируемые поля видны на белой секции: правило общее,
+    // а не копия в модуле потребителя.
+    const uiCss = readFileSync(
+      path.resolve(import.meta.dirname, "../ui.module.css"),
+      "utf8",
+    );
+    expect(uiCss).toMatch(
+      /\.fieldRoot\s*>\s*div\s*>\s*label\s*\{[^}]*--tgui--secondary_bg_color/,
+    );
+  });
+
+  it("фон видимой подписи прозрачный — белый h6 не вырезает пилюлю", () => {
+    const uiCss = readFileSync(
+      path.resolve(import.meta.dirname, "../ui.module.css"),
+      "utf8",
+    );
+    expect(uiCss).toMatch(/\.fieldRoot\s+h6\s*\{[^}]*background:\s*transparent/);
+  });
+
+  it("плейсхолдер — приглушённый тон, а не китовый hint", () => {
+    // Китовый secondary_hint_color ниже AA на серой подложке.
+    const uiCss = readFileSync(
+      path.resolve(import.meta.dirname, "../ui.module.css"),
+      "utf8",
+    );
+    expect(uiCss).toContain("::placeholder");
+    expect(uiCss).toContain("::-moz-placeholder");
+    const rule = uiCss.match(/[^{}]*placeholder[^{}]*\{[^}]*\}/)?.[0] ?? "";
+    expect(rule).toContain("--app-muted");
   });
 });
 
@@ -95,5 +126,17 @@ describe("Field: базовый класс фасада всегда приме�
     );
     expect(html).toContain("fieldRoot");
     expect(html).toContain("consumer-class");
+  });
+
+  it("структура кита прежняя: контрол — div > label", () => {
+    // Селектор подложки зависит от вложенности FormInput; при bump кита
+    // сверить. SSR-разметка — tripwire: пропал div между fieldRoot
+    // и label — правило мёртвое.
+    const html = render(
+      <Field label="Адрес" id="f-1">
+        {(field) => <Input {...field} value="" onChange={() => {}} />}
+      </Field>,
+    );
+    expect(html).toMatch(/fieldRoot[\s\S]*<div[^>]*>\s*<label/);
   });
 });

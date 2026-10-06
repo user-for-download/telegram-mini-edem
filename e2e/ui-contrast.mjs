@@ -79,7 +79,7 @@ function thresholdFor(sizePx, weight) {
  * `pick` — селектор внутри page.evaluate; возвращает массив описаний
  * { label, fontSize, fontWeight }. Контраст считается там же, в браузере.
  */
-async function measure(route, pick, theme) {
+async function measure(route, pick, theme, pseudo = null) {
   const client = await context.newPage();
   const errors = [];
   client.on("pageerror", (e) => errors.push(String(e)));
@@ -170,7 +170,7 @@ async function measure(route, pick, theme) {
     const nodes = selectors(null) ?? [];
 
     return nodes.map((el) => {
-      const cs = getComputedStyle(el);
+      const cs = getComputedStyle(el, pseudo);
       const fg = parseColor(cs.color);
       const bg = backdropOf(el);
       return {
@@ -195,8 +195,8 @@ async function measure(route, pick, theme) {
  * что был с протечкой cleanup: проверка, которая проходит, ничего не
  * проверяя.
  */
-async function contrastStep({ name, route, pick, theme, requireMin = 1 }) {
-  const { rows, errors } = await measure(route, pick, theme);
+async function contrastStep({ name, route, pick, theme, requireMin = 1, pseudo = null }) {
+  const { rows, errors } = await measure(route, pick, theme, pseudo);
   if (errors.length) throw new Error(`pageerror: ${errors[0]}`);
   if (rows.length < requireMin) {
     throw new Error(
@@ -225,7 +225,6 @@ async function contrastStep({ name, route, pick, theme, requireMin = 1 }) {
 }
 
 // ── 1. Тон подписи поля ──────────────────────────────────────────────────
-// Самый хрупкий: до 2026-10-05 был 2.02:1 на серой подложке контрола.
 // Подпись — это h6 внутри [class*='fieldRoot']; живой на /trips (два поля).
 await step("тон подписи поля ≥ AA (светлая тема)", () =>
   contrastStep({
@@ -315,6 +314,28 @@ await step("приглушённый текст ≥ AA (тёмная тема, �
     },
   }),
 );
+
+// ── 4. Плейсхолдеры полей ────────────────────────────────────────────────
+// Кит красит ::placeholder в secondary_hint_color — ниже AA на серой
+// подложке контрола. Правило — --app-muted (ui.module.css). Носители —
+// инпуты/текстареи с непустым placeholder на /support (форма видна
+// сразу, без гейтов). Цвет берём из псевдоэлемента, подложку —
+// из самого контрола (серая, непрозрачная).
+for (const theme of ["light", "dark"]) {
+  await step(`плейсхолдеры ≥ AA (${theme === "light" ? "светлая" : "тёмная"} тема)`, () =>
+    contrastStep({
+      name: "placeholder",
+      route: "/support",
+      theme,
+      requireMin: 1,
+      pseudo: "::placeholder",
+      pick: () =>
+        [...document.querySelectorAll("input[placeholder], textarea[placeholder]")].filter(
+          (el) => el.getAttribute("placeholder")?.trim(),
+        ),
+    }),
+  );
+}
 
 await step("нет pageerror на экранах", () => {
   if (pageErrors.length) throw new Error(pageErrors.join(" | "));
