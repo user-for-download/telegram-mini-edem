@@ -1,24 +1,24 @@
 // backend/prisma/seed-user-trips.ts — тестовый ПРОД-сид с реальным юзером.
 //
 // Наполняет приложение данными вокруг КОНКРЕТНОГО пользователя (SEED_USER_ID):
-// его поездки + мок-окружение (водители, попутчики, их поездки, брони,
-// отзывы, уведомления). Строку реального User НЕ меняет и НЕ удаляет.
-// Самодостаточен: id с префиксом tp-/t-bezz- не пересекаются с полным
-// dev-сидом (u-N/t-N), чужие данные НЕ трогает. Идемпотентен: повторный
-// прогон чистит только свои id и создаёт заново.
+// его поездки и заявки на попутку + мок-окружение (водители, попутчики, их
+// поездки, брони, отзывы, уведомления). Строку реального User НЕ меняет и НЕ
+// удаляет. Самодостаточен: id с префиксом tp-/t-bezz- не пересекаются с
+// полным dev-сидом (u-N/t-N), чужие данные НЕ трогает. Идемпотентен:
+// повторный прогон чистит только свои id и создаёт заново.
 //
-// Использование:
-//   1) Хост, dev-БД (DATABASE_URL из backend/.env → db-dev на :5433):
-//        SEED_USER_ID=u-dev npm run db:seed:user --workspace=backend
-//   2) Контейнер backend (DATABASE_URL из compose → сервис `db`):
-//        docker compose exec -T -e SEED_USER_ID=<uuid> backend \
-//          npx tsx prisma/seed-user-trips.ts
-//      Внимание: у контейнера СВОЯ БД (`db`), не та, что у хостового dev-бэка.
-//      Засеянное там не видно в приложении на :3012 (оно ходит через :3011).
+// ТОЛЬКО ПРОД. Гард `NODE_ENV=production` в начале файла: на dev-стенде
+// скрипт падает, потому что там другой пользователь и другой набор данных,
+// а мок-юзер с id u-tp-* стёр бы dev-сид.
+//
+// Использование (стенд с одним реальным TG-юзером):
+//   docker compose exec -T -e SEED_USER_ID=<uuid> backend \
+//     npx tsx prisma/seed-user-trips.ts
 //   Требуется справочник городов, иначе падает «город «Вологда» отсутствует»:
-//        npm run db:seed:cities        # хост
-//        docker compose exec -T backend npx tsx prisma/seed-cities.ts
-//   НЕ путать с полным `db:seed`: он сбрасывает ВСЕ таблицы (см. seed.ts).
+//     docker compose exec -T backend npx tsx prisma/seed-cities.ts
+//
+//   НЕ путать с полным `db:seed` (dev-стенд): он сбрасывает ВСЕ таблицы
+//   (см. seed.ts) и затирает полный набор данных.
 //   Путь к сгенерированному клиенту (`../src/generated/prisma/client.js`)
 //   одинаково работает на хосте и в контейнере: в образе его восстанавливает
 //   симлинк /app/src/generated → /app/dist/src/generated (backend/Dockerfile).
@@ -32,6 +32,19 @@ loadEnv({ path: new URL("../.env", import.meta.url) });
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("[seed-user-trips] DATABASE_URL не задан");
+// Скрипт ТОЛЬКО для прода. Он пишет вокруг конкретного реального юзера
+// (SEED_USER_ID) в боевой БД, поэтому случайный запуск на dev-стенде
+// (host-команда из backend/.env → db-dev, где другой юзер и другой набор
+// данных) — ошибка, а не мелочь: стёр бы чужие сид-данные, создав мок-юзера
+// с id u-tp-* поверх dev-сида. Контейнер backend несёт
+// ENV NODE_ENV=production (backend/Dockerfile), прод-стенд — тоже; dev —
+// нет.
+if (process.env.NODE_ENV !== "production") {
+  throw new Error(
+    "[seed-user-trips] только прод: NODE_ENV=production не задан. " +
+      "На dev-стенде наполняет полный db:seed.",
+  );
+}
 if (!process.env.SEED_USER_ID) {
   throw new Error("[seed-user-trips] SEED_USER_ID не задан");
 }
@@ -71,6 +84,13 @@ const ALL_TRIPS = [
   "t-tp-past-1",
 ];
 const ALL_REVIEWS = ["r-tp-1", "r-tp-2", "r-tp-3", "r-tp-4"];
+const ALL_RIDE_REQUESTS = [
+  "rr-tp-1",
+  "rr-tp-2",
+  "rr-tp-3",
+  "rr-tp-4",
+  "rr-tp-5",
+];
 
 async function cityId(name: string): Promise<string> {
   const norm = name.trim().toLowerCase();
@@ -105,6 +125,7 @@ async function main(): Promise<void> {
     where: { userId: USER_ID, title: { contains: "Bezz-тест" } },
   });
   await prisma.review.deleteMany({ where: { id: { in: ALL_REVIEWS } } });
+  await prisma.rideRequest.deleteMany({ where: { id: { in: ALL_RIDE_REQUESTS } } });
   await prisma.booking.deleteMany({ where: { tripId: { in: ALL_TRIPS } } });
   await prisma.trip.deleteMany({ where: { id: { in: ALL_TRIPS } } });
   await prisma.car.deleteMany({ where: { userId: { in: MOCK_IDS } } });
@@ -383,6 +404,80 @@ async function main(): Promise<void> {
     },
   });
 
+  // ── Заявки на попутку реального пользователя ──
+  // Страница «История запросов» (/profile/ride-requests) показывает список
+  // по createdAt desc, поэтому createdAt лестницей — иначе порядок в списке
+  // не совпал бы с «свежие сверху».
+  //
+  // Статусы подобраны так, чтобы покрыть и пилюли, и наборы кнопок:
+  // active/paused — с действиями (пауза/возобновление, правка, отмена),
+  // fulfilled/expired/cancelled — терминальные, без действий. Сроки в
+  // будущем у «живых» — иначе воркер проэкспайрит их в expired.
+  await prisma.rideRequest.createMany({
+    data: [
+      {
+        id: "rr-tp-1",
+        userId: USER_ID,
+        fromCityId: vologda,
+        toCityId: cherepovets,
+        earliestAt: days(1, 8),
+        latestAt: days(1, 20),
+        seats: 2,
+        status: "active",
+        expiresAt: days(1, 20),
+        createdAt: new Date(now.getTime() - 2 * hourMs),
+      },
+      {
+        id: "rr-tp-2",
+        userId: USER_ID,
+        fromCityId: vologda,
+        toCityId: cherepovets,
+        earliestAt: days(3, 7),
+        latestAt: days(3, 19),
+        seats: 1,
+        status: "active",
+        expiresAt: days(3, 19),
+        createdAt: new Date(now.getTime() - dayMs),
+      },
+      {
+        id: "rr-tp-3",
+        userId: USER_ID,
+        fromCityId: cherepovets,
+        toCityId: vologda,
+        earliestAt: days(4, 17),
+        latestAt: days(4, 22),
+        seats: 1,
+        status: "paused",
+        expiresAt: days(4, 22),
+        createdAt: new Date(now.getTime() - 2 * dayMs),
+      },
+      {
+        id: "rr-tp-4",
+        userId: USER_ID,
+        fromCityId: vologda,
+        toCityId: cherepovets,
+        earliestAt: days(-5, 9),
+        latestAt: days(-5, 18),
+        seats: 2,
+        status: "fulfilled",
+        expiresAt: days(-5, 18),
+        createdAt: new Date(now.getTime() - 6 * dayMs),
+      },
+      {
+        id: "rr-tp-5",
+        userId: USER_ID,
+        fromCityId: cherepovets,
+        toCityId: vologda,
+        earliestAt: days(-9, 10),
+        latestAt: days(-8, 19),
+        seats: 1,
+        status: "cancelled",
+        expiresAt: days(-8, 19),
+        createdAt: new Date(now.getTime() - 10 * dayMs),
+      },
+    ],
+  });
+
   // ── Отзывы (опубликованные, в обе стороны) ──
   await prisma.review.createMany({
     data: [
@@ -442,6 +537,19 @@ async function main(): Promise<void> {
     data: [
       {
         userId: USER_ID,
+        type: "ride_request_match",
+        title: "Bezz-тест: по вашему запросу нашлась поездка",
+        body: "По запросу Вологда → Череповец нашлась поездка с двумя свободными местами.",
+        isRead: false,
+        // deepLink обязан быть в allowlist бэка (telegramNotifications):
+        // /ride-requests больше не маршрут, страница заявок живёт в профиле.
+        deepLink: "/profile/ride-requests",
+        actorName: "Илья Северов",
+        action: "matched",
+        createdAt: new Date(now.getTime() - hourMs),
+      },
+      {
+        userId: USER_ID,
         type: "booking_created",
         title: "Bezz-тест: новая заявка",
         body: "Анна В хочет присоединиться к вашей поездке Вологда → Череповец.",
@@ -478,8 +586,8 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    "[seed-user-trips] ok: 6 поездок (3 свои + 3 чужие), 4 мок-юзера, " +
-      "6 броней, 4 отзыва, 3 уведомления",
+    "[seed-user-trips] ok: 6 поездок (3 свои + 3 чужие), 5 заявок на попутку, " +
+      "4 мок-юзера, 6 броней, 4 отзыва, 4 уведомления",
   );
 }
 
