@@ -14,6 +14,15 @@ const { mockUseCities, mockUseCreate } = vi.hoisted(() => ({
   mockUseCreate: vi.fn(),
 }));
 
+// Тост подтверждения публикации — единственный видимый feedback: хаптика на
+// iOS в WebView может не сработать, а форма просто очищается.
+const { mockToastShow } = vi.hoisted(() => ({ mockToastShow: vi.fn() }));
+vi.mock("@/components/Toast/ToastProvider", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("@/components/Toast/ToastProvider")>();
+  return { ...original, useToast: () => ({ show: mockToastShow }) };
+});
+
 vi.mock("@/queries/useRideRequestsQuery", async (importOriginal) => {
   const original =
     await importOriginal<typeof import("@/queries/useRideRequestsQuery")>();

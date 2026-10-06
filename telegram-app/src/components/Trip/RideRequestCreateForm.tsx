@@ -3,6 +3,7 @@ import { Input, Text } from "@telegram-apps/telegram-ui";
 import { Calendar, Users } from "lucide-react";
 import { createRideRequestDtoSchema } from "@edem/contracts";
 import { CitySelectField } from "@/components/CitySelect/CitySelectField";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { HINT } from "@/ui/classes";
 import { Button } from "@/ui/Button";
 import { Card } from "@/ui/Card";
@@ -35,6 +36,7 @@ import styles from "./TripModals.module.css";
 export const RideRequestCreateForm = memo(function RideRequestCreateForm() {
   const cities = useAllCitiesQuery();
   const create = useCreateRideRequestMutation();
+  const toast = useToast();
   // Города — id справочника: имя резолвится в id только при отправке —
   // тот же антипаттерн давал ложную ошибку «Выберите города из справочника».
   const [fromCityId, setFromCityId] = useState("");
@@ -93,6 +95,18 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm() {
     create.mutate(parsed.data, {
       onSuccess: () => {
         haptic.success();
+        // Подтверждение — тостом, как после публикации поездки и прочих
+        // действий (7 вызовов toast.show в приложении). Одной хаптики
+        // мало: на iOS в WebView hapticFeedback может не сработать, а форма
+        // просто очищается — без тоста непонятно, опубликовалось или нет.
+        //
+        // В историю НЕ уводим: окно открывается с главной, где за ним нет
+        // списка, и переход сбрасывал бы контекст после трёх полей. Плюс
+        // список за окном обновится сам — инвалидация ["ride-requests"].
+        toast.show({
+          text: "Запрос опубликован",
+          description: `${fromCity.name} → ${toCity.name} — водители увидят его в поиске`,
+        });
         setFromCityId("");
         setToCityId("");
         setEarliest("");
