@@ -35,17 +35,3 @@
   gap: var(--app-space-sm);
 }
 
-/* Степпер мест: узкая строка шириной 6/7 (было max-w-6/7). */
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-xs);
-  max-width: calc(6 / 7 * 100%);
-}
-
-/* Значение степпера по центру между кнопками (было flex-1 text-center). */
-.stepperValue {
-  flex: 1 1 0%;
-  text-align: center;
-}
-

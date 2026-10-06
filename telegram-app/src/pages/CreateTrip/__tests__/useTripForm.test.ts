@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_SEATS, type TripTag } from "@edem/contracts";
+import { type TripTag } from "@edem/contracts";
 import {
   initialTripFormState,
   tripFormReducer,
@@ -90,26 +90,7 @@ describe("tripFormReducer", () => {
     expect(over.tags).not.toContain(extra);
   });
 
-  it("stepSeats клампит 1..MAX_SEATS, мусор считает единицей", () => {
-    expect(
-      tripFormReducer(state({ seats: "1" }), { type: "stepSeats", delta: -1 })
-        .seats,
-    ).toBe("1");
-    expect(
-      tripFormReducer(state({ seats: String(MAX_SEATS) }), {
-        type: "stepSeats",
-        delta: 1,
-      }).seats,
-    ).toBe(String(MAX_SEATS));
-    expect(
-      tripFormReducer(state({ seats: "2" }), { type: "stepSeats", delta: 1 })
-        .seats,
-    ).toBe("3");
-    expect(
-      tripFormReducer(state({ seats: "мусор" }), {
-        type: "stepSeats",
-        delta: 1,
-      }).seats,
-    ).toBe("2");
+  it("места задаются обычным set из селекта 1..MAX_SEATS", () => {
+    expect(tripFormReducer(state({ seats: "1" }), { type: "set", field: "seats", value: "3" }).seats).toBe("3");
   });
 });

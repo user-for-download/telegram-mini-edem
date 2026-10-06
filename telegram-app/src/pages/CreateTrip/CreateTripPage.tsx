@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Caption,
   Input,
-  Text,
+  Select,
   Textarea,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
@@ -21,9 +21,7 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Minus,
   Navigation,
-  Plus,
   RussianRuble,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -124,7 +122,6 @@ export function CreateTripForm({
     setField,
     swapCities: swapFormCities,
     toggleTag: toggleFormTag,
-    stepSeats: stepFormSeats,
   } = useTripForm();
   const [validationError, setValidationError] = useState<string | null>(null);
   /** id невалидного поля для status="error" и скролла (валидатор отдаёт field). */
@@ -160,13 +157,6 @@ export function CreateTripForm({
     haptic.selection();
     touch();
     toggleFormTag(tag);
-  };
-
-  /** Степпер мест: целое 1..MAX_SEATS, ручной ввод исключён. */
-  const stepSeats = (delta: 1 | -1) => () => {
-    haptic.selection();
-    touch();
-    stepFormSeats(delta);
   };
 
   /** Скролл к невалидному полю, иначе — к блоку общей ошибки. */
@@ -410,45 +400,26 @@ export function CreateTripForm({
                   </>
                 )}
               </Field>
-              <fieldset>
-                <legend>Места</legend>
-                <div
-                  id="create-seats"
-                  role="group"
-                  aria-label={`Количество мест: ${seats} из ${MAX_SEATS}`}
-                  className={styles.stepper}
-                >
-                  <IconButton
-                    type="button"
-                    size="s"
-                    variant="secondary"
-                    onClick={stepSeats(-1)}
-                    disabled={Number(seats) <= 1}
-                    aria-label="Меньше мест"
+              <Field label="Места" id="create-seats" error={errorFor("create-seats")}>
+                {(field) => (
+                  <Select
+                    {...field}
+                    value={seats}
+                    status={statusFor("create-seats")}
+                    onChange={(event) => {
+                      haptic.selection();
+                      touch();
+                      setField("seats", event.target.value);
+                    }}
                   >
-                    <Minus size={16} />
-                  </IconButton>
-                  <Text
-                    weight="2"
-                    Component="output"
-                    aria-live="polite"
-                    aria-label="Выбрано мест"
-                    className={styles.stepperValue}
-                  >
-                    {seats}
-                  </Text>
-                  <IconButton
-                    type="button"
-                    size="s"
-                    variant="secondary"
-                    onClick={stepSeats(1)}
-                    disabled={Number(seats) >= MAX_SEATS}
-                    aria-label="Больше мест"
-                  >
-                    <Plus size={16} />
-                  </IconButton>
-                </div>
-              </fieldset>
+                    {Array.from({ length: MAX_SEATS }, (_, index) => (
+                      <option key={index + 1} value={String(index + 1)}>
+                        {index + 1}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
             </div>
             <div className={styles.grid2}>
               <Field label="Расстояние, км" id="create-distance" error={errorFor("create-distance")}>

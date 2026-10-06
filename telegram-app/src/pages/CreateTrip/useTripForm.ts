@@ -1,5 +1,5 @@
 import { useMemo, useReducer, useState } from "react";
-import { MAX_SEATS, type TripTag } from "@edem/contracts";
+import type { TripTag } from "@edem/contracts";
 import type { CreateTripDraft } from "@/helpers/createTripForm";
 import { toLocalDateTimeInputValue } from "@/utils/date";
 
@@ -55,8 +55,7 @@ export type TripFormAction =
       };
     }[TripFormField]
   | { type: "swapCities" }
-  | { type: "toggleTag"; tag: TripTag }
-  | { type: "stepSeats"; delta: 1 | -1 };
+  | { type: "toggleTag"; tag: TripTag };
 
 /**
  * Чистый редьюсер формы (ради unit-тестов инвариантов без DOM).
@@ -86,14 +85,6 @@ export function tripFormReducer(
           ? state.tags.filter((item) => item !== action.tag)
           : [...state.tags, action.tag].slice(0, 6),
       };
-    case "stepSeats": {
-      const next = Number(state.seats);
-      const base = Number.isFinite(next) ? Math.trunc(next) : 1;
-      return {
-        ...state,
-        seats: String(Math.min(MAX_SEATS, Math.max(1, base + action.delta))),
-      };
-    }
   }
 }
 
@@ -156,7 +147,6 @@ export function useTripForm() {
     setField,
     swapCities: () => dispatch({ type: "swapCities" }),
     toggleTag: (tag: TripTag) => dispatch({ type: "toggleTag", tag }),
-    stepSeats: (delta: 1 | -1) => dispatch({ type: "stepSeats", delta }),
   };
 }
 
