@@ -29,7 +29,6 @@ import { useNavigate } from "react-router-dom";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { QueryState } from "@/components/QueryState";
 import { MutationError } from "@/components/MutationError";
-import { FeedbackModal } from "@/components/Profile/FeedbackModal";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
 import { Section } from "@/ui/Section";
@@ -49,7 +48,6 @@ import {
   useAppSettings,
 } from "@/utils/appSettings";
 import { haptic } from "@/utils/haptics";
-import { useModalBack } from "@/utils/modalBack";
 import styles from "./ProfilePage.module.css";
 
 /** Обрезка в одну строку + блочный display (span/caption-типографика tgui).
@@ -193,11 +191,6 @@ export function ProfilePage() {
       },
     });
   };
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-
-  // State-модалка перехватывает Back первой (стек modalBack в Shell).
-  useModalBack(() => setFeedbackOpen(false), feedbackOpen);
-
   // Удаление — через ConfirmPopup (нативный алерт клиента):
   // нативный window.confirm ненадёжен в Telegram WebView.
 
@@ -445,8 +438,12 @@ export function ProfilePage() {
                     title="Служба поддержки"
                     subtitle="Вопросы и обращения — ответим в течение нескольких минут"
                     onClick={() => {
+                      // Страница /profile/support — единственный экран
+                      // поддержки: FAQ, форма обращения и мои обращения.
+                      // Раньше здесь открывалась шторка с дублем той же
+                      // формы, которая сама вела на эту страницу.
                       haptic.light();
-                      setFeedbackOpen(true);
+                      navigate("/profile/support");
                     }}
                   />
                   <MenuRow
@@ -487,10 +484,6 @@ export function ProfilePage() {
           </Page>
         )}
       </QueryState>
-      <FeedbackModal
-        open={feedbackOpen}
-        onClose={() => setFeedbackOpen(false)}
-      />
     </>
   );
 }

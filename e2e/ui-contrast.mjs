@@ -92,7 +92,9 @@ async function measure(route, pick, theme, pseudo = null) {
   // функции передавались строками и собирались через new Function — это
   // молча ломало вызов (контрастOf не функция), то есть шаг падал по
   // ошибке транспорта, а не по дефекту. Внутри страницы обычные функции.
-  const rows = await client.evaluate((pickSrc) => {
+  // page.evaluate принимает РОВНО один аргумент, поэтому всё, что нужно
+  // внутри страницы (исходник селектора и псевдоэлемент), едет объектом.
+  const rows = await client.evaluate(({ pickSrc, pseudo }) => {
     const parseColor = (value) => {
       if (!value) return null;
       const nums = String(value).match(/[\d.]+/g);
@@ -181,7 +183,7 @@ async function measure(route, pick, theme, pseudo = null) {
         error: !fg ? "не разобран цвет текста" : !bg ? "нет непрозрачного фона-предка" : null,
       };
     });
-  }, pick.toString());
+  }, { pickSrc: pick.toString(), pseudo });
 
   await client.close();
   return { rows, errors };
@@ -318,14 +320,14 @@ await step("приглушённый текст ≥ AA (тёмная тема, �
 // ── 4. Плейсхолдеры полей ────────────────────────────────────────────────
 // Кит красит ::placeholder в secondary_hint_color — ниже AA на серой
 // подложке контрола. Правило — --app-muted (ui.module.css). Носители —
-// инпуты/текстареи с непустым placeholder на /support (форма видна
+// инпуты/текстареи с непустым placeholder на /profile/support (форма видна
 // сразу, без гейтов). Цвет берём из псевдоэлемента, подложку —
 // из самого контрола (серая, непрозрачная).
 for (const theme of ["light", "dark"]) {
   await step(`плейсхолдеры ≥ AA (${theme === "light" ? "светлая" : "тёмная"} тема)`, () =>
     contrastStep({
       name: "placeholder",
-      route: "/support",
+      route: "/profile/support",
       theme,
       requireMin: 1,
       pseudo: "::placeholder",

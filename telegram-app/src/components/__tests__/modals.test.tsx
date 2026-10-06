@@ -1,8 +1,10 @@
-// Рендер-тесты тел модалок (Feedback/Settings) и страницы создания поездки.
-// Modal — портал и в renderToString не попадает, поэтому у модалок тестируются
-// экспортированные тела (FeedbackForm/SettingsBody). Создание поездки —
+// Рендер-тесты тела модалки настроек и страницы создания поездки.
+// Modal — портал и в renderToString не попадает, поэтому у модалки
+// тестируется экспортированное тело (SettingsBody). Создание поездки —
 // отдельная страница: тестируется CreateTripForm. Детали
 // поездки — это TripDetailsPage, покрытый tripDetailsPage.test.tsx 8/8.
+// Формы обращения в поддержку здесь больше нет: шторка FeedbackModal удалена,
+// канон — страница /profile/support (supportPage.test.tsx).
 // Паттерн tripsPages.test.tsx (SSR, без testing-library).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -76,7 +78,6 @@ vi.mock("@/queries/vehicle", () => ({
 }));
 
 import { CreateTripForm } from "@/pages/CreateTrip/CreateTripPage";
-import { FeedbackForm } from "@/components/Profile/FeedbackModal";
 import { SettingsBody } from "@/components/Profile/SettingsModal";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
@@ -187,18 +188,6 @@ describe("CreateTripForm (страница /trips/my/new)", () => {
     expect(html).not.toContain("Опубликовать");
     // И никакой шторки автомобиля: неизвестное авто — не «нужен автомобиль».
     expect(html).not.toContain("Нужен автомобиль");
-  });
-});
-
-describe("FeedbackForm", () => {
-  it("темы из списка, лимит 2000, пустое сообщение — сабмит погашен", () => {
-    const html = render(<FeedbackForm onClose={() => {}} />);
-    expect(html).toContain("Тема обращения");
-    expect(html).toContain("Вопрос по поездке");
-    expect(html).toContain("Предложение по улучшению");
-    expect(html).toContain("Опишите детали вашего обращения");
-    expect(html).toContain("Отправить в поддержку");
-    expect(html).toContain("Мои обращения");
   });
 });
 

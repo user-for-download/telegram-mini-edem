@@ -87,8 +87,8 @@ function mutation(overrides: Record<string, unknown> = {}) {
 }
 
 function render(element: ReactNode): string {
-  // QueryClient — как AppConfig в проде: FeedbackModal всегда смонтирован
-  // и тянет useCreateFeedbackMutation → useQueryClient.
+  // QueryClient — как AppConfig в проде: страницы под профилем (список
+  // обращений) тянут useQueryClient.
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: 0 } },
   });

@@ -320,11 +320,27 @@
 }
 
 /* Тон плейсхолдера: кит красит secondary_hint_color — ниже AA на сером.
- * --app-muted калиброван под серый худший фон. */
+ * --app-muted калиброван под серый худший фон.
+ *
+ * ПРАВИЛО: движко-специфичные псевдоэлементы — ОТДЕЛЬНЫМИ правилами, а не
+ * одним списком через запятую. Chromium не знает `::-moz-placeholder` и
+ * отбрасывает весь список селекторов вместе с валидными — правило целиком.
+ * Из-за этого тон молча оставался китовским (2.02:1 на серой подложке) в
+ * Telegram WebView на Android и в замерах e2e, а контрастный гейт это
+ * пропускал: сам падал на `pseudo is not defined`, не доходя до замера.
+ * Firefox и Safari подхватывают свои группы, остальные браузеры их игнорируют. */
 .fieldRoot input::placeholder,
-.fieldRoot textarea::placeholder,
+.fieldRoot textarea::placeholder {
+  color: var(--app-muted);
+}
+
 .fieldRoot input::-moz-placeholder,
 .fieldRoot textarea::-moz-placeholder {
+  color: var(--app-muted);
+}
+
+.fieldRoot input::-webkit-input-placeholder,
+.fieldRoot textarea::-webkit-input-placeholder {
   color: var(--app-muted);
 }
 

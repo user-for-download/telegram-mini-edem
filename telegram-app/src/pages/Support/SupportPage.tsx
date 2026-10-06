@@ -26,6 +26,7 @@ import {
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
+import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { AppealForm } from "@/components/AppealForm";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
@@ -129,12 +130,23 @@ function FeedbackCard({
 }
 
 /**
- * Помощь и поддержка Telegram-приложения:
- * - реальный FAQ;
- * - форма обратной связи (POST /feedback, лимиты 100/2000 из контракта);
- * - «Мои обращения» со статусом ответа (GET /feedback);
- * - обжалование блокировки — рабочая форма через публичный
- *   POST /feedback/appeal с raw initData (TG-ветка backend, без токена).
+ * Поддержка Telegram-приложения — единственный экран поддержки (пункт меню
+ * профиля ведёт сюда; раньше он открывал шторку с дублем формы, которая сама
+ * вела на эту страницу):
+ * - реальный FAQ (первым: чаще всего вопрос решается справкой);
+ * - форма обращения (POST /feedback, лимиты 100/2000 из контракта) с
+ *   подтверждением тостом — общий язык приложения, как при публикации
+ *   поездки;
+ * - «Мои обращения» со статусом ответа (GET /feedback).
+ *
+ * Жалобы на пользователя — НЕ здесь: у них отдельная страница
+ * /profile/reports (один путь вместо двух).
+ *
+ * Форма обжалования блокировки в обычном состоянии тоже нет: она бессмысленна
+ * без бана и занимала целый экран. Она живёт там, где бан и есть, — на
+ * терминальном экране (`AccountStatePage`, как в AuthGate и ReportsPage) —
+ * и в ветке 403 ниже для бана, случившегося на этой странице (requireUser
+ * отвечает 403).
  */
 export function SupportPage() {
   const [openedFaqId, setOpenedFaqId] = useState<string | null>(null);
@@ -178,22 +190,27 @@ export function SupportPage() {
 
   // Бан mid-session: requireUser отвечает 403 — терминальный экран плюс
   // рабочая форма обжалования (публичный appeal с initData, без токена).
+  // AccountStatePage — тот же канон, что на экране бана (AuthGate) и в
+  // жалобах (ReportsPage): раньше здесь был самодельный EmptyState, и
+  // терминальные экраны выглядели в приложении по-разному.
   if (
     myFeedbacks.error instanceof ApiError &&
     myFeedbacks.error.status === 403
   ) {
     return (
-      <Page>
-        <EmptyState
-          header="Аккаунт заблокирован"
-          description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
-        />
+      <AccountStatePage
+        title="Аккаунт заблокирован"
+        description="Доступ к обращениям закрыт, но вы можете обжаловать блокировку ниже — обращение уйдёт в поддержку без входа в аккаунт."
+      >
+        {/* Секция внутри AccountStatePage намеренно: вне его гуттера
+            секция встаёт во всю ширину (0px) — другая рамка, чем у всех
+            остальных секций приложения. */}
         <Section header="Обжалование блокировки">
           <SectionBody>
             <AppealForm />
           </SectionBody>
         </Section>
-      </Page>
+      </AccountStatePage>
     );
   }
 
@@ -227,40 +244,6 @@ export function SupportPage() {
                 </Accordion>
               );
             })}
-          </SectionBody>
-        </Section>
-
-        <Section header="Мои обращения">
-          <SectionBody>
-            <QueryState
-              loading={myFeedbacks.isLoading}
-              error={myFeedbacks.error}
-              empty={false}
-              emptyText=""
-              onRetry={() => void myFeedbacks.refetch()}
-            >
-              {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
-                <EmptyState
-                  header={EMPTY_STATES.supportEmpty.header}
-                  description={EMPTY_STATES.supportEmpty.description}
-                />
-              ) : (
-                <Stack>
-                  {myFeedbacks.data.map((feedback) => (
-                    <FeedbackCard
-                      key={feedback.id}
-                      feedback={feedback}
-                      opened={openedFeedbackId === feedback.id}
-                      onToggle={() =>
-                        setOpenedFeedbackId(
-                          openedFeedbackId === feedback.id ? null : feedback.id,
-                        )
-                      }
-                    />
-                  ))}
-                </Stack>
-              )}
-            </QueryState>
           </SectionBody>
         </Section>
 
@@ -328,11 +311,40 @@ export function SupportPage() {
           </SectionBody>
         </Section>
 
-        <Section header="Обжалование блокировки">
+        <Section header="Мои обращения">
           <SectionBody>
-            <AppealForm />
+            <QueryState
+              loading={myFeedbacks.isLoading}
+              error={myFeedbacks.error}
+              empty={false}
+              emptyText=""
+              onRetry={() => void myFeedbacks.refetch()}
+            >
+              {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
+                <EmptyState
+                  header={EMPTY_STATES.supportEmpty.header}
+                  description={EMPTY_STATES.supportEmpty.description}
+                />
+              ) : (
+                <Stack>
+                  {myFeedbacks.data.map((feedback) => (
+                    <FeedbackCard
+                      key={feedback.id}
+                      feedback={feedback}
+                      opened={openedFeedbackId === feedback.id}
+                      onToggle={() =>
+                        setOpenedFeedbackId(
+                          openedFeedbackId === feedback.id ? null : feedback.id,
+                        )
+                      }
+                    />
+                  ))}
+                </Stack>
+              )}
+            </QueryState>
           </SectionBody>
         </Section>
+
       </Page>
     </>
   );
