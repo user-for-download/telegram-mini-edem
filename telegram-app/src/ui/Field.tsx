@@ -34,14 +34,20 @@ export interface FieldProps
   children: (control: FieldControl) => ReactNode;
 }
 
+import { usePlatformOrBase } from "@/hooks/usePlatform";
+
 /**
- * Поле формы: visually-hidden лейбл + контрол (Input/Textarea/Select кита)
+ * Поле формы: лейбл + контрол (Input/Textarea/Select кита)
  * + опциональная ошибка, связанная через aria-describedby.
  *
- * Почему visually-hidden, а не kit-`header`: в ките header рисует FormInputTitle
- * ВНЕ <label> и только на platform === 'base' (на iOS текста нет вообще,
+ * Почему не kit-`header`: в ките header рисует FormInputTitle ВНЕ <label>
+ * и только на platform === 'base' (на iOS текста нет вообще,
  * см. FormInput.js) — на видимом заголовке держать доступное имя нельзя.
  * Наши label+htmlFor дают имя на всех платформах.
+ *
+ * Видимость лейбла — по платформе: на base он скрыт (видимую подпись
+ * рисует кит), на iOS — текст (кит там header не рисует, иначе у поля
+ * нет видимого имени). Один label на поле в обоих случаях.
  *
  * id и header берутся из одного источника (props label/id) — расхождение
  * подписи и заголовка поля невозможно. Обёртка не меняет раскладку и ритм
@@ -59,6 +65,7 @@ export function Field({
   children,
   ...rest
 }: FieldProps) {
+  const platform = usePlatformOrBase();
   const hasError = Boolean(error);
   const describedBy = errorId ?? `${id}-error`;
   const control: FieldControl = hasError
@@ -77,7 +84,10 @@ export function Field({
       // (.fieldRoot h6 в ui.module.css). Без класса правило мёртвое.
       className={className ? `${styles.fieldRoot} ${className}` : styles.fieldRoot}
     >
-      <label htmlFor={id} className={VISUALLY_HIDDEN}>
+      <label
+        htmlFor={id}
+        className={platform === "ios" ? styles.fieldLabel : VISUALLY_HIDDEN}
+      >
         {label}
       </label>
       {children(control)}

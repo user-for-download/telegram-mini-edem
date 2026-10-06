@@ -308,6 +308,21 @@
   background: transparent;
 }
 
+/* Видимая подпись поля для iOS (ui/Field): кит рисует свой header
+ * (FormInputTitle) только на platform === 'base' (см. FormInput.js),
+ * поэтому на iOS у поля нет видимого имени — один плейсхолдер.
+ * Field показывает свой label текстом только на iOS; на base label
+ * скрыт, а видимую подпись рисует кит. Один label на поле в обоих
+ * случаях: дубли hidden+visible нет. Тон общий --app-field-label. */
+.fieldLabel {
+  display: block;
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--app-field-label);
+}
+
 /* Подложка контрола (ui/Field): серый фон редактируемого поля.
  * Белый фон секции не отделяет поле от страницы; серый показывает,
  * что сюда можно вводить. Правило на внутреннем <label> кита: FormInput

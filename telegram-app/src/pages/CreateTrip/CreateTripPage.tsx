@@ -492,21 +492,22 @@ export function CreateTripForm({
                 );
               })}
             </div>
-            <div>
-              <label htmlFor="create-comment">Комментарий</label>
-              <Textarea
-                id="create-comment"
-                rows={3}
-                maxLength={500}
-                placeholder="Например: едем спокойно, салон чистый, багажник свободен"
-                value={comment}
-                status={statusFor("create-comment")}
-                onChange={(event) => {
-                  touch();
-                  setField("comment", event.target.value);
-                }}
-              />
-            </div>
+            <Field label="Комментарий" id="create-comment" error={errorFor("create-comment")}>
+              {(field) => (
+                <Textarea
+                  {...field}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Например: едем спокойно, салон чистый, багажник свободен"
+                  value={comment}
+                  status={statusFor("create-comment")}
+                  onChange={(event) => {
+                    touch();
+                    setField("comment", event.target.value);
+                  }}
+                />
+              )}
+            </Field>
           </SectionBody>
         </Section>
 
