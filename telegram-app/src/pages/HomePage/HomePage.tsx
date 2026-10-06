@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { EmptyState } from "@/ui/EmptyState";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { NextTripBanner } from "@/components/Section/NextTripBanner";
 import { PopularRoutesSection } from "@/components/Section/PopularRoutesSection";
@@ -51,6 +51,14 @@ export function HomePage() {
     navigate("/trips/my/new");
   };
 
+  // Заявка на попутку — route-backed шторка поверх «Поиска»: роут
+  // /ride-requests (AppRouter), а не локальный state, чтобы точка входа
+  // была ссылкой, а Back закрывал шторку.
+  const goToRideRequests = () => {
+    haptic.light();
+    navigate("/ride-requests");
+  };
+
   useEffect(() => {
     // Авто появилось после сохранения в шторке (кэш ["users","me"]
     // обновляется в onSuccess мутации раньше onDone → onClose): шторка уже
@@ -94,6 +102,22 @@ export function HomePage() {
             onClick={goToCreate}
           >
             Создать поездку
+          </Button>
+        }
+      />
+      {/* Пассажирский CTA — отдельным блоком, а не второй кнопкой в
+          водительском: «Едете на машине?» — про водителя, и пассажиру он
+          враньё. Свой заголовок и своё действие у каждой роли. */}
+      <EmptyState
+        header="Нужна попутка?"
+        description="Оставьте заявку с маршрутом и датой — водители с подходящей поездкой её увидят"
+        action={
+          <Button
+            size="l"
+            before={<Users size={16} />}
+            onClick={goToRideRequests}
+          >
+            Ищу попутку
           </Button>
         }
       />

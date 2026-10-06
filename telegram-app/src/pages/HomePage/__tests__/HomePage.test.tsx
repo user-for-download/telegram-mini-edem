@@ -118,6 +118,10 @@ describe("HomePage", () => {
     // CTA водителю.
     expect(html).toContain("Едете на машине?");
     expect(html).toContain("Создать поездку");
+    // CTA пассажиру — отдельным блоком, не второй кнопкой в водительском:
+    // «Едете на машине?» пассажиру не подходит.
+    expect(html).toContain("Нужна попутка?");
+    expect(html).toContain("Ищу попутку");
     // Популярные направления (вертикальный список).
     expect(html).toContain("Популярные направления");
     expect(html).toContain("Кириллов");

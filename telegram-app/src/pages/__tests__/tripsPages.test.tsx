@@ -238,7 +238,9 @@ describe("SearchPage parity", () => {
     expect(html).toContain("Сегодня");
     expect(html).toContain("Завтра");
     expect(html).toContain("Фильтры");
-    expect(html).toContain("Ищу попутку");
+    // «Ищу попутку» уехала на главную (CTA-блок «Нужна попутка?»): поиск
+    // отвечает за поиск поездки, а не за заявку на попутку.
+    expect(html).not.toContain("Ищу попутку");
     expect(html).toContain("Найти");
     expect(html).toContain("Найдено поездок");
   });

@@ -79,8 +79,8 @@ function toDateTimeLocal(iso: string): string {
 
 /**
  * Запросы «Ищу попутку» — route-backed шторка поверх «Поиска»;
- * роут /ride-requests остаётся источником правды ради точки
- * входа SearchPage:108 — тот же href `#/ride-requests`).
+ * роут /ride-requests остаётся источником правды ради точки входа
+ * с главной: `navigate("/ride-requests")` из CTA «Ищу попутку» (HomePage).
  *
  * Закрытие: native Back — через Shell.handleBack (стек handleModalBack
  * пуст для route-модалок → navigate(-1)), прямой вход — fallback на

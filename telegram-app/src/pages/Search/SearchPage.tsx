@@ -208,15 +208,10 @@ export function SearchPage() {
             им не место: header принимает только текст). */}
         <Section header="Поиск попутных поездок" headingLevel="h1">
           <SectionBody>
+            {/* «Ищу попутку» уехала сюда: это пассажирский сценарий, ему на
+                главной отдельный блок-CTA рядом с «Создать поездку».
+                Экран поиска отвечает за поиск поездки, а не за заявку. */}
             <div className={styles.chipRow}>
-              <Chip
-                variant="quiet"
-                Component="a"
-                href="#/ride-requests"
-                className={styles.chip}
-              >
-                Ищу попутку
-              </Chip>
               <Chip
                 variant={showFilters ? "active" : "quiet"}
                 Component="button"
