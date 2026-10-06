@@ -36,6 +36,7 @@ import {
   formatMaxPriceLabel,
   hasAnySearchFilter,
   parseDateSegmentParam,
+  type DateSegment,
   type SearchFormState,
 } from "@/helpers/searchFilters";
 import { groupTripsByDay } from "@/helpers/tripGroups";
@@ -154,6 +155,31 @@ export function SearchPage() {
         : [...prev.tags, tag],
     }));
 
+  /**
+   * Сегмент даты применяется СРАЗУ, без «Найти».
+   *
+   * Пилюля «Сегодня/Завтра» — это сам фильтр: нажал и ждёшь поездки на
+   * этот день. Прежде здесь стоял `set("dateSegment", …)`, который менял
+   * только `form`, а запрос едет от `submitted`: пилюля отзывалась
+   * визуально, а список оставался прежним до нажатия «Найти» — выглядело
+   * как «фильтр не работает».
+   *
+   * Применяется ВЕСЬ текущий набор формы, а не только дата: пользователь
+   * видит выбранные города и ожидает, что выдача им соответствует, —
+   * молчаливый запрос «по дате, но без названного города» удивляет сильнее.
+   * Города, цена и теги остаются на «Найти»: там нужен явный ввод (выбор из
+   * справочника, тяга слайдера).
+   *
+   * Состояние берём из замыкания `form`, а не через setState-апдейтер:
+   * side-effect (setSubmitted) внутри апдейтера вызвался бы дважды в
+   * StrictMode и попал бы в рендер.
+   */
+  const applyDateSegment = (next: DateSegment) => {
+    const nextForm = { ...form, dateSegment: next };
+    setForm(nextForm);
+    setSubmitted(nextForm);
+  };
+
   const submit = () => {
     haptic.light();
     setSubmitted(form);
@@ -241,7 +267,7 @@ export function SearchPage() {
             <Switcher
               options={DATE_SEGMENTS}
               value={form.dateSegment}
-              onChange={(next) => set("dateSegment", next)}
+              onChange={applyDateSegment}
               ariaLabel="Дата поездки"
               idPrefix="search-date"
             />

@@ -95,16 +95,23 @@ describe("SearchPage: сброс фильтров остаётся доступ�
     expect(resetButton().disabled).toBe(true);
   });
 
-  it("пресет даты из URL: сброс доступен, и остаётся доступен после возврата контрола в «Все даты»", () => {
+  it("пресет даты из URL: сброс доступен, и остаётся доступен после правки неприменяемого контрола", () => {
     // Пресет = применённый фильтр (submitted.dateSegment === "today").
-    renderPage("/trips?segment=today");
+    renderPage("/trips?fromCityId=city-1&segment=today");
     expect(resetButton().disabled).toBe(false);
 
-    // Возвращаем контрол в нейтраль, НЕ нажимая «Найти»: форма neutral,
-    // но запрос всё ещё отфильтрован по today.
-    fireEvent.click(screen.getByRole("radio", { name: "Все даты" }));
+    // Меняем город, НЕ нажимая «Найти»: форма отличается от применённого
+    // набора, но запрос всё ещё отфильтрован по today. Кнопка обязана
+    // остаться рабочей — это тот самый тупик, который счёт от submitted чинит.
+    //
+    // Именно ГОРОД, а не пилюля даты: пилюля применяется сразу (см.
+    // SearchPage.dateSegment.test.tsx), состояние «форма нейтральна, запрос
+    // отфильтрован» через неё больше недостижимо.
+    fireEvent.change(screen.getByLabelText("Откуда"), {
+      target: { value: "city-2" },
+    });
 
-    // Кнопка обязана остаться рабочей: считается от submitted.
+    // Кнопка сброса считается от submitted, а не от формы.
     expect(resetButton().disabled).toBe(false);
   });
 
