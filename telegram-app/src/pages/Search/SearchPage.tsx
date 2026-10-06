@@ -208,15 +208,6 @@ export function SearchPage() {
                 onChange={(next) => set("fromCityId", next)}
                 excludeId={form.toCityId}
               />
-              <CitySelectField
-                id="search-to"
-                label="Куда"
-                valueId={form.toCityId}
-                cities={cities.data}
-                placeholder="Город или село назначения"
-                onChange={(next) => set("toCityId", next)}
-                excludeId={form.fromCityId}
-              />
               <IconButton
                 type="button"
                 size="s"
@@ -226,6 +217,15 @@ export function SearchPage() {
               >
                 <ArrowRightLeft size={14} className={INFO} />
               </IconButton>
+              <CitySelectField
+                id="search-to"
+                label="Куда"
+                valueId={form.toCityId}
+                cities={cities.data}
+                placeholder="Город или село назначения"
+                onChange={(next) => set("toCityId", next)}
+                excludeId={form.fromCityId}
+              />
             </div>
 
             <Switcher

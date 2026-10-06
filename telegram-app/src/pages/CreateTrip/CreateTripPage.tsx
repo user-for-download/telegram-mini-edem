@@ -301,6 +301,15 @@ export function CreateTripForm({
                   setField("fromCityId", next);
                 }}
               />
+              <IconButton
+                type="button"
+                size="s"
+                onClick={swapCities}
+                aria-label="Поменять направление"
+                className={styles.swap}
+              >
+                <ArrowRightLeft size={14} className={INFO} />
+              </IconButton>
               <CitySelectField
                 id="create-to"
                 label="Город назначения"
@@ -314,15 +323,6 @@ export function CreateTripForm({
                   setField("toCityId", next);
                 }}
               />
-              <IconButton
-                type="button"
-                size="s"
-                onClick={swapCities}
-                aria-label="Поменять направление"
-                className={styles.swap}
-              >
-                <ArrowRightLeft size={14} className={INFO} />
-              </IconButton>
             </div>
             <Field label="Адрес отправления" id="create-from-address" error={errorFor("create-from-address")}>
               {(field) => (
