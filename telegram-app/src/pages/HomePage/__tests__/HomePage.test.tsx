@@ -132,7 +132,7 @@ describe("HomePage", () => {
     expect(html).toContain("Ищу попутку");
     // Лента заявок попутчиков: при пустой ленте секция прячется, поэтому
     // заголовка нет — вместо статичных направлений на главной тишина.
-    expect(html).not.toContain("Кого ищут попутчиком");
+    expect(html).not.toContain("Кто ищет попутку");
     // Без данных — все три плашки с нулями.
     expect(html).toContain("Поездки");
     expect(html).toContain("Брони");
@@ -382,7 +382,7 @@ describe("HomePage: имя экрана принадлежит странице,
     const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/g) ?? [];
     expect(h1).toHaveLength(1);
     expect(h1[0]).toContain("Главная");
-    expect(html).not.toMatch(/<h1[^>]*>[^<]*Кого ищут попутчиком/);
+    expect(html).not.toMatch(/<h1[^>]*>[^<]*Кто ищет попутку/);
   });
 
   it("секция ленты заявок — заголовок второго уровня, не h1", () => {
@@ -390,6 +390,6 @@ describe("HomePage: имя экрана принадлежит странице,
 
     const html = render(<HomePage />);
 
-    expect(html).toMatch(/<h2[^>]*>[^<]*Кого ищут попутчиком/);
+    expect(html).toMatch(/<h2[^>]*>[^<]*Кто ищет попутку/);
   });
 });

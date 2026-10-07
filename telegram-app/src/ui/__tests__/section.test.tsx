@@ -32,7 +32,7 @@ describe("Section: заголовок по умолчанию h2, h1 — тол�
 
   it('headingLevel="h1" → h1 (экран, где секция владеет именем)', () => {
     const html = render(
-      <Section header="Кого ищут попутчиком" headingLevel="h1">
+      <Section header="Кто ищет попутку" headingLevel="h1">
         тело
       </Section>,
     );

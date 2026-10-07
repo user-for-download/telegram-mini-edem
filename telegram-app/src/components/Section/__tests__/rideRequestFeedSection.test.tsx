@@ -68,7 +68,7 @@ describe("RideRequestFeedSection", () => {
 
     const html = renderSection();
 
-    expect(html).toContain("Кого ищут попутчиком");
+    expect(html).toContain("Кто ищет попутку");
     expect(html).toContain("Вологда → Череповец");
     // Время — по Москве (06:00Z → 09:00), иначе в строке было бы UTC.
     expect(html).toContain("09:00");
@@ -109,8 +109,8 @@ describe("RideRequestFeedSection", () => {
 
     const html = renderSection();
 
-    expect(html).toMatch(/<h2[^>]*>[\s\S]*?Кого ищут попутчиком/);
-    expect(html).not.toMatch(/<h1[^>]*>[\s\S]*?Кого ищут попутчиком/);
+    expect(html).toMatch(/<h2[^>]*>[\s\S]*?Кто ищет попутку/);
+    expect(html).not.toMatch(/<h1[^>]*>[\s\S]*?Кто ищет попутку/);
   });
 
   it("пустая лента, загрузка и ошибка — секции нет вовсе", () => {
@@ -123,7 +123,7 @@ describe("RideRequestFeedSection", () => {
       queryState({ isError: true, error: new Error("Нет соединения") }),
     ]) {
       mockFeed.mockReturnValue(state);
-      expect(renderSection()).not.toContain("Кого ищут попутчиком");
+      expect(renderSection()).not.toContain("Кто ищет попутку");
     }
   });
 });
