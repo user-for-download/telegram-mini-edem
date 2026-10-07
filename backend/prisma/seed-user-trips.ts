@@ -24,6 +24,11 @@
 //   симлинк /app/src/generated → /app/dist/src/generated (backend/Dockerfile).
 import { PrismaPg } from "@prisma/adapter-pg";
 import { config as loadEnv } from "dotenv";
+import {
+  CRITICAL_NOTIFICATION_TYPES,
+  NOTIFICATION_ROLE_TYPES,
+  type NotificationRole,
+} from "@edem/contracts";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 
 // Prisma 7 больше не подгружает .env автоматически — путь относительно файла
@@ -59,6 +64,153 @@ const prisma = new PrismaClient({
 const DEFAULT_AVATAR_URL =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23E5E7EB'/%3E%3Ccircle cx='100' cy='75' r='38' fill='%239CA3AF'/%3E%3Cpath d='M30 185c8-40 36-60 70-60s62 20 70 60z' fill='%239CA3AF'/%3E%3C/svg%3E";
 
+/**
+ * Прод-сид пишет в БОЕВУЮ базу вокруг реального юзера, поэтому расхождение с
+ * инвариантами рантайма здесь дороже обычного: строка, которой рантайм создать
+ * не мог бы, делает прод-стенд бесполезным для проверки. Проверяем то же, что
+ * проверяет код: окно заявки, её даты, лимит активных заявок, связку
+ * «бронь ← заявка» и правдоподобие уведомлений.
+ */
+function validateUserTripSeed(input: {
+  requests?: Array<{
+    id: string;
+    status: string;
+    earliestAt: Date;
+    latestAt: Date;
+    expiresAt: Date;
+    createdAt: Date;
+  }>;
+  notifications?: Array<{
+    userId: string;
+    type: string;
+    recipientRole?: string;
+    deepLink?: string;
+  }>;
+}): void {
+  const requests = input.requests ?? [];
+  for (const rr of requests) {
+    // API отклоняет и равные границы (createRideRequestDtoSchema.superRefine).
+    if (rr.earliestAt >= rr.latestAt) {
+      throw new Error(
+        `[seed-user-trips] ${rr.id}: окно инвертировано (earliest >= latest)`,
+      );
+    }
+    // createdAt из будущего ставит заявку первой в «Моих заявках» (desc) и
+    // делает её витринной при простановке Booking.requestId (asc).
+    if (rr.createdAt > new Date()) {
+      throw new Error(`[seed-user-trips] ${rr.id}: createdAt в будущем`);
+    }
+    // Статус expired в продукте недостижим (нет в мутабельном наборе, воркера
+    // заявок нет) — он нужен только ради метки в UI, и метка должна быть правдой.
+    if (rr.status === "expired" && rr.expiresAt > new Date()) {
+      throw new Error(
+        `[seed-user-trips] ${rr.id}: статус expired при expiresAt в будущем`,
+      );
+    }
+  }
+
+  // Прод-сид существует ради проверки полного цикла, значит у юзера должна
+  // оставаться свободная квота активных заявок: иначе публикация новой
+  // заявки вернёт 409 и предотправочное предупреждение нечем завершить.
+  const live = requests.filter(
+    (rr) =>
+      (rr.status === "active" || rr.status === "paused") &&
+      rr.expiresAt > new Date(),
+  );
+  if (live.length >= MAX_ACTIVE_REQUESTS_SEED) {
+    throw new Error(
+      `[seed-user-trips] у юзера ${live.length} живых заявок при лимите ` +
+        `${MAX_ACTIVE_REQUESTS_SEED}: публикация новой вернёт 409`,
+    );
+  }
+
+  // Связка «бронь ← заявка»: те же условия, что проверяет
+  // closeRideRequestsForBooking — заявка закрыта, принадлежит пассажиру, и её
+  // маршрут с окном совпадают с поездкой.
+  const fulfilled = requests.find(
+    (rr) => rr.id === FULFILLED_REQUEST_LINK.requestId,
+  );
+  if (fulfilled === undefined && requests.length > 0) {
+    throw new Error(
+      `[seed-user-trips] нет заявки ${FULFILLED_REQUEST_LINK.requestId} под ` +
+        `бронь ${FULFILLED_REQUEST_LINK.bookingId}`,
+    );
+  }
+  if (fulfilled === undefined) {
+    // Заявки не проверялись в этом вызове (проверка уведомлений).
+    return;
+  }
+  if (fulfilled.status !== "fulfilled") {
+    throw new Error(
+      `[seed-user-trips] ${fulfilled.id}linked, но статус ${fulfilled.status}: ` +
+        "бронь закрывает только fulfilled",
+    );
+  }
+  if (fulfilled.latestAt < FULFILLED_REQUEST_LINK.tripDepartureAt) {
+    throw new Error(
+      `[seed-user-trips] окно ${fulfilled.id} заканчивается раньше отправления ` +
+        "поездки, на которую ссылается бронь",
+    );
+  }
+
+  for (const n of input.notifications ?? []) {
+    if (!SEED_NOTIFICATION_TYPES.has(n.type)) {
+      throw new Error(`[seed-user-trips] неизвестный тип уведомления ${n.type}`);
+    }
+    const role = n.recipientRole as NotificationRole | undefined;
+    if (
+      role !== undefined &&
+      !NOTIFICATION_ROLE_TYPES[role].has(n.type) &&
+      !SEED_NEUTRAL_NOTIFICATION_TYPES.has(n.type)
+    ) {
+      throw new Error(
+        `[seed-user-trips] тип ${n.type} не адресуется роли ${role}`,
+      );
+    }
+    if (n.deepLink !== undefined && !SEED_DEEP_LINK_ALLOWED(n.deepLink)) {
+      throw new Error(
+        `[seed-user-trips] deep-link ${n.deepLink} вне allowlist бэка`,
+      );
+    }
+  }
+}
+
+/** Лимит активных заявок на человека — зеркало backend/src/rideRequests/index.ts. */
+const MAX_ACTIVE_REQUESTS_SEED = 3;
+
+const SEED_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
+  ...CRITICAL_NOTIFICATION_TYPES,
+  ...NOTIFICATION_ROLE_TYPES.driver,
+  ...NOTIFICATION_ROLE_TYPES.passenger,
+  "review_approved",
+  "review_rejected",
+  "feedback_replied",
+]);
+
+const SEED_NEUTRAL_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
+  "review_approved",
+  "review_rejected",
+  "feedback_replied",
+]);
+
+/** Маршруты, которые бэк отдаёт в Telegram без искажения (telegramNotifications). */
+const SEED_DEEP_LINK_ALLOWED = (deepLink: string): boolean =>
+  SEED_DEEP_LINK_EXACT.has(deepLink) ||
+  /^\/trips\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    deepLink,
+  );
+
+const SEED_DEEP_LINK_EXACT: ReadonlySet<string> = new Set([
+  "/trips",
+  "/trips/my",
+  "/trips/my/new",
+  "/bookings",
+  "/bookings/history",
+  "/notifications",
+  "/profile/ride-requests",
+  "/reviews",
+]);
+
 const dayMs = 24 * 60 * 60 * 1000;
 const hourMs = 3_600_000;
 const now = new Date();
@@ -68,6 +220,18 @@ const anchor = new Date(
 // День + час МСК (UTC+3 круглый год).
 const days = (n: number, hourMsk = 9): Date =>
   new Date(anchor.getTime() + n * dayMs + (hourMsk - 3) * hourMs);
+
+/**
+ * Связка «заявка → бронь», которая обязана существовать в стенде: без неё
+ * нечего проверить ни простановку requestId, ни автозакрытие заявки бронью.
+ * Отправление — это t-tp-past-1 (Вологда → Череповец, день −6).
+ */
+const FULFILLED_REQUEST_LINK = {
+  requestId: "rr-tp-4",
+  bookingId: "b-tp-past-1-bezz",
+  tripDepartureAt: days(-6, 9),
+} as const;
+
 
 // Мок-окружение (фиктивные TG-id 79990000001+ — явно тестовые).
 const D1 = "u-tp-d1"; // Илья Северов, водитель
@@ -176,6 +340,94 @@ async function main(): Promise<void> {
   });
 
   // ── Поездки реального пользователя ──
+// ── Заявки на попутку реального пользователя ──
+// Идут ДО поездок: брони создаются вложенно в trip.create и ссылаются на
+// заявку через Booking.requestId, поэтому заявка должна существовать раньше
+// (иначе FK Booking_requestId_fkey). Зависят только от городов и юзера.
+  // Страница «История запросов» (/profile/ride-requests) показывает список
+  // по createdAt desc, поэтому createdAt лестницей — иначе порядок в списке
+  // не совпал бы с «свежие сверху».
+  //
+  // Статусы подобраны так, чтобы покрыть и пилюли, и наборы кнопок:
+  // active/paused — с действиями (пауза/возобновление, правка, отмена),
+  // fulfilled/expired/cancelled — терминальные, без действий. Сроки в
+  // будущем у «живых» — иначе воркер проэкспайрит их в expired.
+  const REQUESTS = [
+      {
+        // expired, а не active: у пользователя было ровно три живые заявки
+        // (2 active + 1 paused), то есть ровно MAX_ACTIVE_REQUESTS, и любая
+        // публикация возвращала 409 — предотправочное предупреждение было бы
+        // нечем завершить. Статус expired заодно закрывает пробел покрытия.
+        // Прод-сид не затирает данные, но срок в прошлом обязателен: иначе
+        // строка называется «просрочена» при expiresAt в будущем.
+        id: "rr-tp-1",
+        userId: USER_ID,
+        fromCityId: vologda,
+        toCityId: cherepovets,
+        earliestAt: days(-2, 8),
+        latestAt: days(-2, 20),
+        seats: 2,
+        status: "expired",
+        expiresAt: days(-2, 20),
+        createdAt: new Date(now.getTime() - 3 * dayMs),
+      },
+      {
+        id: "rr-tp-2",
+        userId: USER_ID,
+        fromCityId: vologda,
+        toCityId: cherepovets,
+        earliestAt: days(3, 7),
+        latestAt: days(3, 19),
+        seats: 1,
+        status: "active",
+        expiresAt: days(3, 19),
+        createdAt: new Date(now.getTime() - dayMs),
+      },
+      {
+        id: "rr-tp-3",
+        userId: USER_ID,
+        fromCityId: cherepovets,
+        toCityId: vologda,
+        earliestAt: days(4, 17),
+        latestAt: days(4, 22),
+        seats: 1,
+        status: "paused",
+        expiresAt: days(4, 22),
+        createdAt: new Date(now.getTime() - 2 * dayMs),
+      },
+      {
+        // fulfilled = закрыта состоявшейся бронью. Окно нарочно шире самой
+        // поездки t-tp-past-1 (день −6): связка «заявка → бронь» проверяется
+        // тем же предикатом, что и автозакрытие, и не накрывала поездку.
+        id: "rr-tp-4",
+        userId: USER_ID,
+        fromCityId: vologda,
+        toCityId: cherepovets,
+        earliestAt: days(-7, 9),
+        latestAt: days(-5, 18),
+        seats: 2,
+        status: "fulfilled",
+        expiresAt: days(-5, 18),
+        createdAt: new Date(now.getTime() - 8 * dayMs),
+      },
+      {
+        id: "rr-tp-5",
+        userId: USER_ID,
+        fromCityId: cherepovets,
+        toCityId: vologda,
+        earliestAt: days(-9, 10),
+        latestAt: days(-8, 19),
+        seats: 1,
+        status: "cancelled",
+        expiresAt: days(-8, 19),
+        createdAt: new Date(now.getTime() - 10 * dayMs),
+      },
+  ];
+
+  validateUserTripSeed({ requests: REQUESTS });
+  await prisma.rideRequest.createMany({ data: REQUESTS });
+
+
   const t1Departure = days(2, 8);
   const t1Created = new Date(t1Departure.getTime() - 3 * dayMs);
   await prisma.trip.create({
@@ -397,85 +649,16 @@ async function main(): Promise<void> {
             seat: 2,
             status: "confirmed",
             comment: "Bezz-тест: спасибо!",
+            // Бронь выросла из заявки rr-tp-4 (тот же маршрут, окно накрывает
+            // отправление): requestId проставляет рантайм в одной транзакции с
+            // закрытием заявки. Без него связку «заявка → поездка» на
+            // прод-стенде нечего проверить.
+            requestId: "rr-tp-4",
             createdAt: mPastBookingCreated,
           },
         ],
       },
     },
-  });
-
-  // ── Заявки на попутку реального пользователя ──
-  // Страница «История запросов» (/profile/ride-requests) показывает список
-  // по createdAt desc, поэтому createdAt лестницей — иначе порядок в списке
-  // не совпал бы с «свежие сверху».
-  //
-  // Статусы подобраны так, чтобы покрыть и пилюли, и наборы кнопок:
-  // active/paused — с действиями (пауза/возобновление, правка, отмена),
-  // fulfilled/expired/cancelled — терминальные, без действий. Сроки в
-  // будущем у «живых» — иначе воркер проэкспайрит их в expired.
-  await prisma.rideRequest.createMany({
-    data: [
-      {
-        id: "rr-tp-1",
-        userId: USER_ID,
-        fromCityId: vologda,
-        toCityId: cherepovets,
-        earliestAt: days(1, 8),
-        latestAt: days(1, 20),
-        seats: 2,
-        status: "active",
-        expiresAt: days(1, 20),
-        createdAt: new Date(now.getTime() - 2 * hourMs),
-      },
-      {
-        id: "rr-tp-2",
-        userId: USER_ID,
-        fromCityId: vologda,
-        toCityId: cherepovets,
-        earliestAt: days(3, 7),
-        latestAt: days(3, 19),
-        seats: 1,
-        status: "active",
-        expiresAt: days(3, 19),
-        createdAt: new Date(now.getTime() - dayMs),
-      },
-      {
-        id: "rr-tp-3",
-        userId: USER_ID,
-        fromCityId: cherepovets,
-        toCityId: vologda,
-        earliestAt: days(4, 17),
-        latestAt: days(4, 22),
-        seats: 1,
-        status: "paused",
-        expiresAt: days(4, 22),
-        createdAt: new Date(now.getTime() - 2 * dayMs),
-      },
-      {
-        id: "rr-tp-4",
-        userId: USER_ID,
-        fromCityId: vologda,
-        toCityId: cherepovets,
-        earliestAt: days(-5, 9),
-        latestAt: days(-5, 18),
-        seats: 2,
-        status: "fulfilled",
-        expiresAt: days(-5, 18),
-        createdAt: new Date(now.getTime() - 6 * dayMs),
-      },
-      {
-        id: "rr-tp-5",
-        userId: USER_ID,
-        fromCityId: cherepovets,
-        toCityId: vologda,
-        earliestAt: days(-9, 10),
-        latestAt: days(-8, 19),
-        seats: 1,
-        status: "cancelled",
-        expiresAt: days(-8, 19),
-        createdAt: new Date(now.getTime() - 10 * dayMs),
-      },
-    ],
   });
 
   // ── Отзывы (опубликованные, в обе стороны) ──
@@ -533,52 +716,93 @@ async function main(): Promise<void> {
   });
 
   // ── Уведомления реальному пользователю ──
-  await prisma.notification.createMany({
-    data: [
+  //
+  // Заголовки сохраняют префикс «Bezz-тест»: по нему идёт чистка прошлого
+  // прогона (deleteMany по title contains), без него повторный запуск оставил
+  // бы старые строки. Тексты дальше — по рантайм-шаблонам (bookings/create.ts,
+  // bookings/status.ts, trips/index.ts, rideRequests/index.ts), иначе прод-сид
+  // проверял бы формулировки, которых в проде нет.
+  //
+  // Получатель здесь — ПАССАЖИР, поэтому водительских типов (booking_created)
+  // здесь быть не может: рантайм шлёт их владельцу поездки, а не пассажиру.
+  // Все строки пассажирские, поэтому роль проставлена явно — без неё архив
+  // «Водитель/Пассажир» в инбоксе падает в карту типов вместо колонки.
+  if (user.notificationsEnabled === false) {
+    console.warn(
+      "[seed-user-trips] у юзера выключены уведомления: некритичные строки " +
+        "рантайм создавать не стал бы (createNotification их отбрасывает). " +
+        "Строку User не меняем — только предупреждаем.",
+    );
+  }
+  const NOTIFICATIONS = [
       {
         userId: USER_ID,
         type: "ride_request_match",
-        title: "Bezz-тест: по вашему запросу нашлась поездка",
-        body: "По запросу Вологда → Череповец нашлась поездка с двумя свободными местами.",
+        title: "Bezz-тест: Подходящая поездка",
+        body: "Нашлась подходящая поездка для вашего запроса. Откройте поездку и отправьте заявку на бронирование.",
         isRead: false,
-        // deepLink обязан быть в allowlist бэка (telegramNotifications):
-        // /ride-requests больше не маршрут, страница заявок живёт в профиле.
         deepLink: "/profile/ride-requests",
         actorName: "Илья Северов",
         action: "matched",
+        recipientRole: "passenger",
         createdAt: new Date(now.getTime() - hourMs),
       },
       {
         userId: USER_ID,
-        type: "booking_created",
-        title: "Bezz-тест: новая заявка",
-        body: "Анна В хочет присоединиться к вашей поездке Вологда → Череповец.",
+        type: "booking_status_changed",
+        title: "Bezz-тест: Заявка подтверждена",
+        body: "Водитель подтвердил вашу заявку в поездке Вологда → Череповец.",
         isRead: false,
-        actorName: "Анна В",
-        action: "created",
+        actorName: "Илья Северов",
+        action: "confirmed",
+        recipientRole: "passenger",
         createdAt: new Date(now.getTime() - 2 * hourMs),
+      },
+      {
+        // Приглашение в поездку: получатель — автор заявки rr-tp-2, поездка
+        // t-tp-1 пересекается с её окном (день +3). deep-link не задан: id
+        // поездок здесь слаги (t-tp-*), а бэк принимает в ссылке только
+        // /trips/<uuid> — клиент откроет fallback-маршрут типа. Настоящая
+        // ссылка с UUID появится, если приглашение отправить через UI.
+        userId: USER_ID,
+        type: "driver_invite",
+        title: "Bezz-тест: Водитель приглашает в поездку",
+        body: "Водитель позвал вас в свою поездку. Откройте поездку и забронируйте место.",
+        isRead: false,
+        actorName: "Илья Северов",
+        action: "invited",
+        recipientRole: "passenger",
+        tripFrom: "Вологда",
+        tripTo: "Череповец",
+        tripDepartureAt: m1Departure,
+        createdAt: new Date(now.getTime() - 3 * hourMs),
       },
       {
         userId: USER_ID,
         type: "booking_status_changed",
-        title: "Bezz-тест: бронирование подтверждено",
-        body: "Илья Северов подтвердил вашу поездку Вологда → Череповец.",
-        isRead: false,
+        title: "Bezz-тест: Заявка отклонена",
+        body: "Водитель отклонил вашу заявку в поездке Вологда → Череповец.",
+        isRead: true,
         actorName: "Илья Северов",
-        action: "confirmed",
+        action: "declined",
+        recipientRole: "passenger",
         createdAt: new Date(now.getTime() - 5 * hourMs),
       },
       {
         userId: USER_ID,
         type: "trip_status_changed",
-        title: "Bezz-тест: поездка завершена",
-        body: "Поездка Вологда → Череповец завершена. Оставьте отзыв водителю!",
+        title: "Bezz-тест: Поездка завершена",
+        body: "Поездка Вологда → Череповец завершена. Вы можете оставить отзыв.",
         isRead: false,
+        actorName: "Илья Северов",
         action: "completed",
+        recipientRole: "passenger",
         createdAt: new Date(now.getTime() - 8 * hourMs),
       },
-    ],
-  });
+  ];
+
+  validateUserTripSeed({ notifications: NOTIFICATIONS });
+  await prisma.notification.createMany({ data: NOTIFICATIONS });
 
   // Рейтинг/счётчик по опубликованным — затронутые пользователи.
   for (const userId of [USER_ID, D1, P1]) {
@@ -587,7 +811,7 @@ async function main(): Promise<void> {
 
   console.log(
     "[seed-user-trips] ok: 6 поездок (3 свои + 3 чужие), 5 заявок на попутку, " +
-      "4 мок-юзера, 6 броней, 4 отзыва, 4 уведомления",
+      "4 мок-юзера, 6 броней, 4 отзыва, 5 уведомлений",
   );
 }
 

@@ -2,10 +2,21 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { MAX_SEATS, tripTagSchema } from "@edem/contracts";
+import {
+  CRITICAL_NOTIFICATION_TYPES,
+  MAX_SEATS,
+  NOTIFICATION_ROLE_TYPES,
+  tripTagSchema,
+  type NotificationRole,
+} from "@edem/contracts";
 import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "../src/generated/prisma/client.js";
-import { seedCityId, seedReportId, seedRideRequestId } from "./seed-ids.js";
+import {
+  seedCityId,
+  seedReportId,
+  seedRideRequestId,
+  seedUuid,
+} from "./seed-ids.js";
 import { SEED_CITIES, normalizeCityName } from "./cities-data.js";
 
 // Prisma 7 больше не подгружает .env автоматически — путь относительно файла.
@@ -68,18 +79,78 @@ interface SeedUser {
   tgChatJoinedAtDaysAgo?: number;
 }
 
+/**
+ * Фикстура уведомления: только ссылка на событие.
+ *
+ * Ни текста, ни снапшота поездки, ни deep-link — они выводятся из поездки и
+ * актора в `seedNotificationRow` по шаблонам рантайма. Так сид физически не
+ * может описать несуществующую поездку, цену или человека.
+ */
+interface SeedNotification {
+  /** Получатель. */
+  userId: string;
+  type: string;
+  isRead: boolean;
+  /** Поездка, о которой событие; обязательна для всех поездочных типов. */
+  tripId?: string;
+  /** Пользователь-актор (пассажир для booking_created, водитель иначе). */
+  actorId?: string;
+  /** Роль актора, если это не пользователь (Модератор, Поддержка). */
+  actorName?: string;
+  /** Разновидность внутри типа: confirmed/declined, completed. */
+  variant?: "confirmed" | "declined" | "completed";
+  /** Место в тексте «новая заявка на место N». */
+  seat?: number;
+}
+
+/**
+ * Собранная строка уведомления: ровно те поля, что есть в колонках, плюс
+ * служебный `legacySlugDeepLink` (вырезается перед вставкой). Тип задан
+ * явно, чтобы Prisma проверял вставку, а не получал `unknown` под видом
+ * объекта.
+ */
+interface SeedNotificationRow {
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  actorName?: string;
+  action?: string;
+  recipientRole?: NotificationRole;
+  deepLink?: string;
+  legacySlugDeepLink?: boolean;
+  tripFrom?: string;
+  tripTo?: string;
+  tripPrice?: number;
+  tripDepartureAt?: Date;
+}
+
 interface SeedBooking {
   passengerId: string;
   seat: number;
+  /**
+   * Заявка пассажира, закрытая этой бронью (поток «заявка → поездка»).
+   *
+   * Рантайм проставляет `Booking.requestId` в той же транзакции, что и
+   * `booking.create`, и закрывает заявку в `fulfilled`. В сиде до этого поле
+   * не засевалось вовсе, поэтому `fulfilled`-заявки висели без следа брони —
+   * то есть фича «бронь закрывает заявку» в деве не была видна вообще.
+   * Проверки связи живут в validateSeedData.
+   */
+  requestId?: string;
   status: "pending" | "confirmed" | "declined" | "cancelled";
   comment?: string;
-  // TTL ожидания подтверждения в часах (только для pending). Рантайм
-  // ставит pending-брони ровно 24 часа (PENDING_BOOKING_TTL_MS,
-  // src/bookings/index.ts) и автозакрывает истёкшие; сид воспроизводит
-  // это поле, чтобы GET /bookings/driver и фильтры «не истёкшая» вели
-  // себя на dev-стенде так же, как в бою. По умолчанию — 24, как рантайм.
+  // TTL ожидания подтверждения в часах (только для pending). Рантайм ставит
+  // pending-брони ровно 24 часа от СОЗДАНИЯ (PENDING_BOOKING_TTL_MS,
+  // src/bookings/create.ts) и автозакрывает истёкшие. Сид воспроизводит
+  // ДЛИТЕЛЬНОСТЬ (по умолчанию 24, как рантайм), но НЕ якорь: expiresAt
+  // считается от «сейчас», а createdAt — от поездки, поэтому у поездки
+  // за неделю TTL по факту больше суток, и через ~24 часов воркер переведёт
+  // все pending-брони в declined — как и на бою, но быстрее.
   expiresAtInHours?: number;
-  // Только для cancelled: кто отменил и почему (как пишет рантайм).
+  // Только для cancelled: НАМЕРЕНИЕ — кто отменил (в колонку уходит
+  // CANCELLED_BY_USER = "user", а id автора — в cancelledByUserId).
   cancelledByType?: "passenger" | "driver";
   cancellationReason?: string;
   // Сколько дней назад создана бронь (по умолчанию — через день после
@@ -108,8 +179,9 @@ interface SeedTrip {
   price: number;
   seatsTotal: number;
   status: "active" | "completed" | "cancelled";
-  // Только для cancelled: как пишет рантайм при отмене (трип без
-  // cancelledAt в сиде — нереалистичен, валидация требует).
+  // Только для cancelled: трип без cancelledAt в сиде нереалистичен, валидация
+  // требует. Как и у брони, поле хранит НАМЕРЕНИЕ, а в колонку уходит
+  // CANCELLED_BY_USER = "user" (словарь колонки — user | system | admin).
   cancelledAtDaysAgo?: number;
   cancelledByType?: "passenger" | "driver";
   tags: string[];
@@ -635,6 +707,23 @@ function devOnboardingVersion(): string | null {
 // Поездки + брони
 // ─────────────────────────────────────────────────────────────
 const dayMs = 24 * 60 * 60 * 1000;
+
+/**
+ * Значение, которое рантайм пишет в `Booking.cancelledByType` и
+ * `Trip.cancelledByType` при отмене человеком: словарь колонки — `user |
+ * system | admin` (bookings/cancel.ts, trips/index.ts, tripWorker.ts,
+ * admin/index.ts). Фикстуры хранят намерение («водитель» / «пассажир»), и
+ * автор отмены пишется в `cancelledByUserId`, а не в тип.
+ */
+const CANCELLED_BY_USER = "user";
+
+/**
+ * id поездки «инвайт-демо» (водитель u-13). UUID, а не slug `t-*`: на неё
+ * ссылается deep-link уведомления driver_invite, а бэк принимает в ссылке
+ * только /trips/<uuid>. Читаемое имя живёт здесь, чтобы фикстуры уведомлений
+ * не писали UUID руками.
+ */
+const TRIP_INVITE_ID = seedUuid("edem.trip", "t-dev-invite");
 // Anchor generated dates to the UTC day so repeated runs on the same day
 // produce identical logical timestamps while active fixtures remain future.
 const now = new Date();
@@ -1033,8 +1122,9 @@ const trips: SeedTrip[] = [
     status: "active",
     tags: ["Есть багаж"],
     comment: "Обычный рейс по субботам.",
-    // 3 pending + 1 на t-1 → у водителя u-1 четыре заявки: демо
-    // «Показать все (4)» в секции «Заявки на поездки» на главной.
+    // 3 pending + 1 на t-1 → у водителя u-1 четыре заявки на место: демо
+    // счётчика «Заявки: N» на карточке поездки и раздела «Заявки пассажиров»
+    // на «Поездках» (в главной такого списка нет).
     bookings: [
       {
         passengerId: "u-14",
@@ -1274,7 +1364,18 @@ const trips: SeedTrip[] = [
     cancelledByType: "driver",
     tags: ["С остановками"],
     comment: "Поездка отменена из-за погоды.",
-    bookings: [{ passengerId: "u-15", seat: 1, status: "declined" }],
+    // Отмена поездки отменяет и бронь (bookings/cancel.ts по цепочке), поэтому
+    // статус cancelled, а не declined: уведомление «поездка отменена» получает
+    // тот, у кого на момент отмены была ЖИВАЯ бронь.
+    bookings: [
+      {
+        passengerId: "u-15",
+        seat: 1,
+        status: "cancelled",
+        cancelledByType: "driver",
+        cancellationReason: "Водитель отменил поездку",
+      },
+    ],
   },
   {
     id: "t-c-2",
@@ -1293,10 +1394,29 @@ const trips: SeedTrip[] = [
     cancelledByType: "driver",
     tags: [],
     comment: "Отменил, планы изменились.",
-    bookings: [],
+    // Две отменённые брони: без них отмена поездки не достаётся никому —
+    // рантайм уведомляет только тех, у кого была живая бронь, и сид-строка
+    // «поездка отменена» была бы недостижимой.
+    bookings: [
+      {
+        passengerId: "u-4",
+        seat: 1,
+        status: "cancelled",
+        cancelledByType: "driver",
+        cancellationReason: "Водитель отменил поездку",
+      },
+      {
+        passengerId: "u-dev",
+        seat: 2,
+        status: "cancelled",
+        cancelledByType: "driver",
+        cancellationReason: "Водитель отменил поездку",
+      },
+    ],
   },
   // ── DEV-аккаунт (u-dev, telegramUserId 9800001) ──
-  // Поездки u-dev как водителя: заявки для секции «Рассмотрите заявки».
+  // Поездки u-dev как водителя: на них видна карточка спроса «N человек ищут
+  // попутку по твоему маршруту» и кнопка «Пригласить».
   {
     id: "t-dev-1",
     driverId: "u-dev",
@@ -1329,7 +1449,9 @@ const trips: SeedTrip[] = [
     ],
   },
   // Подтверждённая поездка u-dev как водителя (полная комплектация:
-  // 1 confirmed + 2 pending — демо «Рассмотрите заявки» и «Показать все»).
+  // 1 confirmed + 1 pending + 1 declined → одно свободное место: только при
+  // seatsAvailable > 0 действие «Пригласить» вообще нажимается (клиент прячет
+  // его при нуле мест, бэк отвечает 409).
   {
     id: "t-dev-2",
     driverId: "u-dev",
@@ -1352,8 +1474,34 @@ const trips: SeedTrip[] = [
         status: "pending",
         comment: "Еду с маленькой сумкой.",
       },
-      { passengerId: "u-22", seat: 3, status: "pending" },
+      // Отклонена водителем, поэтому место свободно. Это единственная
+      // поездка DEV-аккаунта с матчащим спросом И свободным местом, то есть
+      // единственная, где «Пригласить» в карточке спроса вообще нажимается:
+      // клиент прячет действие при seatsAvailable === 0, а бэк отвечает 409.
+      // При трёх занятых местах фича выглядела бы рабочей, но была недостижима.
+      { passengerId: "u-22", seat: 3, status: "declined" },
     ],
+  },
+  // Поездка постороннего водителя под заявку rr-dev-2 (Череповец → Сокол,
+  // окно +4..+6д): приглашение получает АВТОР заявки, поэтому для инвайта в
+  // инбокс u-dev нужна именно чужая поездка — свои он исключён сам (userId:
+  // { not: driverId }). Именно на ней в деве нажимается «Пригласить».
+  // id — TRIP_INVITE_ID (UUID) ради deep-link уведомления driver_invite.
+  {
+    id: TRIP_INVITE_ID,
+    driverId: "u-13",
+    fromCity: "Череповец",
+    fromAddress: "Октябрьский проспект",
+    toCity: "Сокол",
+    toAddress: "ул. Калинина",
+    daysFromNow: 5,
+    durationMinutes: 70,
+    distanceKm: 42,
+    price: 350,
+    seatsTotal: 3,
+    status: "active",
+    tags: [],
+    bookings: [],
   },
   // u-dev как пассажир: подтверждённая бронь → секция «Ваша поездка».
   {
@@ -1420,7 +1568,17 @@ const trips: SeedTrip[] = [
     status: "active",
     tags: ["Можно с животными"],
     comment: "Забираю пассажиров от автовокзала.",
-    bookings: [{ passengerId: "u-dev", seat: 1, status: "confirmed" }],
+    bookings: [
+      {
+        passengerId: "u-dev",
+        seat: 1,
+        status: "confirmed",
+        // Поездка выросла из заявки rr-dev-1 (тот же маршрут, окно +1..+5д
+        // накрывает отправление +4д) — связка видна в админке и в БД, и
+        // повторяет то, что делает closeRideRequestsForBooking.
+        requestId: seedRideRequestId("rr-dev-1"),
+      },
+    ],
   },
   // Прошлые поездки u-dev — источник отзывов r-29/r-30 (валидация сидa
   // требует: автор отзыва — confirmed-пассажир этой поездки).
@@ -1788,15 +1946,35 @@ const rideRequests: SeedRideRequest[] = [
   // нельзя, а без запросов у дев-юзера шторка «Ищу попутку» показывала только
   // пустое состояние и ни один из четырёх статусов нельзя было замерить.
   {
+    // Закрыта бронью: t-dev-5 (Вологда → Череповец, +4д) выросла из этой
+    // заявки, поэтому окно накрывает и поездку, и саму бронь — именно эта
+    // пара нужна, чтобы `Booking.requestId` и автозакрытие были не
+    // теорией, а видимой в деве связкой.
     id: seedRideRequestId("rr-dev-1"),
     userId: "u-dev",
     fromCity: "Вологда",
     toCity: "Череповец",
     daysFromNowEarliest: 1,
-    daysFromNowLatest: 3,
+    daysFromNowLatest: 5,
     seats: 1,
-    status: "active",
-    expiresInDays: 7,
+    status: "fulfilled",
+    expiresInDays: 30,
+  },
+  {
+    // Статус cancelled в сиде больше не встречался — им закрываем слот
+    // активных заявок u-dev (MAX_ACTIVE_REQUESTS = 3, счётчик считает
+    // active + paused с непротухшим expiresAt). Пока у дев-юзера было ровно
+    // три живые заявки, публикация новой давала 409, и предотправочное
+    // предупреждение «уже есть поездки» было нечем завершить.
+    id: seedRideRequestId("rr-dev-6"),
+    userId: "u-dev",
+    fromCity: "Вологда",
+    toCity: "Кириллов",
+    daysFromNowEarliest: 20,
+    daysFromNowLatest: 22,
+    seats: 1,
+    status: "cancelled",
+    expiresInDays: 30,
   },
   {
     id: seedRideRequestId("rr-dev-2"),
@@ -1814,8 +1992,10 @@ const rideRequests: SeedRideRequest[] = [
     userId: "u-dev",
     fromCity: "Вологда",
     toCity: "Грязовец",
+    // Окно шире суток: earliest == latest API отклоняет
+    // (createRideRequestDtoSchema.superRefine), а сид такое создавал.
     daysFromNowEarliest: 2,
-    daysFromNowLatest: 2,
+    daysFromNowLatest: 3,
     seats: 1,
     status: "paused",
     expiresInDays: 5,
@@ -1826,12 +2006,16 @@ const rideRequests: SeedRideRequest[] = [
     fromCity: "Сокол",
     toCity: "Вологда",
     daysFromNowEarliest: 12,
-    daysFromNowLatest: 12,
+    daysFromNowLatest: 13,
     seats: 1,
     status: "fulfilled",
     expiresInDays: 30,
   },
   {
+    // Статус `expired` в продукте недостижим: его нет в мутабельном наборе
+    // (rideRequestStatusUpdateSchema), терминальные строки PATCH отклоняют, а
+    // воркера заявок нет. Нужен только чтобы UI показывал эту метку, поэтому
+    // срок в прошлом — иначе заявка выглядит живой при статусе «просрочена».
     id: seedRideRequestId("rr-dev-5"),
     userId: "u-dev",
     fromCity: "Кадуй",
@@ -1840,7 +2024,7 @@ const rideRequests: SeedRideRequest[] = [
     daysFromNowLatest: 9,
     seats: 1,
     status: "expired",
-    expiresInDays: 1,
+    expiresInDays: -1,
   },
   {
     id: seedRideRequestId("rr-1"),
@@ -1870,7 +2054,7 @@ const rideRequests: SeedRideRequest[] = [
     fromCity: "Вологда",
     toCity: "Грязовец",
     daysFromNowEarliest: 1,
-    daysFromNowLatest: 1,
+    daysFromNowLatest: 2,
     seats: 1,
     status: "paused",
     expiresInDays: 7,
@@ -1994,9 +2178,81 @@ const reports: SeedReport[] = [
   },
 ];
 
+/**
+ * Типы уведомлений, которые сид вправе засеивать: объединение критичных
+ * (`CRITICAL_NOTIFICATION_TYPES`), обоих наборов ролей и нейтральных
+ * (review_approved, review_rejected, feedback_replied). Список рантайма по
+ * типам не экспортируется, а набор ролей покрывает не всё, поэтому
+ * перечисляем явно — иначе опечатка в типе проехала бы в базу молча.
+ */
+const SEED_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
+  ...CRITICAL_NOTIFICATION_TYPES,
+  ...NOTIFICATION_ROLE_TYPES.driver,
+  ...NOTIFICATION_ROLE_TYPES.passenger,
+  "review_approved",
+  "review_rejected",
+  "feedback_replied",
+]);
+
+/**
+ * Роль получателя по типу — дубль `NOTIFICATION_ROLE_TYPES` из контрактов,
+ * но разрешённый в одну сторону: тип встречается в двух наборах (например
+ * `trip_status_changed` — и водителю своей поездки, и пассажиру завершённой).
+ * Здесь роль — это КОМУ сид адресует строку, а не «как этот тип вообще
+ * архивируется»; выбирается фикстурой по сюжету (своя поездка → driver).
+ */
+const SEED_NOTIFICATION_ROLES: Readonly<Record<string, NotificationRole>> = {
+  booking_created: "driver",
+  booking_status_changed: "passenger",
+  ride_request_match: "passenger",
+  driver_invite: "passenger",
+  trip_cancelled: "passenger",
+  trip_details_changed: "passenger",
+  // Адресуется по сюжету: своя завершённая поездка → driver, поездка, на
+  // которой был билет, → passenger.
+  trip_status_changed: "passenger",
+};
+
+/** Типы без роли получателя: админка/модерация, архив им не адресован. */
+const SEED_NEUTRAL_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
+  "review_approved",
+  "review_rejected",
+  "feedback_replied",
+]);
+
+/**
+ * deep-link по правилам бэка (`resolveTelegramDeepLink`): точный маршрут из
+ * allowlist либо `/trips/<uuid>`. Старые сид-строки со слагами (`/trips/t-1`)
+ * под правило не подпадают намеренно — их помечено как легаси-исключение, и
+ * новые строки (например `driver_invite`) обязаны быть валидными.
+ */
+const SEED_DEEP_LINK_EXACT: ReadonlySet<string> = new Set([
+  "/trips",
+  "/trips/my",
+  "/trips/my/new",
+  "/bookings",
+  "/bookings/history",
+  "/notifications",
+  "/profile/ride-requests",
+  "/reviews",
+]);
+const SEED_TRIP_DEEP_LINK_RE = /^\/trips\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function seedDeepLinkAllowed(deepLink: string): boolean {
+  return (
+    SEED_DEEP_LINK_EXACT.has(deepLink) ||
+    SEED_TRIP_DEEP_LINK_RE.test(deepLink)
+  );
+}
+
 function validateSeedData(): void {
   const userIds = new Set(users.map((user) => user.id));
   const tripById = new Map(trips.map((trip) => [trip.id, trip]));
+  // Карта заявок нужна для проверки связи «бронь ← заявка» (Booking.requestId):
+  // заявка должна существовать, принадлежать тому же пассажиру и быть закрыта,
+  // а маршрут с окном — совпадать с поездкой, иначе сид показывал бы «закрытую
+  // бронью», которую рантайм никогда бы не создал.
+  const requestById = new Map(rideRequests.map((rr) => [rr.id, rr]));
   const reviewKeys = new Set<string>();
 
   for (const trip of trips) {
@@ -2151,6 +2407,47 @@ function validateSeedData(): void {
           `Отрицательный createdDaysAgo брони ${trip.id}/${booking.passengerId}`,
         );
       }
+      if (booking.requestId === undefined) continue;
+
+      // Консистентность Booking.requestId — ровно те условия, которые
+      // проверяет рантайм в closeRideRequestsForBooking/findClientRequest:
+      // заявка есть, принадлежит пассажиру, закрыта и подходит под поездку.
+      const request = requestById.get(booking.requestId);
+      if (!request) {
+        throw new Error(
+          `Unknown requestId ${booking.requestId} in seed booking ${trip.id}/${booking.passengerId}`,
+        );
+      }
+      if (request.userId !== booking.passengerId) {
+        throw new Error(
+          `Seed booking ${trip.id}/${booking.passengerId} closes a request of another user (${request.id})`,
+        );
+      }
+      if (request.status !== "fulfilled") {
+        throw new Error(
+          `Seed booking ${trip.id}/${booking.passengerId} links a request in status ${request.status ?? "active"}; runtime closes only fulfilled`,
+        );
+      }
+      if (
+        normalizeCityName(request.fromCity) !== normalizeCityName(trip.fromCity) ||
+        normalizeCityName(request.toCity) !== normalizeCityName(trip.toCity)
+      ) {
+        throw new Error(
+          `Seed booking ${trip.id} links a request of another route (${request.fromCity} → ${request.toCity})`,
+        );
+      }
+      // Окно заявки обязано пересекать отправление поездки (matchingRideRequestWhere):
+      // earliestAt <= tripEnd && latestAt >= departureAt.
+      const tripEndDays =
+        trip.daysFromNow + (trip.durationMinutes ?? 60) / (60 * 24);
+      if (
+        request.daysFromNowEarliest > tripEndDays ||
+        request.daysFromNowLatest < trip.daysFromNow
+      ) {
+        throw new Error(
+          `Seed booking ${trip.id} links a request whose window does not overlap the trip`,
+        );
+      }
     }
   }
   for (const review of reviews) {
@@ -2188,11 +2485,39 @@ function validateSeedData(): void {
     if (normalizeCityName(rr.fromCity) === normalizeCityName(rr.toCity)) {
       throw new Error(`Same from/to city in seed ride request ${rr.id}`);
     }
-    if (rr.daysFromNowEarliest > rr.daysFromNowLatest) {
-      throw new Error(`Inverted window in seed ride request ${rr.id}`);
+    // `>=`, а не `>`: рантайм отклоняет и равные границы
+    // (createRideRequestDtoSchema.superRefine — earliestAt < latestAt), и
+    // сид раньше создавал заявки, которые API не пропустил бы.
+    if (rr.daysFromNowEarliest >= rr.daysFromNowLatest) {
+      throw new Error(
+        `Inverted window in seed ride request ${rr.id}: earliest ${rr.daysFromNowEarliest} >= latest ${rr.daysFromNowLatest}`,
+      );
     }
     if (rr.seats !== undefined && (rr.seats < 1 || rr.seats > MAX_SEATS)) {
       throw new Error(`Invalid seats in seed ride request ${rr.id}`);
+    }
+    // createdAt заявки = min(earliestAt − 2д, сейчас − 1ч) и не может уехать в
+    // будущее: иначе «Мои заявки» (createdAt desc) показывают дату создания
+    // впереди, а выбор витринной заявки для Booking.requestId (createdAt asc)
+    // отдаёт предпочтение ещё не созданной.
+    const rrCreatedAt = new Date(
+      Math.min(
+        (seedNow.getTime() + rr.daysFromNowEarliest * dayMs) - 2 * dayMs,
+        seedNow.getTime() - 3_600_000,
+      ),
+    );
+    if (rrCreatedAt > seedNow) {
+      throw new Error(`Future createdAt in seed ride request ${rr.id}`);
+    }
+    // Просроченная заявка обязана иметь срок в прошлом, иначе подпись
+    // «просрочена» противоречит expiresAt в будущем.
+    if (
+      rr.status === "expired" &&
+      (rr.expiresInDays ?? 7) >= 0
+    ) {
+      throw new Error(
+        `Expired seed ride request ${rr.id} must have expiresAt in the past`,
+      );
     }
   }
 
@@ -2361,6 +2686,40 @@ async function main() {
       throw new Error(`[seed] город «${name}» отсутствует в справочнике City`);
     return id;
   };
+// Заявки идут ДО поездок: брони создаются вложенно в trip.create и
+// ссылаются на заявку через Booking.requestId, поэтому заявка должна
+// существовать раньше поездки, иначе FK Booking_requestId_fkey.
+  // Create RideRequests
+  for (const rr of rideRequests) {
+    const earliestAt = new Date(
+      seedNow.getTime() + rr.daysFromNowEarliest * dayMs,
+    );
+    await prisma.rideRequest.create({
+      data: {
+        id: rr.id,
+        userId: rr.userId,
+        fromCityId: cityId(rr.fromCity),
+        toCityId: cityId(rr.toCity),
+        earliestAt,
+        latestAt: new Date(seedNow.getTime() + rr.daysFromNowLatest * dayMs),
+        seats: rr.seats ?? 1,
+        status: rr.status ?? "active",
+        expiresAt: new Date(
+          seedNow.getTime() + (rr.expiresInDays ?? 7) * dayMs,
+        ),
+        // Заявка создана за 2 дня до начала окна поиска, но НЕ позже «сейчас»:
+        // иначе заявка с окном от +2д и дальше получала createdAt из будущего,
+        // «Мои заявки» сортировали такие первыми (createdAt desc), а выбор
+        // витринной заявки для Booking.requestId (createdAt asc) отдавала бы
+        // предпочтение именно ей. Час запасом — чтобы createdAt был строго
+        // в прошлом.
+        createdAt: new Date(
+          Math.min(earliestAt.getTime() - 2 * dayMs, seedNow.getTime() - 3_600_000),
+        ),
+      },
+    });
+  }
+
   for (const [tripIndex, t] of trips.entries()) {
     // Время отправления: час по МСК (UTC+3 круглый год, без DST).
     // Дефолт — детерминированный разброс 6..19 по индексу.
@@ -2403,8 +2762,13 @@ async function main() {
           t.status === "cancelled" && t.cancelledAtDaysAgo !== undefined
             ? new Date(seedNow.getTime() - t.cancelledAtDaysAgo * dayMs)
             : null,
+        // Фикстура хранит НАМЕРЕНИЕ («кто отменил»), колонка — рантаймное
+        // значение: cancelledByType пишется только как user | system | admin
+        // (bookings/cancel.ts, trips/index.ts, tripWorker.ts, admin/index.ts).
+        // Раньше сюда уезжало "driver"/"passenger" — значений, которых рантайм
+        // не пишет никогда.
         cancelledByType:
-          t.status === "cancelled" ? (t.cancelledByType ?? "driver") : null,
+          t.status === "cancelled" ? CANCELLED_BY_USER : null,
         cancelledByUserId: t.status === "cancelled" ? t.driverId : null,
         cancellationReason:
           t.status === "cancelled" ? (t.comment ?? null) : null,
@@ -2421,6 +2785,8 @@ async function main() {
             return {
               id: bookingId(t.id, b.passengerId, b.seat),
               passengerId: b.passengerId,
+              // null — обычная бронь, без заявки (обычный случай в проде).
+              requestId: b.requestId ?? null,
               seat: b.seat,
               status: b.status,
               comment: b.comment,
@@ -2437,9 +2803,7 @@ async function main() {
                   ? new Date(bookingCreatedAt.getTime() + dayMs)
                   : null,
               cancelledByType:
-                b.status === "cancelled"
-                  ? (b.cancelledByType ?? "passenger")
-                  : null,
+                b.status === "cancelled" ? CANCELLED_BY_USER : null,
               cancelledByUserId:
                 b.status === "cancelled"
                   ? b.cancelledByType === "driver"
@@ -2527,324 +2891,477 @@ async function main() {
   }
 
   // Create Notifications
-  const notifications = [
+
+  const notifications: SeedNotification[] = [
     {
       userId: "u-1",
       type: "booking_created",
-      title: "Новая заявка на место",
-      body: "Павел Никитин хочет присоединиться к вашей поездке Вологда → Череповец.",
+      tripId: "t-1",
+      actorId: "u-18",
       isRead: false,
-      actorName: "Павел Никитин",
-      action: "created",
-      tripFrom: "Вологда",
-      tripTo: "Череповец",
-      tripPrice: 500,
-      tripDepartureAt: new Date(seedNow.getTime() + 2 * dayMs),
+      seat: 2,
     },
     {
       userId: "u-3",
       type: "booking_created",
-      title: "Новая заявка на место",
-      body: "Павел Никитин хочет присоединиться к вашей поездке Череповец → Вологда.",
+      tripId: "t-3",
+      actorId: "u-14",
       isRead: false,
-      actorName: "Павел Никитин",
-      action: "created",
-      tripFrom: "Череповец",
-      tripTo: "Вологда",
-      tripPrice: 500,
-      tripDepartureAt: new Date(seedNow.getTime() + 3 * dayMs),
+      seat: 1,
     },
     {
       userId: "u-3",
       type: "booking_created",
-      title: "Новая заявка на место",
-      body: "Артём Киселёв хочет присоединиться к вашей поездке Череповец → Вологда.",
+      tripId: "t-3",
+      actorId: "u-2",
       isRead: false,
-      actorName: "Артём Киселёв",
-      action: "created",
-      tripFrom: "Череповец",
-      tripTo: "Вологда",
-      tripPrice: 550,
-      tripDepartureAt: new Date(seedNow.getTime() + 3 * dayMs),
+      seat: 2,
     },
     {
       userId: "u-4",
       type: "booking_status_changed",
-      title: "Бронирование подтверждено",
-      body: "Марина Ковалёва подтвердила вашу поездку Вологда → Великий Устюг.",
+      tripId: "t-2",
+      actorId: "u-2",
+      variant: "confirmed",
       isRead: false,
-      actorName: "Марина Ковалёва",
-      action: "confirmed",
-      tripFrom: "Вологда",
-      tripTo: "Великий Устюг",
-      tripPrice: 700,
-      tripDepartureAt: new Date(seedNow.getTime() + 4 * dayMs),
     },
-    {
-      userId: "u-18",
-      type: "booking_created",
-      title: "Новая заявка на место",
-      body: "Вы отправили заявку на поездку Вологда → Череповец.",
-      isRead: true,
-    },
-    // DEV-аккаунт: уведомления по его поездкам и броням.
     {
       userId: "u-dev",
       type: "booking_created",
-      title: "Новая заявка на место",
-      body: "Дарья Петрова хочет присоединиться к вашей поездке Вологда → Череповец.",
+      tripId: "t-dev-1",
+      actorId: "u-19",
       isRead: false,
-      // Per-entity deep-link (демо тапа → шторка деталей поездки): заявка
-      // по поездке t-dev-1. Остальные сид-уведомления без deepLink —
-      // клиент уходит по fallback-карте раздела.
-      // m7: сид пишет deepLink напрямую, в обход resolveTelegramDeepLink
-      // (рантайм требует UUID и слаг t-dev-1 схлопнул бы в /notifications).
-      // Осознанное dev-исключение: сид-поездки на слагах, а GET /trips/:id
-      // uuid не валидирует — тап в деве работает как в проде.
-      deepLink: "/trips/t-dev-1",
-      actorName: "Дарья Петрова",
-      action: "created",
-      tripFrom: "Вологда",
-      tripTo: "Череповец",
-      tripPrice: 450,
-      tripDepartureAt: new Date(seedNow.getTime() + dayMs + 9 * 3_600_000),
+      seat: 3,
     },
     {
       userId: "u-dev",
       type: "booking_status_changed",
-      title: "Бронирование подтверждено",
-      body: "Марина Ковалёва подтвердила вашу бронь Вологда → Сокол.",
+      tripId: "t-dev-3",
+      actorId: "u-2",
+      variant: "confirmed",
       isRead: false,
-      actorName: "Марина Ковалёва",
-      action: "confirmed",
-      tripFrom: "Вологда",
-      tripTo: "Сокол",
-      tripPrice: 350,
-      tripDepartureAt: new Date(seedNow.getTime() + 2 * dayMs),
     },
     {
       userId: "u-dev",
       type: "booking_status_changed",
-      title: "Бронирование подтверждено",
-      body: "Алексей Громов подтвердил вашу бронь Вологда → Череповец.",
+      tripId: "t-dev-5",
+      actorId: "u-3",
+      variant: "confirmed",
       isRead: true,
-      actorName: "Алексей Громов",
-      action: "confirmed",
-      tripFrom: "Вологда",
-      tripTo: "Череповец",
-      tripPrice: 450,
-      tripDepartureAt: new Date(seedNow.getTime() + dayMs + 9 * 3_600_000),
     },
-    // DEV-аккаунт: полный набор типов уведомлений. Нужен, чтобы все 9 типов
-    // карточек открывались вживую: mockEnv жёстко зашивает tgId 9800001, и
-    // зайти в другой аккаунт из дева нельзя — типы, разбросанные по u-1..u-22,
-    // невозможно было бы ни открыть, ни замерить (аудит ленты 2026-10-02).
-    // 4 непрочитанных → сегмент «Новые», 3 прочитанных + один переведённый
-    // выше в isRead → «Архив»: оба сегмента теперь непустые.
     {
+      // Подходящая поездка к активной заявке rr-dev-2 (Череповец → Сокол).
       userId: "u-dev",
       type: "ride_request_match",
-      title: "Найдена поездка под ваш запрос",
-      body: "По вашему запросу Вологда → Череповец нашлась поездка с тремя свободными местами.",
+      tripId: TRIP_INVITE_ID,
+      actorId: "u-13",
       isRead: false,
-      deepLink: "/profile/ride-requests",
-      actorName: "Сергей Кузнецов",
-      action: "matched",
-      tripFrom: "Вологда",
-      tripTo: "Череповец",
-      tripPrice: 450,
-      tripDepartureAt: new Date(seedNow.getTime() + 3 * dayMs),
     },
     {
+      // trip_status_changed в роли водителя: завершение своей поездки.
       userId: "u-dev",
       type: "trip_status_changed",
-      title: "Статус поездки изменился",
-      body: "Поездка Вологда → Сокол вышла завтра в 08:40.",
+      tripId: "t-dev-past-1",
+      actorId: "u-dev",
+      variant: "completed",
       isRead: false,
-      deepLink: "/trips/t-dev-1",
-      actorName: "Марина Ковалёва",
-      action: "changed",
-      tripFrom: "Вологда",
-      tripTo: "Сокол",
-      tripPrice: 350,
-      tripDepartureAt: new Date(seedNow.getTime() + dayMs),
     },
     {
       userId: "u-dev",
       type: "trip_cancelled",
-      title: "Поездка отменена",
-      body: "Поездка Вологда → Грязовец отменена: водитель заболел.",
+      tripId: "t-c-2",
+      actorId: "u-5",
       isRead: false,
-      actorName: "Игорь Белов",
-      action: "cancelled",
-      tripFrom: "Вологда",
-      tripTo: "Грязовец",
-      tripPrice: 400,
-      tripDepartureAt: new Date(seedNow.getTime() + 4 * dayMs),
     },
     {
       userId: "u-dev",
       type: "trip_details_changed",
-      title: "Детали поездки изменились",
-      body: "В поездке Вологда → Череповец поменялось время выезда.",
+      tripId: "t-dev-4",
+      actorId: "u-6",
       isRead: false,
-      deepLink: "/trips/t-dev-1",
-      actorName: "Ольга Миронова",
-      action: "changed",
-      tripFrom: "Вологда",
-      tripTo: "Череповец",
-      tripPrice: 450,
-      tripDepartureAt: new Date(seedNow.getTime() + 2 * dayMs),
     },
     {
       userId: "u-dev",
       type: "review_approved",
-      title: "Отзыв опубликован",
-      body: "Ваш отзыв о поездке Вологда → Сокол прошёл модерацию.",
-      isRead: false,
-      deepLink: "/reviews",
       actorName: "Модератор",
-      action: "approved",
+      isRead: false,
     },
     {
       userId: "u-dev",
       type: "review_rejected",
-      title: "Отзыв отклонён",
-      body: "Отзыв о поездке Вологда → Череповец отклонён модератором.",
-      isRead: false,
-      deepLink: "/reviews",
       actorName: "Модератор",
-      action: "rejected",
+      isRead: false,
+    },
+    {
+      userId: "u-dev",
+      type: "driver_invite",
+      tripId: TRIP_INVITE_ID,
+      actorId: "u-13",
+      isRead: false,
     },
     {
       userId: "u-dev",
       type: "feedback_replied",
-      title: "Ответ на обращение",
-      body: "Поддержка ответила на ваше обращение от 12 мая.",
-      isRead: false,
       actorName: "Поддержка",
-      action: "replied",
+      isRead: false,
     },
     {
       userId: "u-16",
       type: "booking_status_changed",
-      title: "Бронирование подтверждено",
-      body: "Дмитрий Соколов подтвердил вашу поездку Вологда → Грязовец.",
+      tripId: "t-4",
+      actorId: "u-5",
+      variant: "confirmed",
       isRead: false,
-      actorName: "Дмитрий Соколов",
-      action: "confirmed",
-      tripFrom: "Вологда",
-      tripTo: "Грязовец",
-      tripPrice: 400,
-      tripDepartureAt: new Date(seedNow.getTime() + 2 * dayMs),
     },
     {
       userId: "u-22",
       type: "booking_status_changed",
-      title: "Бронирование подтверждено",
-      body: "Татьяна Белова подтвердила вашу поездку Кадуй → Тарногский Городок.",
+      tripId: "t-8",
+      actorId: "u-11",
+      variant: "confirmed",
       isRead: true,
-      actorName: "Татьяна Белова",
-      action: "confirmed",
-      tripFrom: "Кадуй",
-      tripTo: "Тарногский Городок",
-      tripPrice: 600,
-      tripDepartureAt: new Date(seedNow.getTime() + 5 * dayMs),
     },
     {
       userId: "u-15",
       type: "trip_cancelled",
-      title: "Поездка отменена",
-      body: "Алексей Громов отменил поездку Федотово → Вологда.",
+      tripId: "t-c-1",
+      actorId: "u-3",
       isRead: false,
-      actorName: "Алексей Громов",
-      action: "cancelled",
-      tripFrom: "Федотово",
-      tripTo: "Вологда",
-      tripPrice: 300,
-      tripDepartureAt: new Date(seedNow.getTime() + 3 * dayMs),
     },
     {
       userId: "u-4",
       type: "trip_cancelled",
-      title: "Поездка отменена",
-      body: "Дмитрий Соколов отменил поездку Суда → Череповец.",
+      tripId: "t-c-2",
+      actorId: "u-5",
       isRead: true,
-      actorName: "Дмитрий Соколов",
-      action: "cancelled",
-      tripFrom: "Суда",
-      tripTo: "Череповец",
-      tripPrice: 350,
-      tripDepartureAt: new Date(seedNow.getTime() + 2 * dayMs),
     },
-    // Новые типы уведомлений — parity с типами рантайма
-    // (notification.service.ts) и картой deep-link мини-апа
-    // (NOTIFICATION_ROUTES): старый booking_confirmed рантайм не пишет.
     {
-      userId: "u-18",
+      // Подходящая поездка к активной заявке rr-1 (Вологда → Череповец).
+      userId: "u-14",
       type: "ride_request_match",
-      title: "Новый попутчик",
-      body: "Иван Иванов хочет присоединиться к вашей поездке Москва → Казань.",
+      tripId: "t-dev-1",
+      actorId: "u-dev",
       isRead: false,
-      actorName: "Иван Иванов",
-      action: "matched",
-      tripFrom: "Москва",
-      tripTo: "Казань",
-      tripPrice: 1200,
-      tripDepartureAt: new Date(seedNow.getTime() + 5 * dayMs),
     },
     {
       userId: "u-18",
       type: "trip_details_changed",
-      title: "Изменение деталей поездки",
-      body: "Время отправления поездки Череповец → Вологда сдвинуто на 30 минут.",
+      tripId: "t-1",
+      actorId: "u-1",
       isRead: false,
-      action: "changed",
-      tripFrom: "Череповец",
-      tripTo: "Вологда",
-      tripPrice: 500,
-      tripDepartureAt: new Date(seedNow.getTime() + 3 * dayMs),
     },
     {
       userId: "u-18",
       type: "booking_status_changed",
-      title: "Статус бронирования изменён",
-      body: "Ваша заявка на поездку подтверждена.",
+      tripId: "t-1",
+      actorId: "u-1",
+      variant: "confirmed",
       isRead: false,
-      action: "confirmed",
     },
     {
+      // trip_status_changed в роли пассажира: завершение поездки, на которой
+      // был билет.
       userId: "u-18",
       type: "trip_status_changed",
-      title: "Поездка отменена",
-      body: "Ваша поездка отменена.",
+      tripId: "t-past-6",
+      actorId: "u-3",
+      variant: "completed",
       isRead: false,
-      action: "cancelled",
     },
     {
-      userId: "u-18",
+      userId: "u-dev",
       type: "feedback_replied",
-      title: "Ответ на обращение в поддержку",
-      body: "На ваш вопрос ответил администратор.",
-      isRead: false,
       actorName: "Оператор",
-      action: "replied",
+      isRead: false,
     },
     {
-      userId: "u-18",
+      userId: "u-20",
       type: "review_rejected",
-      title: "Отзыв отклонён",
-      body: "Ваш отзыв о поездке отклонён администратором.",
-      isRead: false,
       actorName: "Модератор",
-      action: "rejected",
+      isRead: false,
     },
   ];
-  // Уведомления приходили в прошлом (разброс по часам), а не все «сейчас».
+
+  /**
+   * Сборка строки уведомления из ссылки на событие — зеркало текстов рантайма.
+   *
+   * Шаблоны скопированы из мест создания (bookings/create.ts:303,
+   * bookings/status.ts:279, trips/index.ts:1052,1207,1428,
+   * rideRequests/matching.ts:124, rideRequests/index.ts:632): иначе сид
+   * «учился бы» на выдуманных формулировках и однажды разошёлся бы с продом
+   * молча. Маркеры дедупа тоже рантайм-ные: `MATCH_NOTIFY_TRIP_ID_MARKER`
+   * (matching.ts) и `invitePairKey` (rideRequests/index.ts) — по ним бэк
+   * ищет дубль, поэтому повтор уведомления в деве подавится как дубль, а
+   * не создаст вторую строку.
+   */
+  const notificationTripRows = await prisma.trip.findMany({
+    select: {
+      id: true,
+      fromCity: true,
+      toCity: true,
+      price: true,
+      departureAt: true,
+      driverId: true,
+    },
+  });
+  const notificationTripById = new Map(
+    notificationTripRows.map((t) => [t.id, t]),
+  );
+  const nameById = new Map(
+    (await prisma.user.findMany({ select: { id: true, name: true } })).map(
+      (u) => [u.id, u.name],
+    ),
+  );
+  const inviteKey = (requestId: string, tripId: string): string =>
+    `[request:${requestId};trip:${tripId}]`;
+  // Формат маркера дедупа повторяет рантаймный. Импортировать константу из
+  // rideRequests/matching.ts нельзя: модуль создаёт PrismaClient на импорте,
+  // а сид работает на своём адаптере. Расхождение здесь ударит только на
+  // повторную отправку уведомления в деве (не на данные), поэтому формат
+  // задокументирован тут, а не вынесен в общий модуль.
+  const MATCH_MARKER = "ID: ";
+
+  const seedNotificationRow = (
+    n: SeedNotification,
+  ): SeedNotificationRow => {
+    const trip = n.tripId ? notificationTripById.get(n.tripId) : undefined;
+    if (n.tripId && !trip) {
+      throw new Error(`[seed] уведомление ${n.type} для ${n.userId}: нет поездки ${n.tripId}`);
+    }
+    if (n.actorId && !nameById.has(n.actorId)) {
+      throw new Error(`[seed] уведомление ${n.type} для ${n.userId}: нет актора ${n.actorId}`);
+    }
+    const route = trip ? `${trip.fromCity} → ${trip.toCity}` : "";
+    const actorName = n.actorId ? nameById.get(n.actorId) : n.actorName;
+    // Без начального значения: каждая ветвь switch либо присваивает, либо
+    // бросает на незнакомый тип — инициализация была бы мёртвой.
+    let title: string;
+    let body: string;
+    let action: string | undefined;
+
+    switch (n.type) {
+      case "booking_created":
+        title = "Новая заявка на место";
+        body = `Получена новая заявка на место ${n.seat ?? 1} в поездке ${route}`;
+        action = "created";
+        break;
+      case "booking_status_changed":
+        title = n.variant === "declined" ? "Заявка отклонена" : "Заявка подтверждена";
+        body = `Водитель ${n.variant === "declined" ? "отклонил" : "подтвердил"} вашу заявку в поездке ${route}`;
+        action = n.variant === "declined" ? "declined" : "confirmed";
+        break;
+      case "ride_request_match":
+        title = "Подходящая поездка";
+        body = `Нашлась подходящая поездка для вашего запроса. Откройте поездку и отправьте заявку на бронирование. ${MATCH_MARKER}${trip?.id ?? ""}`;
+        action = "matched";
+        break;
+      case "driver_invite": {
+        const requestId = seedRideRequestId("rr-dev-2");
+        title = "Водитель приглашает в поездку";
+        body = `Водитель позвал вас в свою поездку. Откройте поездку и забронируйте место. ${inviteKey(requestId, trip?.id ?? "")}`;
+        action = "invited";
+        break;
+      }
+      case "trip_cancelled":
+        title = "Поездка отменена";
+        body = `Водитель отменил поездку ${route}`;
+        action = "cancelled";
+        break;
+      case "trip_details_changed":
+        title = "Детали поездки изменены";
+        body = `Водитель изменил детали поездки ${route}. Проверьте время и место встречи.`;
+        action = "changed";
+        break;
+      case "trip_status_changed":
+        title = "Поездка завершена";
+        body = `Поездка ${route} завершена. Вы можете оставить отзыв.`;
+        action = "completed";
+        break;
+      case "review_approved":
+        title = "Отзыв опубликован";
+        body = "Ваш отзыв опубликован.";
+        action = "approved";
+        break;
+      case "review_rejected":
+        title = "Отзыв отклонён";
+        body = "Ваш отзыв отклонён модератором.";
+        action = "rejected";
+        break;
+      case "feedback_replied":
+        title = "Ответ на обращение";
+        body = "На ваше обращение ответил администратор.";
+        action = "replied";
+        break;
+      default:
+        throw new Error(`[seed] нет шаблона уведомления для типа ${n.type}`);
+    }
+
+    // deep-link на поездку. Сид-поездки на слагах, а бэк принимает только
+    // /trips/<uuid>, поэтому ссылка помечается легаси-флагом автоматически —
+    // вручную её проставлять не нужно, и она не может разойтись с tripId.
+    const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isSlugTrip = trip !== undefined && !uuidLike.test(trip.id);
+
+    return {
+      userId: n.userId,
+      type: n.type,
+      title,
+      body,
+      isRead: n.isRead,
+      actorName,
+      action,
+      recipientRole: SEED_NOTIFICATION_ROLES[n.type],
+      ...(trip === undefined
+        ? {}
+        : {
+            deepLink: `/trips/${trip.id}`,
+            legacySlugDeepLink: isSlugTrip,
+            tripFrom: trip.fromCity,
+            tripTo: trip.toCity,
+            tripPrice: trip.price,
+            tripDepartureAt: trip.departureAt,
+          }),
+    };
+  };
+
+
+  const notificationRows = notifications.map(seedNotificationRow);
+
+  // Уведомления собираются инлайн в main(), мимо validateSeedData, — из-за
+  // чего раньше туда проезжали строки, которых рантайм создать не может, и
+  // строки, описывающие несуществующие поездки. Проверяем СОБРАННЫЕ строки
+  // (снапшот уже выведен из данных) плюс правдоподобие самой связки.
+  const bookingPassengers = new Map<string, Set<string>>();
+  for (const trip of trips) {
+    const passengers = new Set<string>();
+    for (const booking of trip.bookings) passengers.add(booking.passengerId);
+    bookingPassengers.set(trip.id, passengers);
+  }
+  const requestById = new Map(rideRequests.map((rr) => [rr.id, rr]));
+
   for (const [index, n] of notifications.entries()) {
+    const row = notificationRows[index];
+    if (!row) throw new Error(`[seed] уведомление #${index} не собрано`);
+    const user = users.find((candidate) => candidate.id === n.userId);
+    if (!user) {
+      throw new Error(`Invalid user in seed notification for ${n.userId}`);
+    }
+    if (user.deletedAtDaysAgo !== undefined) {
+      throw new Error(`Notification for deleted user ${n.userId}`);
+    }
+    if (!SEED_NOTIFICATION_TYPES.has(n.type)) {
+      throw new Error(`Unknown notification type «${n.type}» for ${n.userId}`);
+    }
+    const role = row.recipientRole as NotificationRole | undefined;
+    if (
+      role !== undefined &&
+      !NOTIFICATION_ROLE_TYPES[role].has(n.type) &&
+      !SEED_NEUTRAL_NOTIFICATION_TYPES.has(n.type)
+    ) {
+      throw new Error(
+        `Notification type «${n.type}» is not scoped to role ${role} (${n.userId})`,
+      );
+    }
+    // Выключенный тумблер глушит всё, кроме критичных типов: такие строки
+    // рантайм не создал бы (createNotification).
+    if (
+      user.notificationsEnabled === false &&
+      !CRITICAL_NOTIFICATION_TYPES.has(n.type)
+    ) {
+      throw new Error(
+        `Non-critical notification «${n.type}» for ${n.userId} with notifications off`,
+      );
+    }
+
+    const trip = n.tripId ? notificationTripById.get(n.tripId) : undefined;
+    const passengers = n.tripId ? bookingPassengers.get(n.tripId) : undefined;
+
+    if (trip && row.deepLink !== `/trips/${trip.id}`) {
+      throw new Error(
+        `Notification ${n.type} for ${n.userId}: deep-link ${String(row.deepLink)} не указывает на поездку ${trip.id}`,
+      );
+    }
+    if (
+      row.deepLink !== undefined &&
+      row.legacySlugDeepLink !== true &&
+      !seedDeepLinkAllowed(row.deepLink as string)
+    ) {
+      throw new Error(
+        `deepLink «${row.deepLink}» is outside the allowlist (${n.userId}, ${n.type})`,
+      );
+    }
+
+    // Правдоподобие события: кому и от кого такое уведомление вообще могло
+    // прийти. Без этих проверок сид рассказывает несуществующие истории.
+    if (n.type === "booking_created") {
+      if (!trip) throw new Error(`booking_created без поездки (${n.userId})`);
+      if (trip.driverId !== n.userId) {
+        throw new Error(
+          `booking_created для ${n.userId}, но водитель поездки ${trip.id} — ${trip.driverId}`,
+        );
+      }
+      if (n.actorId && !passengers?.has(n.actorId)) {
+        throw new Error(
+          `booking_created: актор ${n.actorId} не бронирует поездку ${trip.id}`,
+        );
+      }
+    }
+    if (
+      (n.type === "booking_status_changed" ||
+        n.type === "trip_cancelled" ||
+        n.type === "trip_details_changed" ||
+        n.type === "trip_status_changed") &&
+      n.tripId
+    ) {
+      // Получатель либо едет этой поездкой, либо сам её водитель: водителю
+      // рантайм тоже шлёт «поездка завершена» по его СОБСТВЕННОЙ поездке, и
+      // брони у него нет.
+      if (!passengers?.has(n.userId) && trip?.driverId !== n.userId) {
+        throw new Error(
+          `${n.type} для ${n.userId}: нет брони на поездку ${n.tripId} и он не её водитель — уведомление неоткуда`,
+        );
+      }
+      // Актором таких событий в рантайме выступает водитель поездки.
+      if (n.actorId && trip && n.actorId !== trip.driverId) {
+        throw new Error(
+          `${n.type}: актор ${n.actorId} не водитель поездки ${n.tripId} (${trip.driverId})`,
+        );
+      }
+    }
+    if (n.type === "ride_request_match" || n.type === "driver_invite") {
+      if (!trip) throw new Error(`${n.type} без поездки (${n.userId})`);
+      const match = [...requestById.values()].find(
+        (rr) =>
+          rr.userId === n.userId &&
+          normalizeCityName(rr.fromCity) === normalizeCityName(trip.fromCity) &&
+          normalizeCityName(rr.toCity) === normalizeCityName(trip.toCity),
+      );
+      if (!match) {
+        throw new Error(
+          `${n.type} для ${n.userId}: нет заявки по маршруту ${trip.fromCity} → ${trip.toCity}`,
+        );
+      }
+      if (n.type === "ride_request_match" && match.status !== "active") {
+        throw new Error(
+          `ride_request_match ссылается на заявку в статусе ${match.status ?? "active"}`,
+        );
+      }
+      if (trip.driverId === n.userId) {
+        throw new Error(
+          `${n.type} для ${n.userId}: получатель не может быть водителем этой поездки`,
+        );
+      }
+    }
+  }
+
+  for (const [index, row] of notificationRows.entries()) {
+    // legacySlugDeepLink — служебная пометка для валидатора, в БД такого поля
+    // нет: вырезаем перед вставкой.
+    const { legacySlugDeepLink: _legacy, ...data } = row;
+    void _legacy;
     await prisma.notification.create({
       data: {
-        ...n,
+        ...data,
         createdAt: new Date(seedNow.getTime() - (index + 1) * 3 * 3_600_000),
       },
     });
@@ -2907,30 +3424,6 @@ async function main() {
       data: {
         ...f,
         createdAt: new Date(seedNow.getTime() - (index + 2) * dayMs),
-      },
-    });
-  }
-
-  // Create RideRequests
-  for (const rr of rideRequests) {
-    const earliestAt = new Date(
-      seedNow.getTime() + rr.daysFromNowEarliest * dayMs,
-    );
-    await prisma.rideRequest.create({
-      data: {
-        id: rr.id,
-        userId: rr.userId,
-        fromCityId: cityId(rr.fromCity),
-        toCityId: cityId(rr.toCity),
-        earliestAt,
-        latestAt: new Date(seedNow.getTime() + rr.daysFromNowLatest * dayMs),
-        seats: rr.seats ?? 1,
-        status: rr.status ?? "active",
-        expiresAt: new Date(
-          seedNow.getTime() + (rr.expiresInDays ?? 7) * dayMs,
-        ),
-        // Заявка создана за 2 дня до начала окна поиска.
-        createdAt: new Date(earliestAt.getTime() - 2 * dayMs),
       },
     });
   }
