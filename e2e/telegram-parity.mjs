@@ -418,12 +418,14 @@ await shot(page, "notification-read");
 
   await runStep("support: обращение в UI + ответ админа виден", async () => {
     await hashUrl(page, "/profile/support");
+    // Форма обращения живёт во всплывающем окне: страница показывает FAQ и
+    // историю, а написать новое — кнопка под списком «Мои обращения».
+    await page.getByRole("button", { name: "Создать обращение" }).click();
     await page.locator("#support-subject").fill("Нет уведомления");
     await page.locator("#support-text").fill(FEEDBACK_TEXT);
-    // На странице две кнопки «Отправить» (запрос попутчика + поддержка) —
-    // целимся в секцию «Связаться с нами».
+    // «Отправить» есть и в других окнах — целимся в это, по видимым полям.
     await page
-      .locator("section", { hasText: "Связаться с нами" })
+      .locator('[role="dialog"]')
       .getByRole("button", { name: "Отправить" })
       .click();
     await page.getByText("Обращение отправлено").waitFor({ timeout: 30000 });

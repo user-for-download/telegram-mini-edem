@@ -79,7 +79,7 @@ function thresholdFor(sizePx, weight) {
  * `pick` — селектор внутри page.evaluate; возвращает массив описаний
  * { label, fontSize, fontWeight }. Контраст считается там же, в браузере.
  */
-async function measure(route, pick, theme, pseudo = null) {
+async function measure(route, pick, theme, pseudo = null, prepare = null) {
   const client = await context.newPage();
   const errors = [];
   client.on("pageerror", (e) => errors.push(String(e)));
@@ -87,6 +87,12 @@ async function measure(route, pick, theme, pseudo = null) {
     localStorage.setItem("edem:theme-override", t);
   }, theme);
   await client.goto(`${TG_BASE}/#${route}`, { waitUntil: "networkidle" });
+  // Подготовка перед замером: например, открыть окно с формой — носители
+  // лежат в портале и без клика их на странице просто нет.
+  if (prepare?.click) {
+    await client.getByRole(prepare.role ?? "button", { name: prepare.click }).click();
+    await client.waitForSelector(prepare.waitFor);
+  }
 
   // Всё считается ОДНИМ evaluate: и поиск носителей, и контраст. Раньше
   // функции передавались строками и собирались через new Function — это
@@ -197,8 +203,16 @@ async function measure(route, pick, theme, pseudo = null) {
  * что был с протечкой cleanup: проверка, которая проходит, ничего не
  * проверяя.
  */
-async function contrastStep({ name, route, pick, theme, requireMin = 1, pseudo = null }) {
-  const { rows, errors } = await measure(route, pick, theme, pseudo);
+async function contrastStep({
+  name,
+  route,
+  pick,
+  theme,
+  requireMin = 1,
+  pseudo = null,
+  prepare = null,
+}) {
+  const { rows, errors } = await measure(route, pick, theme, pseudo, prepare);
   if (errors.length) throw new Error(`pageerror: ${errors[0]}`);
   if (rows.length < requireMin) {
     throw new Error(
@@ -331,6 +345,9 @@ for (const theme of ["light", "dark"]) {
       theme,
       requireMin: 1,
       pseudo: "::placeholder",
+      // Форма обращения — во всплывающем окне: без клика носителей на
+      // странице нет и шаг упал бы на «найдено 0», а не на дефекте тона.
+      prepare: { click: "Создать обращение", waitFor: "#support-subject" },
       pick: () =>
         [...document.querySelectorAll("input[placeholder], textarea[placeholder]")].filter(
           (el) => el.getAttribute("placeholder")?.trim(),

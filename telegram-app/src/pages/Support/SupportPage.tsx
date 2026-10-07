@@ -1,30 +1,16 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { VisuallyHidden } from "@telegram-apps/telegram-ui";
-import {
-  Accordion,
-  Caption,
-  Input,
-  Text,
-  Textarea,
-} from "@telegram-apps/telegram-ui";
+import { Accordion, Caption, Text } from "@telegram-apps/telegram-ui";
 import { Section } from "@/ui/Section";
-import { Notice } from "@/ui/Notice";
 import { AS_BUTTON } from "@/ui/classes";
-import { HINT, PROSE } from "@/ui/classes";
+import { PROSE } from "@/ui/classes";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { Field } from "@/ui/Field";
-import { CharCounter } from "@/ui/CharCounter";
 import { Button } from "@/ui/Button";
 
-import { MessageSquareText, Send } from "lucide-react";
-import {
-  FEEDBACK_SUBJECT_MAX_LENGTH,
-  FEEDBACK_TEXT_MAX_LENGTH,
-  type UserFeedbackDto,
-} from "@edem/contracts";
+import { PlusCircle } from "lucide-react";
+import { type UserFeedbackDto } from "@edem/contracts";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
-import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { AppealForm } from "@/components/AppealForm";
@@ -33,15 +19,10 @@ import { SectionBody } from "@/ui/SectionBody";
 import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
 import { moscowNumericDate } from "@/utils/date";
-import {
-  useCreateFeedbackMutation,
-  useMyFeedbacksQuery,
-} from "@/queries/useSupportQuery";
-import {
-  feedbackErrorMessage,
-  normalizeSupportForm,
-  validateSupportForm,
-} from "./supportValidation";
+import { useMyFeedbacksQuery } from "@/queries/useSupportQuery";
+import { useModalBack } from "@/utils/modalBack";
+import { haptic } from "@/utils/haptics";
+import { FeedbackModal } from "./FeedbackModal";
 import styles from "./SupportPage.module.css";
 
 /**
@@ -151,42 +132,12 @@ function FeedbackCard({
 export function SupportPage() {
   const [openedFaqId, setOpenedFaqId] = useState<string | null>(null);
   const [openedFeedbackId, setOpenedFeedbackId] = useState<string | null>(null);
-  const [subject, setSubject] = useState("");
-  const [text, setText] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  // Защита от двойного сабмита: ref синхронен (в отличие от state),
-  // второй клик до ре-рендера не отправит второй запрос (защита от двойного сабмита).
-  const submitGuard = useRef(false);
+  // Форма обращения — во всплывающем окне (FeedbackModal): нажал
+  // «Создать обращение» под списком, Back закрывает через useModalBack.
+  const [createOpen, setCreateOpen] = useState(false);
+  useModalBack(() => setCreateOpen(false), createOpen);
 
   const myFeedbacks = useMyFeedbacksQuery();
-  const create = useCreateFeedbackMutation();
-
-  const submit = () => {
-    if (create.isPending || submitGuard.current) return;
-    const validationError = validateSupportForm(subject, text);
-    if (validationError) {
-      setFormError(validationError);
-      return;
-    }
-    setFormError(null);
-    setSuccess(false);
-    submitGuard.current = true;
-    create.mutate(normalizeSupportForm(subject, text), {
-      onSettled: () => {
-        submitGuard.current = false;
-      },
-      onSuccess: () => {
-        setSubject("");
-        setText("");
-        setSuccess(true);
-      },
-      onError: (error) => setFormError(feedbackErrorMessage(error)),
-    });
-  };
-
-  const canSubmit =
-    subject.trim().length > 0 && text.trim().length > 0 && !create.isPending;
 
   // Бан mid-session: requireUser отвечает 403 — терминальный экран плюс
   // рабочая форма обжалования (публичный appeal с initData, без токена).
@@ -247,70 +198,6 @@ export function SupportPage() {
           </SectionBody>
         </Section>
 
-        <Section header="Связаться с нами" aria-label="Связаться с нами">
-          <SectionBody>
-            <MutationError error={create.error} />
-            <Field label="Тема" id="support-subject">
-              {(field) => (
-                <Input
-                  {...field}
-                  before={<MessageSquareText size={16} className={HINT} />}
-                  placeholder="Например: не приходит уведомление"
-                  value={subject}
-                  maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
-                  status={formError ? "error" : undefined}
-                  onChange={(event) => {
-                    setSubject(event.target.value);
-                    if (formError) setFormError(null);
-                    if (success) setSuccess(false);
-                  }}
-                />
-              )}
-            </Field>
-            <Field label="Сообщение" id="support-text">
-              {(field) => (
-                <Textarea
-                  {...field}
-                  rows={4}
-                  maxLength={FEEDBACK_TEXT_MAX_LENGTH}
-                  placeholder="Расскажите подробнее, что произошло"
-                  value={text}
-                  aria-invalid={Boolean(formError)}
-                  status={formError ? "error" : undefined}
-                  onChange={(event) => {
-                    setText(event.target.value);
-                    if (formError) setFormError(null);
-                    if (success) setSuccess(false);
-                  }}
-                />
-              )}
-            </Field>
-            {text.length > 0 && (
-              <CharCounter value={text.length} max={FEEDBACK_TEXT_MAX_LENGTH} />
-            )}
-            {formError && (
-              <Notice tone="danger" variant="text">
-                {formError}
-              </Notice>
-            )}
-            {success && (
-              <Notice tone="success" variant="text">
-                Обращение отправлено — мы ответим вам как можно скорее
-              </Notice>
-            )}
-            <Button
-              stretched
-              size="l"
-              before={<Send size={16} />}
-              loading={create.isPending}
-              disabled={!canSubmit}
-              onClick={submit}
-            >
-              Отправить
-            </Button>
-          </SectionBody>
-        </Section>
-
         <Section header="Мои обращения">
           <SectionBody>
             <QueryState
@@ -342,10 +229,25 @@ export function SupportPage() {
                 </Stack>
               )}
             </QueryState>
+            {/* Написать новое обращение — из окна: сама страница отвечает за
+                FAQ и историю, а форма на весь экран занимала бы его
+                целиком. */}
+            <Button
+              stretched
+              size="m"
+              before={<PlusCircle size={16} />}
+              onClick={() => {
+                haptic.light();
+                setCreateOpen(true);
+              }}
+            >
+              Создать обращение
+            </Button>
           </SectionBody>
         </Section>
 
       </Page>
+      <FeedbackModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </>
   );
 }

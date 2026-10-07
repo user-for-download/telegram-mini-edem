@@ -86,14 +86,20 @@ describe("SupportPage: FAQ (порт SupportPanel)", () => {
   });
 });
 
-describe("SupportPage: форма обратной связи (лимиты 100/2000)", () => {
-  it("поля с браузерными maxLength из контракта", () => {
+describe("SupportPage: форма — во всплывающем окне", () => {
+  it("под «Мои обращения» есть кнопка «Создать обращение»", () => {
     const html = renderPage();
 
-    expect(html).toContain("Связаться с нами");
-    expect(html).toMatch(/maxlength="100"/i);
-    expect(html).toMatch(/maxlength="2000"/i);
-    expect(html).toContain("Отправить");
+    expect(html).toContain("Создать обращение");
+  });
+
+  it("самой формы на странице нет — она в окне (портал в SSR не попадает)", () => {
+    // Регресс на возврат к слипшейся форме: полноэкранная форма занимала бы
+    // страницу целиком, ради неё и вынесена в окно.
+    const html = renderPage();
+
+    expect(html).not.toContain('id="support-subject"');
+    expect(html).not.toContain('id="support-text"');
   });
 });
 
@@ -123,16 +129,15 @@ describe("SupportPage: мои обращения", () => {
 });
 
 describe("SupportPage: структура экрана", () => {
-  it("порядок секций: FAQ → форма → мои обращения", () => {
-    // Решение владельца: FAQ первым (чаще вопрос решается справкой), потом
-    // форма обращения, потом история. Закрепляем порядок, а не только
-    // наличие — «всё в 1» начинается именно с порядка блоков.
+  it("порядок секций: FAQ → мои обращения → кнопка создания", () => {
+    // FAQ первым (чаще вопрос решается справкой), потом история обращений,
+    // и под ней — кнопка открытия формы в окне.
     const html = renderPage();
     expect(html.indexOf("Частые вопросы")).toBeLessThan(
-      html.indexOf("Связаться с нами"),
-    );
-    expect(html.indexOf("Связаться с нами")).toBeLessThan(
       html.indexOf("Мои обращения"),
+    );
+    expect(html.indexOf("Мои обращения")).toBeLessThan(
+      html.indexOf("Создать обращение"),
     );
   });
 
