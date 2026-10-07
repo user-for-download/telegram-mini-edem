@@ -65,23 +65,36 @@ describe("RideRequestFeedSection", () => {
 
     expect(html).toContain("Кто ищет попутку");
     expect(html).toContain("Вологда → Череповец");
-    expect(html).toContain("ищут 2 человека");
-    expect(html).toContain("3 места");
+    // Подпись строки ЦЕЛИКОМ: так ловится и лишнее слово («ищут»), и обрыв
+    // текста. Проверять по кускам нельзя — те же слова есть в aria-label, и
+    // ассерт проходил бы по нему, а не по видимой строке.
+    expect(html).toContain("2 человека · 3 места · 1 июня, 09:00");
     // Время — по Москве (06:00Z → 09:00), иначе в строке было бы UTC.
     expect(html).toContain("09:00");
     expect(html).not.toContain("06:00");
   });
 
   it("люди и места — разные числа: один человек может просить три места", () => {
-    // «ищут 1 человека» не значит «нужно 1 место», поэтому в строке оба.
+    // «1 человек» не значит «нужно 1 место», поэтому в строке оба.
     mockFeed.mockReturnValue(
       queryState({ data: [item({ people: 1, seats: 3 })] }),
     );
 
     const html = renderSection();
 
-    expect(html).toContain("ищут 1 человек");
-    expect(html).toContain("3 места");
+    expect(html).toContain("1 человек · 3 места");
+  });
+
+  it("строка переносится, а не растягивается за карточку", () => {
+    // Кит по умолчанию рисует подпись в одну строку с nowrap, и её
+    // min-content шире карточки: строка вылезала за рамку секции (553px при
+    // секции 356px), а шеврон уезжал за карточку. `multiline` это лечит;
+    // пиним класс кита — сверять при bump версии (как и другие :global-хеши).
+    mockFeed.mockReturnValue(queryState({ data: [item()] }));
+
+    const html = renderSection();
+
+    expect(html).toContain("tgui-6c49dadccf648a5b");
   });
 
   it("дата — человеческая, а не ISO", () => {
