@@ -1,9 +1,9 @@
-// SSR-тесты ленты заявок попутчиков на главной.
+// SSR-тесты ленты спроса на главной (суммаризатор по маршрутам).
 //
-// Сортировку «ближайшие» проверяет бэк (`earliestAt asc`, интеграционный тест
-// `backend/tests/integration/ride-requests.test.ts`), здесь — контракт разметки:
-// заголовок, строка заявки, подпись, скрытие при пустой ленте и тап в поиск по
-// маршруту. Паттерн tripsPages.test.tsx (SSR, без testing-library).
+// Агрегацию и сортировку проверяет бэк (интеграционный тест
+// `backend/tests/integration/ride-requests.test.ts`): тут контракт разметки —
+// заголовок, «люди + места + ближайшая дата», скрытие при пустой ленте и
+// анонимность (в строке нет id заявки). Паттерн tripsPages.test.tsx (SSR).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -16,19 +16,14 @@ vi.mock("@/queries/useRideRequestsQuery", () => ({
 
 import { RideRequestFeedSection } from "@/components/Section/RideRequestFeedSection";
 
-function request(overrides: Record<string, unknown> = {}) {
+function item(overrides: Record<string, unknown> = {}) {
   return {
-    id: "11111111-1111-4111-8111-111111111111",
     fromCity: { id: "c-1", name: "Вологда" },
     toCity: { id: "c-2", name: "Череповец" },
+    people: 2,
+    seats: 3,
     // 06:00Z = 09:00 МСК: в строке должно быть 09:00, а не 06:00 UTC.
-    earliestAt: "2030-06-01T06:00:00.000Z",
-    latestAt: "2030-06-01T15:00:00.000Z",
-    seats: 2,
-    status: "active",
-    expiresAt: "2030-06-01T15:00:00.000Z",
-    createdAt: "2030-05-01T06:00:00.000Z",
-    updatedAt: "2030-05-01T06:00:00.000Z",
+    nextAt: "2030-06-01T06:00:00.000Z",
     ...overrides,
   };
 }
@@ -63,21 +58,34 @@ afterEach(() => {
 });
 
 describe("RideRequestFeedSection", () => {
-  it("строка: маршрут, московские дата и время, места", () => {
-    mockFeed.mockReturnValue(queryState({ data: [request()] }));
+  it("строка: маршрут, люди, места и ближайшая дата по Москве", () => {
+    mockFeed.mockReturnValue(queryState({ data: [item()] }));
 
     const html = renderSection();
 
     expect(html).toContain("Кто ищет попутку");
     expect(html).toContain("Вологда → Череповец");
+    expect(html).toContain("ищут 2 человека");
+    expect(html).toContain("3 места");
     // Время — по Москве (06:00Z → 09:00), иначе в строке было бы UTC.
     expect(html).toContain("09:00");
     expect(html).not.toContain("06:00");
-    expect(html).toContain("2 места");
   });
 
-  it("дата окна — человеческая, а не ISO", () => {
-    mockFeed.mockReturnValue(queryState({ data: [request()] }));
+  it("люди и места — разные числа: один человек может просить три места", () => {
+    // «ищут 1 человека» не значит «нужно 1 место», поэтому в строке оба.
+    mockFeed.mockReturnValue(
+      queryState({ data: [item({ people: 1, seats: 3 })] }),
+    );
+
+    const html = renderSection();
+
+    expect(html).toContain("ищут 1 человек");
+    expect(html).toContain("3 места");
+  });
+
+  it("дата — человеческая, а не ISO", () => {
+    mockFeed.mockReturnValue(queryState({ data: [item()] }));
 
     const html = renderSection();
 
@@ -85,16 +93,27 @@ describe("RideRequestFeedSection", () => {
     expect(html).not.toContain("2030-06-01");
   });
 
-  it("имя строки для скринридера несёт маршрут, дату, время и места", () => {
-    mockFeed.mockReturnValue(queryState({ data: [request()] }));
+  it("имя строки для скринридера несёт маршрут, людей, места и дату", () => {
+    mockFeed.mockReturnValue(queryState({ data: [item()] }));
 
     const html = renderSection();
 
-    expect(html).toContain("Нужен попутчик Вологда — Череповец, 1 июня, 09:00, 2 места");
+    expect(html).toContain(
+      "По маршруту Вологда — Череповец ищут 2 человека и 3 места, ближайшая 1 июня в 09:00",
+    );
+  });
+
+  it("строка не содержит id заявки: лента анонимная", () => {
+    mockFeed.mockReturnValue(queryState({ data: [item()] }));
+
+    const html = renderSection();
+
+    // В агрегате нет ни автора, ни id отдельных заявок — только маршрут.
+    expect(html).not.toContain("11111111-1111-4111-8111-111111111111");
   });
 
   it("нативная кнопка: строка фокусируется и опознаётся как кнопка", () => {
-    mockFeed.mockReturnValue(queryState({ data: [request()] }));
+    mockFeed.mockReturnValue(queryState({ data: [item()] }));
 
     const html = renderSection();
 
@@ -105,7 +124,7 @@ describe("RideRequestFeedSection", () => {
   });
 
   it("заголовок секции — не h1 (имя экрана принадлежит странице)", () => {
-    mockFeed.mockReturnValue(queryState({ data: [request()] }));
+    mockFeed.mockReturnValue(queryState({ data: [item()] }));
 
     const html = renderSection();
 

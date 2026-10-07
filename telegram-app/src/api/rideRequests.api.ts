@@ -1,18 +1,20 @@
 import { z } from "zod";
 import {
+  rideRequestFeedItemSchema,
   rideRequestSchema,
   type CreateRideRequestDto,
   type RideRequest,
+  type RideRequestFeedItem,
   type RideRequestStatus,
   type UpdateRideRequestDto,
 } from "@edem/contracts";
 import { apiClient } from "./client";
 
-// Лента заявок попутчиков для главной: бэк отдаёт `{ items }` без пагинации
-// (витрина на экран, не список с прокруткой). Автор в ответе не отдаётся —
-// лента анонимная.
+// Лента спроса для главной: бэк отдаёт `{ items }` без пагинации (витрина на
+// экран, не список с прокруткой). Элемент — АГРЕГАТ по маршруту, а не заявка:
+// людей, мест и ближайшее окно. Автора в ответе нет — лента анонимная.
 const rideRequestFeedSchema = z.object({
-  items: z.array(rideRequestSchema),
+  items: z.array(rideRequestFeedItemSchema),
 });
 
 const rideRequestListSchema = z.object({
@@ -36,8 +38,8 @@ export const rideRequestsApi = {
       rideRequestListSchema.transform(({ items }) => items),
     ),
 
-  /** Чужие активные заявки, ближайшее окно сверху. */
-  feed: (signal?: AbortSignal): Promise<RideRequest[]> =>
+  /** Агрегаты по маршрутам: по спросу, затем по ближайшему окну. */
+  feed: (signal?: AbortSignal): Promise<RideRequestFeedItem[]> =>
     apiClient.request(
       "/ride-requests/feed",
       { signal },

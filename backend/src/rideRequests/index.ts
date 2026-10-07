@@ -22,6 +22,9 @@ import { serializeRideRequest } from "./serializers.js";
 const MAX_ACTIVE_REQUESTS = 3;
 // Потолок ленты главной: секция на экране, 20 строк — уже не список.
 const FEED_MAX_LIMIT = 20;
+// Пул заявок для агрегации ленты: активных заявок у человека до трёх, поэтому
+// 500 активных заявок — заведомо больше ожидаемого спроса.
+const FEED_AGGREGATE_POOL = 500;
 const rideRequestMutationLimiter = createUserRateLimiter({
   windowMs: 60 * 60 * 1000,
   max: devRateMax(30),
@@ -223,26 +226,34 @@ rideRequestsRouter.get("/matching", publicReadLimiter, async (c) => {
 });
 
 /**
- * Лента заявок попутчиков для главной (`/ride-requests/feed`).
+ * Лента спроса для главной (`/ride-requests/feed`): СУММАРИЗАТОР по маршрутам.
  *
- * Отличие от `/matching`: `/matching` — инструмент водителя под конкретный
- * маршрут и окно (опубликовал поездку → покажи подходящие заявки), а `feed` —
- * витрина спроса: «кто сейчас ищет попутку» (заявку создаёт пассажир — он и
- * ищет место, а не ищет попутчика). Поэтому без фильтров по
- * маршруту, сортировка по БЛИЖАЙШЕМУ окну, а не по свежести.
+ * Что показывает: одну строку на пару городов, а не по заявке. «Вологда →
+ * Череповец: ищут 2 человека · 2 места · ближайшая завтра, 08:00». Список
+ * заявок занимал бы десяток строк одного и того же маршрута и не давал масштаба
+ * спроса, а масштаб — это и есть смысл витрины.
  *
- * `earliestAt asc` — «ближайшие»: у профиля нет ни города, ни координат,
- * сортировать географически нечем (см. user.schema.ts), и в ленте видно
- * именно «кто едет завтра», а не «кто созрел пять минут назад».
- * Второй ключ — `id`, чтобы порядок не прыгал между одинаковыми окнами.
+ * Отличие от `/matching`: тот — инструмент водителя под конкретный маршрут и
+ * окно, feed — общая лента без фильтров. Заявку создаёт пассажир (он ищет
+ * место), поэтому в заголовке «кто ищет попутку», а не «кого ищут попутчиком».
  *
- * Чужие и активные: свои заявки пользователь и так видит в профиле, а смешивать
- * свои намерения с чужими в одной ленте нельзя. Истёкшие окна отсекаем по
- * `latestAt`, просроченные — по `expiresAt` (тот же смысл, что у `/matching`).
+ * `people` (разные люди) и `seats` (сумма мест) — разные числа: человек может
+ * просить несколько мест, поэтому «ищут 1 человека» не значит «нужно 1 место».
+ * Людей считаем через `Set` по userId: активных заявок у человека до трёх, и
+ * две на одном маршруте не должны превращаться в «2 человека».
  *
- * Имена не отдаём: ответ — маршрут, окно и места, без автора (та же форма
- * `rideRequestSchema`, что и у списка). Анонимная лента не создаёт повода
- * показывать, кто именно ищет попутчика.
+ * `count(distinct userId)` Prisma `groupBy` не умеет, поэтому агрегация в JS по
+ * ограниченному пулу. Пул (FEED_AGGREGATE_POOL) — честная граница: при его
+ * превышении числа занижены, то есть «ищут 12 человек» может оказаться «ищут
+ * ≥12». Пул велик относительно ожидаемой нагрузки (3 активные заявки на
+ * человека), но ограничение задокументировано, а не спрятано.
+ *
+ * Сортировка — по спросу (`seats desc`), затем по ближайшему окну: маршрут, где
+ * просят больше мест, и есть «популярное направление», а дата лишь разводит
+ * равные по спросу.
+ *
+ * Имена не отдаём поштучно: в ответе агрегата нет ни id, ни автора — лента
+ * анонимная и не показывает, кто именно ищет попутку.
  */
 rideRequestsRouter.get("/feed", publicReadLimiter, async (c) => {
   const rawLimit = c.req.query("limit");
@@ -253,26 +264,85 @@ rideRequestsRouter.get("/feed", publicReadLimiter, async (c) => {
     parsedLimit > FEED_MAX_LIMIT
   ) {
     return c.json(
-      {
-        code: ERROR_CODES.VALIDATION_FAILED,
-        message: "Invalid limit",
-      },
+      { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid limit" },
       400,
     );
   }
   const now = new Date();
-  const items = await db.rideRequest.findMany({
+  const requests = await db.rideRequest.findMany({
     where: {
       userId: { not: c.get("user").id },
       status: "active",
       expiresAt: { gt: now },
       latestAt: { gt: now },
     },
-    include: includeCities,
-    orderBy: [{ earliestAt: "asc" }, { id: "asc" }],
-    take: parsedLimit,
+    select: {
+      userId: true,
+      fromCityId: true,
+      toCityId: true,
+      seats: true,
+      earliestAt: true,
+    },
+    orderBy: { earliestAt: "asc" },
+    take: FEED_AGGREGATE_POOL,
   });
-  return c.json({ items: items.map(serializeRideRequest) });
+
+  type Group = {
+    fromCityId: string;
+    toCityId: string;
+    seats: number;
+    nextAt: number;
+    people: Set<string>;
+  };
+  const groups = new Map<string, Group>();
+  for (const request of requests) {
+    // Обратное направление — отдельная строка: «туда» и «обратно» разные
+    // маршруты, и спрос на них не складывается.
+    const key = `${request.fromCityId}:${request.toCityId}`;
+    const group = groups.get(key);
+    if (group) {
+      group.people.add(request.userId);
+      group.seats += request.seats;
+      // Запросы отсортированы по earliestAt, поэтому первый — и есть ближайший.
+    } else {
+      groups.set(key, {
+        fromCityId: request.fromCityId,
+        toCityId: request.toCityId,
+        seats: request.seats,
+        nextAt: request.earliestAt.getTime(),
+        people: new Set([request.userId]),
+      });
+    }
+  }
+
+  const ranked = [...groups.values()].sort(
+    (a, b) => b.seats - a.seats || a.nextAt - b.nextAt,
+  );
+  const top = ranked.slice(0, parsedLimit);
+  if (top.length === 0) return c.json({ items: [] });
+
+  // Имена городов одним запросом: groupBy/JS-агрегация их не включают.
+  const cityIds = [...new Set(top.flatMap((g) => [g.fromCityId, g.toCityId]))];
+  const cities = await db.city.findMany({ where: { id: { in: cityIds } } });
+  const cityById = new Map(cities.map((city) => [city.id, city]));
+
+  const items = top.flatMap((group) => {
+    const from = cityById.get(group.fromCityId);
+    const to = cityById.get(group.toCityId);
+    // Города нет в справочнике (удалён при смене справочника) — строку без
+    // названий показать нечем, выбрасываем, а не показываем id.
+    if (!from || !to) return [];
+    return [
+      {
+        fromCity: { id: from.id, name: from.name },
+        toCity: { id: to.id, name: to.name },
+        people: group.people.size,
+        seats: group.seats,
+        nextAt: new Date(group.nextAt).toISOString(),
+      },
+    ];
+  });
+  return c.json({ items });
 });
 
 rideRequestsRouter.patch(

@@ -32,3 +32,22 @@ export const rideRequestSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 export type RideRequest = z.infer<typeof rideRequestSchema>;
+
+/**
+ * Строка ленты спроса (`GET /ride-requests/feed`): агрегат по маршруту, а не
+ * отдельная заявка.
+ *
+ * `people` и `seats` — разные числа, и это не опечатка: человек может просить
+ * несколько мест (компания), поэтому «ищут N человек» не значит «нужно N мест».
+ * `nextAt` — ближайшее начало окна среди активных заявок маршрута.
+ */
+export const rideRequestFeedItemSchema = z.object({
+  fromCity: cityDtoSchema,
+  toCity: cityDtoSchema,
+  /** Сколько разных людей оставило заявку на этот маршрут. */
+  people: z.number().int().min(1),
+  /** Сколько мест суммарно просят по маршруту. */
+  seats: z.number().int().min(1).max(MAX_SEATS * 1000),
+  nextAt: z.string().datetime(),
+});
+export type RideRequestFeedItem = z.infer<typeof rideRequestFeedItemSchema>;

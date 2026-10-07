@@ -12,7 +12,10 @@ interface RideRequestFeedSectionProps {
 }
 
 /**
- * Лента заявок на попутку на главной — «кто ищет попутку».
+ * Лента спроса на главной — суммаризатор по маршрутам: одна строка на пару
+ * городов («Вологда → Череповец: ищут 2 человека · 2 места · ближайшая
+ * завтра, 08:00»), а не строка на заявку. Список заявок занимал десяток строк
+ * одного маршрута и не показывал масштаб спроса.
  *
  * Заявку создаёт ПАССАЖИР (он ищет место), а не водитель (он ищет
  * попутчика): формулировки вроде «кого ищут попутчиком» читались наоборот
@@ -33,6 +36,10 @@ interface RideRequestFeedSectionProps {
  * Тап ведёт в поиск по маршруту заявки — то же, что делали направления:
  * водитель сразу видит, есть ли поездки на этот путь.
  *
+ * «Люди» и «места» — разные числа и показываются оба: человек может просить
+ * несколько мест, поэтому «ищут 1 человека» не значит «нужно 1 место». Порядок
+ * строк задаёт бэк: по спросу (места), затем по ближайшему окну.
+ *
  * Загрузка, пусто и ошибка — секция прячется (как NextTripBanner): витрина
  * спроса не должна занимать место на главной заголовком без строк.
  */
@@ -50,10 +57,16 @@ export function RideRequestFeedSection({
     // (VisuallyHidden h1 в HomePage), а не у секции.
     <Section header="Кто ищет попутку">
       {items.map((request) => {
-        const departure = new Date(request.earliestAt);
-        const date = dayLabel(moscowDayKey(departure));
-        const time = moscowTimeLabel(departure);
+        const nearest = new Date(request.nextAt);
+        const date = dayLabel(moscowDayKey(nearest));
+        const time = moscowTimeLabel(nearest);
         const route = `${request.fromCity.name} — ${request.toCity.name}`;
+        const people = `${request.people} ${plural(
+          request.people,
+          "человек",
+          "человека",
+          "человек",
+        )}`;
         const seats = `${request.seats} ${plural(
           request.seats,
           "место",
@@ -62,7 +75,7 @@ export function RideRequestFeedSection({
         )}`;
         return (
           <Cell
-            key={request.id}
+            key={`${request.fromCity.id}:${request.toCity.id}`}
             // Нативная кнопка обязательна (фасад, реестр #12): без
             // Component="button" строка не фокусируется Tab'ом и не
             // опознаётся скринридером как кнопка.
@@ -70,7 +83,7 @@ export function RideRequestFeedSection({
             type="button"
             onClick={() => onSelect(request.fromCity.id, request.toCity.id)}
             after={<ChevronRight />}
-            subtitle={`${date}, ${time} · ${seats}`}
+            subtitle={`ищут ${people} · ${seats} · ближайшая ${date}, ${time}`}
             before={
               <IconContainer>
                 <Route aria-hidden />
@@ -78,7 +91,7 @@ export function RideRequestFeedSection({
             }
             // Имя строки целиком: «куда ехать» + «когда» + «сколько мест» —
             // иначе скринридер читает только города, а время и места теряются.
-            aria-label={`Нужен попутчик ${route}, ${date}, ${time}, ${seats}`}
+            aria-label={`По маршруту ${route} ищут ${people} и ${seats}, ближайшая ${date} в ${time}`}
           >
             {`${request.fromCity.name} → ${request.toCity.name}`}
           </Cell>

@@ -339,18 +339,14 @@ describe("HomePage", () => {
   });
 });
 
-function makeFeedRequest() {
+/** Агрегат ленты спроса: маршрут + люди + места + ближайшее окно. */
+function makeFeedItem() {
   return {
-    id: "11111111-1111-4111-8111-111111111111",
     fromCity: { id: "c-1", name: "Вологда" },
     toCity: { id: "c-2", name: "Череповец" },
-    earliestAt: "2030-06-01T06:00:00.000Z",
-    latestAt: "2030-06-01T18:00:00.000Z",
-    seats: 2,
-    status: "active",
-    expiresAt: "2030-06-01T18:00:00.000Z",
-    createdAt: "2030-05-01T06:00:00.000Z",
-    updatedAt: "2030-05-01T06:00:00.000Z",
+    people: 2,
+    seats: 3,
+    nextAt: "2030-06-01T06:00:00.000Z",
   };
 }
 
@@ -386,7 +382,7 @@ describe("HomePage: имя экрана принадлежит странице,
   });
 
   it("секция ленты заявок — заголовок второго уровня, не h1", () => {
-    mockUseFeed.mockReturnValue(queryState({ data: [makeFeedRequest()] }));
+    mockUseFeed.mockReturnValue(queryState({ data: [makeFeedItem()] }));
 
     const html = render(<HomePage />);
 
