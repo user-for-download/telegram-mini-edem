@@ -44,6 +44,17 @@ vi.mock("@/queries/useTripsQuery", () => ({
   useInfiniteMyTripsQuery: mockUseMyTrips,
 }));
 vi.mock("@/queries/vehicle", () => ({ useVehicleQuery: mockUseVehicle }));
+// Лента заявок попутчиков на главной — тоже нужен мок: без него хук уходит в
+// useQuery, которому на странице теста нечем кормить (нет QueryClientProvider).
+vi.mock("@/queries/useRideRequestsQuery", () => ({
+  useRideRequestFeedQuery: () => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
 // Окно создания монтируется порталом, который в jsdom не переживает контекст
 // AppRoot (tgui useAppRootContext) — замокано маркером: проверяем контракт
 // главной, форму тестируют SSR-тесты и браузер.

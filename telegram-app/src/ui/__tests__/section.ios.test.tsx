@@ -62,13 +62,13 @@ describe("Section iOS", () => {
   it('headingLevel="h1" работает и на iOS', () => {
     const { container } = render(
       <AppRoot platform="ios">
-        <Section header="Популярные направления" headingLevel="h1">
+        <Section header="Кого ищут попутчиком" headingLevel="h1">
           тело
         </Section>
       </AppRoot>,
     );
     expect(container.querySelector("h1")?.textContent).toBe(
-      "Популярные направления",
+      "Кого ищут попутчиком",
     );
   });
 });

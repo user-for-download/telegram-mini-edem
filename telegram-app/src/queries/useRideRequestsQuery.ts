@@ -12,6 +12,23 @@ export const RIDE_REQUEST_KEYS = {
   all: ["ride-requests"] as const,
 };
 
+/**
+ * Лента заявок попутчиков для главной: чужие активные, ближайшее окно сверху.
+ *
+ * Отдельный ключ, а не `RIDE_REQUEST_KEYS.all`: лента и список моих заявок —
+ * разные данные с разным временем жизни. Пересчитывать список после публикации
+ * (как это делает `useRideRequestMutation`) здесь незачем — заявок чужих мы не
+ * создаём и не отменяем.
+ */
+export function useRideRequestFeedQuery(enabled = true) {
+  return useQuery({
+    queryKey: [...RIDE_REQUEST_KEYS.all, "feed"] as const,
+    queryFn: ({ signal }) => rideRequestsApi.feed(signal),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
 export function useRideRequestsQuery(enabled = true) {
   return useQuery({
     queryKey: RIDE_REQUEST_KEYS.all,

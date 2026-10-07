@@ -8,6 +8,13 @@ import {
 } from "@edem/contracts";
 import { apiClient } from "./client";
 
+// Лента заявок попутчиков для главной: бэк отдаёт `{ items }` без пагинации
+// (витрина на экран, не список с прокруткой). Автор в ответе не отдаётся —
+// лента анонимная.
+const rideRequestFeedSchema = z.object({
+  items: z.array(rideRequestSchema),
+});
+
 const rideRequestListSchema = z.object({
   items: z.array(rideRequestSchema),
   pagination: z.object({
@@ -27,6 +34,14 @@ export const rideRequestsApi = {
       "/ride-requests",
       { signal },
       rideRequestListSchema.transform(({ items }) => items),
+    ),
+
+  /** Чужие активные заявки, ближайшее окно сверху. */
+  feed: (signal?: AbortSignal): Promise<RideRequest[]> =>
+    apiClient.request(
+      "/ride-requests/feed",
+      { signal },
+      rideRequestFeedSchema.transform(({ items }) => items),
     ),
 
   create: (data: CreateRideRequestDto): Promise<RideRequest> =>

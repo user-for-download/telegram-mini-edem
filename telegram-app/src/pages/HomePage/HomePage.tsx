@@ -5,7 +5,7 @@ import { EmptyState } from "@/ui/EmptyState";
 import { PlusCircle, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { NextTripBanner } from "@/components/Section/NextTripBanner";
-import { PopularRoutesSection } from "@/components/Section/PopularRoutesSection";
+import { RideRequestFeedSection } from "@/components/Section/RideRequestFeedSection";
 import { ProfileSection } from "@/components/Section/ProfileSection";
 import { TripCountersSection } from "@/components/Section/TripCountersSection";
 import { TripSearchSection } from "@/components/Section/TripSearchSection";
@@ -94,7 +94,7 @@ export function HomePage() {
       <TripCountersSection />
       <NextTripBanner />
       <TripSearchSection onSearch={goToSearch} />
-      <PopularRoutesSection onSelect={goToSearch} />
+      <RideRequestFeedSection onSelect={goToSearch} />
       <EmptyState
         header="Едете на машине?"
         description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы"

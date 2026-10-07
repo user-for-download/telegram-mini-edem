@@ -20,6 +20,8 @@ import { devRateMax } from "../env.js";
 import { serializeRideRequest } from "./serializers.js";
 
 const MAX_ACTIVE_REQUESTS = 3;
+// Потолок ленты главной: секция на экране, 20 строк — уже не список.
+const FEED_MAX_LIMIT = 20;
 const rideRequestMutationLimiter = createUserRateLimiter({
   windowMs: 60 * 60 * 1000,
   max: devRateMax(30),
@@ -216,6 +218,58 @@ rideRequestsRouter.get("/matching", publicReadLimiter, async (c) => {
     include: includeCities,
     orderBy: { createdAt: "desc" },
     take: 50,
+  });
+  return c.json({ items: items.map(serializeRideRequest) });
+});
+
+/**
+ * Лента заявок попутчиков для главной (`/ride-requests/feed`).
+ *
+ * Отличие от `/matching`: `/matching` — инструмент водителя под конкретный
+ * маршрут и окно (опубликовал поездку → покажи подходящие заявки), а `feed` —
+ * витрина спроса: «кого сейчас ищут попутчиком». Поэтому без фильтров по
+ * маршруту, сортировка по БЛИЖАЙШЕМУ окну, а не по свежести.
+ *
+ * `earliestAt asc` — «ближайшие»: у профиля нет ни города, ни координат,
+ * сортировать географически нечем (см. user.schema.ts), и в ленте видно
+ * именно «кто едет завтра», а не «кто созрел пять минут назад».
+ * Второй ключ — `id`, чтобы порядок не прыгал между одинаковыми окнами.
+ *
+ * Чужие и активные: свои заявки пользователь и так видит в профиле, а смешивать
+ * свои намерения с чужими в одной ленте нельзя. Истёкшие окна отсекаем по
+ * `latestAt`, просроченные — по `expiresAt` (тот же смысл, что у `/matching`).
+ *
+ * Имена не отдаём: ответ — маршрут, окно и места, без автора (та же форма
+ * `rideRequestSchema`, что и у списка). Анонимная лента не создаёт повода
+ * показывать, кто именно ищет попутчика.
+ */
+rideRequestsRouter.get("/feed", publicReadLimiter, async (c) => {
+  const rawLimit = c.req.query("limit");
+  const parsedLimit = rawLimit === undefined ? 10 : Number(rawLimit);
+  if (
+    !Number.isInteger(parsedLimit) ||
+    parsedLimit < 1 ||
+    parsedLimit > FEED_MAX_LIMIT
+  ) {
+    return c.json(
+      {
+        code: ERROR_CODES.VALIDATION_FAILED,
+        message: "Invalid limit",
+      },
+      400,
+    );
+  }
+  const now = new Date();
+  const items = await db.rideRequest.findMany({
+    where: {
+      userId: { not: c.get("user").id },
+      status: "active",
+      expiresAt: { gt: now },
+      latestAt: { gt: now },
+    },
+    include: includeCities,
+    orderBy: [{ earliestAt: "asc" }, { id: "asc" }],
+    take: parsedLimit,
   });
   return c.json({ items: items.map(serializeRideRequest) });
 });

@@ -21,9 +21,11 @@ beforeEach(() => {
   mockUseDriverRequests.mockReturnValue(queryState({ data: [] }));
   mockUseUpdateBookingStatus.mockReturnValue({ mutate: vi.fn() });
   mockUseVehicle.mockReturnValue(queryState({ vehicle: { model: "Skoda", color: "белый" } }));
+  mockUseFeed.mockReturnValue(queryState({ data: [] }));
 });
 
 const {
+  mockUseFeed,
   mockUseProfile,
   mockUseMyBookings,
   mockUseAllCities,
@@ -32,6 +34,7 @@ const {
   mockUseMyTrips,
   mockUseVehicle,
 } = vi.hoisted(() => ({
+  mockUseFeed: vi.fn(),
   mockUseProfile: vi.fn(),
   mockUseMyBookings: vi.fn(),
   mockUseAllCities: vi.fn(),
@@ -61,6 +64,11 @@ vi.mock("@/queries/useTripsQuery", () => ({
 
 vi.mock("@/queries/vehicle", () => ({
   useVehicleQuery: mockUseVehicle,
+}));
+// Лента заявок попутчиков на главной — мок: главной нужен предсказуемый
+// список, а реальный запрос уехал бы в сеть из SSR-теста.
+vi.mock("@/queries/useRideRequestsQuery", () => ({
+  useRideRequestFeedQuery: mockUseFeed,
 }));
 
 import { HomePage } from "@/pages/HomePage/HomePage";
@@ -122,9 +130,9 @@ describe("HomePage", () => {
     // «Едете на машине?» пассажиру не подходит.
     expect(html).toContain("Нужна попутка?");
     expect(html).toContain("Ищу попутку");
-    // Популярные направления (вертикальный список).
-    expect(html).toContain("Популярные направления");
-    expect(html).toContain("Кириллов");
+    // Лента заявок попутчиков: при пустой ленте секция прячется, поэтому
+    // заголовка нет — вместо статичных направлений на главной тишина.
+    expect(html).not.toContain("Кого ищут попутчиком");
     // Без данных — все три плашки с нулями.
     expect(html).toContain("Поездки");
     expect(html).toContain("Брони");
@@ -331,6 +339,21 @@ describe("HomePage", () => {
   });
 });
 
+function makeFeedRequest() {
+  return {
+    id: "11111111-1111-4111-8111-111111111111",
+    fromCity: { id: "c-1", name: "Вологда" },
+    toCity: { id: "c-2", name: "Череповец" },
+    earliestAt: "2030-06-01T06:00:00.000Z",
+    latestAt: "2030-06-01T18:00:00.000Z",
+    seats: 2,
+    status: "active",
+    expiresAt: "2030-06-01T18:00:00.000Z",
+    createdAt: "2030-05-01T06:00:00.000Z",
+    updatedAt: "2030-05-01T06:00:00.000Z",
+  };
+}
+
 function makeDriverRequest() {
   return {
     id: "dr-1",
@@ -353,17 +376,20 @@ function makeDriverRequest() {
 }
 
 describe("HomePage: имя экрана принадлежит странице, а не секции (реестр #15)", () => {
-  it("единственный h1 — «Главная», а «Популярные направления» не h1", () => {
+  it("единственный h1 — «Главная», а секция ленты не h1", () => {
     // NavHeader помечен aria-hidden, поэтому имя экрана — у страницы.
     const html = render(<HomePage />);
     const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/g) ?? [];
     expect(h1).toHaveLength(1);
     expect(h1[0]).toContain("Главная");
-    expect(html).not.toMatch(/<h1[^>]*>[^<]*Популярные направления/);
+    expect(html).not.toMatch(/<h1[^>]*>[^<]*Кого ищут попутчиком/);
   });
 
-  it("секция «Популярные направления» остаётся заголовком второго уровня", () => {
+  it("секция ленты заявок — заголовок второго уровня, не h1", () => {
+    mockUseFeed.mockReturnValue(queryState({ data: [makeFeedRequest()] }));
+
     const html = render(<HomePage />);
-    expect(html).toMatch(/<h2[^>]*>[^<]*Популярные направления/);
+
+    expect(html).toMatch(/<h2[^>]*>[^<]*Кого ищут попутчиком/);
   });
 });

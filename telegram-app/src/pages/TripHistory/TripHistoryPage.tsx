@@ -121,7 +121,7 @@ export function TripHistoryPage() {
         }}
       >
         {historyItems.length > 0 && (
-          // Как «Популярные направления»: нативный Section — строки идут
+          // Как лента заявок на главной: нативный Section — строки идут
           // сплошняком с hairline-разделителями, без гэпов.
           <Section>
             {historyItems.map((item) => {

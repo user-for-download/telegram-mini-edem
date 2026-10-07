@@ -97,4 +97,93 @@ describe("RideRequest API", () => {
     });
     expect(overLimit.status).toBe(409);
   });
+  it("feed: чужие активные по ближайшему окну, свои и неактивные — нет", async () => {
+    // Окна заведомо в будущем: лента режет по now.
+    const at = (day: number, hour: number) =>
+      new Date(Date.UTC(2035, 0, day, hour)).toISOString();
+
+    // Чужой, ближайшее окно → должен быть первым.
+    const near = await app.request("/api/v1/ride-requests", {
+      method: "POST",
+      headers: { ...JSON_HEADERS, ...auth(otherUserId) },
+      body: JSON.stringify({
+        fromCityId,
+        toCityId,
+        earliestAt: at(2, 9),
+        latestAt: at(2, 20),
+        expiresAt: at(2, 23),
+      }),
+    });
+    // Чужой, окно позже.
+    const far = await app.request("/api/v1/ride-requests", {
+      method: "POST",
+      headers: { ...JSON_HEADERS, ...auth(otherUserId) },
+      body: JSON.stringify({
+        fromCityId,
+        toCityId,
+        earliestAt: at(5, 9),
+        latestAt: at(5, 20),
+        expiresAt: at(5, 23),
+      }),
+    });
+    // Свой — в ленту не попадает.
+    await app.request("/api/v1/ride-requests", {
+      method: "POST",
+      headers: { ...JSON_HEADERS, ...auth(userId) },
+      body: JSON.stringify({
+        fromCityId,
+        toCityId,
+        earliestAt: at(1, 9),
+        latestAt: at(1, 20),
+        expiresAt: at(1, 23),
+      }),
+    });
+
+    const nearId = (await near.json()).id;
+    const farId = (await far.json()).id;
+    const feed = await app.request("/api/v1/ride-requests/feed", {
+      headers: auth(userId),
+    });
+    expect(feed.status).toBe(200);
+    const ids = (await feed.json()).items.map(
+      (item: { id: string }) => item.id,
+    );
+    expect(ids).toContain(nearId);
+    expect(ids).toContain(farId);
+    // Ближайшее окно раньше дальнего, а своя заявка исключена.
+    expect(ids.indexOf(nearId)).toBeLessThan(ids.indexOf(farId));
+    expect(ids).toHaveLength(2);
+  });
+
+  it("feed: просроченное и отменённое не показываются, limit валидируется", async () => {
+    const past = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    const stale = await app.request("/api/v1/ride-requests", {
+      method: "POST",
+      headers: { ...JSON_HEADERS, ...auth(otherUserId) },
+      body: JSON.stringify({
+        fromCityId,
+        toCityId,
+        earliestAt: past,
+        latestAt: past,
+        expiresAt: past,
+      }),
+    });
+    const staleId = (await stale.json()).id;
+
+    const feed = await app.request("/api/v1/ride-requests/feed", {
+      headers: auth(userId),
+    });
+    expect((await feed.json()).items.map((i: { id: string }) => i.id)).not.toContain(
+      staleId,
+    );
+
+    const bad = await app.request("/api/v1/ride-requests/feed?limit=0", {
+      headers: auth(userId),
+    });
+    expect(bad.status).toBe(400);
+    const tooBig = await app.request("/api/v1/ride-requests/feed?limit=999", {
+      headers: auth(userId),
+    });
+    expect(tooBig.status).toBe(400);
+  });
 });
