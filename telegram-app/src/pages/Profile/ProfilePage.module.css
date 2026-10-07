@@ -54,22 +54,3 @@
   color: var(--app-rating);
 }
 
-/* Иконка строки меню/переключателя: не сжимается (было shrink-0). */
-.icon {
-  flex-shrink: 0;
-}
-
-/* Шеврон строки меню: подсказочный цвет, не сжимается. */
-.chevron {
-  color: var(--app-muted);
-  flex-shrink: 0;
-}
-
-/* Кликабельная строка-меню на всю ширину (Cell Component="button"). */
-.menuCell {
-  width: 100%;
-  /* text-align перенесён в фасад: сброс UA-кнопки (AS_BUTTON) ставит
-   * `text-align: inherit` одинаково для button- и div-строк. */
-}
-
-

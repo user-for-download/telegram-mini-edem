@@ -1,6 +1,6 @@
 import { IconContainer } from "@telegram-apps/telegram-ui";
-import { Route, ChevronRight } from "lucide-react";
-import { Cell } from "@/ui/Cell";
+import { Route } from "lucide-react";
+import { MenuRow } from "@/ui/MenuRow";
 import { Section } from "@/ui/Section";
 import { useRideRequestFeedQuery } from "@/queries/useRideRequestsQuery";
 import { dayLabel, moscowDayKey, moscowTimeLabel } from "@/utils/date";
@@ -85,34 +85,18 @@ export function RideRequestFeedSection({
           "мест",
         )}`;
         return (
-          <Cell
+          <MenuRow
             key={`${request.fromCity.id}:${request.toCity.id}`}
-            // Штатный режим кита «content without truncation»: по умолчанию
-            // подпись рисуется в одну строку с `nowrap`, и её min-content шире
-            // карточки — кнопка-строка вылезала за рамку секции (553px при
-            // секции 356px на 390-экране), а шеврон уезжал за карточку. Свои
-            // CSS-правила на внутренние классы кита не нужны: хеш класса
-            // меняется при апгрейде кита, а `multiline` — публичный проп.
-            multiline
-            // Нативная кнопка обязательна (фасад, реестр #12): без
-            // Component="button" строка не фокусируется Tab'ом и не
-            // опознаётся скринридером как кнопка.
-            Component="button"
-            type="button"
-            onClick={() => onSelect(request.fromCity.id, request.toCity.id)}
-            after={<ChevronRight />}
+            label={`Заявки ${route}`}
+            title={`${request.fromCity.name} → ${request.toCity.name}`}
             subtitle={`${people} · ${seats} · ${date}, ${time}`}
-            before={
+            icon={
               <IconContainer>
-                <Route aria-hidden />
+                <Route size={18} />
               </IconContainer>
             }
-            // Имя строки целиком: «куда ехать» + «когда» + «сколько мест» —
-            // иначе скринридер читает только города, а время и места теряются.
-            aria-label={`По маршруту ${route} ищут ${people} и ${seats}, ближайшая ${date} в ${time}`}
-          >
-            {`${request.fromCity.name} → ${request.toCity.name}`}
-          </Cell>
+            onClick={() => onSelect(request.fromCity.id, request.toCity.id)}
+          />
         );
       })}
     </Section>

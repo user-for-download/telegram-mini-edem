@@ -11,11 +11,11 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { Cell } from "@/ui/Cell";
+import { MenuRow } from "@/ui/MenuRow";
 
 import {
   Bell,
   Car,
-  ChevronRight,
   ClipboardList,
   Flag,
   History,
@@ -65,41 +65,6 @@ const DELETE_ACCOUNT_WARNING =
   "Ваши активные поездки завершатся (ожидающие заявки отклонятся, " +
   "подтверждённые останутся историей), ваши брони на чужих поездках " +
   "и заявки на поездку отменятся. Восстановление невозможно.";
-
-/**
- * Строка меню раздела — tgui Cell (учебниковый паттерн стори Playground:
- * before=иконка, children=title, subtitle, after=chevron). Cell идёт через
- * Tappable (ripple/press), Component="button" + styles.menuCell держат ширину.
- */
-function MenuRow({
-  icon,
-  title,
-  subtitle,
-  onClick,
-  label,
-}: {
-  icon: ReactNode;
-  title: string;
-  subtitle: string;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <Cell
-      Component="button"
-      type="button"
-      // Имя = заголовок + подпись: видимая подпись входит в имя.
-      aria-label={`${label}. ${subtitle}`}
-      onClick={onClick}
-      before={<span className={styles.icon}>{icon}</span>}
-      after={<ChevronRight size={16} className={styles.chevron} />}
-      subtitle={subtitle}
-      className={styles.menuCell}
-    >
-      {title}
-    </Cell>
-  );
-}
 
 /**
  * Строка-переключатель: обычная `Cell`, `Switch` в слоте `after`.
