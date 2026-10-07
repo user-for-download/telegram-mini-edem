@@ -68,24 +68,26 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("ReportsPage: форма (порт ReportModal)", () => {
-  it("селекты типа/категории с русскими подписями и кнопка ≥44px", () => {
-    const html = renderPage();
-
-    expect(html).toContain("Жалобы");
-    expect(html).toContain("Сообщите о проблеме");
-    expect(html).toContain("Пользователь");
-    expect(html).toContain("Поездка");
-    expect(html).toContain("Бронь");
-    expect(html).toContain("Безопасность");
-    expect(html).toContain("Мошенничество");
-    expect(html).toContain("Недостоверная информация");
-    expect(html).toContain("Отправить жалобу");
-    expect(html).toContain('data-tap-target="44"');
+describe("ReportsPage: форма — во всплывающем окне", () => {
+  it("под «Мои жалобы» есть кнопка «Подать жалобу»", () => {
+    expect(renderPage()).toContain("Подать жалобу");
   });
 
-  it("описание с браузерным maxLength 2000 из контракта", () => {
-    expect(renderPage()).toMatch(/maxlength="2000"/i);
+  it("самой формы на странице нет — она в окне (портал в SSR не попадает)", () => {
+    // Регресс на возврат к форме во весь экран: страница отвечает за список
+    // и ответы модерации, форма — в ComplaintModal.
+    const html = renderPage();
+
+    expect(html).not.toContain("Сообщите о проблеме");
+    expect(html).not.toContain('id="report-target-id"');
+    expect(html).not.toContain('id="report-description"');
+  });
+
+  it("кнопка создания идёт после списка, а не до него", () => {
+    const html = renderPage();
+    expect(html.indexOf("Мои жалобы")).toBeLessThan(
+      html.indexOf("Подать жалобу"),
+    );
   });
 });
 

@@ -1,29 +1,21 @@
-import { memo, useRef, useState } from "react";
-import {
-  Caption,
-  Input,
-  Select,
-  Text,
-  Textarea,
-  VisuallyHidden,
-} from "@telegram-apps/telegram-ui";
+import { memo, useState } from "react";
+import { Caption, Text, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { PROSE } from "@/ui/classes";
-import { Field } from "@/ui/Field";
-import { CharCounter } from "@/ui/CharCounter";
 import { Button } from "@/ui/Button";
+import { ComplaintModal } from "./ComplaintModal";
+import { useModalBack } from "@/utils/modalBack";
 
-import { REPORT_CATEGORIES, type Report } from "@edem/contracts";
-import { REPORT_DESCRIPTION_MAX_LENGTH } from "@edem/contracts";
+import type { Report } from "@edem/contracts";
 import { Card } from "@/ui/Card";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
+import { Flag } from "lucide-react";
 import {
   StatusPill,
   type StatusTone,
 } from "@/components/StatusPill/StatusPill";
-import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { Page } from "@/ui/Page";
 import { Section } from "@/ui/Section";
@@ -32,22 +24,11 @@ import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
 import { haptic } from "@/utils/haptics";
 import { moscowNumericDate } from "@/utils/date";
-import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
-import {
-  useCreateReportMutation,
-  useMyReportsQuery,
-} from "@/queries/useReportQuery";
+import { useMyReportsQuery } from "@/queries/useReportQuery";
 import {
   REPORT_CATEGORY_LABELS,
   REPORT_STATUS_LABELS,
   REPORT_TARGET_TYPE_LABELS,
-  hasExistingReport,
-  isReportCategory,
-  isReportTargetType,
-  reportErrorMessage,
-  validateReportForm,
-  type ReportFieldError,
-  type ReportTargetType,
 } from "./reportValidation";
 import styles from "./ReportsPage.module.css";
 
@@ -119,83 +100,11 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
  * aria-live, ошибки — role=alert, успех — role=status.
  */
 export function ReportsPage() {
-  const [targetType, setTargetType] = useState<ReportTargetType>("trip");
-  const [targetId, setTargetId] = useState("");
-  const [category, setCategory] =
-    useState<(typeof REPORT_CATEGORIES)[number]>("safety");
-  const [description, setDescription] = useState("");
-  // Клиентская ошибка приходит с полем: <Field error=…> ставит aria-invalid и
-  // aria-describedby сам. formError остаётся для ошибок, которые
-  // не принадлежат конкретному полю: лимит «одна жалоба» и ответ сервера.
-  const [fieldError, setFieldError] = useState<ReportFieldError | null>(null);
-  const errorFor = (id: string) =>
-    fieldError?.field === id ? fieldError.message : undefined;
-  const [formError, setFormError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  // Черновик формы — dirty для нативного подтверждения ухода со страницы
-  // (closingBehavior.enableConfirmation через useClosingConfirmation,
-  // пока targetId/description не пусты).
-  useClosingConfirmation(targetId !== "" || description !== "");
-  // Защита от двойного сабмита: ref синхронен (в отличие от state),
-  // второй клик до ре-рендера не отправит второй запрос (защита от двойного сабмита).
-  const submitGuard = useRef(false);
-
+  // Форма жалобы — во всплывающем окне (ComplaintModal): страница показывает
+  // список и ответы модерации, Back закрывает окно через useModalBack.
+  const [complaintOpen, setComplaintOpen] = useState(false);
+  useModalBack(() => setComplaintOpen(false), complaintOpen);
   const myReports = useMyReportsQuery();
-  const create = useCreateReportMutation();
-
-  const alreadyReported = hasExistingReport(
-    myReports.data ?? [],
-    targetType,
-    targetId,
-  );
-
-  const submit = () => {
-    if (create.isPending || submitGuard.current) return;
-    const validationError = validateReportForm(targetId, description);
-    if (validationError) {
-      setFieldError(validationError);
-      return;
-    }
-    setFieldError(null);
-    if (alreadyReported) {
-      setFormError(
-        "Жалоба уже отправлена: повторная жалоба на этот объект недоступна.",
-      );
-      return;
-    }
-    setFormError(null);
-    setSuccess(false);
-    submitGuard.current = true;
-    create.mutate(
-      {
-        targetType,
-        targetId: targetId.trim(),
-        category,
-        description: description.trim(),
-      },
-      {
-        onSettled: () => {
-          submitGuard.current = false;
-        },
-        onSuccess: () => {
-          haptic.success();
-          setTargetId("");
-          setDescription("");
-          setSuccess(true);
-        },
-        onError: (error) => {
-          haptic.error();
-          setFormError(reportErrorMessage(error));
-        },
-      },
-    );
-  };
-
-  const canSubmit =
-    targetId.trim().length > 0 &&
-    description.trim().length > 0 &&
-    !alreadyReported &&
-    !create.isPending;
 
   // Бан mid-session: requireUser отвечает 403 — терминальный экран вместо
   // общей ошибки (паттерн ProfilePage; глобальные случаи закрывает AuthGate).
@@ -215,117 +124,6 @@ export function ReportsPage() {
             страницах»), а секции фасад отдаёт как h2 — имя экрана даёт
             скрытый h1. */}
         <VisuallyHidden Component="h1">Мои обращения</VisuallyHidden>
-        <Section header="Сообщите о проблеме">
-          <SectionBody>
-            <MutationError error={create.error} />
-            <Field label="Что случилось" id="report-target-type">
-              {(field) => (
-                <Select
-                  {...field}
-                  value={targetType}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    if (!isReportTargetType(next)) return;
-                    setTargetType(next);
-                    if (formError) setFormError(null);
-                  }}
-                >
-                  {(
-                    Object.keys(REPORT_TARGET_TYPE_LABELS) as ReportTargetType[]
-                  ).map((value) => (
-                    <option key={value} value={value}>
-                      {REPORT_TARGET_TYPE_LABELS[value]}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-            <Field label="Идентификатор объекта" id="report-target-id" error={errorFor("report-target-id")}>
-              {(field) => (
-                <Input
-                  {...field}
-                  placeholder="Например: идентификатор поездки из её страницы"
-                  value={targetId}
-                  status={errorFor("report-target-id") ? "error" : undefined}
-                  onChange={(event) => {
-                    setTargetId(event.target.value);
-                    setFieldError(null);
-                    if (formError) setFormError(null);
-                    if (success) setSuccess(false);
-                  }}
-                />
-              )}
-            </Field>
-            <Field label="Причина" id="report-category">
-              {(field) => (
-                <Select
-                  {...field}
-                  value={category}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    if (!isReportCategory(next)) return;
-                    setCategory(next);
-                  }}
-                >
-                  {REPORT_CATEGORIES.map((value) => (
-                    <option key={value} value={value}>
-                      {REPORT_CATEGORY_LABELS[value]}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-            <Field label="Описание" id="report-description" error={errorFor("report-description")}>
-              {(field) => (
-                <Textarea
-                  {...field}
-                  rows={4}
-                  maxLength={REPORT_DESCRIPTION_MAX_LENGTH}
-                  placeholder="Опишите, что произошло"
-                  value={description}
-                  status={errorFor("report-description") ? "error" : undefined}
-                  onChange={(event) => {
-                    setDescription(event.target.value);
-                    if (formError) setFormError(null);
-                    if (success) setSuccess(false);
-                  }}
-                />
-              )}
-            </Field>
-            {description.length > 0 && (
-              <CharCounter
-                value={description.length}
-                max={REPORT_DESCRIPTION_MAX_LENGTH}
-              />
-            )}
-            {alreadyReported && (
-              <Notice tone="info" variant="text">
-                Вы уже отправляли жалобу на этот объект. Повторная отправка
-                недоступна.
-              </Notice>
-            )}
-            {formError && (
-              <Notice tone="danger" variant="text">
-                {formError}
-              </Notice>
-            )}
-            {success && (
-              <Notice tone="success" variant="text">
-                Жалоба отправлена
-              </Notice>
-            )}
-            <Button
-              stretched
-              size="l"
-              loading={create.isPending}
-              disabled={!canSubmit}
-              onClick={submit}
-            >
-              {alreadyReported ? "Жалоба уже отправлена" : "Отправить жалобу"}
-            </Button>
-          </SectionBody>
-        </Section>
-
         <Section header="Мои жалобы">
           <SectionBody>
             <QueryState
@@ -348,9 +146,28 @@ export function ReportsPage() {
                 </Stack>
               )}
             </QueryState>
+            {/* Подать жалобу — из окна: страница отвечает за список и ответы
+                модерации, а полноэкранная форма занимала её целиком. Тот же
+                приём, что у обращения в поддержку. */}
+            <Button
+              stretched
+              size="m"
+              before={<Flag size={16} />}
+              onClick={() => {
+                haptic.light();
+                setComplaintOpen(true);
+              }}
+            >
+              Подать жалобу
+            </Button>
           </SectionBody>
         </Section>
       </Page>
+      <ComplaintModal
+        open={complaintOpen}
+        onClose={() => setComplaintOpen(false)}
+        reports={myReports.data ?? []}
+      />
     </>
   );
 }
