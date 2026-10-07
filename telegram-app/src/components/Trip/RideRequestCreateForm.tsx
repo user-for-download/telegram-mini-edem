@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
-import { Input, Text } from "@telegram-apps/telegram-ui";
-import { Calendar, Users } from "lucide-react";
-import { createRideRequestDtoSchema } from "@edem/contracts";
+import { Input, Select, Text } from "@telegram-apps/telegram-ui";
+import { Calendar } from "lucide-react";
+import { createRideRequestDtoSchema, MAX_SEATS } from "@edem/contracts";
 import { CitySelectField } from "@/components/CitySelect/CitySelectField";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { HINT } from "@/ui/classes";
@@ -143,53 +143,63 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm() {
         onChange={setToCityId}
         error={createErrorFor("ride-to")}
       />
-      <div className={styles.grid2}>
-        <Field
-          label="Не раньше"
-          id="ride-earliest"
-          error={createErrorFor("ride-earliest")}
-        >
-          {(field) => (
-            <Input
-              {...field}
-              before={<Calendar size={16} className={HINT} />}
-              type="datetime-local"
-              value={earliest}
-              onChange={(event) => setEarliest(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field
-          label="Не позже"
-          id="ride-latest"
-          error={createErrorFor("ride-latest")}
-        >
-          {(field) => (
-            <Input
-              {...field}
-              before={<Calendar size={16} className={HINT} />}
-              type="datetime-local"
-              value={latest}
-              onChange={(event) => setLatest(event.target.value)}
-            />
-          )}
-        </Field>
-      </div>
+      {/* Даты — в столбик, а не вдвое: нативный datetime-local рисует
+          локальный формат (в Telegram это mm/dd/yy), и в две колонки поле
+          не влезало — значение обрезалось. */}
+      <Field
+        label="Не раньше"
+        id="ride-earliest"
+        error={createErrorFor("ride-earliest")}
+      >
+        {(field) => (
+          <Input
+            {...field}
+            before={<Calendar size={16} className={HINT} />}
+            type="datetime-local"
+            value={earliest}
+            onChange={(event) => setEarliest(event.target.value)}
+          />
+        )}
+      </Field>
+      <Field
+        label="Не позже"
+        id="ride-latest"
+        error={createErrorFor("ride-latest")}
+      >
+        {(field) => (
+          <Input
+            {...field}
+            before={<Calendar size={16} className={HINT} />}
+            type="datetime-local"
+            value={latest}
+            onChange={(event) => setLatest(event.target.value)}
+          />
+        )}
+      </Field>
+      {/* Места — селект 1..MAX_SEATS, а не number-ввод: у number на iOS
+          вылезают крутилки, а вариантов ровно три (max в контракте) —
+          выбирать их быстрее, чем набирать. Тот же приём, что в форме
+          создания поездки. */}
       <Field
         label="Места"
         id="ride-seats"
         error={createErrorFor("ride-seats")}
       >
         {(field) => (
-          <Input
+          <Select
             {...field}
-            before={<Users size={16} className={HINT} />}
-            type="number"
-            min="1"
-            max="3"
             value={seats}
-            onChange={(event) => setSeats(event.target.value)}
-          />
+            onChange={(event) => {
+              haptic.selection();
+              setSeats(event.target.value);
+            }}
+          >
+            {Array.from({ length: MAX_SEATS }, (_, index) => (
+              <option key={index + 1} value={String(index + 1)}>
+                {index + 1}
+              </option>
+            ))}
+          </Select>
         )}
       </Field>
       {/* Плашка только когда поле null: иначе текст уже нарисован
