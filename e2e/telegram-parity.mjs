@@ -232,10 +232,11 @@ try {
     await page.locator('input[type="datetime-local"]').fill(local);
     await page.getByLabel("Расстояние, км").fill("180");
     await page.getByLabel("Цена, ₽").fill(String(PRICE));
-    // Места — степпер 1..3 (дефолт 1): два клика «Больше мест» → 3.
-    const moreSeats = page.getByRole("button", { name: "Больше мест" });
-    await moreSeats.click();
-    await moreSeats.click();
+    // Места — нативный селект 1..3 (дефолт 1): выбираем 3. Степпера с
+    // кнопками «Больше мест» больше нет — заменён Select (1fde25f), и сценарий
+    // всё ещё ждал ту кнопку: поездка не создавалась, а дальше падал каскад
+    // из восьми шагов (бронь 404, «Принять», уведомления, отзыв).
+    await page.getByLabel("Места").selectOption("3");
     await page.getByRole("button", { name: "Опубликовать" }).click();
     // Успех — редирект на /trips/:id.
     await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/, { timeout: 30000 });
