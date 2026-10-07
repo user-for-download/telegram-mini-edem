@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Notice } from "@/ui/Notice";
 import { FetchMore } from "@/ui/FetchMore";
 import { Button } from "@/ui/Button";
@@ -9,6 +9,7 @@ import { Search as SearchIcon } from "lucide-react";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { TripCard } from "@/components/Trip/TripCard";
+import { TripDemandCard } from "@/components/Trip/TripDemandCard";
 import { QueryState } from "@/components/QueryState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Stack } from "@/ui/Stack";
@@ -143,16 +144,30 @@ export function TripActivePage() {
   const cancelTripPending = (id: string) =>
     cancelTrip.isPending && cancelTrip.variables === id;
 
+  // Карточка спроса едет СОСЕДОМ своей поездки, а не внутрь неё: строки
+  // заявок — нативные кнопки `ui/MenuRow`, и внутри кликабельной `TripCard`
+  // (корневой onClick + кнопка открытия) они оказались бы вложенными
+  // интерактивными элементами. Соседями они не конфликтуют: тап по строке
+  // сам открывает поездку (см. TripDemandCard).
+  //
+  // Цена решения — по одному запросу на поездку водителя (у него их единицы,
+  // страница ленты берёт по 20). Сводного эндпоинта «спрос по всем моим
+  // поездкам» нет, а лимит публичного чтения — 100/мин: на обычном экране
+  // это единицы запросов, а не сотня.
   const renderDriving = (trip: (typeof driverTrips)[number]) => (
-    <TripCard
-      key={`d-${trip.id}`}
-      variant={{
-        kind: "driving",
-        trip,
-        onCancel: onCancelTrip,
-        cancelPending: cancelTripPending(trip.id),
-      }}
-    />
+    <Fragment key={`d-${trip.id}`}>
+      <TripCard
+        variant={{
+          kind: "driving",
+          trip,
+          onCancel: onCancelTrip,
+          cancelPending: cancelTripPending(trip.id),
+        }}
+      />
+      {/* seatsAvailable — из той же поездки: приглашать некого, когда мест
+          нет, и проверять это отдельным запросом незачем. */}
+      <TripDemandCard tripId={trip.id} seatsAvailable={trip.seatsAvailable} />
+    </Fragment>
   );
   const renderBooking = (booking: (typeof activeBookings)[number]) => (
     <TripCard

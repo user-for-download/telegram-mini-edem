@@ -81,4 +81,17 @@ describe("Telegram data API adapters", () => {
       expect.anything(),
     );
   });
+
+  // Тело приглашения — ТОЛЬКО id поездки: заявка едет маршрутом, а любое
+  // лишнее поле сервер отверг бы (.strict()). Никаких сырых данных о пассажире
+  // в запрос не попадает — только то, что бэк и так знает по своим ключам.
+  it("invites a request by id and sends nothing but the trip id", () => {
+    void rideRequestsApi.invite("request/id", "trip-id");
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "/ride-requests/request%2Fid/invite",
+      { method: "POST", body: JSON.stringify({ tripId: "trip-id" }) },
+      expect.anything(),
+    );
+  });
 });

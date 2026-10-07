@@ -4,6 +4,16 @@ export type RideRequestWithCities = Prisma.RideRequestGetPayload<{
   include: { fromCity: true; toCity: true };
 }>;
 
+/**
+ * Города нужны в КАЖДОМ ответе по заявке (сериализатор читает их имена), поэтому
+ * форма включения живёт здесь, рядом с типом результата, а не дублируется по
+ * месту вызова: разъехавшийся `include` тихо ломает сериализатор.
+ */
+export const rideRequestIncludeCities = {
+  fromCity: true,
+  toCity: true,
+} as const;
+
 export function serializeRideRequest(request: RideRequestWithCities) {
   return {
     id: request.id,

@@ -6,6 +6,7 @@ import { Prisma } from "../generated/prisma/client.js";
 import {
   createTripDtoSchema,
   updateTripDtoSchema,
+  tripRideRequestsResponseSchema,
   ACTIVE_BOOKING_STATUSES,
 } from "@edem/contracts";
 import { db } from "../db.js";
@@ -32,7 +33,12 @@ import {
   tripSnapshotOf,
 } from "../services/notification.service.js";
 import { wsManager } from "../ws/manager.js";
-import { notifyMatchingRideRequests } from "../rideRequests/matching.js";
+import {
+  findMatchingRideRequests,
+  notifyMatchingRideRequests,
+} from "../rideRequests/matching.js";
+import { serializeRideRequest } from "../rideRequests/serializers.js";
+import { reportServerError } from "../client-errors/index.js";
 import {
   decrementCityTripsCount,
   incrementCityTripsCount,
@@ -562,6 +568,63 @@ tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
     }),
   );
 });
+
+/**
+ * Спрос на поездку: активные заявки, подходящие под маршрут и окно
+ * (`GET /trips/:id/requests`).
+ *
+ * Зеркало `GET /ride-requests/matching`: там водитель задаёт маршрут и окно
+ * руками, здесь ключ — сама поездка, поэтому клиенту не нужно знать
+ * `fromCityId/toCityId` и границы окна. Условия подбора общие с уведомлениями
+ * при создании поездки (`findMatchingRideRequests` → `matchingRideRequestWhere`).
+ *
+ * Доступ — только водителю поездки: спрос это его забота, а чужим видеть
+ * «кто ещё ищет попутку по моему маршруту» незачем (тот же privacy-принцип,
+ * что у агрегата ленты `/ride-requests/feed`).
+ *
+ * Порядок проверок тот же, что у `GET /bookings/trip/:tripId`: сначала
+ * существование поездки (404), потом права (403) — иначе не-водитель узнавал
+ * бы из 403, что поездка с таким id вообще есть.
+ */
+tripsRouter.get(
+  "/:id/requests",
+  requireUser,
+  publicReadLimiter,
+  async (c) => {
+    const id = c.req.param("id");
+    const user = c.get("user")!;
+
+    const trip = await db.trip.findUnique({ where: { id } });
+    if (!trip) {
+      return c.json(
+        { code: ERROR_CODES.NOT_FOUND, message: "Trip not found" },
+        404,
+      );
+    }
+    if (trip.driverId !== user.id) {
+      return c.json(
+        { code: ERROR_CODES.FORBIDDEN, message: "Forbidden" },
+        403,
+      );
+    }
+
+    const requests = await findMatchingRideRequests(trip);
+
+    const response = tripRideRequestsResponseSchema.safeParse({
+      items: requests.map(serializeRideRequest),
+    });
+    if (!response.success) {
+      logger.error(
+        { issues: response.error.issues },
+        "trip_ride_requests_response_validation_failed",
+      );
+      reportServerError(response.error, c.req.method, c.req.path);
+      return c.json({ message: "Internal response validation failed" }, 500);
+    }
+
+    return c.json(response.data);
+  },
+);
 
 /**
  * Создание поездки текущим пользователем.

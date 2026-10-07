@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { Prisma } from "../generated/prisma/client.js";
 import { z } from "zod";
 import {
+  DRIVER_INVITE_NOTIFICATION_TYPE,
   createRideRequestDtoSchema,
   rideRequestListQuerySchema,
   rideRequestStatusUpdateSchema,
@@ -18,6 +19,16 @@ import {
 import { ERROR_CODES } from "../errors.js";
 import { devRateMax } from "../env.js";
 import { serializeRideRequest } from "./serializers.js";
+import {
+  matchingRideRequestWhere,
+  withRoute,
+  type TripWithRoute,
+} from "./matching.js";
+import {
+  notifyUser,
+  tripSnapshotOf,
+} from "../services/notification.service.js";
+import { logBusinessEvent } from "../logger/business.js";
 
 const MAX_ACTIVE_REQUESTS = 3;
 // Потолок ленты главной: секция на экране, 20 строк — уже не список.
@@ -230,7 +241,7 @@ rideRequestsRouter.get("/matching", publicReadLimiter, async (c) => {
  *
  * Что показывает: одну строку на пару городов, а не по заявке. «Вологда →
  * Череповец: ищут 2 человека · 2 места · ближайшая завтра, 08:00». Список
- * заявок занимал бы десяток строк одного и того же маршрута и не давал масштаба
+ * заявок занимал бы десяток строк одного и того же маршрута и не давал бы масштаба
  * спроса, а масштаб — это и есть смысл витрины.
  *
  * Отличие от `/matching`: тот — инструмент водителя под конкретный маршрут и
@@ -238,7 +249,7 @@ rideRequestsRouter.get("/matching", publicReadLimiter, async (c) => {
  * место), поэтому в заголовке «кто ищет попутку», а не «кого ищут попутчиком».
  *
  * `people` (разные люди) и `seats` (сумма мест) — разные числа: человек может
- * просить несколько мест, поэтому «ищут 1 человека» не значит «нужно 1 место».
+ * просить несколько мест, поэтому «ищут 1 человек» не значит «нужно 1 место».
  * Людей считаем через `Set` по userId: активных заявок у человека до трёх, и
  * две на одном маршруте не должны превращаться в «2 человека».
  *
@@ -509,5 +520,233 @@ rideRequestsRouter.delete(
         404,
       );
     return c.json(serializeRideRequest(item));
+  },
+);
+
+// ─── Приглашение пассажира в поездку водителя ───────────────────────────────
+//
+// Контур замкнут на уведомлении: водитель зовёт конкретного пассажира, тот
+// получает `driver_invite` с deep-link на карточку поездки и бронирует САМ
+// (`POST /bookings`). Бронь здесь не создаётся намеренно — решение владельца
+// продукта, поэтому ни `Booking.source`, ни `invitedById` не понадобились.
+
+/**
+ * Тело приглашения — только поездка, к которой водитель зовёт.
+ *
+ * Локальная схема вместо DTO в `@edem/contracts`: контракт приглашения
+ * (тип уведомления) закрыт в контрактах, а форма запроса — одна строка.
+ * Как только появится клиентский вызов, ей место в `dto/ride-request.dto.ts`
+ * рядом с остальными DTO заявок, а здесь останется только импорт.
+ */
+const inviteRideRequestBodySchema = z
+  .object({
+    // Не uuid(): id приезжает из маршрута, лишняя строгая проверка отвергла бы
+    // тест-данные, а не реальные поездки. Наличие поездки проверяет БД.
+    tripId: z.string().trim().min(1),
+  })
+  .strict();
+
+/**
+ * Структурированный маркер пары (заявка, поездка) в теле приглашения.
+ *
+ * Константа — по той же причине, что `MATCH_NOTIFY_TRIP_ID_MARKER`: и текст
+ * уведомления, и dedup-запрос строятся из неё, поэтому разойтись они не могут.
+ *
+ * Ключ ИМЕЕТ БЫТЬ ПАРОЙ, а не одним id поездки: у человека бывает до трёх
+ * активных заявок, в том числе несколько на один маршрут, и приглашать его
+ * надобно по каждой конкретной — иначе второе приглашение молча подавилось бы
+ * как дубль первого. Разделители литеральные, id фиксированной длины, поэтому
+ * `contains` инъективен: ключ одной пары не может оказаться подстрокой ключа
+ * другой (в отличие от `…<tripId>:<requestId>` без закрывающего `]`).
+ */
+const INVITE_NOTIFY_PAIR_PREFIX = "[request:";
+
+/** Ключ пары «заявка + поездка» для тела уведомления и для dedup-запроса. */
+function invitePairKey(requestId: string, tripId: string): string {
+  return `${INVITE_NOTIFY_PAIR_PREFIX}${requestId};trip:${tripId}]`;
+}
+
+/** Минимум полей поездки для приглашения: id (deep-link) плюс снимок ячейки. */
+type TripForInvite = Parameters<typeof tripSnapshotOf>[0] & { id: string };
+
+/**
+ * Заявка, которую водитель вправе позвать: она существует, активна, не
+ * просрочена, не от самого водителя и её окно пересекается с поездкой.
+ *
+ * Условия НЕ перечислены здесь — берутся из `matchingRideRequestWhere`, тем же
+ * предикатом, что и `GET /trips/:id/requests` и уведомления при создании
+ * поездки. Своя копия условий разошлась бы с тем, что водитель видит на
+ * экране спроса, и позволила бы позвать того, кто под поездку не подходил.
+ */
+async function findInvitableRequest(requestId: string, trip: TripWithRoute) {
+  return db.rideRequest.findFirst({
+    where: { id: requestId, ...matchingRideRequestWhere(trip) },
+    select: { id: true, userId: true },
+  });
+}
+
+/**
+ * Уже отправленное приглашение этой же пары (заявка + поездка) — вернуть его
+ * id, чтобы повтор был идемпотентным, а не вторым уведомлением в инбоксе.
+ *
+ * В отличие от общего дедупа `findNotificationDuplicate` (окно в часах) здесь
+ * проверка без окна: повторное нажатие «Пригласить» — это тот же жест по той
+ * же кнопке, а не «новое событие», и ждать истечения окна не должен никто.
+ */
+async function findInviteNotification(input: {
+  requestId: string;
+  tripId: string;
+  userId: string;
+}) {
+  return db.notification.findFirst({
+    where: {
+      userId: input.userId,
+      type: DRIVER_INVITE_NOTIFICATION_TYPE,
+      body: { contains: invitePairKey(input.requestId, input.tripId) },
+    },
+    select: { id: true },
+  });
+}
+
+/**
+ * Уведомление-приглашение. Ровно одна запись на пару (заявка, поездка) —
+ * защита от дубля живёт в теле (маркер пары), см. `findInviteNotification`.
+ *
+ * `notifyUser` — существующий путь уведомлений: он же уважает тумблер
+ * получателя, сам гасит WS-hint при пропуске и кладёт задачу в outbox для
+ * диспетчера. `driver_invite` не критичен, поэтому отдельного кода «написать
+ * в Telegram» не нужно — канал и его лимиты уже там.
+ *
+ * null — пропуск (выключенный тумблер) или сбой; вызывающий отдаёт это
+ * значение клиенту как есть, не выдавая пропуск за доставленное приглашение.
+ */
+async function notifyDriverInvite(input: {
+  trip: TripForInvite;
+  driverName: string;
+  recipientId: string;
+  requestId: string;
+}): Promise<string | null> {
+  return notifyUser({
+    userId: input.recipientId,
+    type: DRIVER_INVITE_NOTIFICATION_TYPE,
+    title: "Водитель приглашает в поездку",
+    body:
+      "Водитель позвал вас в свою поездку. Откройте поездку и забронируйте место. " +
+      invitePairKey(input.requestId, input.trip.id),
+    // Allowlist-маршрут `/trips/<uuid>` и ничего кроме: без query, hash и сырых
+    // данных (resolveTelegramDeepLink отверг бы иначе, и тап вёлся бы в inbox).
+    fragment: `/trips/${input.trip.id}`,
+    actorName: input.driverName,
+    // Машинный код для третьей строки ячейки. Словарь подписей живёт в клиенте
+    // (NotificationsPage.NOTIFICATION_ACTION_LABELS) — там ему добавляют
+    // «invited» вместе с UI приглашения.
+    action: "invited",
+    tripSnapshot: tripSnapshotOf(input.trip),
+    role: "passenger",
+  });
+}
+
+/**
+ * `POST /ride-requests/:id/invite` — водитель зовёт пассажира в свою поездку.
+ *
+ * Порядок проверок повторяет `GET /trips/:id/requests`: сначала существование
+ * поездки (404), потом права (403) — иначе посторонний узнал бы из 403, что
+ * поездка с таким id вообще есть. Дальше состояние поездки и свободные места,
+ * и лишь потом «подходит ли заявка»: приглашение в поездку без мест — тупик,
+ * и отправлять о нём пассажиру незачем (тот же предикат, что в
+ * `bookings/create.ts`).
+ *
+ * Бронь не создаётся и заявка не меняется: приглашение — только уведомление.
+ */
+rideRequestsRouter.post(
+  "/:id/invite",
+  mutationLimiter,
+  rideRequestMutationLimiter,
+  async (c) => {
+    const parsed = inviteRideRequestBodySchema.safeParse(
+      await getSanitizedBody(c),
+    );
+    if (!parsed.success)
+      return c.json(
+        {
+          code: ERROR_CODES.VALIDATION_FAILED,
+          message: "Invalid payload",
+          errors: z.formatError(parsed.error),
+        },
+        400,
+      );
+
+    const requestId = c.req.param("id");
+    const tripId = parsed.data.tripId;
+    const driver = c.get("user");
+
+    const trip = await db.trip.findUnique({ where: { id: tripId } });
+    if (!trip)
+      return c.json(
+        { code: ERROR_CODES.NOT_FOUND, message: "Trip not found" },
+        404,
+      );
+    if (trip.driverId !== driver.id)
+      return c.json(
+        { code: ERROR_CODES.FORBIDDEN, message: "Forbidden" },
+        403,
+      );
+    if (trip.status !== "active")
+      return c.json(
+        { code: ERROR_CODES.TRIP_NOT_ACTIVE, message: "Trip is not active" },
+        409,
+      );
+    if (trip.seatsAvailable <= 0)
+      return c.json(
+        {
+          code: ERROR_CODES.CONFLICT,
+          message: "Not enough available seats",
+        },
+        409,
+      );
+
+    // withRoute null у старых поездок без FK на справочник: подбирать нечем,
+    // значит и приглашать некого — ветка даёт тот же 404, что и несовпадение.
+    const route = withRoute(trip);
+    const request = route ? await findInvitableRequest(requestId, route) : null;
+    // Несуществующая и несовпадающая заявка неразличимы (404, а не 409):
+    // иначе эндпоинт служил бы оракулом существования чужих заявок.
+    if (!request)
+      return c.json(
+        { code: ERROR_CODES.NOT_FOUND, message: "Ride request not found" },
+        404,
+      );
+
+    const existing = await findInviteNotification({
+      requestId: request.id,
+      tripId: trip.id,
+      userId: request.userId,
+    });
+    // Повтор — не ошибка: клиент показывает «Приглашение отправлено» и не
+    // рассылает второе уведомление (псевдо-идемпотентность, как в брони).
+    if (existing)
+      return c.json({
+        invited: true,
+        duplicate: true,
+        notificationId: existing.id,
+      });
+
+    const notificationId = await notifyDriverInvite({
+      trip,
+      driverName: driver.name,
+      recipientId: request.userId,
+      requestId: request.id,
+    });
+
+    logBusinessEvent("ride_request.driver_invited", {
+      requestId: request.id,
+      tripId: trip.id,
+      driverId: driver.id,
+      passengerId: request.userId,
+      // false — приглашение записано, но у получателя выключен тумблер.
+      notified: notificationId !== null,
+    });
+
+    return c.json({ invited: true, duplicate: false, notificationId }, 201);
   },
 );

@@ -1,9 +1,106 @@
 /**
- * Чистая валидация окна «Не раньше / Не позже» запроса попутки (DOM-free,
+ * Чистая валидация и сборка запроса попутчика из полей формы (DOM-free,
  * unit-тест без jsdom — паттерн reportValidation/reviewValidation).
  * Тексты русские: zod-сообщения схемы (`latestAt must be after earliestAt`)
  * пользователю не показываем.
  */
+import {
+  createRideRequestDtoSchema,
+  type CreateRideRequestDto,
+} from "@edem/contracts";
+import type { DirectoryCity } from "@/helpers/createTripForm";
+
+/**
+ * Черновик формы: строковые значения полей (datetime-local, id городов).
+ *
+ * Одно состояние вместо пяти useState — набор полей меняется только при
+ * добавлении поля в форму, а не в каждом обработчике.
+ */
+export interface RideRequestDraft {
+  /** id городов справочника, не имена. */
+  fromCityId: string;
+  toCityId: string;
+  earliest: string;
+  latest: string;
+  seats: string;
+}
+
+/**
+ * Начальный черновик. Объект общий и НЕ мутируется: сброс — это спред
+ * поверх текущего (места после публикации сохраняются).
+ */
+export const EMPTY_RIDE_REQUEST_DRAFT: RideRequestDraft = {
+  fromCityId: "",
+  toCityId: "",
+  earliest: "",
+  latest: "",
+  seats: "1",
+};
+
+export type RideRequestDraftResult =
+  | {
+      ok: true;
+      dto: CreateRideRequestDto;
+      /** «Вологда → Тула» — для тоста и для текста предпроверки. */
+      routeLabel: string;
+    }
+  | { ok: false; error: RideRequestFieldError };
+
+/**
+ * Черновик → DTO запроса, либо первая ошибка в порядке формы.
+ *
+ * Порядок обязателен и повторяет прежний: справочник → окно → разные города
+ * → схема. Zod отвечает английским message, пользователю показываем русский
+ * текст, поэтому схема идёт последней — её issue переводится
+ * `rideRequestErrorMessage`.
+ */
+export function buildRideRequestDraft(
+  draft: RideRequestDraft,
+  cities: readonly DirectoryCity[] | undefined,
+): RideRequestDraftResult {
+  const fromCity = cities?.find((city) => city.id === draft.fromCityId);
+  const toCity = cities?.find((city) => city.id === draft.toCityId);
+  if (!fromCity || !toCity) {
+    return {
+      ok: false,
+      error: { field: null, message: "Выберите города из справочника" },
+    };
+  }
+  const windowError = validateRideRequestWindow(draft.earliest, draft.latest);
+  if (windowError) return { ok: false, error: { field: null, message: windowError } };
+  if (fromCity.id === toCity.id) {
+    return {
+      ok: false,
+      error: {
+        field: null,
+        message: "Города отправления и прибытия должны различаться",
+      },
+    };
+  }
+  const earliestDate = new Date(draft.earliest);
+  const latestDate = new Date(draft.latest);
+  const parsed = createRideRequestDtoSchema.safeParse({
+    fromCityId: fromCity.id,
+    toCityId: toCity.id,
+    earliestAt: earliestDate.toISOString(),
+    latestAt: latestDate.toISOString(),
+    // Запрос живёт до конца окна «Не позже»: привязка к earliest гасила
+    // бы его из выдачи в момент начала окна.
+    expiresAt: latestDate.toISOString(),
+    seats: Number(draft.seats),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: rideRequestErrorMessage(parsed.error.issues[0]?.path ?? []),
+    };
+  }
+  return {
+    ok: true,
+    dto: parsed.data,
+    routeLabel: `${fromCity.name} → ${toCity.name}`,
+  };
+}
 
 /** Окно отправления корректно (обе даты валидны, «не позже» строго после «не раньше»). */
 export function validateRideRequestWindow(

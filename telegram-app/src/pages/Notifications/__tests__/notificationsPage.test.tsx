@@ -38,7 +38,10 @@ import {
   notificationRoute,
   notificationTarget,
 } from "@/pages/Notifications/NotificationsPage";
-import { NOTIFICATION_ROLE_TYPES } from "@edem/contracts";
+import { NOTIFICATION_ROLE_TYPES, tripIdFromDeepLink } from "@edem/contracts";
+
+/** UUID поездки в allowlist- deepLink приглашения (та же форма, что на бэке). */
+const TRIP_ID = "0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b";
 
 function makeNotification(overrides: Record<string, unknown> = {}) {
   return {
@@ -128,6 +131,9 @@ describe("notificationRoute (контракт parity)", () => {
     expect(notificationRoute("booking_created")).toBe("/bookings?segment=requests");
     expect(notificationRoute("review_approved")).toBe("/reviews");
     expect(notificationRoute("feedback_replied")).toBe("/profile/support");
+    // Приглашение водителя: fallback-уровень для легаси-записей без
+    // deepLink (у новых он есть — `/trips/<uuid>` от allowlist-резолвера).
+    expect(notificationRoute("driver_invite")).toBe("/trips");
   });
 
   it("неизвестный тип — честно null, не выдуманный маршрут", () => {
@@ -155,6 +161,16 @@ describe("notificationTarget: deepLink важнее fallback-карты", () => 
       notificationTarget({ type: "something_future", deepLink: null }),
     ).toBeNull();
   });
+
+  it("приглашение ведёт ровно на allowlist-маршрут поездки, как есть", () => {
+    // Сервер отдаёт `/trips/<uuid>` (только UUID, без query/hash) — клиент
+    // обязан повести по нему дословно, ничего не дописывая.
+    const deepLink = `/trips/${TRIP_ID}`;
+    expect(notificationTarget({ type: "driver_invite", deepLink })).toBe(
+      deepLink,
+    );
+    expect(tripIdFromDeepLink(deepLink)).toBe(TRIP_ID);
+  });
 });
 
 describe("formatNotifTime / notificationAcronym", () => {
@@ -171,6 +187,8 @@ describe("formatNotifTime / notificationAcronym", () => {
     expect(notificationActionLabel("confirmed")).toBe("подтвердил");
     expect(notificationActionLabel("cancelled")).toBe("отменил");
     expect(notificationActionLabel("created")).toBe("отправил заявку");
+    // Приглашение водителя: код приходит с бэка (`action: "invited"`).
+    expect(notificationActionLabel("invited")).toBe("пригласил в поездку");
     expect(notificationActionLabel(null)).toBeNull();
     expect(notificationActionLabel(undefined)).toBeNull();
     expect(notificationActionLabel("something_future")).toBeNull();

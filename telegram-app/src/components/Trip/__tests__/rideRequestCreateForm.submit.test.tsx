@@ -6,7 +6,13 @@
 // очищаются, а хаптика на iOS в WebView может не сработать. Регресс на
 // возврат к «пустая форма = успех».
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 
 const { mockUseCities, mockMutate, mockToastShow } = vi.hoisted(() => ({
@@ -110,12 +116,17 @@ afterEach(() => {
 });
 
 describe("RideRequestCreateForm: публикация", () => {
-  it("уходит запрос с маршрутом, окном и сроком", () => {
+  // Публикация стала асинхронной: перед мутацией форма спрашивает, нет ли
+  // уже подходящих поездок (GET /trips). Здесь ответа нет — реальный
+  // tripsApi.getTrips в jsdom падает, и проверка пропускается как «совпадений
+  // неизвестно», поэтому путь «как раньше» и проверяется. Ждём мутацию через
+  // waitFor: синхронного клика больше недостаточно.
+  it("уходит запрос с маршрутом, окном и сроком", async () => {
     renderForm();
 
     fillAndSubmit();
 
-    expect(mockMutate).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
     const [dto] = mockMutate.mock.calls[0] as [
       Record<string, unknown>,
       unknown,
@@ -130,11 +141,12 @@ describe("RideRequestCreateForm: публикация", () => {
     expect(dto.expiresAt).toBe(dto.latestAt);
   });
 
-  it("показывает тост с маршрутом и очищает поля", () => {
+  it("показывает тост с маршрутом и очищает поля", async () => {
     renderForm();
 
     fillAndSubmit();
 
+    await waitFor(() => expect(mockToastShow).toHaveBeenCalledTimes(1));
     expect(mockToastShow).toHaveBeenCalledWith({
       text: "Запрос опубликован",
       description: "Вологда → Тула — водители увидят его в поиске",

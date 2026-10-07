@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { Sheet } from "@/ui/Sheet";
 import { RideRequestCreateForm } from "./RideRequestCreateForm";
@@ -19,6 +20,11 @@ import { RideRequestCreateForm } from "./RideRequestCreateForm";
  * focus-trap и возврат фокуса. `OfflineBanner` — обязателен именно здесь:
  * портал шторки перекрывает глобальный баннер (AppConfig), на страницах
  * локальные копии не дублируются.
+ *
+ * Хост ещё и единственный, кто умеет переходить: форма не знает роутера,
+ * а предпроверка «уже есть поездки» просит открыть найденную карточку.
+ * Окно закрываем ПЕРЕД переходом (оно осталось бы висеть поверх карточки),
+ * и push, а не replace: «назад» возвращает на страницу, откуда открыли.
  */
 export function RideRequestCreateModal({
   open,
@@ -27,6 +33,8 @@ export function RideRequestCreateModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
+
   // Фокус, Esc и Tab-trap — нативные (Radix FocusScope + onOpenChange);
   // свой role=dialog не добавляем — vaul уже рендерит dialog (двойной анонс).
   // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
@@ -34,7 +42,12 @@ export function RideRequestCreateModal({
   return (
     <Sheet open={open} onClose={onClose} title="Ищу попутку">
       <OfflineBanner />
-      <RideRequestCreateForm />
+      <RideRequestCreateForm
+        onNavigate={(route) => {
+          onClose();
+          navigate(route);
+        }}
+      />
     </Sheet>
   );
 }

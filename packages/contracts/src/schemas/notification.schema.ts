@@ -60,6 +60,63 @@ export const CRITICAL_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
   "trip_status_changed",
 ]);
 
+/**
+ * Тип уведомления-приглашения водителя: пассажир оставил заявку, водитель
+ * позвал его именно в эту поездку. Бронь создаёт пассажир сам — в уведомлении
+ * нет ничего, кроме deep-link на поездку и контекста маршрута.
+ *
+ * В `CRITICAL_NOTIFICATION_TYPES` его НЕТ намеренно: обычный тип уходит в
+ * Telegram, когда тумблер юзера включён и он в чате (`shouldDeliverTelegram`),
+ * поэтому отдельного кода «написать в Telegram» для приглашения не требуется.
+ */
+export const DRIVER_INVITE_NOTIFICATION_TYPE = "driver_invite";
+
+/**
+ * Deep-link на карточку поездки: `/trips/<uuid>` и ничего кроме.
+ *
+ * Форма не выдумана здесь, а зафиксирована allowlist-резолвером бэкенда
+ * (`resolveTelegramDeepLink` / `TELEGRAM_EXACT_ROUTES`): параметризованные
+ * маршруты — строго UUID, query/hash и сырые пользовательские данные в
+ * deep-link запрещены. UUID здесь такой же «свободный», как в резолвере
+ * бэкенда: жёсткий RFC-вариант (`z.string().uuid()`) отверг бы маршрут,
+ * который сервер уже провалидировал и отдал клиенту.
+ */
+const TRIP_DEEP_LINK_RE =
+  /^\/trips\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
+
+/**
+ * Строка инбокса типа `driver_invite` — обычная `notificationSchema`, у
+ * которой контекст поездки обязателен: у остальных типов он nullable (событие
+ * могло обойтись без поездки), а приглашению поездка нужна, иначе тап по
+ * уведомлению некуда вести и вторая строка ячейки останется пустой.
+ *
+ * Персональных данных тут нет: города и время — снимок поездки, второй
+ * стороной события подписан водитель в `actorName` (как у
+ * `ride_request_match`), id поездки несёт deep-link — отдельной колонки
+ * `tripId` у `Notification` нет и заводить её ради этого не стали.
+ */
+export const driverInviteNotificationSchema = notificationSchema.extend({
+  type: z.literal(DRIVER_INVITE_NOTIFICATION_TYPE),
+  deepLink: z
+    .string()
+    .regex(TRIP_DEEP_LINK_RE, "deep-link приглашения — только /trips/<uuid>"),
+  tripFrom: z.string().min(1),
+  tripTo: z.string().min(1),
+  tripDepartureAt: z.string().datetime(),
+});
+
+export type DriverInviteNotification = z.infer<
+  typeof driverInviteNotificationSchema
+>;
+
+/**
+ * Id поездки из deep-link приглашения — единственное место, где маршрут
+ * разбирается на части. null — не приглашение (чужой или битый маршрут).
+ */
+export function tripIdFromDeepLink(deepLink: string): string | null {
+  return TRIP_DEEP_LINK_RE.exec(deepLink)?.[1] ?? null;
+}
+
 /** Роль получателя для серверного фильтра `?role=` и ролевых архивов. */
 export const notificationRoleSchema = z.enum(["driver", "passenger"]);
 
@@ -74,7 +131,8 @@ export type NotificationRole = z.infer<typeof notificationRoleSchema>;
  *   (завершение своей поездки водителю — tripWorker);
  * - passenger: booking_status_changed, trip_cancelled, trip_status_changed,
  *   trip_details_changed (получатели — пассажиры), ride_request_match
- *   (получатель — автор запроса);
+ *   (получатель — автор запроса), driver_invite (получатель — приглашённый
+ *   автор заявки);
  * - нейтральные (review_approved/rejected, feedback_replied, unknown) —
  *   ни в одной карте: видны только в очереди «Новые», архивного дома нет
  *   (осознанно: у них нет ролевого контекста поездки).
@@ -89,6 +147,7 @@ export const NOTIFICATION_ROLE_TYPES: Readonly<
     "trip_status_changed",
     "trip_details_changed",
     "ride_request_match",
+    DRIVER_INVITE_NOTIFICATION_TYPE,
   ]),
 };
 

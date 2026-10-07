@@ -6,16 +6,19 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
+import { ApiError } from "@/api/client";
 
 const {
   mockUseMyBookings,
   mockUseInfiniteMyTrips,
   mockUseCancelTrip,
   mockUseDriverRequests,
+  mockUseTripDemand,
 } = vi.hoisted(() => ({
   mockUseMyBookings: vi.fn(),
   mockUseInfiniteMyTrips: vi.fn(),
   mockUseDriverRequests: vi.fn(),
+  mockUseTripDemand: vi.fn(),
   mockUseCancelTrip: vi.fn(
     (): {
       mutate: ReturnType<typeof vi.fn>;
@@ -31,6 +34,19 @@ const {
 
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: () => ({ data: { rating: 4.9 } }),
+}));
+
+// Спрос на поездку (`GET /trips/:id/requests`) — отдельный мок: без него
+// висящий в карточке `useTripDemandQuery` звал бы настоящий useQuery без
+// QueryClientProvider. Пустой ответ по умолчанию — карточка ничего не рисует.
+// Мутация приглашения в этом моке нужна заглушкой: строки спроса рисуются в
+// тестах ниже, а хук зовётся на каждой из них.
+vi.mock("@/queries/useRideRequestsQuery", () => ({
+  useTripDemandQuery: mockUseTripDemand,
+  useInviteRideRequestMutation: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
 }));
 
 vi.mock("@/queries/useBookingsQuery", () => ({
@@ -79,6 +95,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
   mockUseDriverRequests.mockReturnValue(queryState({ data: [] }));
+  mockUseTripDemand.mockReturnValue(queryState({ data: [] }));
 });
 
 describe("TripActivePage scope", () => {
@@ -304,5 +321,146 @@ describe("TripActivePage per-card cancel pending (F5)", () => {
     // Обе карточки рендерят кнопку отмены, но disabled — ровно одна.
     expect(html.match(/Отменить поездку/g) ?? []).toHaveLength(2);
     expect(html.match(/disabled=""/g) ?? []).toHaveLength(1);
+  });
+});
+
+describe("TripActivePage: карточка спроса на свою поездку", () => {
+  function demandTrip() {
+    return {
+      id: "t-demand",
+      status: "active",
+      fromCity: "Вологда",
+      toCity: "Сокол",
+      departureAt: "2030-06-02T09:00:00.000Z",
+      price: 400,
+      seatsAvailable: 2,
+      seatsTotal: 4,
+      pendingRequestsCount: 0,
+      confirmedBookingsCount: 0,
+    };
+  }
+
+  function rideRequest(id: string, seats: number) {
+    return {
+      id,
+      fromCity: { id: "c-1", name: "Вологда" },
+      toCity: { id: "c-2", name: "Сокол" },
+      earliestAt: "2030-06-02T05:00:00.000Z",
+      latestAt: "2030-06-02T12:00:00.000Z",
+      seats,
+      status: "active",
+      expiresAt: "2030-06-01T05:00:00.000Z",
+      createdAt: "2030-05-01T05:00:00.000Z",
+      updatedAt: "2030-05-01T05:00:00.000Z",
+    };
+  }
+
+  function driverPageWithDemand() {
+    mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({
+        data: { pages: [{ items: [demandTrip()] }] },
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      }),
+    );
+  }
+
+  it("N=3: заголовок из items.length и строки заявок", () => {
+    // Arrange
+    driverPageWithDemand();
+    mockUseTripDemand.mockReturnValue(
+      queryState({
+        data: [
+          rideRequest("r-1", 1),
+          rideRequest("r-2", 2),
+          rideRequest("r-3", 1),
+        ],
+      }),
+    );
+
+    // Act
+    const html = render(<TripActivePage />, "/bookings?segment=driver");
+
+    // Assert
+    expect(html).toContain("3 человека ищут попутку по твоему маршруту");
+    expect(html).toContain("2 места");
+    expect(html).toContain("1 место");
+  });
+
+  it("N=0: карточки нет вовсе, поездка на месте", () => {
+    // Arrange
+    driverPageWithDemand();
+    mockUseTripDemand.mockReturnValue(queryState({ data: [] }));
+
+    // Act
+    const html = render(<TripActivePage />, "/bookings?segment=driver");
+
+    // Assert
+    expect(html).toContain("Сокол");
+    expect(html).not.toContain("ищут попутку по твоему маршруту");
+  });
+
+  it("403 (не водитель) — тишина: экран цел, спроса нет", () => {
+    // Arrange
+    driverPageWithDemand();
+    mockUseTripDemand.mockReturnValue(
+      queryState({
+        data: undefined,
+        isError: true,
+        error: new ApiError("Forbidden", "FORBIDDEN", 403),
+      }),
+    );
+
+    // Act
+    const html = render(<TripActivePage />, "/bookings?segment=driver");
+
+    // Assert
+    expect(html).toContain("Сокол");
+    expect(html).not.toContain("ищут попутку по твоему маршруту");
+    expect(html).not.toContain("Forbidden");
+  });
+
+  it("бронь (сегмент пассажира) карточку спроса не рисует", () => {
+    // Arrange
+    mockUseTripDemand.mockReturnValue(
+      queryState({ data: [rideRequest("r-1", 1)] }),
+    );
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({
+        data: { pages: [] },
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      }),
+    );
+    mockUseMyBookings.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "b-now",
+            seat: 1,
+            status: "confirmed",
+            scope: "active",
+            trip: {
+              id: "t-booked",
+              fromCity: "Вологда",
+              toCity: "Череповец",
+              departureAt: "2030-06-01T09:00:00.000Z",
+              price: 450,
+              driver: { name: "Александр" },
+            },
+          },
+        ],
+      }),
+    );
+
+    // Act
+    const html = render(<TripActivePage />, "/bookings?segment=passenger");
+
+    // Assert
+    expect(html).toContain("Череповец");
+    expect(html).not.toContain("ищут попутку по твоему маршруту");
   });
 });

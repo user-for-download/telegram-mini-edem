@@ -263,9 +263,11 @@ model RideRequest {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fromCity   City @relation("RideRequestFromCity", fields: [fromCityId], references: [id], onDelete: Restrict)
-  toCity     City @relation("RideRequestToCity", fields: [toCityId], references: [id], onDelete: Restrict)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromCity   City      @relation("RideRequestFromCity", fields: [fromCityId], references: [id], onDelete: Restrict)
+  toCity     City      @relation("RideRequestToCity", fields: [toCityId], references: [id], onDelete: Restrict)
+  // Брони, закрывшие эту заявку (поток «заявка → поездка», слой 2).
+  bookings   Booking[]
 
   @@index([status, expiresAt])
   @@index([fromCityId, toCityId, status, earliestAt])
@@ -304,6 +306,9 @@ model Booking {
   id          String   @id @default(uuid())
   tripId      String
   passengerId String
+  // Заявка пассажира, из которой выросла бронь (поток «заявка → поездка»,
+  // слой 2; миграция *add_booking_request_id).
+  requestId   String?
   // DB CHECK Booking_seat_positive (seat >= 1) — см. миграцию *compress_seats_to_max3.
   seat        Int
   status      String   @default("pending") // pending, confirmed, declined, cancelled
@@ -315,8 +320,12 @@ model Booking {
   comment     String?
   createdAt   DateTime @default(now())
 
-  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  passenger User @relation("PassengerBookings", fields: [passengerId], references: [id])
+  // Nullable + SetNull: удаление заявки обнуляет ссылку, но НЕ удаляет бронь.
+  // Бронь — реальное резервирование места в поездке, она обязана пережить
+  // судьбу породившей её заявки (удаление заявки не отменяет поездку).
+  trip      Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  passenger User         @relation("PassengerBookings", fields: [passengerId], references: [id])
+  request   RideRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
 
   @@index([tripId, status])
   @@index([status, expiresAt])
@@ -324,6 +333,10 @@ model Booking {
   @@index([tripId, seat])
   @@index([tripId, passengerId])
   @@index([tripId, createdAt(sort: Desc)])
+  // Трассировка «бронь ← заявка» (разбор в админке/аналитике, отчёт по
+  // конверсии заявок). Обычный индекс, НЕ unique: одна заявка может закрыться
+  // несколькими поездками (смена даты, отмена первой), у каждой — своя бронь.
+  @@index([requestId])
 }
 
 // Partial unique constraints создаются SQL-миграцией (Prisma не поддерживает

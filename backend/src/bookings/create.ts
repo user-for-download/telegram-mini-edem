@@ -26,6 +26,7 @@ import {
   BookingError,
   type CreateResult,
 } from "./shared.js";
+import { closeRideRequestsForBooking } from "./rideRequests.js";
 import { logBusinessEvent } from "../logger/business.js";
 import {
   notifyUser,
@@ -51,7 +52,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
     );
   }
 
-  const { tripId, seat, comment } = parseResult.data;
+  const { tripId, seat, comment, requestId } = parseResult.data;
   const passenger = c.get("user");
 
   try {
@@ -220,10 +221,28 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
           },
         });
 
+        // Слой 2 «заявка → поездка»: заявка, породившая бронь, закрывается
+        // ЗДЕСЬ, в той же Serializable-транзакции, что и booking.create.
+        // Порядок именно такой: сначала закрытие (оно может бросить BookingError
+        // и откатить всё), потом вставка брони. Обратный порядок оставил бы
+        // пассажира с «бронь есть, заявка висит» при любой ошибке записи.
+        //
+        // Клиентский requestId приоритетнее серверного подбора; без него
+        // сервер закрывает все совпавшие активные заявки сам. Правила и
+        // обоснование — в closeRideRequestsForBooking.
+        const closedRequests = await closeRideRequestsForBooking(tx, {
+          trip,
+          passengerId: passenger.id,
+          ...(requestId !== undefined ? { requestedRequestId: requestId } : {}),
+        });
+
         const created = await tx.booking.create({
           data: {
             tripId,
             passengerId: passenger.id,
+            // Трассировка «бронь ← заявка». null — бронь без заявки (обычный
+            // случай: человек забронировал, ни разу не создавая заявку).
+            requestId: closedRequests.stampedRequestId,
             seat,
             comment,
             status: "pending",
@@ -247,7 +266,11 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
           },
         });
 
-        return { kind: "created", booking: created };
+        return {
+          kind: "created",
+          booking: created,
+          closedRequestIds: closedRequests.closedIds,
+        };
       },
       { isolationLevel: "Serializable" },
     );

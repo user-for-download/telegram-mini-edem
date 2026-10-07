@@ -34,6 +34,28 @@ export const rideRequestSchema = z.object({
 export type RideRequest = z.infer<typeof rideRequestSchema>;
 
 /**
+ * Спрос на конкретную поездку (`GET /trips/:id/requests`, только водитель):
+ * активные заявки других людей, совпадающие по маршруту и пересекающиеся с
+ * окном поездки. Зеркало `GET /ride-requests/matching`, ключ — поездка.
+ *
+ * Форма элемента та же, что у `rideRequestSchema`: автор заявки не отдаётся
+ * (privacy — как в ленте спроса), водитель видит окно, места и города.
+ *
+ * Следствие приватности, о котором важно помнить в UI: «сколько человек
+ * ищет попутку» по этому ответу — верхняя оценка `items.length`, а не число
+ * разных людей. У одного человека бывает до трёх активных заявок, и две из
+ * них на один маршрут посчитаются двумя строками. Точное число людей без
+ * раскрытия авторов недостижимо — как и в агрегате `/ride-requests/feed`,
+ * где оно считается на сервере из скрытого `userId`.
+ */
+export const tripRideRequestsResponseSchema = z.object({
+  items: z.array(rideRequestSchema),
+});
+export type TripRideRequestsResponse = z.infer<
+  typeof tripRideRequestsResponseSchema
+>;
+
+/**
  * Строка ленты спроса (`GET /ride-requests/feed`): агрегат по маршруту, а не
  * отдельная заявка.
  *
