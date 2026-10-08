@@ -113,6 +113,41 @@ node dist/src/index.js`, `backend/Dockerfile:78`), а в pm2-стенде так
       ищется в логах бэкенда (`unhandled_error` + текст Prisma), второй
       виден только в консоли клиента — `[ApiClient] Zod validation failed`.
 
+### 5.1 Дрейф `db push` против `_prisma_migrations`
+
+`prisma db push` меняет схему **минуя** таблицу `_prisma_migrations`. На БД,
+где миграции ведутся, это создаёт дрейф, и следующий `migrate deploy`
+падает:
+
+```
+Error: P3018 … column "autoComplete" of relation "Trip" already exists (42701)
+New migrations cannot be applied before the error is recovered from.
+```
+
+Восстановление — `migrate resolve`, а не повторный `deploy` и тем более не
+`migrate reset` (он сносит данные):
+
+```bash
+# 1. Убедиться, что колонки УЖЕ на месте — resolve оправдан только тогда,
+#    когда желаемое состояние достигнуто (проверить SQL из §5)
+npx prisma migrate resolve --applied <имя_миграции>
+# 2. Дальше deploy идёт штатно
+npm run db:migrate:deploy --workspace=backend
+```
+
+`resolve --applied` честно помечает миграцию применённой, а упавшую
+попытку — откатанной (в леджере появятся обе строки; это нормально и
+`migrate status` после этого показывает «up to date»).
+
+Главное — не применять `resolve` «на всякий случай»: он не выполняет SQL,
+а только правит учёт. Если колонок нет, `resolve` пометит миграцию
+применённой, и дрейф станет невидимым — расхождение всплывёт позже и
+дальше. Правило: на БД с миграциями — `migrate deploy`; `db push` годится
+только для чистых БД без учёта (и CI, где каждый прогон с нуля).
+
+Инцидент 2026-10-08 вызван именно этим: колонки добавили `db push`-ом, а
+запись в леджере не появилась.
+
 ## 6. Known non-goals (заблокировано отдельно)
 
 - Bot API фоновая рассылка (ADR, Product-аппрув) — на стейдже не включать.
