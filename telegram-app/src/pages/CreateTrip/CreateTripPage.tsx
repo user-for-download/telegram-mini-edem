@@ -8,6 +8,7 @@ import {
 } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
 import { Section } from "@/ui/Section";
+import { SwitchRow } from "@/ui/SwitchRow";
 import { BTN_ROW_WRAP, HINT, INFO, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { QueryState } from "@/components/QueryState";
@@ -116,6 +117,8 @@ export function CreateTripForm({
       seats,
       comment,
       tags,
+      autoComplete,
+      matchingEnabled,
     },
     draft,
     isDirty,
@@ -157,6 +160,24 @@ export function CreateTripForm({
     haptic.selection();
     touch();
     toggleFormTag(tag);
+  };
+
+  /**
+   * Переключатели опций поездки — тот же контракт, что у селекта мест и
+   * тегов: haptic + гашение ошибки (правка делает черновик — см.
+   * isTripFormDirty) + setField. Значение живёт в useTripForm, отсюда же
+   * уходит в draft → POST /trips.
+   */
+  const toggleAutoComplete = (next: boolean) => {
+    haptic.selection();
+    touch();
+    setField("autoComplete", next);
+  };
+
+  const toggleMatchingEnabled = (next: boolean) => {
+    haptic.selection();
+    touch();
+    setField("matchingEnabled", next);
   };
 
   /** Скролл к невалидному полю, иначе — к блоку общей ошибки. */
@@ -277,257 +298,320 @@ export function CreateTripForm({
   }
 
   return (
-    <>
-      <Page>
-        {/* NavHeader помечен aria-hidden («авторитетные h1 живут на страницах»),
+    <Page>
+      {/* NavHeader помечен aria-hidden («авторитетные h1 живут на страницах»),
             поэтому имя экрана даёт скрытый h1, а заголовки секций — h2
             (гарантирует фасад ui/Section). */}
-        <VisuallyHidden Component="h1">Создание поездки</VisuallyHidden>
-        <Section header="Маршрут">
-          <SectionBody>
-            <div className={styles.cityFields}>
-              {/* Тот же CitySelectField, что на главной и в поиске:
+      <VisuallyHidden Component="h1">Создание поездки</VisuallyHidden>
+      <Section header="Маршрут">
+        <SectionBody>
+          <div className={styles.cityFields}>
+            {/* Тот же CitySelectField, что на главной и в поиске:
                   китовский Multiselect не подходит (реестр #19). */}
-              <CitySelectField
-                id="create-from"
-                label="Город отправления"
-                valueId={fromCityId}
-                cities={cities.data}
-                placeholder="Откуда едем"
-                error={errorFor("create-from")}
-                excludeId={toCityId}
-                onChange={(next) => {
-                  touch();
-                  setField("fromCityId", next);
-                }}
-              />
-              <IconButton
-                type="button"
-                size="s"
-                onClick={swapCities}
-                aria-label="Поменять направление"
-                className={styles.swap}
-              >
-                <ArrowRightLeft size={14} className={INFO} />
-              </IconButton>
-              <CitySelectField
-                id="create-to"
-                label="Город назначения"
-                valueId={toCityId}
-                cities={cities.data}
-                placeholder="Куда едем"
-                error={errorFor("create-to")}
-                excludeId={fromCityId}
-                onChange={(next) => {
-                  touch();
-                  setField("toCityId", next);
-                }}
-              />
-            </div>
-            <Field label="Адрес отправления" id="create-from-address" error={errorFor("create-from-address")}>
-              {(field) => (
-                <>
-                  <Input
-                    {...field}
-                    before={<Navigation size={16} className={HINT} />}
-                    value={fromAddress}
-                    status={statusFor("create-from-address")}
-                    onChange={(event) => {
-                      touch();
-                      setField("fromAddress", event.target.value);
-                    }}
-                    placeholder="Точка встречи"
-                  />
-                </>
-              )}
-            </Field>
-            <Field label="Адрес назначения" id="create-to-address" error={errorFor("create-to-address")}>
-              {(field) => (
-                <>
-                  <Input
-                    {...field}
-                    before={<Navigation size={16} className={HINT} />}
-                    value={toAddress}
-                    status={statusFor("create-to-address")}
-                    onChange={(event) => {
-                      touch();
-                      setField("toAddress", event.target.value);
-                    }}
-                    placeholder="Точка прибытия"
-                  />
-                </>
-              )}
-            </Field>
-          </SectionBody>
-        </Section>
-
-        <Section header="Поездка">
-          <SectionBody>
-            <Field label="Дата и время" id="create-date" error={errorFor("create-date")}>
-              {(field) => (
-                <>
-                  <Input
-                    {...field}
-                    before={<Calendar size={16} className={HINT} />}
-                    type="datetime-local"
-                    value={date}
-                    status={statusFor("create-date")}
-                    onChange={(event) => {
-                      touch();
-                      setField("date", event.target.value);
-                    }}
-                  />
-                </>
-              )}
-            </Field>
-            <div className={styles.grid2}>
-              <Field label="Цена, ₽" id="create-price" error={errorFor("create-price")}>
-                {(field) => (
-                  <>
-                    <Input
-                      {...field}
-                      before={<RussianRuble size={16} className={HINT} />}
-                      type="number"
-                      min="1"
-                      max="100000"
-                      value={price}
-                      status={statusFor("create-price")}
-                      onChange={(event) => {
-                        touch();
-                        setField("price", event.target.value);
-                      }}
-                    />
-                  </>
-                )}
-              </Field>
-              <Field label="Места" id="create-seats" error={errorFor("create-seats")}>
-                {(field) => (
-                  <Select
-                    {...field}
-                    value={seats}
-                    status={statusFor("create-seats")}
-                    onChange={(event) => {
-                      haptic.selection();
-                      touch();
-                      setField("seats", event.target.value);
-                    }}
-                  >
-                    {Array.from({ length: MAX_SEATS }, (_, index) => (
-                      <option key={index + 1} value={String(index + 1)}>
-                        {index + 1}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-            </div>
-            <div className={styles.grid2}>
-              <Field label="Расстояние, км" id="create-distance" error={errorFor("create-distance")}>
-                {(field) => (
-                  <>
-                    <Input
-                      {...field}
-                      before={<MapPin size={16} className={HINT} />}
-                      type="number"
-                      min="1"
-                      max="20000"
-                      value={distanceKm}
-                      status={statusFor("create-distance")}
-                      onChange={(event) => {
-                        touch();
-                        setField("distanceKm", event.target.value);
-                      }}
-                      placeholder="180"
-                    />
-                  </>
-                )}
-              </Field>
-              <Field label="В пути, часов" id="create-duration" error={errorFor("create-duration")}>
-                {(field) => (
-                  <>
-                    <Input
-                      {...field}
-                      before={<Clock size={16} className={HINT} />}
-                      type="number"
-                      min="1"
-                      max="168"
-                      value={durationHours}
-                      status={statusFor("create-duration")}
-                      onChange={(event) => {
-                        touch();
-                        setField("durationHours", event.target.value);
-                      }}
-                    />
-                  </>
-                )}
-              </Field>
-            </div>
-          </SectionBody>
-        </Section>
-
-        <Section
-          header="Условия поездки"
-          footer={`до 6 · выбрано ${tags.length}`}
-        >
-          <SectionBody>
-            <div
-              className={BTN_ROW_WRAP}
-              role="group"
-              aria-label="Условия поездки"
+            <CitySelectField
+              id="create-from"
+              label="Город отправления"
+              valueId={fromCityId}
+              cities={cities.data}
+              placeholder="Откуда едем"
+              error={errorFor("create-from")}
+              excludeId={toCityId}
+              onChange={(next) => {
+                touch();
+                setField("fromCityId", next);
+              }}
+            />
+            <IconButton
+              type="button"
+              size="s"
+              onClick={swapCities}
+              aria-label="Поменять направление"
+              className={styles.swap}
             >
-              {TRIP_TAGS.map((tag) => {
-                const checked = tags.includes(tag);
-                return (
-                  <Chip
-                    key={tag}
-                    tone="accent"
-                    Component="button"
-                    type="button"
-                    variant={checked ? "active" : "quiet"}
-                    aria-pressed={checked}
-                    onClick={() => toggleTag(tag)}
-                  >
-                    {tag}
-                  </Chip>
-                );
-              })}
-            </div>
-            <Field label="Комментарий" id="create-comment" error={errorFor("create-comment")}>
-              {(field) => (
-                <Textarea
+              <ArrowRightLeft size={14} className={INFO} />
+            </IconButton>
+            <CitySelectField
+              id="create-to"
+              label="Город назначения"
+              valueId={toCityId}
+              cities={cities.data}
+              placeholder="Куда едем"
+              error={errorFor("create-to")}
+              excludeId={fromCityId}
+              onChange={(next) => {
+                touch();
+                setField("toCityId", next);
+              }}
+            />
+          </div>
+          <Field
+            label="Адрес отправления"
+            id="create-from-address"
+            error={errorFor("create-from-address")}
+          >
+            {(field) => (
+              <>
+                <Input
                   {...field}
-                  rows={3}
-                  maxLength={500}
-                  placeholder="Например: едем спокойно, салон чистый, багажник свободен"
-                  value={comment}
-                  status={statusFor("create-comment")}
+                  before={<Navigation size={16} className={HINT} />}
+                  value={fromAddress}
+                  status={statusFor("create-from-address")}
                   onChange={(event) => {
                     touch();
-                    setField("comment", event.target.value);
+                    setField("fromAddress", event.target.value);
+                  }}
+                  placeholder="Точка встречи"
+                />
+              </>
+            )}
+          </Field>
+          <Field
+            label="Адрес назначения"
+            id="create-to-address"
+            error={errorFor("create-to-address")}
+          >
+            {(field) => (
+              <>
+                <Input
+                  {...field}
+                  before={<Navigation size={16} className={HINT} />}
+                  value={toAddress}
+                  status={statusFor("create-to-address")}
+                  onChange={(event) => {
+                    touch();
+                    setField("toAddress", event.target.value);
+                  }}
+                  placeholder="Точка прибытия"
+                />
+              </>
+            )}
+          </Field>
+        </SectionBody>
+      </Section>
+
+      <Section header="Поездка">
+        <SectionBody>
+          <Field
+            label="Дата и время"
+            id="create-date"
+            error={errorFor("create-date")}
+          >
+            {(field) => (
+              <>
+                <Input
+                  {...field}
+                  before={<Calendar size={16} className={HINT} />}
+                  type="datetime-local"
+                  value={date}
+                  status={statusFor("create-date")}
+                  onChange={(event) => {
+                    touch();
+                    setField("date", event.target.value);
                   }}
                 />
+              </>
+            )}
+          </Field>
+          <div className={styles.grid2}>
+            <Field
+              label="Цена, ₽"
+              id="create-price"
+              error={errorFor("create-price")}
+            >
+              {(field) => (
+                <>
+                  <Input
+                    {...field}
+                    before={<RussianRuble size={16} className={HINT} />}
+                    type="number"
+                    min="1"
+                    max="100000"
+                    value={price}
+                    status={statusFor("create-price")}
+                    onChange={(event) => {
+                      touch();
+                      setField("price", event.target.value);
+                    }}
+                  />
+                </>
               )}
             </Field>
-          </SectionBody>
-        </Section>
+            <Field
+              label="Места"
+              id="create-seats"
+              error={errorFor("create-seats")}
+            >
+              {(field) => (
+                <Select
+                  {...field}
+                  value={seats}
+                  status={statusFor("create-seats")}
+                  onChange={(event) => {
+                    haptic.selection();
+                    touch();
+                    setField("seats", event.target.value);
+                  }}
+                >
+                  {Array.from({ length: MAX_SEATS }, (_, index) => (
+                    <option key={index + 1} value={String(index + 1)}>
+                      {index + 1}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          </div>
+          <div className={styles.grid2}>
+            <Field
+              label="Расстояние, км"
+              id="create-distance"
+              error={errorFor("create-distance")}
+            >
+              {(field) => (
+                <>
+                  <Input
+                    {...field}
+                    before={<MapPin size={16} className={HINT} />}
+                    type="number"
+                    min="1"
+                    max="20000"
+                    value={distanceKm}
+                    status={statusFor("create-distance")}
+                    onChange={(event) => {
+                      touch();
+                      setField("distanceKm", event.target.value);
+                    }}
+                    placeholder="180"
+                  />
+                </>
+              )}
+            </Field>
+            <Field
+              label="В пути, часов"
+              id="create-duration"
+              error={errorFor("create-duration")}
+            >
+              {(field) => (
+                <>
+                  <Input
+                    {...field}
+                    before={<Clock size={16} className={HINT} />}
+                    type="number"
+                    min="1"
+                    max="168"
+                    value={durationHours}
+                    status={statusFor("create-duration")}
+                    onChange={(event) => {
+                      touch();
+                      setField("durationHours", event.target.value);
+                    }}
+                  />
+                </>
+              )}
+            </Field>
+          </div>
+        </SectionBody>
+      </Section>
 
-        {validationError && !errorField && (
-          <Notice tone="danger" variant="text" ref={errorRef}>
-            {validationError}
-          </Notice>
-        )}
-        <MutationError error={create.error} />
-        <Button
-          variant="primary"
-          size="l"
-          stretched
-          loading={create.isPending}
-          disabled={create.isPending}
-          onClick={submit}
-        >
-          Опубликовать
-        </Button>
-      </Page>
-    </>
+      <Section header="Условия поездки">
+        <SectionBody>
+          <div
+            className={BTN_ROW_WRAP}
+            role="group"
+            aria-label="Условия поездки"
+          >
+            {TRIP_TAGS.map((tag) => {
+              const checked = tags.includes(tag);
+              return (
+                <Chip
+                  key={tag}
+                  tone="accent"
+                  Component="button"
+                  type="button"
+                  variant={checked ? "active" : "quiet"}
+                  aria-pressed={checked}
+                  onClick={() => toggleTag(tag)}
+                >
+                  {tag}
+                </Chip>
+              );
+            })}
+          </div>
+          <Field
+            label="Комментарий"
+            id="create-comment"
+            error={errorFor("create-comment")}
+          >
+            {(field) => (
+              <Textarea
+                {...field}
+                rows={3}
+                maxLength={500}
+                placeholder="Например: едем спокойно, салон чистый, багажник свободен"
+                value={comment}
+                status={statusFor("create-comment")}
+                onChange={(event) => {
+                  touch();
+                  setField("comment", event.target.value);
+                }}
+              />
+            )}
+          </Field>
+        </SectionBody>
+      </Section>
+
+      {/* Опции владельца — ПЕРЕД кнопкой «Опубликовать» (решение
+            владельца: опции читаются как решение при отправке, а не как
+            часть паспорта поездки в середине формы). Строки — прямые дети
+            SectionBody: Section ставит Divider только между прямыми детьми,
+            поэтому Stack-обёртка молча убрала бы разделители (ровно поэтому
+            SwitchRow в профиле не оборачивают). */}
+      <Section
+        header="Опции поездки"
+        footer="Завершение по расписанию срабатывает в течение часа после конца рейса"
+      >
+        <SectionBody>
+          <SwitchRow
+            label="Завершать поездку сразу после прибытия"
+            title="Завершать сразу после поездки"
+            subtitle={
+              autoComplete
+                ? "Завершится после конца рейса, а не через сутки после отправления"
+                : "Завершится через сутки после отправления — или раньше, вручную"
+            }
+            checked={autoComplete}
+            onChange={toggleAutoComplete}
+          />
+          <SwitchRow
+            label="Предлагать поездку подходящим попутчикам"
+            title="Предлагать подходящим попутчикам"
+            subtitle={
+              matchingEnabled
+                ? "Предложим тем, кто ищет попутку по вашему маршруту"
+                : "Не предложим никому: ни уведомлений, ни подсказок"
+            }
+            checked={matchingEnabled}
+            onChange={toggleMatchingEnabled}
+          />
+        </SectionBody>
+      </Section>
+
+      {validationError && !errorField && (
+        <Notice tone="danger" variant="text" ref={errorRef}>
+          {validationError}
+        </Notice>
+      )}
+      <MutationError error={create.error} />
+      <Button
+        variant="primary"
+        size="l"
+        stretched
+        loading={create.isPending}
+        disabled={create.isPending}
+        onClick={submit}
+      >
+        Опубликовать
+      </Button>
+    </Page>
   );
 }

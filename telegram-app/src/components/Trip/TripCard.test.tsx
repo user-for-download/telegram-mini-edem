@@ -40,6 +40,12 @@ function makeTrip(overrides: Partial<Trip> = {}): Trip {
     price: 450,
     seatsTotal: 3,
     seatsAvailable: 2,
+    // Флаги опций поездки обязательны в ОТВЕТЕ (tripSchema): неизвестное
+    // значение ≠ «выключено», поэтому у фикстуры нет «дефолта».
+
+    autoComplete: false,
+    matchingEnabled: true,
+
     driver: DRIVER,
     tags: [],
     status: "active",

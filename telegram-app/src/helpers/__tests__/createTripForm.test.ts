@@ -134,4 +134,44 @@ describe("validateCreateTripDraft", () => {
       field: "create-comment",
     });
   });
+
+  it("флаги опций из черновика доезжают в payload", () => {
+    // Выбор водителя — не дефолт: валидатор обязан его прокинуть, иначе
+    // бэкенд создаст поездку с чужим поведением, молча.
+    const result = validateCreateTripDraft(
+      draft({ autoComplete: true, matchingEnabled: false }),
+      [...CITIES],
+      NOW,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data["autoComplete"]).toBe(true);
+      expect(result.data["matchingEnabled"]).toBe(false);
+    }
+  });
+
+  it("дефолтные флаги опций доезжают как есть", () => {
+    const result = validateCreateTripDraft(
+      draft({ autoComplete: false, matchingEnabled: true }),
+      [...CITIES],
+      NOW,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data["autoComplete"]).toBe(false);
+      expect(result.data["matchingEnabled"]).toBe(true);
+    }
+  });
+
+  it("черновик без флагов валиден: контракт сам подставляет дефолты", () => {
+    // Обратная совместимость: e2e-фикстуры/старый клиент флагов не шлют —
+    // `.default()` в createTripDtoSchema даёт текущее поведение.
+    const { autoComplete: _a, matchingEnabled: _m, ...withoutFlags } = draft();
+    const result = validateCreateTripDraft(withoutFlags, [...CITIES], NOW);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data["autoComplete"]).toBe(false);
+      expect(result.data["matchingEnabled"]).toBe(true);
+    }
+  });
 });

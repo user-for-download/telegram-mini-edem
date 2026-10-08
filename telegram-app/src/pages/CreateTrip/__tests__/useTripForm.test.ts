@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { type TripTag } from "@edem/contracts";
 import {
   initialTripFormState,
+  isTripFormDirty,
   tripFormReducer,
   type TripFormState,
 } from "@/pages/CreateTrip/useTripForm";
@@ -26,6 +27,14 @@ describe("initialTripFormState", () => {
       tags: [],
     });
     expect(initial.date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+  });
+
+  it("флаги опций стартуют с дефолтов контракта", () => {
+    // autoComplete=false — автозавершение по TTL +24ч (текущее поведение),
+    // matchingEnabled=true — безусловный подбор пассажиров (текущее поведение).
+    // Инверсия дефолта тихо поменяла бы семантику для всех новых поездок.
+    expect(initialTripFormState().autoComplete).toBe(false);
+    expect(initialTripFormState().matchingEnabled).toBe(true);
   });
 });
 
@@ -92,5 +101,82 @@ describe("tripFormReducer", () => {
 
   it("места задаются обычным set из селекта 1..MAX_SEATS", () => {
     expect(tripFormReducer(state({ seats: "1" }), { type: "set", field: "seats", value: "3" }).seats).toBe("3");
+  });
+
+  it("флаги опций переключаются обычным set", () => {
+    const on = tripFormReducer(state(), {
+      type: "set",
+      field: "autoComplete",
+      value: true,
+    });
+    expect(on.autoComplete).toBe(true);
+    const off = tripFormReducer(on, {
+      type: "set",
+      field: "matchingEnabled",
+      value: false,
+    });
+    expect(off.matchingEnabled).toBe(false);
+    // Остальные поля не поехали.
+    expect(off.seats).toBe("1");
+  });
+
+  it("set флага тем же значением возвращает тот же объект", () => {
+    const prev = state();
+    expect(
+      tripFormReducer(prev, { type: "set", field: "matchingEnabled", value: true }),
+    ).toBe(prev);
+  });
+});
+
+describe("isTripFormDirty", () => {
+  it("чистая форма — не черновик", () => {
+    const initial = initialTripFormState();
+    expect(isTripFormDirty(initial, initial)).toBe(false);
+  });
+
+  it("переключение опции делает форму черновиком", () => {
+    // Регрессия: без флагов в сравнении переключатель не считался бы
+    // изменением, и useClosingConfirmation молчал бы — водитель потерял бы
+    // выбор опции при выходе из формы.
+    const initial = initialTripFormState();
+    const toggled = tripFormReducer(initial, {
+      type: "set",
+      field: "matchingEnabled",
+      value: false,
+    });
+    expect(isTripFormDirty(toggled, initial)).toBe(true);
+  });
+
+  it("переключение второй опции тоже черновик", () => {
+    const initial = initialTripFormState();
+    const toggled = tripFormReducer(initial, {
+      type: "set",
+      field: "autoComplete",
+      value: true,
+    });
+    expect(isTripFormDirty(toggled, initial)).toBe(true);
+  });
+
+  it("возврат к начальному значению снова делает форму чистой", () => {
+    const initial = initialTripFormState();
+    const toggled = tripFormReducer(initial, {
+      type: "set",
+      field: "autoComplete",
+      value: true,
+    });
+    const restored = tripFormReducer(toggled, {
+      type: "set",
+      field: "autoComplete",
+      value: false,
+    });
+    expect(isTripFormDirty(restored, initial)).toBe(false);
+  });
+
+  it("форма без флагов в сравнении — тест на откат полей", () => {
+    // Фикстура для проверки падения: если из isTripFormDirty выкинуть оба
+    // флага, первый «переключение опции делает форму черновиком» упадёт.
+    const initial = initialTripFormState();
+    expect(isTripFormDirty({ ...initial, autoComplete: true }, initial)).toBe(true);
+    expect(isTripFormDirty({ ...initial, matchingEnabled: false }, initial)).toBe(true);
   });
 });

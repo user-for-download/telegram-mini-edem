@@ -325,9 +325,13 @@ describe("TripActivePage per-card cancel pending (F5)", () => {
 });
 
 describe("TripActivePage: карточка спроса на свою поездку", () => {
-  function demandTrip() {
+  function demandTrip(overrides: Record<string, unknown> = {}) {
     return {
       id: "t-demand",
+      // Обязательны в tripSchema. Дефолты = включённый подбор, то есть
+      // состояние, в котором пина быть не должно.
+      autoComplete: false,
+      matchingEnabled: true,
       status: "active",
       fromCity: "Вологда",
       toCity: "Сокол",
@@ -337,6 +341,7 @@ describe("TripActivePage: карточка спроса на свою поезд
       seatsTotal: 4,
       pendingRequestsCount: 0,
       confirmedBookingsCount: 0,
+      ...overrides,
     };
   }
 
@@ -387,6 +392,69 @@ describe("TripActivePage: карточка спроса на свою поезд
     expect(html).toContain("3 человека ищут попутку по твоему маршруту");
     expect(html).toContain("2 места");
     expect(html).toContain("1 место");
+  });
+
+  it("matchingEnabled=false: пояснение видно, карточка спроса не рисуется", () => {
+    // Молчание карточки спроса неотличимо от «спроса нет», поэтому при
+    // выключенном подборе водитель должен видеть, что это ЕГО выбор.
+    driverPageWithDemand();
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({
+        data: { pages: [{ items: [demandTrip({ matchingEnabled: false })] }] },
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      }),
+    );
+    mockUseTripDemand.mockReturnValue(queryState({ data: [] }));
+
+    const html = render(<TripActivePage />, "/bookings?segment=driver");
+
+    expect(html).toContain("Подбор попутчиков выключен");
+    // Пояснение обещает правду о поиске: поездку из поиска не прячут.
+    expect(html).toContain("обычным поиском");
+    // Это не список заявок: ни строк, ни действий-приглашений.
+    expect(html).not.toContain("ищут попутку по твоему маршруту");
+    expect(html).not.toContain("Пригласить");
+  });
+
+  it("matchingEnabled=true: пояснения нет", () => {
+    driverPageWithDemand();
+    mockUseTripDemand.mockReturnValue(queryState({ data: [] }));
+
+    const html = render(<TripActivePage />, "/bookings?segment=driver");
+
+    expect(html).not.toContain("Подбор попутчиков выключен");
+  });
+
+  it("matchingEnabled=undefined: пояснения нет — неизвестно ≠ выключено", () => {
+    // MEMORY §18. На старом или замоканном ответе флага нет; угадывать его
+    // как «выключено» значило бы врать водителю, что он что-то отключил.
+    driverPageWithDemand();
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({
+        data: {
+          pages: [
+            {
+              items: [
+                (({ matchingEnabled: _omitted, ...rest }) => rest)(
+                  demandTrip(),
+                ),
+              ],
+            },
+          ],
+        },
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      }),
+    );
+    mockUseTripDemand.mockReturnValue(queryState({ data: [] }));
+
+    const html = render(<TripActivePage />, "/bookings?segment=driver");
+
+    expect(html).not.toContain("Подбор попутчиков выключен");
+    expect(html).toContain("Сокол");
   });
 
   it("N=0: карточки нет вовсе, поездка на месте", () => {

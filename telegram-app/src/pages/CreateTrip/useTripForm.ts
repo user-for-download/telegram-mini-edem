@@ -7,9 +7,9 @@ const tomorrow = () =>
   toLocalDateTimeInputValue(new Date(Date.now() + 86_400_000));
 
 /**
- * Состояние формы создания поездки (10 полей). Города хранятся как id
- * справочника, а не именами: имя неоднозначно («Москва» входит в «Москва-…»),
- * и резолвить его обратно в id при отправке — источник рассинхрона.
+ * Состояние формы создания поездки. Города хранятся как id справочника,
+ * а не именами: имя неоднозначно («Москва» входит в «Москва-…»), и резолвить
+ * его обратно в id при отправке — источник рассинхрона.
  */
 export interface TripFormState {
   /** id городов справочника (не имена). */
@@ -25,11 +25,22 @@ export interface TripFormState {
   seats: string;
   comment: string;
   tags: TripTag[];
+  /** Завершать поездку сразу по окончании рейса (иначе — текущие +24ч). */
+  autoComplete: boolean;
+  /** Предлагать подходящие ride request (выключено — не предлагать вовсе). */
+  matchingEnabled: boolean;
 }
 
 export type TripFormField = keyof TripFormState;
 
-/** Начальные значения — те же, что были в useState страницы. */
+/**
+ * Начальные значения — те же, что были в useState страницы.
+ *
+ * Флаги опций равны дефолтам `createTripDtoSchema` (autoComplete=false,
+ * matchingEnabled=true): форма стартует в состоянии, эквивалентном текущему
+ * поведению бэкенда (автозавершение по TTL +24ч, безусловный подбор пассажиров),
+ * поэтому старый/новый клиент и e2e-фикстуры дают одинаковую поездку.
+ */
 export function initialTripFormState(): TripFormState {
   return {
     fromCityId: "",
@@ -43,6 +54,8 @@ export function initialTripFormState(): TripFormState {
     seats: "1",
     comment: "",
     tags: [],
+    autoComplete: false,
+    matchingEnabled: true,
   };
 }
 
@@ -89,6 +102,35 @@ export function tripFormReducer(
 }
 
 /**
+ * Несохранённый черновик: форма отличается от начальных значений.
+ *
+ * Вынесено чистой функцией ради unit-теста без DOM. Флаги опций участвуют
+ * в сравнении наравне с полями ввода: переключатель — тоже выбор водителя,
+ * и без этого сравнения Telegram не спросил бы подтверждение ухода, а водитель
+ * потерял бы выбор молча (ровно как сегодня теряет комментарий).
+ */
+export function isTripFormDirty(
+  form: TripFormState,
+  initial: TripFormState,
+): boolean {
+  return (
+    form.fromCityId !== initial.fromCityId ||
+    form.toCityId !== initial.toCityId ||
+    form.fromAddress !== initial.fromAddress ||
+    form.toAddress !== initial.toAddress ||
+    form.date !== initial.date ||
+    form.durationHours !== initial.durationHours ||
+    form.distanceKm !== initial.distanceKm ||
+    form.price !== initial.price ||
+    form.seats !== initial.seats ||
+    form.comment !== initial.comment ||
+    form.tags.length > 0 ||
+    form.autoComplete !== initial.autoComplete ||
+    form.matchingEnabled !== initial.matchingEnabled
+  );
+}
+
+/**
  * Форма создания поездки на useReducer + isDirty из сравнения
  * с начальными значениями (несохранённый черновик для
  * useClosingConfirmation). UI-флаги (vehicleOpen/validationError/
@@ -106,21 +148,7 @@ export function useTripForm() {
   ) =>
     dispatch({ type: "set", field, value } as TripFormAction);
 
-  const isDirty = useMemo(
-    () =>
-      form.fromCityId !== initial.fromCityId ||
-      form.toCityId !== initial.toCityId ||
-      form.fromAddress !== initial.fromAddress ||
-      form.toAddress !== initial.toAddress ||
-      form.date !== initial.date ||
-      form.durationHours !== initial.durationHours ||
-      form.distanceKm !== initial.distanceKm ||
-      form.price !== initial.price ||
-      form.seats !== initial.seats ||
-      form.comment !== initial.comment ||
-      form.tags.length > 0,
-    [form, initial],
-  );
+  const isDirty = useMemo(() => isTripFormDirty(form, initial), [form, initial]);
 
   /** Черновик для validateCreateTripDraft (порядок полей — как в форме). */
   const draft: CreateTripDraft = useMemo(
@@ -136,6 +164,8 @@ export function useTripForm() {
       seats: form.seats,
       tags: form.tags,
       comment: form.comment,
+      autoComplete: form.autoComplete,
+      matchingEnabled: form.matchingEnabled,
     }),
     [form],
   );

@@ -22,6 +22,13 @@ export interface CreateTripDraft {
   seats: string;
   tags: TripTag[];
   comment: string;
+  /**
+   * Флаги опций поездки. Обязательны в черновике (форма их держит), но
+   * валидатор кладёт их в схему только при наличии ключа — `.default()`
+   * в `createTripDtoSchema` сам даст текущее поведение, если флаг забыт.
+   */
+  autoComplete?: boolean;
+  matchingEnabled?: boolean;
 }
 
 export interface DirectoryCity {
@@ -132,6 +139,15 @@ export function validateCreateTripDraft(
     seatsTotal: Number(draft.seats),
     tags: draft.tags,
     comment: draft.comment.trim() || undefined,
+    // Флаги — только если черновик их задал: `.default()` контракта сам
+    // даст текущее поведение (autoComplete=false, matchingEnabled=true),
+    // т.е. старый черновик и старый клиент не ломаются.
+    ...(draft.autoComplete !== undefined
+      ? { autoComplete: draft.autoComplete }
+      : {}),
+    ...(draft.matchingEnabled !== undefined
+      ? { matchingEnabled: draft.matchingEnabled }
+      : {}),
   });
   if (!parsed.success) {
     const first = schemaErrorMessage(parsed.error.issues[0]?.path ?? []);

@@ -18,6 +18,12 @@ function makeTrip(id: string, departureAt: string | undefined): Trip {
     price: 500,
     seatsTotal: 3,
     seatsAvailable: 2,
+    // Флаги опций поездки обязательны в ОТВЕТЕ (tripSchema): неизвестное
+    // значение ≠ «выключено», поэтому у фикстуры нет «дефолта».
+
+    autoComplete: false,
+    matchingEnabled: true,
+
     driver: {
       id: "u-driver",
       name: "Иван Водителев",
