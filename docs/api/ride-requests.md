@@ -23,6 +23,20 @@ Matching is informational. The passenger must open the trip and submit the norma
 
 The matching predicate is shared with the notification pass that runs on trip creation (`backend/src/rideRequests/matching.ts`), so the demand a driver sees is exactly the demand passengers were notified about.
 
+### Opting out: `matchingEnabled = false`
+
+A trip created with `matchingEnabled: false` is not offered to anyone. The switch-off applies to **three** surfaces at once, and all three must agree — a gate on only one of them would either notify about a demand that cannot be read back, or send a live hint leading to an empty card:
+
+1. no `ride_request_match` notification is created when the trip is created;
+2. `GET /api/v1/trips/:id/requests` answers `200 { "items": [] }` — **not** `403` and **not** `404`: the trip exists and the driver may read it, the demand was simply never offered;
+3. no `ride_request:new` WebSocket hint is sent to the driver when a matching request appears later.
+
+The client learns about the state from the trip payload (`matchingEnabled` in `tripSchema`, required and without a default — an unknown value is not "off"), never from an empty demand list: an empty list cannot distinguish "no demand" from "you switched it off", which is why the trips screen shows an explicit note in the first case.
+
+The option is editable later through `PATCH /api/v1/trips/:id`; the gates read the flag at request time, so switching it off takes effect immediately and switching it back restores the demand.
+
+**The trip is not hidden from search.** `GET /api/v1/trips` is unaffected — passengers still find it and can book it themselves. Opting out suppresses *automatic suggestions*, not availability.
+
 ## Driver invites
 
 - `POST /api/v1/ride-requests/:id/invite` with `{ "tripId": "<uuid>" }` lets the driver of that trip invite the author of request `:id`.
