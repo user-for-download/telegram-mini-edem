@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { Text } from "@telegram-apps/telegram-ui";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { Button } from "@/ui/Button";
@@ -59,6 +59,9 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
   // уже нарисовал сам <Field>, второй раз текст дублировался бы.
   const generalError =
     createError && !createError.field ? createError.message : null;
+  // Синхронный гейт: предпроверка (`checkTrip`) — тоже await, и в это
+  // время кнопка не pending, поэтому два быстрых тапа создавали две заявки.
+  const submittingRef = useRef(false);
 
   /** Маршрут и окно чистим, выбранные места оставляем — как было. */
   const clear = () =>
@@ -89,18 +92,36 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
         clear();
       },
       onError: () => haptic.error(),
+      // Гейт снимаем только после завершения мутации, иначе повторный тап
+      // во время сети снова ушёл бы в publish.
+      onSettled: () => {
+        submittingRef.current = false;
+      },
     });
   };
 
   const submit = async () => {
+    if (submittingRef.current) return;
     const draft = buildRideRequestDraft(values, cities.data);
     if (!draft.ok) {
       setCreateError(draft.error);
       return;
     }
     setCreateError(null);
-    const proceed = await checkTrip(values, draft.routeLabel);
-    if (!proceed) return;
+    submittingRef.current = true;
+    let proceed: boolean;
+    try {
+      proceed = await checkTrip(values, draft.routeLabel);
+    } catch (error) {
+      submittingRef.current = false;
+      throw error;
+    }
+    if (!proceed) {
+      // Пользователь ушёл смотреть поездку — заявку не публикуем, гейт снять,
+      // иначе форма осталась бы заблокированной до перезагрузки.
+      submittingRef.current = false;
+      return;
+    }
     publish(draft.dto, draft.routeLabel);
   };
 

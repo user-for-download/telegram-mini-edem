@@ -247,8 +247,8 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
       });
       root = null;
     }
-    // Живой сокет переживает unmount при активной сессии (нет лишнего
-    // reconnect-шторма) — гасим хендлеры, чтобы не текли между тестами.
+    // Сокет закрывается на unmount провайдера; дополнительно гасим хендлеры,
+    // чтобы ничего не текло между тестами.
     for (const ws of FakeWebSocket.instances) {
       ws.onopen = null;
       ws.onmessage = null;
@@ -797,6 +797,78 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     });
 
     expect(useAuthStore.getState().status).toBe("deleted");
+  });
+
+  it("4403 с неизвестной причиной: успешная переавторизация НЕ возвращает бан", async () => {
+    // Бан сняли, но сервер прислал устаревший/пустой 4403: авторитетный
+    // bootstrap отдаёт authenticated — экран бана не должен вернуться.
+    mockLoginWithTelegram.mockResolvedValue({
+      user: { id: "u-unbanned" },
+      accessToken: "access-unbanned",
+      refreshToken: "refresh-unbanned",
+      expiresIn: 900,
+    });
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+
+    await act(async () => {
+      ws.serverClose(4403, "Account is on fire");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(useAuthStore.getState().status).toBe("authenticated");
+  });
+
+  it("серия событий до рендера не теряет кадры (нет единого слота)", async () => {
+    // Два кадра в одном таске: единый lastMessage сохранил бы только
+    // последний, и инвалидация по первому потерялась бы.
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+    invalidateSpy.mockClear();
+
+    await act(async () => {
+      ws.serverMessage({
+        type: "booking:new",
+        payload: { bookingId: "b-a", tripId: "t-a" },
+      });
+      ws.serverMessage({
+        type: "booking:new",
+        payload: { bookingId: "b-b", tripId: "t-b" },
+      });
+    });
+
+    expect(invalidateCallsFor([...TRIP_KEYS.detail("t-a")])).toBe(1);
+    expect(invalidateCallsFor([...TRIP_KEYS.detail("t-b")])).toBe(1);
+  });
+
+  it("unmount провайдера закрывает живой сокет (нет утечки соединения)", async () => {
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+
+    await act(async () => {
+      root?.unmount();
+    });
+    root = null;
+
+    expect(ws.readyState).toBe(FakeWebSocket.CLOSED);
   });
 
   it("classifyTerminalCloseReason: таблица причин бэкенда", () => {

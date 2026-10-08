@@ -4,7 +4,7 @@
 // Вынесено в helper ради unit-тестов без DOM.
 import type { TripTag } from "@edem/contracts";
 import type { SearchTripsFilters } from "@/api/trips.api";
-import { toIsoDate } from "@/utils/date";
+import { moscowDayKey } from "@/utils/date";
 
 export type DateSegment = "all" | "today" | "tomorrow" | "weekend";
 
@@ -15,16 +15,15 @@ export const DATE_SEGMENTS: ReadonlyArray<{ value: DateSegment; label: string }>
 ];
 
 /**
- * Календарное приращение дней: конструктор с числом дня, а НЕ сложение
- * 86 400 000 мс.
- *
- * «Завтра» — следующий КАЛЕНДАРНЫЙ день, а `local midnight + 24h` в зоне
- * с переходом на летнее/зимнее время даёт 23:00 того же дня. Дефект не
- * виден на московском времени (фиксированное смещение) — TZ-кейсы
- * проверяются отдельным файлом с принудительным `process.env.TZ`.
+ * Календарное приращение дней к ключу дня "YYYY-MM-DD" через UTC-полночь:
+ * сложение 86 400 000 мс в локальной зоне с переводом часов даёт 23:00
+ * того же дня. Ключ уже московский, а переводов часов в Москве нет.
  */
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+function addDaysToKey(key: string, days: number): string {
+  const [year = 0, month = 1, day = 1] = key.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
 }
 
 function parseSegment(value: string | null): DateSegment {
@@ -39,7 +38,12 @@ export function parseDateSegmentParam(value: string | null): DateSegment {
 }
 
 /**
- * Сегмент дат → диапазон dateFrom/dateTo (локальные даты, ISO):
+ * Сегмент дат → диапазон dateFrom/dateTo (МОСКОВСКИЕ календарные дни, ISO).
+ *
+ * Бэкенд разбирает dateFrom/dateTo как границы московских суток
+ * (`moscowDateBoundary`), поэтому и клиент обязан считать «сегодня/завтра/
+ * выходные» по Москве, а не по зоне устройства: иначе у клиента западнее/
+ * восточнее МСК фильтр уезжает на сутки.
  * - today/tomorrow — конкретный день;
  * - weekend — ближайшие суббота–воскресенье; если выходные уже идут
  *   (суббота/воскресенье) — от сегодня до воскресенья.
@@ -49,23 +53,22 @@ export function dateSegmentToRange(
   now: Date = new Date(),
 ): { dateFrom?: string; dateTo?: string } {
   if (segment === "all") return {};
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = moscowDayKey(now);
   if (segment === "today") {
-    const iso = toIsoDate(today);
-    return { dateFrom: iso, dateTo: iso };
+    return { dateFrom: today, dateTo: today };
   }
   if (segment === "tomorrow") {
-    const iso = toIsoDate(addDays(today, 1));
+    const iso = addDaysToKey(today, 1);
     return { dateFrom: iso, dateTo: iso };
   }
-  const dayOfWeek = today.getDay(); // 0 = воскресенье, 6 = суббота
+  // 0 = воскресенье, 6 = суббота — день недели московской календарной даты.
+  const dayOfWeek = new Date(`${today}T00:00:00Z`).getUTCDay();
   if (dayOfWeek === 0) {
-    const iso = toIsoDate(today);
-    return { dateFrom: iso, dateTo: iso };
+    return { dateFrom: today, dateTo: today };
   }
-  const saturday = addDays(today, 6 - dayOfWeek);
-  const sunday = addDays(saturday, 1);
-  return { dateFrom: toIsoDate(saturday), dateTo: toIsoDate(sunday) };
+  const saturday = addDaysToKey(today, 6 - dayOfWeek);
+  const sunday = addDaysToKey(saturday, 1);
+  return { dateFrom: saturday, dateTo: sunday };
 }
 
 /**

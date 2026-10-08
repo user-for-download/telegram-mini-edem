@@ -41,12 +41,16 @@ export function EditTripForm({
   onDone: () => void;
 }) {
   const update = useUpdateTripMutation();
+  // Длительность поездки хранится в минутах, а поле — в часах. Округление
+  // теряет реальные минуты (110, 125, …), поэтому исходные минуты держим
+  // как есть и конвертируем только если поле реально правили.
+  const initialDurationHours = String(
+    Math.max(1, Math.round(trip.durationMinutes / 60)),
+  );
   const [fromAddress, setFromAddress] = useState(trip.fromAddress ?? "");
   const [toAddress, setToAddress] = useState(trip.toAddress ?? "");
   const [departure, setDeparture] = useState(toDateTimeLocal(trip.departureAt));
-  const [durationHours, setDurationHours] = useState(
-    String(Math.max(1, Math.round(trip.durationMinutes / 60))),
-  );
+  const [durationHours, setDurationHours] = useState(initialDurationHours);
   const [distanceKm, setDistanceKm] = useState(String(trip.distanceKm));
   const [price, setPrice] = useState(String(trip.price));
   const [seats, setSeats] = useState(String(trip.seatsTotal));
@@ -69,8 +73,7 @@ export function EditTripForm({
     fromAddress !== (trip.fromAddress ?? "") ||
       toAddress !== (trip.toAddress ?? "") ||
       departure !== toDateTimeLocal(trip.departureAt) ||
-      durationHours !==
-        String(Math.max(1, Math.round(trip.durationMinutes / 60))) ||
+      durationHours !== initialDurationHours ||
       distanceKm !== String(trip.distanceKm) ||
       price !== String(trip.price) ||
       seats !== String(trip.seatsTotal) ||
@@ -98,7 +101,10 @@ export function EditTripForm({
       fromAddress: fromAddress.trim(),
       toAddress: toAddress.trim(),
       departureAt: departureAt.toISOString(),
-      durationMinutes: Number(durationHours) * 60,
+      durationMinutes:
+        durationHours === initialDurationHours
+          ? trip.durationMinutes
+          : Number(durationHours) * 60,
       distanceKm: Number(distanceKm),
       price: Number(price),
       seatsTotal: Number(seats),

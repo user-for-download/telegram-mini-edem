@@ -39,7 +39,11 @@ export function useTripActions(item: Trip | undefined) {
   // напрямую в рендере запрещён react-hooks/purity).
   const [now, setNow] = useState(() => Date.now());
 
-  const isDriver = item ? item.driver.id === user?.id : false;
+  const driver = item?.driver ?? null;
+  // Неизвестное ≠ водитель: без поездки (item нет) и без юзера оба id —
+  // undefined, и голое `===` дало бы true. Поэтому сначала факт наличия
+  // водителя, и только потом сравнение id.
+  const isDriver = driver !== null && driver.id === user?.id;
   const departureTime =
     item?.departureAt != null ? new Date(item.departureAt).getTime() : null;
 
@@ -61,7 +65,9 @@ export function useTripActions(item: Trip | undefined) {
     return () => window.clearTimeout(timer);
   }, [departureTime, now]);
   const departed = departureTime !== null && departureTime <= now;
-  const isActive = !item?.status || item.status === "active";
+  // Без поездки активности нет: `!item?.status` давал true на отсутствии
+  // данных (тот же класс ошибки, что isDriver выше).
+  const isActive = item != null && (!item.status || item.status === "active");
   const hasActiveBooking =
     !!item?.myBooking &&
     item.myBooking.status !== "cancelled" &&

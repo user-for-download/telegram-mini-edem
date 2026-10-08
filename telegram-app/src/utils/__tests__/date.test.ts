@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, formatMoscowDateTime, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
+import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, formatMoscowDateTime, moscowDayLabel, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
 
 const NOW = new Date(2026, 8, 10, 15, 0, 0); // четверг 2026-09-10
 
@@ -36,6 +36,22 @@ describe("dayLabel", () => {
 describe("dayTimeLabel", () => {
   it("combines day label and time", () => {
     expect(dayTimeLabel("2026-09-10", "08:30", NOW)).toBe("Сегодня, 08:30");
+  });
+});
+
+describe("moscowDayLabel", () => {
+  // 2026-09-12T22:00Z = 01:00 МСК 13-го: ключ дня — 13-е, а не 12-е.
+  const NOW = new Date("2026-09-12T22:00:00.000Z");
+
+  it("относительные подписи считаются от московского дня", () => {
+    expect(moscowDayLabel("2026-09-13", NOW)).toBe("Сегодня");
+    expect(moscowDayLabel("2026-09-14", NOW)).toBe("Завтра");
+    expect(moscowDayLabel("2026-09-12", NOW)).toBe("Вчера");
+    expect(moscowDayLabel("2026-09-20", NOW)).toBe("20 сентября");
+  });
+
+  it("не-ключ (подпись бэка) не ломается — уходит в dayLabel", () => {
+    expect(moscowDayLabel("сб, 12 сентября", NOW)).toBe("сб, 12 сентября");
   });
 });
 

@@ -3,7 +3,7 @@ import { Route } from "lucide-react";
 import { MenuRow } from "@/ui/MenuRow";
 import { Section } from "@/ui/Section";
 import { useRideRequestFeedQuery } from "@/queries/useRideRequestsQuery";
-import { dayLabel, moscowDayKey, moscowTimeLabel } from "@/utils/date";
+import { moscowDayLabel, moscowDayKey, moscowTimeLabel } from "@/utils/date";
 import { plural } from "@/utils/plural";
 
 interface RideRequestFeedSectionProps {
@@ -65,7 +65,7 @@ export function RideRequestFeedSection({
     <Section header="Кто ищет попутку">
       {items.map((request) => {
         const nearest = new Date(request.nextAt);
-        const date = dayLabel(moscowDayKey(nearest));
+        const date = moscowDayLabel(moscowDayKey(nearest));
         const time = moscowTimeLabel(nearest);
         const route = `${request.fromCity.name} — ${request.toCity.name}`;
         const people = `${request.people} ${plural(

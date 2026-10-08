@@ -50,6 +50,18 @@ function parseDay(value: string): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+/** «12 сентября» для ISO-даты; мусорный месяц/день — исходная строка. */
+function formatDayMonth(dateIso: string): string {
+  const [, month, day] = dateIso.split("-").map(Number);
+  // Месяц обязан быть в 1..12: `new Date(2026, 12, 1)` молча перекатывается
+  // на январь следующего года и остаётся валидным, а подстановка даёт
+  // «1 undefined». Мусор с сервера (z.string без проверки формата) — исходной строкой.
+  if (!month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+    return dateIso;
+  }
+  return `${day} ${MONTHS_GENITIVE[month - 1] ?? ""}`.trim();
+}
+
 /** «Сегодня» / «Завтра» / «Вчера» / «12 сентября» относительно now. */
 export function dayLabel(dateIso: string, now: Date = new Date()): string {
   const parsed = parseDay(dateIso);
@@ -61,14 +73,34 @@ export function dayLabel(dateIso: string, now: Date = new Date()): string {
   if (diffDays === 0) return "Сегодня";
   if (diffDays === 1) return "Завтра";
   if (diffDays === -1) return "Вчера";
-  const [, month, day] = dateIso.split("-").map(Number);
-  // Месяц обязан быть в 1..12: `new Date(2026, 12, 1)` молча перекатывается
-  // на январь следующего года и остаётся валидным, а подстановка даёт
-  // «1 undefined». Мусор с сервера (z.string без проверки формата) — исходной строкой.
-  if (!month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
-    return dateIso;
-  }
-  return `${day} ${MONTHS_GENITIVE[month - 1] ?? ""}`.trim();
+  return formatDayMonth(dateIso);
+}
+
+/**
+ * «Сегодня/Завтра/Вчера/12 сентября» для КЛЮЧА московского дня
+ * ("YYYY-MM-DD" из `moscowDayKey`): относительная подпись считается от
+ * московского дня `now`, а не от зоны устройства. Без этого поездка с
+ * отправлением «сегодня ночью по Москве» у клиента западнее МСК получала бы
+ * «Завтра». Не-ключ (подпись бэка, мусор) уходит в обычный `dayLabel`.
+ */
+export function moscowDayLabel(dateIso: string, now: Date = new Date()): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateIso.trim());
+  if (!match) return dayLabel(dateIso, now);
+  const target = Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+  );
+  const [year = 0, month = 1, day = 1] = moscowDayKey(now)
+    .split("-")
+    .map(Number);
+  const diffDays = Math.round(
+    (target - Date.UTC(year, month - 1, day)) / MS_IN_DAY,
+  );
+  if (diffDays === 0) return "Сегодня";
+  if (diffDays === 1) return "Завтра";
+  if (diffDays === -1) return "Вчера";
+  return formatDayMonth(dateIso);
 }
 
 /** «Сегодня, 08:30». */

@@ -1,5 +1,5 @@
 import type { Trip } from "@edem/contracts";
-import { dayLabel, moscowDayKey } from "@/utils/date";
+import { moscowDayLabel, moscowDayKey } from "@/utils/date";
 
 /**
  * Группировка ленты поиска по календарным дням для пилюль-заголовков.
@@ -61,7 +61,7 @@ export function groupTripsByDay(trips: readonly Trip[]): TripDayGroup[] {
     if (last && last.key === key) {
       last.trips.push(trip);
     } else {
-      groups.push({ key, label: dayLabel(key), trips: [trip] });
+      groups.push({ key, label: moscowDayLabel(key), trips: [trip] });
     }
   }
   return groups;

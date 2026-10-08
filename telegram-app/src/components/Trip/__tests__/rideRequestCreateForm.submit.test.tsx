@@ -168,4 +168,34 @@ describe("RideRequestCreateForm: публикация", () => {
     expect(mockToastShow).not.toHaveBeenCalled();
     expect(screen.getByText("Выберите города из справочника")).toBeTruthy();
   });
+
+  it("двойной тап не создаёт вторую заявку (гейт на время предпроверки)", async () => {
+    renderForm();
+
+    const button = screen.getByRole("button", {
+      name: "Опубликовать запрос",
+    });
+    fireEvent.change(screen.getByLabelText("Откуда"), {
+      target: { value: "c-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Куда"), {
+      target: { value: "c-2" },
+    });
+    fireEvent.change(screen.getByLabelText("Не раньше"), {
+      target: { value: localDateTime(1, 8) },
+    });
+    fireEvent.change(screen.getByLabelText("Не позже"), {
+      target: { value: localDateTime(1, 20) },
+    });
+
+    // Пока первая предпроверка (GET /trips) в полёте, кнопка не pending —
+    // без синхронного гейта второй тап ушёл бы второй мутацией.
+    fireEvent.click(button);
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+  });
 });

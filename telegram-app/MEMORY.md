@@ -535,3 +535,21 @@ e2e-parity 17/17. `ADMIN_TOKEN` стенда задан явно в `ecosystem.c
   — контекст и подзадачи аудита (все закрыты). Перед новой правкой
   **прочитай реестр `src/ui/README.md`** — там записаны действующие
   отклонения от кита.
+
+## 2026-10-08 — Аудит логики tg-app: 10 исправлений
+
+Найдено ревью (typecheck/eslint/тесты были зелёными — дефекты не покрыты тестами):
+
+1. EditTripForm — `durationMinutes` округлялся до часов при сохранении (110→120, 125→120). Исходные минуты теперь сохраняются, конверсия — только если поле правили.
+2. RideRequestCreateForm — не было гейта на время предпроверки `checkTrip`: двойной тап создавал две заявки. Добавлен `submittingRef` (сброс в `onSettled`/при отказе).
+3. WebSocketProvider — 4403 с неизвестной причиной возвращал бан-экран даже после успешного `bootstrap` (authenticated). Авторитетны `authenticated/banned/deleted`; дефолт «banned» — только на неопределённом исходе.
+4. searchFilters.dateSegmentToRange — сегменты дат считались по зоне устройства, а бэк режет `dateFrom/dateTo` по Москве (`moscowDateBoundary`). Переведено на `moscowDayKey`.
+5. date.ts — добавлен `moscowDayLabel`; tripGroups/RideRequestFeedSection/TripDemandCard не считают «Сегодня/Завтра» по локальной зоне.
+6. HomePage.closeVehicle — замыкание видело `vehicle=null` и гасило `pendingCreate` (сценарий «добавил авто → на форму создания»). Читает стор в момент закрытия.
+7. WebSocketProvider — единый слот `lastMessage` терял кадры при серии доставок. Прямая доставка через `subscribeEvent`.
+8. useAuthStore.applyDeleted — не чистил launch params cache. Добавлен `purgeLaunchParamsCache()`.
+9. telegram-adapter.getRawInitData — пустая строка не нормализовалась в `undefined`. Теперь `|| undefined`.
+10. WebSocketProvider — unmount при активной сессии не закрывал сокет. Добавлен отдельный unmount-эффект (ротация токена сокет не рвёт).
+
+Регрессионные тесты: `date.test`, `searchFilters.moscow.tz.test` (новый), `telegram-adapter.test`, `rideRequestCreateForm.submit.test`, `WebSocketProvider.test`.
+Итог: tsc/eslint чисто; 133 файла / 1059 тестов зелёные.

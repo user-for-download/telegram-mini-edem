@@ -5,7 +5,7 @@ import { Section } from "@/ui/Section";
 import { SectionBody } from "@/ui/SectionBody";
 import { TripDemandRow } from "./TripDemandRow";
 import { useTripDemandQuery } from "@/queries/useRideRequestsQuery";
-import { dayLabel, moscowDayKey, moscowTimeLabel } from "@/utils/date";
+import { moscowDayLabel, moscowDayKey, moscowTimeLabel } from "@/utils/date";
 import { haptic } from "@/utils/haptics";
 import { plural } from "@/utils/plural";
 
@@ -47,9 +47,9 @@ export function demandWindow(request: RideRequest): string {
   const fromDay = moscowDayKey(from);
   const toDay = moscowDayKey(to);
   if (fromDay === toDay) {
-    return `${dayLabel(fromDay)}, ${fromTime} — ${toTime}`;
+    return `${moscowDayLabel(fromDay)}, ${fromTime} — ${toTime}`;
   }
-  return `${dayLabel(fromDay)}, ${fromTime} — ${dayLabel(toDay)}, ${toTime}`;
+  return `${moscowDayLabel(fromDay)}, ${fromTime} — ${moscowDayLabel(toDay)}, ${toTime}`;
 }
 
 /**

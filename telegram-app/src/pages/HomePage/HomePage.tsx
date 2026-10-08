@@ -12,6 +12,7 @@ import { TripSearchSection } from "@/components/Section/TripSearchSection";
 import { VehicleModal } from "@/components/Profile/VehicleModal";
 import { RideRequestCreateModal } from "@/components/Trip/RideRequestCreateModal";
 import { useVehicleQuery } from "@/queries/vehicle";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useModalBack } from "@/utils/modalBack";
 import { haptic } from "@/utils/haptics";
 import { Page } from "@/ui/Page";
@@ -81,7 +82,12 @@ export function HomePage() {
   const closeVehicle = () => {
     // Ручное закрытие без сохранения: флаг намерения сбрасываем только
     // когда авто так и не появилось — иначе выше уже ушли на форму.
-    if (!((vehicleQuery.vehicle ?? null) !== null)) setPendingCreate(false);
+    // Стор читаем в момент закрытия: на успешном сохранении onSuccess
+    // мутации кладёт юзера в стор ДО вызова onClose, а рендер-замыкание
+    // HomePage к этому моменту ещё старое и видело бы `vehicle === null`
+    // (и гасило намерение).
+    const user = useAuthStore.getState().user;
+    if (!user?.car) setPendingCreate(false);
     setVehicleOpen(false);
   };
 

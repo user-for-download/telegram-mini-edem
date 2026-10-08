@@ -165,6 +165,10 @@ function applyBanned(
 
 function applyDeleted(set: (state: Partial<AuthState>) => void) {
   log("[Auth] Account is deleted");
+  // Симметрично markAccountDeleted/clearSession: удалённому аккаунту
+  // «материал сессии» (сырая initData в кэше launch params) не нужен и не
+  // должен переживать logout в табе.
+  purgeLaunchParamsCache();
   apiClient.setSession(null);
   set({
     status: "deleted",

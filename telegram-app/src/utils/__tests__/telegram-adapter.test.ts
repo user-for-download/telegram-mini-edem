@@ -52,6 +52,12 @@ describe("getRawInitData", () => {
     mockedRetrieve.mockReturnValue(undefined as unknown as string);
     expect(getRawInitData()).toBeUndefined();
   });
+
+  it("fail-closed: пустая строка SDK → undefined (не валидная сессия)", () => {
+    // `??` пропускал "" как «сессию»: она текла бы в tripShare/applyBanned.
+    mockedRetrieve.mockReturnValue("");
+    expect(getRawInitData()).toBeUndefined();
+  });
 });
 
 describe("signalAppReady", () => {

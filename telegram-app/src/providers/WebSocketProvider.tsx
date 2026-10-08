@@ -88,6 +88,15 @@ interface WsContextValue {
    * Слушатель делает resync-инвалидацию при его изменении.
    */
   resyncSeq: number;
+  /**
+   * Прямая подписка на событие. Раньше события доставлялись через один
+   * слот `lastMessage`, и серия кадров до рендера теряла все, кроме
+   * последнего; теперь доставка идёт из `onmessage` каждому подписчику.
+   */
+  subscribeEvent: (
+    type: WsServerEvent["type"],
+    handler: (payload: unknown) => void,
+  ) => () => void;
 }
 
 const WsContext = createContext<WsContextValue | null>(null);
@@ -105,30 +114,28 @@ type PayloadOf<T extends WsServerEvent["type"]> =
 
 /**
  * Подписка на одно WS-событие. Handler хранится в ref: инлайн-колбэки
- * создаются при каждом рендере, и зависимость от них приводила бы к
- * повторному срабатыванию на то же lastMessage (дедупликация эффектов).
+ * создаются при каждом рендере, и зависимость от них переписывала бы
+ * подписку на каждый рендер. События доставляются напрямую из `onmessage`
+ * (см. `subscribeEvent`), поэтому серия кадров не теряется.
  */
 export function useWsEvent<T extends WsServerEvent["type"]>(
   type: T,
   handler: (payload: PayloadOf<T>) => void,
 ): void {
-  const { lastMessage } = useWs();
+  const { subscribeEvent } = useWs();
   const handlerRef = useRef(handler);
 
   useEffect(() => {
     handlerRef.current = handler;
   }, [handler]);
 
-  useEffect(() => {
-    if (lastMessage?.type === type) {
-      const event = lastMessage as Extract<WsServerEvent, { type: T }>;
-      if ("payload" in event) {
-        handlerRef.current(event.payload as PayloadOf<T>);
-      } else {
-        handlerRef.current(undefined as PayloadOf<T>);
-      }
-    }
-  }, [lastMessage, type]);
+  useEffect(
+    () =>
+      subscribeEvent(type, (payload) => {
+        handlerRef.current(payload as PayloadOf<T>);
+      }),
+    [subscribeEvent, type],
+  );
 }
 
 export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
@@ -149,6 +156,10 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
    * снимает терминал. Refresh-loop бана запрещён контрактом.
    */
   const terminalTokenRef = useRef<string | null>(null);
+  /** Подписчики useWsEvent по типу события (см. subscribeEvent). */
+  const eventListenersRef = useRef(
+    new Map<string, Set<(payload: unknown) => void>>(),
+  );
 
   const authenticated = useAuthStore((state) => state.status === "authenticated");
   const status = useAuthStore((state) => state.status);
@@ -156,6 +167,23 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
 
   const connectRef = useRef<() => void>(() => {});
   const scheduleReconnectRef = useRef<() => void>(() => {});
+
+  const subscribeEvent = useCallback(
+    (type: WsServerEvent["type"], handler: (payload: unknown) => void) => {
+      const listeners = eventListenersRef.current;
+      let set = listeners.get(type);
+      if (!set) {
+        set = new Set();
+        listeners.set(type, set);
+      }
+      set.add(handler);
+      return () => {
+        set.delete(handler);
+        if (set.size === 0) listeners.delete(type);
+      };
+    },
+    [],
+  );
 
   const scheduleReconnect = useCallback(() => {
     if (
@@ -245,6 +273,16 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
         return;
       }
       setLastMessage(parsed);
+      // Прямая доставка подписчикам: не зависит от рендера, поэтому серия
+      // кадров не теряет события (в отличие от единственного слота выше).
+      const listeners = eventListenersRef.current.get(parsed.type);
+      if (listeners) {
+        const payload =
+          "payload" in parsed
+            ? (parsed as { payload: unknown }).payload
+            : undefined;
+        for (const listener of listeners) listener(payload);
+      }
     };
 
     ws.onclose = async (e) => {
@@ -291,7 +329,17 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
         if (terminalReason === "unknown") {
           void useAuthStore.getState().bootstrap().then(() => {
             const next = useAuthStore.getState().status;
-            if (next === "banned" || next === "deleted") return;
+            // Авторитетный ответ (banned/deleted) и УСПЕШНАЯ переавторизация
+            // (authenticated — например, бан уже сняли) принимаются как есть.
+            // К безопасному дефолту «banned» возвращаемся только на
+            // неопределённом исходе (unauthenticated/сбой сети).
+            if (
+              next === "authenticated" ||
+              next === "banned" ||
+              next === "deleted"
+            ) {
+              return;
+            }
             useAuthStore.getState().markBanned(null);
           });
         }
@@ -408,6 +456,12 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
     }
   }, []);
 
+  // Настоящий unmount провайдера (не смена токена — см. ниже): живой сокет
+  // обязан закрыться, иначе соединение и его хендлеры переживают React-дерево
+  // (remount AppConfig/ошибка-бордер). Отдельный эффект с пустыми
+  // зависимостями, чтобы ротация токена НЕ рвала сокет.
+  useEffect(() => () => teardownSocket(), [teardownSocket]);
+
   // Сессия потеряна (logout/бан/протухший токен): живой сокет уже разобран
   // teardown'ом в эффекте, флаг соединения сбрасываем здесь же фазой
   // рендера — иначе UI врёт «подключено» (onclose занулен, колбэк молчит).
@@ -484,8 +538,8 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
   }, [authenticated, accessToken, status, connect, teardownSocket]);
 
   const value = useMemo(
-    () => ({ isConnected, lastMessage, resyncSeq }),
-    [isConnected, lastMessage, resyncSeq],
+    () => ({ isConnected, lastMessage, resyncSeq, subscribeEvent }),
+    [isConnected, lastMessage, resyncSeq, subscribeEvent],
   );
 
   return <WsContext.Provider value={value}>{children}</WsContext.Provider>;

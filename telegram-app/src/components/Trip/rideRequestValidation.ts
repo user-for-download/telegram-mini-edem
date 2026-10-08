@@ -151,6 +151,10 @@ export function rideRequestErrorMessage(
         message: "Мест может быть от 1 до 3",
       };
     case "fromCityId":
+      return {
+        field: editRequestId ? null : "ride-from",
+        message: "Города отправления и прибытия должны различаться",
+      };
     case "toCityId":
       return {
         field: editRequestId ? null : "ride-to",
@@ -158,12 +162,12 @@ export function rideRequestErrorMessage(
       };
     case "earliestAt":
       return {
-        field: editRequestId ? null : "ride-earliest",
+        field: editRequestId ? `ride-edit-earliest-${editRequestId}` : "ride-earliest",
         message: "Выберите временной интервал",
       };
     case "latestAt":
       return {
-        field: editRequestId ? null : "ride-latest",
+        field: editRequestId ? `ride-edit-latest-${editRequestId}` : "ride-latest",
         message: "«Не позже» должно быть позже «Не раньше»",
       };
     case "expiresAt":

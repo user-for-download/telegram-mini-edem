@@ -28,7 +28,9 @@ import {
  */
 export function getRawInitData(): string | undefined {
   try {
-    return retrieveRawInitData() ?? undefined;
+    // `||`, а не `??`: пустая строка — тоже «нет initData» (SDK может отдать
+    // ""), иначе она утекла бы как валидная сессия в tripShare/applyBanned.
+    return retrieveRawInitData() || undefined;
   } catch {
     return undefined;
   }
