@@ -86,7 +86,7 @@ describe("tgConfirm: уровень 1 — диалог клиента", () => {
   });
 
   it("не-boolean из метода клиента трактуется как «не спросили»", async () => {
-    // Arrange: showConfirm нестандартный — клиент может вернуть что угодно.
+    // Arrange: метод клиента без нашей колбэк-обвязки может вернуть что угодно.
     stubClientConfirm(() => undefined);
     const confirm = stubBrowserConfirm(() => false);
 
