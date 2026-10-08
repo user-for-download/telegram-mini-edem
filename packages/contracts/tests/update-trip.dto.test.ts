@@ -6,6 +6,9 @@ import { updateTripDtoSchema } from "../src/dto/trip.dto";
  *  - все поля опциональны (partial);
  *  - маршрут (`fromCity`/`fromCityId`/`toCity`/`toCityId`) ЗАПРЕЩЁН
  *    к изменению. Водитель должен удалить поездку и создать новую.
+ *  - флаги опций (`autoComplete`/`matchingEnabled`) РЕДАКТИРУЕМЫ
+ *    (решение владельца 2026-10-08), но без `.default()`: отсутствие ключа
+ *    = «не трогать».
  */
 describe("updateTripDtoSchema", () => {
   it("accepts empty payload (no-op)", () => {
@@ -24,6 +27,66 @@ describe("updateTripDtoSchema", () => {
       comment: "Один раз остановлюсь",
     });
     expect(result.success).toBe(true);
+  });
+
+  // РЕШЕНИЕ ВЛАДЕЛЬЦА 2026-10-08: маршрут заморожен, а флаги опций
+  // (`autoComplete`/`matchingEnabled`) в PATCH РЕДАКТИРУЕМЫ — водитель вправе
+  // передумать после публикации. Засвидетельствовано здесь, чтобы решение
+  // не выглядело молчаливым: если поля однажды уедут в .omit(), эти тесты
+  // упадут.
+  it("accepts flipping both option flags (водитель передумал после публикации)", () => {
+    const turnOn = updateTripDtoSchema.safeParse({
+      autoComplete: true,
+      matchingEnabled: true,
+    });
+    expect(turnOn.success).toBe(true);
+
+    const turnOff = updateTripDtoSchema.safeParse({
+      autoComplete: false,
+      matchingEnabled: false,
+    });
+    expect(turnOff.success).toBe(true);
+    if (turnOff.success) {
+      // Явный false = «выключить», а не «не передано».
+      expect(turnOff.data.autoComplete).toBe(false);
+      expect(turnOff.data.matchingEnabled).toBe(false);
+    }
+  });
+
+  it("keeps flags optional in PATCH (отсутствие ключа = «не менять»)", () => {
+    const result = updateTripDtoSchema.safeParse({ price: 900 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.autoComplete).toBeUndefined();
+      expect(result.data.matchingEnabled).toBeUndefined();
+    }
+  });
+
+  // Регрессия (zod 4): если бы флаги лежали в baseTripSchema с .default(),
+  // то .partial() обернул бы их в ZodOptional, который СОХРАНЯЕТ rung
+  // «defaulted» ($ZodOptional/optin), и PATCH без этих ключей подставил бы
+  // дефолты. Водитель, поменявший цену, молча потерял бы выбор флагов.
+  // Дефолты поэтому живут только в createTripDtoSchema.
+  it("does not substitute flag defaults in PATCH (дефолты только в create)", () => {
+    const result = updateTripDtoSchema.safeParse({ price: 900 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect("autoComplete" in result.data).toBe(false);
+      expect("matchingEnabled" in result.data).toBe(false);
+    }
+  });
+
+  it("treats explicit false as «выключить», а не как «не передано»", () => {
+    const result = updateTripDtoSchema.safeParse({ matchingEnabled: false });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.matchingEnabled).toBe(false);
+    }
+  });
+
+  it("rejects non-boolean option flags in PATCH", () => {
+    expect(updateTripDtoSchema.safeParse({ autoComplete: "yes" }).success).toBe(false);
+    expect(updateTripDtoSchema.safeParse({ matchingEnabled: 1 }).success).toBe(false);
   });
 
   it("rejects update that tries to change fromCity (route is locked)", () => {

@@ -26,6 +26,8 @@ describe("tripSchema", () => {
     },
     tags: ["Есть багаж", "Тихая поездка"],
     comment: "Останавливаюсь один раз",
+    autoComplete: true,
+    matchingEnabled: true,
   };
 
   it("should parse valid trip", () => {
@@ -63,9 +65,58 @@ describe("tripSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // Флаги опций в ответе обязательны: «неизвестное значение ≠ выключено»
+  // (MEMORY §18). Если бы в tripSchema стояло .default(false), клиент на
+  // устаревшем/замоканном ответе показал бы ложный пин «подбор выключен».
+  it("should reject response trip without autoComplete/matchingEnabled", () => {
+    const withoutFlags: Record<string, unknown> = { ...validTrip };
+    delete withoutFlags.autoComplete;
+    delete withoutFlags.matchingEnabled;
+    const result = tripSchema.safeParse(withoutFlags);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path.join("."));
+      expect(paths).toContain("autoComplete");
+      expect(paths).toContain("matchingEnabled");
+    }
+  });
+
+  it("should accept autoComplete=false / matchingEnabled=false (выключено — валидное значение)", () => {
+    const result = tripSchema.safeParse({
+      ...validTrip,
+      autoComplete: false,
+      matchingEnabled: false,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.autoComplete).toBe(false);
+      expect(result.data.matchingEnabled).toBe(false);
+    }
+  });
+
+  it("should reject non-boolean flags in response", () => {
+    expect(tripSchema.safeParse({ ...validTrip, autoComplete: "yes" }).success).toBe(false);
+    expect(tripSchema.safeParse({ ...validTrip, matchingEnabled: 0 }).success).toBe(false);
+  });
 });
 
 describe("createTripDtoSchema", () => {
+  const validCreateDto = {
+    fromCity: "Москва",
+    fromAddress: "м. Тёплый Стан",
+    toCity: "Тула",
+    toAddress: "пр-т Ленина",
+    fromCityId: "11111111-1111-4111-8111-111111111111",
+    toCityId: "22222222-2222-4222-8222-222222222222",
+    departureAt: "2025-08-05T09:30:00.000Z",
+    durationMinutes: 130,
+    distanceKm: 165,
+    price: 500,
+    seatsTotal: 3,
+    tags: ["Можно курить", "Есть багаж"],
+  };
+
   it("should parse valid create trip dto", () => {
     const result = createTripDtoSchema.safeParse({
       fromCity: "Москва",
@@ -82,6 +133,40 @@ describe("createTripDtoSchema", () => {
       tags: ["Можно курить", "Есть багаж"],
     });
     expect(result.success).toBe(true);
+  });
+
+  // Обратная совместимость: старый клиент, e2e-фикстуры и сиды не шлют флаги.
+  // Дефолты во ВХОДЕ = текущее поведение: автозавершение по TTL +24ч,
+  // подбор пассажиров включён.
+  it("should default flags when payload omits them (старый клиент/e2e)", () => {
+    const result = createTripDtoSchema.safeParse(validCreateDto);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.autoComplete).toBe(false);
+      expect(result.data.matchingEnabled).toBe(true);
+    }
+  });
+
+  it("should accept explicit autoComplete=true / matchingEnabled=false", () => {
+    const result = createTripDtoSchema.safeParse({
+      ...validCreateDto,
+      autoComplete: true,
+      matchingEnabled: false,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.autoComplete).toBe(true);
+      expect(result.data.matchingEnabled).toBe(false);
+    }
+  });
+
+  it("should reject non-boolean flags in create dto", () => {
+    expect(
+      createTripDtoSchema.safeParse({ ...validCreateDto, autoComplete: "yes" }).success,
+    ).toBe(false);
+    expect(
+      createTripDtoSchema.safeParse({ ...validCreateDto, matchingEnabled: 1 }).success,
+    ).toBe(false);
   });
 
   it("should reject dto with price > 100000", () => {

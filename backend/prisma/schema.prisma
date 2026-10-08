@@ -195,6 +195,18 @@ model Trip {
   tags            String[] @default([])
   comment         String?
   status          String   @default("active") // active, cancelled, completed
+  // Опции владельца, выбранные при создании поездки.
+  // ДЕФОЛТЫ СОХРАНЯЮТ ТЕКУЩЕЕ ПОВЕДЕНИЕ — поэтому 25+ существующих
+  // db.trip.create (сиды, фикстуры, e2e-sql) новые поля не задают:
+  //   autoComplete = false   → автозавершение по старому TTL (поездка
+  //     «протухает» через PENDING_BOOKING_TTL_MS = +24ч после отъезда);
+  //   matchingEnabled = true → безусловный подбор ride request'ов
+  //     (уведомления, карточка спроса, WS-хинт) — ровно как сейчас.
+  // matchingEnabled НЕЛЬЗЯ «оптимизировать» в false: это молча выключит
+  // подбор для всех поездок, созданных без явного флага. Выключение
+  // подбора — сознательный выбор владельца в форме, а не дефолт.
+  autoComplete    Boolean  @default(false)
+  matchingEnabled Boolean  @default(true)
   cancelledAt     DateTime?
   cancelledByType String?
   cancelledByUserId String?

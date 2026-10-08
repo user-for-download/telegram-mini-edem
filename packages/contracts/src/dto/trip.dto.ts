@@ -3,7 +3,7 @@ import { tripTagSchema, tripSchema, MAX_SEATS } from "../schemas/trip.schema.js"
 
 /**
  * Базовый объект без refine.
- * От него отдельно берутся .partial() (для обновления) и .refine() (для обоих вариантов).
+ * От него отдельно берутся .partial() (для обновления) и .refine() (для создания).
  * Это критично: .refine() возвращает ZodEffects, у которого нет метода .partial().
  *
  * `fromCity`/`toCity` — строки-снимки (историческое имя для UI/поиска/
@@ -36,22 +36,41 @@ export const baseTripSchema = z.object({
   seatsTotal: z.number().int().min(1).max(MAX_SEATS),
   tags: z.array(tripTagSchema).max(6),
   comment: z.string().max(500).optional(),
+  // Флаги опций поездки. В БАЗЕ они ОБЯЗАТЕЛЬНЫ и БЕЗ дефолта — иначе
+  // `.partial()` для PATCH унаследовал бы `.default()` (zod 4: ZodOptional
+  // сохраняет rung «defaulted», см. $ZodOptional/optin), и PATCH без этих
+  // ключей МОЛЧА сбрасывал бы флаги на дефолт, т.е. водитель, поменявший
+  // цену, тихо потерял бы свой выбор. Дефолты живут только в create-схеме
+  // (createTripDtoSchema), где они нужны для обратной совместимости.
+  /** Завершать поездку сразу по окончании рейса (иначе — текущие +24ч). */
+  autoComplete: z.boolean(),
+  /** Предлагать подходящие ride request. */
+  matchingEnabled: z.boolean(),
 });
 
-export const createTripDtoSchema = baseTripSchema.refine(
-  (data) =>
-    data.fromCity.trim().toLowerCase() !== data.toCity.trim().toLowerCase(),
-  {
-    message: "Города отправления и назначения совпадают",
-    path: ["toCity"],
-  },
-).refine(
-  (data) => data.fromCityId !== data.toCityId,
-  {
-    message: "Города отправления и назначения совпадают",
-    path: ["toCityId"],
-  },
-);
+export const createTripDtoSchema = baseTripSchema
+  // Обратная совместимость ВХОДА: старый клиент, e2e-фикстуры и сиды не шлют
+  // флаги — получаем текущее поведение (автозавершение по TTL +24ч, подбор
+  // включён). В ОТВЕТЕ (`tripSchema`) те же поля обязательны и без дефолта:
+  // «неизвестно ≠ выключено» (MEMORY §18). Асимметрия намеренная.
+  .extend({
+    autoComplete: z.boolean().default(false),
+    matchingEnabled: z.boolean().default(true),
+  })
+  .refine(
+    (data) =>
+      data.fromCity.trim().toLowerCase() !== data.toCity.trim().toLowerCase(),
+    {
+      message: "Города отправления и назначения совпадают",
+      path: ["toCity"],
+    },
+  ).refine(
+    (data) => data.fromCityId !== data.toCityId,
+    {
+      message: "Города отправления и назначения совпадают",
+      path: ["toCityId"],
+    },
+  );
 
 export type CreateTripDto = z.infer<typeof createTripDtoSchema>;
 
@@ -86,6 +105,19 @@ export type TripFiltersDto = z.infer<typeof tripFiltersDtoSchema>;
  *
  * `.strict()` гарантирует, что Zod не «проглотит» запрещённые поля
  * (по умолчанию Zod их просто отбрасывает — а нам нужен 400).
+ *
+ * РЕШЕНИЕ ВЛАДЕЛЬЦА 2026-10-08: запрет касается ТОЛЬКО маршрута.
+ * `autoComplete`/`matchingEnabled` в PATCH РЕДАКТИРУЕМЫ — водитель вправе
+ * передумать после публикации, поэтому они НЕ добавлены в `.omit()` и
+ * автоматически стали полями обновления через `baseTripSchema.partial()`.
+ *
+ * Отсутствие ключа = «не трогать» (бэкенд гейтит `dto.x !== undefined`).
+ * Это работает именно потому, что в `baseTripSchema` флаги БЕЗ `.default()`:
+ * в zod 4 `ZodOptional(ZodDefault(...))` сохраняет rung «defaulted»
+ * ($ZodOptional/optin), и `.partial()` подставил бы дефолт даже при
+ * отсутствии ключа — PATCH `{price: 900}` тихо сбросил бы оба флага.
+ * Дефолты заданы только в `createTripDtoSchema`.
+ * Пин в `update-trip.dto.test.ts` фиксирует это решение.
  */
 export const updateTripDtoSchema = baseTripSchema
   .partial()

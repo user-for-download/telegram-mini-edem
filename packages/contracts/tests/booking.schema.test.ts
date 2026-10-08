@@ -75,6 +75,8 @@ describe("bookingSchema (response)", () => {
     seatsAvailable: 0,
     driver,
     tags: ["Тихая поездка"],
+    autoComplete: true,
+    matchingEnabled: true,
   };
 
   it(`should accept booking with seat = MAX_SEATS (${MAX_SEATS})`, () => {
