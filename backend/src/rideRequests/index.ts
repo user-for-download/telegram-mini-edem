@@ -28,6 +28,7 @@ import {
   notifyUser,
   tripSnapshotOf,
 } from "../services/notification.service.js";
+import { wsManager } from "../ws/manager.js";
 import { logBusinessEvent } from "../logger/business.js";
 
 const MAX_ACTIVE_REQUESTS = 3;
@@ -173,9 +174,96 @@ rideRequestsRouter.post(
         400,
       );
     const item = result.item;
+    // Хинт водителям по подходящим поездкам — наружу и неблокирующе: ответ
+    // клиенту не должен ждать рассылку, а wsManager.sendToUser синхронный и
+    // не бросает (упавший сокет закрывается внутри). Ошибка БД здесь — тоже
+    // не причина отдавать 500 на успешно созданной заявке, поэтому catch.
+    void notifyTripsAboutNewRequest(item).catch((error) => {
+      logBusinessEvent("ride_request.demand_hint_failed", {
+        requestId: item.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
     return c.json(serializeRideRequest(item), 201);
   },
 );
+
+/**
+ * Хинт водителям: «появился попутчик под ваш маршрут» (слой 1a в реальном
+ * времени).
+ *
+ * Обратная сторона пересечения заявки и поездки. Уведомление при СОЗДАНИИ
+ * поездки (`notifyMatchingRideRequests`) шлёт пассажиру, когда появляется машина;
+ * обратного сигнала не было, и водитель о новом попутчике узнавал только по
+ * `staleTime` карточки спроса (30с) — при выключенном `refetchOnWindowFocus`
+ * это до полуминуты stale на активном экране.
+ *
+ * Кому: водителям активных поездок, чей маршрут совпадает по справочнику и чьё
+ * окно пересекается с окном заявки. Условие — ОБРАТНАЯ сторона
+ * `matchingRideRequestWhere`: там заявка подбирается под поездку, здесь
+ * поездка под заявку. Формулы симметричны (окна пересекаются), но писать её
+ * копией нельзя — при разъезде водителю придёт подсказка, которой он не ждал,
+ * а под реальное окно заявка не попадёт.
+ *
+ * Почему отдельная функция, а не переиспользование предиката: у предиката
+ * другая сторона «кроме-кого» (не водитель, а не автор), и подставлять его
+ * наоборот нельзя — это молча исключило бы самого автора заявки.
+ *
+ * Порядок — один проход по активным поездкам маршрута, лимит и дедуп на
+ * уровне водителя: у человека несколько поездок одного маршрута, а хинт о
+ * спросе ему один (карточка спроса живёт по каждой поездке, но клиент
+ * инвалидирует ключ по `tripId`, поэтому дубли по поездкам НЕ лишние — они
+ * адресны). Адресат — один: `trip.driverId`.
+ */
+async function notifyTripsAboutNewRequest(
+  request: Awaited<ReturnType<typeof getOwnedRequest>>,
+): Promise<void> {
+  if (!request) return;
+  // Старые поездки без FK на справочник подбирать нечем (см. withRoute).
+  if (!request.fromCityId || !request.toCityId) return;
+
+  const now = new Date();
+  const trips = await db.trip.findMany({
+    where: {
+      // Свой спрос автору не показываем: он и так знает, что едет без машины.
+      driverId: { not: request.userId },
+      fromCityId: request.fromCityId,
+      toCityId: request.toCityId,
+      status: "active",
+      // Поездка уехала — спрос на неё неактуален.
+      departureAt: { gt: now },
+    },
+    select: { id: true, driverId: true, departureAt: true, durationMinutes: true },
+    // Экран поездок, а не выгрузка: граница задокументирована.
+    take: 50,
+  });
+
+  // Окна должны пересекаться — те же границы, что у matchingRideRequestWhere:
+  // заявка начинается не позже конца поездки и кончается не раньше её начала.
+  const matching = trips.filter(
+    (trip) =>
+      request.earliestAt <=
+        new Date(trip.departureAt.getTime() + trip.durationMinutes * 60_000) &&
+      request.latestAt >= trip.departureAt,
+  );
+
+  for (const trip of matching) {
+    // Hint, а не уведомление в инбоксе: карточка спроса на странице поездки
+    // покажет и состав, и окно. WS-событие не создаёт записи в notifications,
+    // поэтому тумблер уведомлений его не касается.
+    wsManager.sendToUser(trip.driverId, {
+      type: "ride_request:new",
+      payload: { tripId: trip.id },
+    });
+  }
+
+  if (matching.length > 0) {
+    logBusinessEvent("ride_request.demand_hinted", {
+      requestId: request.id,
+      trips: matching.length,
+    });
+  }
+}
 
 rideRequestsRouter.get("/matching", publicReadLimiter, async (c) => {
   const fromCityId = c.req.query("fromCityId");

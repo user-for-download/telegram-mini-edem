@@ -10,6 +10,7 @@ import { TRIP_KEYS } from "@/queries/useTripsQuery";
 import { BOOKING_KEYS } from "@/queries/useBookingsQuery";
 import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
 import { REVIEW_KEYS } from "@/queries/useReviewsQuery";
+import { RIDE_REQUEST_KEYS } from "@/queries/useRideRequestsQuery";
 
 
 interface RealtimeNotice {
@@ -77,11 +78,17 @@ export const TelegramRealtimeListener: FC = () => {
   // доставку тех же событий сервером. Inbox уведомлений — authoritative
   // канал parity: пропущенные за разрыв события иначе не подтянутся
   // до ручного рефетча.
+  //
+  // Заявки — blanket по RIDE_REQUEST_KEYS.all, а не по tripId: за разрыв
+  // могли прийти хинты по нескольким поездкам, а адресата мы бы не узнали
+  // (события не дошли). Здесь идёт редкий путь (reconnect), в отличие от
+  // живого `ride_request:new`, где адрес известен точно.
   useEffect(() => {
     if (resyncSeq === 0) return;
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.all });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.all });
     void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.all });
+    void queryClient.invalidateQueries({ queryKey: RIDE_REQUEST_KEYS.all });
   }, [resyncSeq, queryClient]);
 
   useWsEvent("notification:new", () => {
@@ -177,6 +184,25 @@ export const TelegramRealtimeListener: FC = () => {
         subtitle: "Вы можете оставить отзыв",
       });
     }
+  });
+
+  /**
+   * Новый попутчик под маршрут этой поездки (`ride_request:new`).
+   *
+   * Обратная сторона пересечения заявки и поездки: водитель узнаёт о спросе
+   * сразу, а не по `staleTime` 30с. Инвалидируем ключ КОНКРЕТНОЙ поездки
+   * (`RIDE_REQUEST_KEYS.trip`), а не `all`: у водителя может быть несколько
+   * поездок, а спрос под новую заявку появился только под одной.
+   *
+   * Тост здесь лишний: событие прилетает к водителю, у которого открыта
+   * страница поездки или список своих поездок, и карточка спроса нарисуется
+   * сама после рефетча. Молчащий 403 на карточке без спроса (сценарий
+   * «водитель без заявок») остаётся тихим — тост шарил бы шумом.
+   */
+  useWsEvent("ride_request:new", ({ tripId }) => {
+    void queryClient.invalidateQueries({
+      queryKey: RIDE_REQUEST_KEYS.trip(tripId),
+    });
   });
 
   useWsEvent("trip:details_changed", ({ tripId }) => {
