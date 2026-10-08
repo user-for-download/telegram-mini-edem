@@ -1,9 +1,17 @@
-// Строка-переключатель профиля: инварианты «как в стандарте кита».
+// Что страница профиля делает со строкой-переключателем.
 //
-// Строка — обычная `Cell` с `Switch` в `after` (без своей рамки и фона:
-// `width: 100%` + `padding` + `border` при `box-sizing: content-box` дают
-// переполнение за правый край), без обёртки `Stack` (`Section` вставляет
-// `Divider` только между прямыми детьми).
+// САМА строка уехала в фасад `ui/SwitchRow` (правило нужно не одному экрану:
+// настройки профиля и форма создания поездки). Контракт компонента —
+// `ui/__tests__/switchRow.test.tsx`, там же DOM-пины на `role="switch"`,
+// отсутствие `aria-checked` и отсутствие вложенной кнопки. Здесь осталось
+// ровно то, что знает только страница:
+//
+//  1. строка ЖИВЁТ в `ui/`, а не объявлена приватно здесь (иначе правило
+//     разъедется со вторым экраном, ради которого и вынесено);
+//  2. у строки-переключателя нет своей рамки и ширины — прежний дефект
+//     переполнения за правый край;
+//  3. строки идут прямыми детьми `Section` (без `Stack`-обёртки), иначе
+//     Section перестаёт ставить между ними разделители.
 //
 // Тест ловит именно форму, а не вид: «своя рамка» и «обёртка Stack» — это
 // дефекты, которые возвращаются молча.
@@ -25,58 +33,31 @@ const pageCss = readFileSync(
  */
 const pageCssCode = pageCss.replace(/\/\*[\s\S]*?\*\//g, "");
 
-/**
- * Исходник страницы без комментариев. Обязательно: роль switch обсуждается
- * в комментарии рядом с ней, и без чистки тест на `role="switch"` проходил бы
- * на тексте комментария — ровно тот класс молчаливых тестов, который сам же
- * ловит в CSS-части этого файла.
- */
-const pageSrcCode = pageSrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
-
-/** Тело функции SwitchRow. */
-const switchRowBody = (): string => {
-  const start = pageSrc.indexOf("function SwitchRow(");
-  expect(start, "SwitchRow не найдена").toBeGreaterThan(-1);
-  const end = pageSrc.indexOf("\n}\n", start);
-  return pageSrc.slice(start, end);
-};
-
-/**
- * То же тело без комментариев. Роль switch обсуждается в комментарии прямо
- * над атрибутом, поэтому проверять надо именно код: иначе тест находит
- * `role="switch"` в тексте комментария и проходит, даже если атрибут убрали.
- */
-const switchRowCode = (): string =>
-  switchRowBody().replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
-
-describe("SwitchRow: стандартный паттерн (Cell + Switch в after)", () => {
-  it("рендерится через ui/Cell, а не через div с собственным классом", () => {
-    const body = switchRowBody();
-    expect(body).toMatch(/<Cell\b/);
-    // Собственный div-контейнер с классом запрещён.
-    expect(body).not.toMatch(/<div\s+className=/);
+describe("строка-переключатель живёт в ui/, а не в странице", () => {
+  it("страница импортирует SwitchRow из фасада", () => {
+    // Признак «нужно не одному экрану» — причина выноса (MEMORY §7,
+    // «Правило №5» в ui/README.md). Пин на импорт, а не на использование:
+    // иначе возврат приватной копии прошёл бы, пока страница зовёт фасад.
+    expect(pageSrc).toMatch(/import\s*\{\s*SwitchRow\s*\}\s*from\s*"@\/ui\/SwitchRow"/);
   });
 
-  it("переключатель лежит в слоте after", () => {
-    expect(switchRowBody()).toMatch(/after=\{[\s\S]*?<Switch\b/);
+  it("приватного объявления SwitchRow на странице не осталось", () => {
+    // Копия на странице — это ровно то, что вынос устраняет: правило,
+    // нужно двум экранам, живёт в одном.
+    expect(pageSrc).not.toMatch(/function\s+SwitchRow\b/);
+    expect(pageSrc).not.toMatch(/<Switch\b/);
   });
 
-  it("строка НЕ кликабельна целиком: Switch не вложен в кнопку", () => {
-    // Нативный checkbox внутри <button> — невалидная вложенность, и двойное
-    // срабатывание на Enter/Space. Переключать должен сам Switch.
-    const body = switchRowBody();
-    expect(body).not.toMatch(/Component="button"/);
-    expect(body).not.toMatch(/onClick=/);
-  });
-
-  it("подпись и иконка передаются в слоты Cell", () => {
-    const body = switchRowBody();
-    expect(body).toMatch(/before=\{icon\}/);
-    expect(body).toMatch(/subtitle=\{subtitle\}/);
-  });
-
-  it("клетка несёт a11y-имя переключателя", () => {
-    expect(switchRowBody()).toMatch(/aria-label=\{label\}/);
+  it("китовский Switch страницу не касается — фасад владеет переключателем", () => {
+    // Смысл тот же, что у «Switch вне SwitchRow»: если роль switch
+    // проставлена только в одной копии, второй экран останется чекбоксом.
+    // Смотрим ТОЛЬКО тело импорта кита — по всему файлу регулярка ловила бы
+    // любое слово «Switch» дальше по тексту.
+    const kitImport =
+      pageSrc.match(
+        /import\s*\{([^}]*)\}\s*from\s*"@telegram-apps\/telegram-ui"/,
+      )?.[1] ?? "";
+    expect(kitImport).not.toMatch(/\bSwitch\b/);
   });
 });
 
@@ -97,7 +78,7 @@ describe("переполнение по ширине не вернётся", () 
     // горизонтальный padding/border. Проверяем все модули страницы, чтобы
     // тот же дефект не всплыл на другой строке.
     // Группы всегда на месте (саргмент 1 — имя, 2 — тело), но noUncheckedIndexedAccess
-      // делает их `string | undefined` — сужаем явно, иначе тест не компилируется.
+    //   делает их `string | undefined` — сужаем явно, иначе тест не компилируется.
     const rules = [...pageCssCode.matchAll(/\.([A-Za-z][\w-]*)\s*\{([^}]*)\}/g)].map(
       (m) => ({ name: m[1] ?? "", body: m[2] ?? "" }),
     );
@@ -128,33 +109,5 @@ describe("разделители секций работают", () => {
       offenders,
       "SwitchRow/MenuRow внутри Stack — разделители Section не появятся",
     ).toEqual([]);
-  });
-});
-
-describe("SwitchRow: роль switch, а не чекбокс", () => {
-  it("на переключателе стоит role=switch", () => {
-    // Китовский Switch — это input[type=checkbox], и роль из обёртки
-    // не приходит: без явной роли скринридер озвучивает
-    // «отмечено/не отмечено» вместо «включено/выключено».
-    expect(switchRowCode()).toMatch(/<Switch\b[^>]*role="switch"/);
-  });
-
-  it("Switch вне SwitchRow тоже объявлен переключателем", () => {
-    // Тумблер темы рисуется не через SwitchRow, но семантика та же: если
-    // роль проставили только в SwitchRow, тема останется чекбоксом.
-    const switches = pageSrcCode.match(/<Switch\b/g) ?? [];
-    const withRole = pageSrcCode.match(/<Switch\b[\s\S]{0,400}?role="switch"/g) ?? [];
-    expect(switches.length).toBeGreaterThan(0);
-    expect(
-      withRole.length,
-      "не все <Switch> несут role=\"switch\"",
-    ).toBe(switches.length);
-  });
-
-  it("aria-checked не задаётся руками", () => {
-    // Для input[type=checkbox] браузер выводит aria-checked из checked.
-    // Дублирование рискует разойтись с реальным состоянием — ловим молчаливый
-    // возврат через лишний атрибут.
-    expect(switchRowCode()).not.toMatch(/aria-checked/);
   });
 });

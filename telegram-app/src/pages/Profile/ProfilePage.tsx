@@ -1,17 +1,16 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import {
   Avatar,
   Badge,
   Caption,
   Headline,
   IconContainer,
-  Switch,
   Text,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
-import { Cell } from "@/ui/Cell";
 import { MenuRow } from "@/ui/MenuRow";
+import { SwitchRow } from "@/ui/SwitchRow";
 
 import {
   Bell,
@@ -65,53 +64,6 @@ const DELETE_ACCOUNT_WARNING =
   "Ваши активные поездки завершатся (ожидающие заявки отклонятся, " +
   "подтверждённые останутся историей), ваши брони на чужих поездках " +
   "и заявки на поездку отменятся. Восстановление невозможно.";
-
-/**
- * Строка-переключатель: обычная `Cell`, `Switch` в слоте `after`.
- *
- * Поверхность и разделители между строками даёт `Section` — свои рамки и
- * `Stack`-обёртка не нужны (и ломали разделители: `Section` ставит `Divider`
- * только между прямыми детьми).
- *
- * Строка не кликабельна целиком: нативный `Switch` внутри `<button>` —
- * невалидная вложенность и двойное срабатывание на Enter/Space.
- */
-function SwitchRow({
-  icon,
-  title,
-  subtitle,
-  checked,
-  onChange,
-  label,
-}: {
-  icon: ReactNode;
-  title: string;
-  subtitle: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  label: string;
-}) {
-  return (
-    <Cell
-      before={icon}
-      subtitle={subtitle}
-      after={
-        <Switch
-          // Настройка вкл/выкл — это switch по APG, а не чекбокс:
-          // скринридер озвучивает «включено/выключено». aria-checked
-          // руками не задаём: браузер выводит его из checked, а
-          // дублирование рискует разойтись с реальным состоянием.
-          role="switch"
-          aria-label={label}
-          checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-      }
-    >
-      {title}
-    </Cell>
-  );
-}
 
 /**
  * Профиль Telegram-пользователя (язык ProfileTab примера): header-карточка
