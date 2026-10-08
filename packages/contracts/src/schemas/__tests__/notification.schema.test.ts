@@ -7,6 +7,7 @@ import {
   notificationSchema,
   tripIdFromDeepLink,
 } from "../notification.schema.js";
+import { wsServerEventSchema } from "../ws.schema.js";
 
 const TRIP_ID = "0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b";
 
@@ -30,6 +31,26 @@ const invite = {
   tripDepartureAt: "2026-09-10T09:00:00.000Z",
   createdAt: "2026-09-09T10:00:00.000Z",
 };
+
+describe("ws.schema: ride_request:new (хинт спроса водителю)", () => {
+  it("принимает хинт с tripId", () => {
+    const parsed = wsServerEventSchema.safeParse({
+      type: "ride_request:new",
+      payload: { tripId: "t-77" },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("отвергает хинт без tripId: спрос живёт по поездке", () => {
+    // Без адреса клиент не знает, какую карточку спроса обновлять, а
+    // молча инвалидировать всё — значит дёрнуть лишние поездки водителя.
+    const parsed = wsServerEventSchema.safeParse({
+      type: "ride_request:new",
+      payload: {},
+    });
+    expect(parsed.success).toBe(false);
+  });
+});
 
 describe("driver_invite: валидное приглашение", () => {
   it("проходит схему приглашения", () => {
