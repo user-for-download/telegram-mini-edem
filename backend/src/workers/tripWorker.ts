@@ -20,6 +20,37 @@ interface ExpiredTrip {
   toCity: string;
   price: number;
   departureAt: Date;
+  /**
+   * Нужен проходу opt-in: Prisma не умеет считать `departureAt +
+   * durationMinutes` в where, поэтому «рейс закончился» вычисляется в
+   * памяти. В дефолтном проходе не используется, но грузится вместе с
+   * остальным — один select на оба прохода вместо двух.
+   */
+  durationMinutes: number;
+}
+
+/**
+ * Каким правилом воркер вправе завершить поездку.
+ *
+ * Два режима, и путать их опасно:
+ * - `autoComplete: false` (дефолт) — поездка «протухает» через
+ *   `PENDING_BOOKING_TTL_MS` после отправления. Текущее поведение.
+ * - `autoComplete: true` — поездка завершается сразу по окончании рейса,
+ *   то есть владелец в форме выбрал «после прибытия, а не через сутки».
+ *
+ * Предикат claim'а внутри транзакции ОБЯЗАН совпадать с правилом прохода.
+ * Общий cutoff для обоих дал бы TOCTOU: opt-in поездка, рейс которой ещё не
+ * кончился, завершилась бы по TTL-правилу, а воркер решил бы, что всё по
+ * плану.
+ */
+interface ExpiryClaim {
+  /** Правило прохода: по флагу owner-решения. */
+  autoComplete: boolean;
+  /**
+   * Граница для `departureAt`. Для дефолтного прохода — `now − TTL`,
+   * для opt-in — `now` (окончание рейса дожимается в памяти, см. проход).
+   */
+  departureBefore: Date;
 }
 
 /**
@@ -49,10 +80,19 @@ export async function processExpiredTrips() {
     } catch (err) {
       logger.error({ err }, "trip_worker_prune_failed");
     }
+    // Проход 1: владелец выбрал «завершать по окончании рейса».
+    processedCount += await completeAutoCompleteTrips();
     while (true) {
       const expiredTrips: ExpiredTrip[] = await db.trip.findMany({
         where: {
           status: "active",
+          // opt-in поездки сюда НЕ попадают — это экономия прохода, а не
+          // единственная защита: настоящую гарантию даёт предикат claim'а
+          // (`autoComplete: claim.autoComplete`). Если бы этот фильтр убрали,
+          // поездки длиннее суток всё равно не завершились бы раньше конца
+          // рейса, но дефолтный проход перебирал бы их каждый час, пока они
+          // active. Обе строки нужны, и по разным причинам.
+          autoComplete: false,
           departureAt: { lt: cutoff },
           ...(lastId ? { id: { gt: lastId } } : {}),
         },
@@ -64,6 +104,7 @@ export async function processExpiredTrips() {
           toCity: true,
           price: true,
           departureAt: true,
+          durationMinutes: true,
         },
         orderBy: { id: "asc" },
         take: TRIP_WORKER_BATCH_SIZE,
@@ -77,7 +118,10 @@ export async function processExpiredTrips() {
       );
 
       for (const trip of expiredTrips) {
-        await processExpiredTrip(trip, cutoff);
+        await processExpiredTrip(trip, {
+          autoComplete: false,
+          departureBefore: cutoff,
+        });
         processedCount++;
       }
 
@@ -136,7 +180,74 @@ async function expirePendingBookings(now: Date): Promise<void> {
   }
 }
 
-async function processExpiredTrip(trip: ExpiredTrip, cutoff: Date) {
+/**
+ * Проход для поездок с `autoComplete = true`: завершаются по окончании рейса,
+ * а не через TTL.
+ *
+ * Почему отдельный проход, а не расширение выборки дефолтного: Prisma не
+ * умеет сравнивать `departureAt + durationMinutes` с `now`, поэтому «рейс
+ * закончился» в `where` не выразить. Сырой SQL ради одного предиката означал
+ * бы отказ от Prisma в воркере — несоразмерно. Поэтому кандидаты берутся
+ * УЗКО (`status = active`, `autoComplete = true`, отправление уже прошло), а
+ * остаток окна добирается в памяти. Асимметрия тут безопасная: лишняя
+ * фильтрация в JS стоит ничего, а пропуск поездки означал бы «висит active».
+ *
+ * Честное ограничение точности: `CHECK_INTERVAL_MS` = час, поэтому «сразу по
+ * окончании рейса» на практике = «не позже чем через час после конца рейса».
+ * Интервал не меняем: он же сбрасывает pending-брони и чистит уведомления.
+ */
+async function completeAutoCompleteTrips(): Promise<number> {
+  const now = new Date();
+  let processed = 0;
+  let lastId: string | null = null;
+
+  while (true) {
+    const candidates: ExpiredTrip[] = await db.trip.findMany({
+      where: {
+        status: "active",
+        autoComplete: true,
+        departureAt: { lt: now },
+        ...(lastId ? { id: { gt: lastId } } : {}),
+      },
+      select: {
+        id: true,
+        driverId: true,
+        fromCity: true,
+        toCity: true,
+        price: true,
+        departureAt: true,
+        durationMinutes: true,
+      },
+      orderBy: { id: "asc" },
+      take: TRIP_WORKER_BATCH_SIZE,
+    });
+
+    if (candidates.length === 0) break;
+
+    for (const trip of candidates) {
+      const rideEnd = new Date(
+        trip.departureAt.getTime() + trip.durationMinutes * 60_000,
+      );
+      // Рейс ещё идёт — ждём следующего часового тика.
+      if (rideEnd > now) continue;
+      await processExpiredTrip(trip, {
+        autoComplete: true,
+        departureBefore: now,
+      });
+      processed++;
+    }
+
+    if (candidates.length < TRIP_WORKER_BATCH_SIZE) break;
+    lastId = candidates[candidates.length - 1].id;
+  }
+
+  if (processed > 0) {
+    logger.info({ processed }, "trip_worker_auto_complete_done");
+  }
+  return processed;
+}
+
+async function processExpiredTrip(trip: ExpiredTrip, claim: ExpiryClaim) {
   try {
     // Транзакция — только изменение данных (без уведомлений, чтобы
     // не держать соединение из пула открытым дольше необходимого).
@@ -147,7 +258,11 @@ async function processExpiredTrip(trip: ExpiredTrip, cutoff: Date) {
             where: {
               id: trip.id,
               status: "active",
-              departureAt: { lt: cutoff },
+              // Правило СВОЕГО прохода, а не общий cutoff: общий дал бы
+              // TOCTOU — opt-in поездка, рейс которой ещё идёт, завершилась
+              // бы по TTL-отсечке, и воркер счёл бы это плановым закрытием.
+              autoComplete: claim.autoComplete,
+              departureAt: { lt: claim.departureBefore },
             },
             data: { status: "completed", seatsAvailable: 0 },
           });
