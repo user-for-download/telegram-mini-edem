@@ -84,7 +84,7 @@ const CITIES = [
 ];
 
 /** Имена переключателей = `label` фасадной строки (ui/SwitchRow). */
-const AUTO_COMPLETE = "Завершать поездку сразу после прибытия";
+const AUTO_COMPLETE = "Завершать поездку сразу";
 const MATCHING = "Предлагать поездку подходящим попутчикам";
 
 function renderForm(): void {

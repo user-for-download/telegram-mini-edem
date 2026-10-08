@@ -572,7 +572,7 @@ export function CreateTripForm({
       >
         <SectionBody>
           <SwitchRow
-            label="Завершать поездку сразу после прибытия"
+            label="Завершать поездку сразу"
             title="Завершать сразу после поездки"
             subtitle={
               autoComplete
@@ -584,7 +584,7 @@ export function CreateTripForm({
           />
           <SwitchRow
             label="Предлагать поездку подходящим попутчикам"
-            title="Предлагать подходящим попутчикам"
+            title="Предлагать подходящим"
             subtitle={
               matchingEnabled
                 ? "Предложим тем, кто ищет попутку по вашему маршруту"
