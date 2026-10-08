@@ -63,4 +63,28 @@ describe("MenuRow", () => {
   it("строка на всю ширину родителя — иначе подпись растёт за карточку", () => {
     expect(css).toMatch(/\.row\s*\{[^}]*width:\s*100%/);
   });
+
+  it("multiline прокидывается в кит: без него подпись режется многоточием", () => {
+    // Кит по умолчанию рисует подпись с `white-space: nowrap` +
+    // `text-overflow: ellipsis` (styles.css), а `multiline` снимает это —
+    // единственный штатный способ не обрезать подпись. Пин на РЕАЛЬНЫЙ
+    // эффект: один и тот же ряд с пропом и без него обязан давать разный
+    // HTML (без пропа кит вешает на узел класс, снимающий nowrap-правило).
+    // Сравнение с заведомо другим рядом проходило бы вхолостую.
+    const row = (multiline?: boolean) =>
+      renderToString(
+        <AppRoot platform="base">
+          <MenuRow
+            icon={<span>i</span>}
+            title="Вологда → Череповец"
+            subtitle="2 человека · 7 мест · Завтра, 08:00"
+            multiline={multiline}
+            onClick={() => {}}
+          />
+        </AppRoot>,
+      );
+    expect(row(true)).not.toBe(row(false));
+    // И подпись на месте целиком — многоточие её не съело.
+    expect(row(true)).toContain("2 человека · 7 мест · Завтра, 08:00");
+  });
 });

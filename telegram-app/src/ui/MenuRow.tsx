@@ -17,6 +17,18 @@ export interface MenuRowProps {
    * это то, как пункт называется в меню).
    */
   label?: string;
+  /**
+   * Подпись переносится, а не усекается (штатный проп кита `multiline`,
+   * «Allows for multiline content without truncation»).
+   *
+   * По умолчанию кит рисует подпись с `white-space: nowrap` +
+   * `text-overflow: ellipsis`: длинный текст не переносится, а ОБРЕЗАЕТСЯ
+   * многоточием. Для коротких подписей меню это верно, но для подписи с
+   * данными в хвосте (ленты спроса: «2 человека · 7 мест · Завтра, 08:00»)
+   * обрезается ровно то, ради чего строка и нужна. Проп нужен ровно там, где
+   * подпись несёт значения, которые нельзя потерять.
+   */
+  multiline?: boolean;
 }
 
 /**
@@ -33,8 +45,19 @@ export interface MenuRowProps {
  * `Cell` идёт через `Component="button"` (реестр #12: интерактивная строка
  * обязана быть нативной кнопкой — иначе не фокусируется Tab'ом и не
  * опознаётся скринридером).
+ *
+ * `multiline` прокидывается в кит 1:1: обрезать подпись с данными нельзя,
+ * а своих правил на внутренние классы кита мы не пишем (хеш класса меняется
+ * при bump версии, проп — публичный контракт).
  */
-export function MenuRow({ icon, title, subtitle, onClick, label }: MenuRowProps) {
+export function MenuRow({
+  icon,
+  title,
+  subtitle,
+  onClick,
+  label,
+  multiline,
+}: MenuRowProps) {
   return (
     <Cell
       Component="button"
@@ -45,6 +68,7 @@ export function MenuRow({ icon, title, subtitle, onClick, label }: MenuRowProps)
       before={<span className={styles.icon}>{icon}</span>}
       after={<ChevronRight size={16} className={styles.chevron} />}
       subtitle={subtitle}
+      multiline={multiline}
       className={styles.row}
     >
       {title}
