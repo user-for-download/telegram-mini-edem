@@ -20,6 +20,10 @@ type TripForMatching = Pick<
   | "toCityId"
   | "departureAt"
   | "durationMinutes"
+  // Флаг подбора пассажиров. В типе он ОБЯЗАТЕЛЕН намеренно: без него
+  // TypeScript не дал бы прочитать поле, и «undefined значит true» пришёл бы
+  // из-под типов — то есть выключатель молча работал бы как включённый.
+  | "matchingEnabled"
 >;
 
 /**
@@ -100,6 +104,14 @@ export function matchingRideRequestWhere(
 export async function notifyMatchingRideRequests(
   trip: TripForMatching,
 ): Promise<void> {
+  // Владелец поездки выключил подбор пассажиров → не предлагаем вовсе.
+  // Первое из ТРЁХ мест гейта (уведомления здесь, чтение спроса и WS-хинт в
+  // `rideRequests/index.ts`): пропуск любого даёт либо «уведомление есть, а
+  // предложить нечего», либо «хинт привёл к пустой карточке».
+  // Выход ДО выборки заявок и ДО запроса имени водителя: при выключенном
+  // подборе не должно быть даже чтения, не то чтобы записей.
+  if (!trip.matchingEnabled) return;
+
   const route = withRoute(trip);
   if (!route) return;
 
@@ -163,10 +175,18 @@ export async function notifyMatchingRideRequests(
  * важнее те, кто оставил заявку недавно. Лимит 50 — экран вкладки, а не
  * выгрузка; при превышении список обрезан и это задокументировано, а не
  * спрятано.
+ *
+ * Гейт №2 из трёх: при `matchingEnabled = false` возвращаем пустой список,
+ * а НЕ 403/404. Поездка существует, водитель имеет право её читать — просто
+ * подбор для неё не предлагали. Эндпоинт остаётся 200 `{ items: [] }`, и
+ * клиент берёт сигнал «подбор выключен» из `tripSchema` самой поездки, а не
+ * из ответа спроса: форма ответа менять нельзя, иначе по «пустому списку»
+ * нельзя отличить «спроса нет» от «подбор выключен».
  */
 export async function findMatchingRideRequests(
   trip: TripForMatching,
 ): Promise<RideRequestWithCities[]> {
+  if (!trip.matchingEnabled) return [];
   const route = withRoute(trip);
   if (!route) return [];
 

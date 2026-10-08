@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { app } from "../../src/app.js";
 import { db } from "../../src/db.js";
@@ -94,6 +94,8 @@ describe("trip demand: GET /trips/:id/requests", () => {
   let toCityId: string;
   let otherToCityId: string;
   let tripId: string;
+  /** Поездки, созданные внутри кейсов (уведомления о них чистим послеEach). */
+  const createdTripIds: string[] = [];
 
   // Даты относительные: абсолютный «2029» перестанет быть прошлым, как
   // только системные часы уедут вперёд, и «просроченная» заявка начнёт
@@ -102,7 +104,14 @@ describe("trip demand: GET /trips/:id/requests", () => {
   const past = new Date(Date.now() - 60_000);
 
   beforeEach(async () => {
+    createdTripIds.length = 0;
     driverId = await createUser("Demand driver");
+    // Автомобиль нужен кейсам, создающим поездку через POST: без него
+    // trips/index.ts отдаёт 400 NO_CAR, и проверка флага не была бы достигнута.
+    // Удаляется каскадом вместе с юзером.
+    await db.car.create({
+      data: { userId: driverId, model: "Test", color: "Black" },
+    });
     passengerId = await createUser("Demand passenger");
     strangerId = await createUser("Demand stranger");
 
@@ -126,6 +135,9 @@ describe("trip demand: GET /trips/:id/requests", () => {
         seatsTotal: 3,
         seatsAvailable: 3,
         tags: [],
+        // Явно: дефолт схемы тоже true, но тест ниже переключает флаг, и
+        // базовая поездка должна быть гарантированно с включённым подбором.
+        matchingEnabled: true,
       },
     });
     tripId = trip.id;
@@ -133,8 +145,13 @@ describe("trip demand: GET /trips/:id/requests", () => {
 
   afterEach(async () => {
     const userIds = [driverId, passengerId, strangerId];
+    // Уведомления — первыми: они ссылаются на поездки и юзеров.
+    await db.notification.deleteMany({ where: { userId: { in: userIds } } });
     // Порядок обязателен: заявки и поездки ссылаются и на юзеров, и на города.
     await db.rideRequest.deleteMany({ where: { userId: { in: userIds } } });
+    // Поездки, созданные самими тестами (createdTripIds), — иначе уведомления
+    // о них пережили бы прогон и ломали бы счёт следующего кейса.
+    await db.trip.deleteMany({ where: { id: { in: createdTripIds } } });
     await db.trip.deleteMany({ where: { id: tripId } });
     await db.user.deleteMany({ where: { id: { in: userIds } } });
     await db.city.deleteMany({
@@ -306,6 +323,70 @@ describe("trip demand: GET /trips/:id/requests", () => {
     expect((await response.json()).code).toBe("NOT_FOUND");
   });
 
+  it("выключенный подбор даёт пустой спрос при НЕПУСТОЙ ленте заявок", async () => {
+    // Гейт №2 из трёх. Ключевое — «при непустой ленте»: без этого ассерт
+    // прошёл бы и при пустой БД, то есть ничего бы не проверял (MEMORY §14:
+    // проверка, которая не находит, — дефект теста).
+    await createRequest({
+      userId: passengerId,
+      fromCityId,
+      toCityId,
+      earliestAt: shift(-1),
+      latestAt: shift(2),
+      expiresAt: farFuture,
+    });
+    await db.trip.update({
+      where: { id: tripId },
+      data: { matchingEnabled: false },
+    });
+
+    const response = await app.request(`/api/v1/trips/${tripId}/requests`, {
+      headers: auth(driverId),
+    });
+
+    // 200, а не 403/404: поездка существует, водитель имеет право читать —
+    // подбор для неё просто не предлагали.
+    expect(response.status).toBe(200);
+    expect((await response.json()).items).toEqual([]);
+  });
+
+  it("выключение подбора действует в момент чтения, а не как снимок", async () => {
+    // Решение владельца: PATCH может переключить флаг. Значит гейт обязан
+    // смотреть на текущее значение поездки, а не на состояние на момент
+    // создания — иначе поездка, у которой водитель снял галочку, продолжила
+    // бы показывать спрос до перезапуска.
+    await createRequest({
+      userId: passengerId,
+      fromCityId,
+      toCityId,
+      earliestAt: shift(-1),
+      latestAt: shift(2),
+      expiresAt: farFuture,
+    });
+    const read = async () =>
+      (
+        await (
+          await app.request(`/api/v1/trips/${tripId}/requests`, {
+            headers: auth(driverId),
+          })
+        ).json()
+      ).items as unknown[];
+
+    expect(await read()).toHaveLength(1);
+
+    await db.trip.update({
+      where: { id: tripId },
+      data: { matchingEnabled: false },
+    });
+    expect(await read()).toHaveLength(0);
+
+    await db.trip.update({
+      where: { id: tripId },
+      data: { matchingEnabled: true },
+    });
+    expect(await read()).toHaveLength(1);
+  });
+
   it("returns an empty list when nothing matches", async () => {
     // Arrange / Act
     const response = await app.request(`/api/v1/trips/${tripId}/requests`, {
@@ -315,5 +396,96 @@ describe("trip demand: GET /trips/:id/requests", () => {
     // Assert
     expect(response.status).toBe(200);
     expect((await response.json()).items).toEqual([]);
+  });
+
+  /**
+   * Поездка для кейсов про гейт уведомлений: на 9 суток, то есть на 2 дня
+   * позже поездки из beforeEach. Смещение нужно по двум причинам: у поездок
+   * одного водителя не должно пересекаться окон (иначе 409 TRIP_OVERLAP), и
+   * заявка под неё создаётся со своим окном — иначе подбор не сойдётся и
+   * тест проверял бы несовпадение вместо гейта.
+   */
+  const gateTripOffsetDays = 9;
+  const gateDeparture = () =>
+    new Date(Date.now() + gateTripOffsetDays * 24 * 3_600_000);
+  const gateTripBody = (matchingEnabled: boolean) => ({
+    fromCity: `Demand from ${tgSeq}`,
+    fromAddress: "ул. Отправления, 1",
+    toCity: `Demand to ${tgSeq}`,
+    toAddress: "ул. Назначения, 2",
+    fromCityId,
+    toCityId,
+    departureAt: gateDeparture().toISOString(),
+    durationMinutes: 60,
+    distanceKm: 120,
+    price: 500,
+    seatsTotal: 3,
+    tags: [],
+    matchingEnabled,
+  });
+  /** Заявка, совпадающая с поездкой `gateTripBody` по маршруту и окну. */
+  const gateRequest = () =>
+    createRequest({
+      userId: passengerId,
+      fromCityId,
+      toCityId,
+      earliestAt: new Date(gateDeparture().getTime() - 3_600_000),
+      latestAt: new Date(gateDeparture().getTime() + 2 * 3_600_000),
+      expiresAt: farFuture,
+    });
+
+  it("выключенный подбор не создаёт НИ ОДНОГО уведомления о совпадении", async () => {
+    // Arrange: заявка пассажира совпадает по маршруту и окну с той поездкой,
+    // которую мы сейчас создадим — при включённом подборе уведомление было бы.
+    await gateRequest();
+
+    // Act
+    const response = await app.request("/api/v1/trips", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...auth(driverId) },
+      body: JSON.stringify(gateTripBody(false)),
+    });
+
+    // Assert
+    expect(response.status).toBe(201);
+    const newTripId = (await response.json()).id as string;
+    createdTripIds.push(newTripId);
+    // Рассылка уведомлений fire-and-forget (`void … .catch()` в
+    // trips/index.ts), поэтому «пока нет записи» ничего не доказывает: без
+    // ожидания тест проходил бы и при СЛОМАННОМ гейте, просто потому что
+    // уведомление ещё не успело создаться. Ждём окна, в котором запись
+    // обязана была бы появиться, и только потом утверждаем её отсутствие.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const notifications = await db.notification.findMany({
+      where: { userId: passengerId, type: "ride_request_match" },
+    });
+    expect(notifications).toEqual([]);
+  });
+
+  it("включённый подбор уведомляет пассажира — поведение не изменилось", async () => {
+    // Arrange: та же заявка, но флаг поездки — включён. Это регресс на «гейт
+    // не съел обычный путь»: без проверки выключатель тихо выключил бы подбор
+    // у всех поездок, и уведомления перестали бы приходить вообще.
+    await gateRequest();
+
+    // Act
+    const response = await app.request("/api/v1/trips", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...auth(driverId) },
+      body: JSON.stringify(gateTripBody(true)),
+    });
+
+    // Assert: регресс на «гейт не съел обычный путь».
+    expect(response.status).toBe(201);
+    const newTripId = (await response.json()).id as string;
+    createdTripIds.push(newTripId);
+    // Тот же fire-and-forget: ждём появления записи, а не ловим гонку.
+    await vi.waitFor(async () => {
+      const rows = await db.notification.findMany({
+        where: { userId: passengerId, type: "ride_request_match" },
+      });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.body).toContain(newTripId);
+    });
   });
 });

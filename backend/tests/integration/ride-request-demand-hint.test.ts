@@ -135,6 +135,8 @@ describe("ride_request:new — хинт спроса водителю", () => {
     departureAt?: Date;
     durationMinutes?: number;
     status?: string;
+    /** Флаг подбора; null → не задавать, берётся дефолт схемы (true). */
+    matchingEnabled?: boolean | null;
   }): Promise<string> {
     const trip = await db.trip.create({
       data: {
@@ -153,6 +155,9 @@ describe("ride_request:new — хинт спроса водителю", () => {
         seatsAvailable: 3,
         status: params.status ?? "active",
         tags: [],
+        ...(params.matchingEnabled === null
+          ? {}
+          : { matchingEnabled: params.matchingEnabled ?? true }),
       },
     });
     tripIds.push(trip.id);
@@ -322,6 +327,35 @@ describe("ride_request:new — хинт спроса водителю", () => {
 
     expect(res.status).toBe(201);
     expect(hintsTo(driverId)).toEqual([]);
+  });
+
+  it("поездка с выключенным подбором не получает WS-хинт", async () => {
+    // Гейт №3 из трёх. Без него водитель с выключенным подбором получил бы
+    // `ride_request:new`, открыл поездку и увидел пустую карточку спроса
+    // (гейт №2) — подсказка вела бы в никуда.
+    const tripId = await createTrip({ driverId, matchingEnabled: false });
+
+    await publish(passengerId);
+
+    // НЕ waitFor(→0): «сейчас ноль» выполняется мгновенно, и без сломанного
+    // гейта тест прошёл бы, просто не дождавшись хинта. Ждём окно, в
+    // котором хинт обязан был прийти (та же пауза, что у негативного кейса
+    // с уведомлением), и только затем утверждаем, что его нет.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(hintsTo(driverId)).toEqual([]);
+    // Контрольная проверка: поездка реально подходила под заявку, иначе
+    // пустой результат объяснялся бы не гейтом, а несовпадением маршрута.
+    const row = await db.trip.findUniqueOrThrow({ where: { id: tripId } });
+    expect(row.matchingEnabled).toBe(false);
+  });
+
+  it("поездка с включённым подбором хинт получает", async () => {
+    // Регресс на «фильтр не съел обычный путь».
+    const tripId = await createTrip({ driverId, matchingEnabled: true });
+
+    await publish(passengerId);
+
+    await vi.waitFor(() => expect(hintsTo(driverId)).toEqual([tripId]));
   });
 
   it("публикация с чужим id города отвергается и хинта не шлёт", async () => {

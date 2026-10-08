@@ -41,6 +41,11 @@ describe("RideRequest matching notifications", () => {
     toCityId: "to-city",
     departureAt: new Date("2030-01-01T10:00:00.000Z"),
     durationMinutes: 120,
+    // Обязателен в TripForMatching, поэтому фикстура его задаёт. Без него
+    // поле было бы undefined, а `!undefined` в гейте — ранний выход, и тест
+    // падал бы не на своей проверке, а на отсутствии флага. Именно поэтому
+    // флаг добавлен в Pick, а не взят «необязательным» из Prisma-типа.
+    matchingEnabled: true,
   };
 
   it("notifies matching requester with a trip deep link", async () => {
@@ -65,6 +70,18 @@ describe("RideRequest matching notifications", () => {
   it("does not duplicate a notification for the same trip", async () => {
     findFirst.mockResolvedValue({ id: "notification-1" });
     await notifyMatchingRideRequests(trip);
+    expect(notifyUser).not.toHaveBeenCalled();
+  });
+
+  it("matchingEnabled=false: выходит ДО выборки заявок — ничего не читает и не пишет", async () => {
+    // Гейт №1 из трёх. Проверяем именно ПОРЯДОК: выход до `findMany`
+    // означает, что при выключенном подборе нет даже чтения БД, не только
+    // нет записей. Если бы гейт стоял после выборки, этот тест остался бы
+    // зелёным, а лишний запрос уехал бы в прод на каждое создание поездки.
+    await notifyMatchingRideRequests({ ...trip, matchingEnabled: false });
+
+    expect(findMany).not.toHaveBeenCalled();
+    expect(findUniqueUser).not.toHaveBeenCalled();
     expect(notifyUser).not.toHaveBeenCalled();
   });
 });

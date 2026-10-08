@@ -232,8 +232,18 @@ async function notifyTripsAboutNewRequest(
       status: "active",
       // Поездка уехала — спрос на неё неактуален.
       departureAt: { gt: now },
+      // Гейт №3 из трёх. Подбор выключен → хинта нет: он привёл бы водителя
+      // на страницу поездки, где карточка спроса пуста (гейт №2), то есть
+      // подсказка вела бы в никуда. Фильтр в БД, а не в памяти, — чтобы в
+      // счётчик `demand_hinted` не попадали выключенные поездки.
+      matchingEnabled: true,
     },
-    select: { id: true, driverId: true, departureAt: true, durationMinutes: true },
+    select: {
+      id: true,
+      driverId: true,
+      departureAt: true,
+      durationMinutes: true,
+    },
     // Экран поездок, а не выгрузка: граница задокументирована.
     take: 50,
   });
@@ -775,10 +785,7 @@ rideRequestsRouter.post(
         404,
       );
     if (trip.driverId !== driver.id)
-      return c.json(
-        { code: ERROR_CODES.FORBIDDEN, message: "Forbidden" },
-        403,
-      );
+      return c.json({ code: ERROR_CODES.FORBIDDEN, message: "Forbidden" }, 403);
     if (trip.status !== "active")
       return c.json(
         { code: ERROR_CODES.TRIP_NOT_ACTIVE, message: "Trip is not active" },
