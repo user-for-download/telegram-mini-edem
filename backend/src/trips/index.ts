@@ -762,6 +762,12 @@ tripsRouter.post(
               seatsAvailable: dto.seatsTotal,
               tags: dto.tags,
               comment: dto.comment,
+              // Флаги опций из DTO. Явными полями, а не спредом `...dto`:
+              // здесь перечисление, поэтому забытое поле тихо уехало бы в
+              // БД как дефолт схемы — водитель поставил галочку, получил 201,
+              // а опция не включилась. Дефолты живут в createTripDtoSchema.
+              autoComplete: dto.autoComplete,
+              matchingEnabled: dto.matchingEnabled,
             },
             include: {
               driver: {
@@ -895,6 +901,16 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
         if (dto.price !== undefined) updateData.price = dto.price;
         if (dto.tags !== undefined) updateData.tags = dto.tags;
         if (dto.comment !== undefined) updateData.comment = dto.comment;
+        // Флаги опций — тоже редактируются после публикации (решение
+        // владельца 2026-10-08: водитель вправе передумать). Проверка
+        // `!== undefined` обязательна: без неё PATCH цены затирал бы опции
+        // дефолтом схемы, то есть молча возвращал бы прошлый выбор.
+        // Переключение не трогает status и не требует пересчёта мест,
+        // поэтому идёт после проверки пересечения окон.
+        if (dto.autoComplete !== undefined)
+          updateData.autoComplete = dto.autoComplete;
+        if (dto.matchingEnabled !== undefined)
+          updateData.matchingEnabled = dto.matchingEnabled;
 
         if (
           dto.departureAt !== undefined ||

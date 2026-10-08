@@ -202,6 +202,12 @@ export function serializeTrip(
     tags: trip.tags,
     comment: trip.comment ?? undefined,
     status: trip.status as TripStatus,
+    // Флаги опций поездки. В ответе они ОБЯЗАТЕЛЬНЫ (tripSchema без
+    // дефолта): «неизвестно» ≠ «выключено», иначе клиент на устаревшем
+    // ответе решил бы, что подбор пассажиров отключён, и показал бы
+    // ложный пин. Значения приходят из БД — NOT NULL с дефолтом в схеме.
+    autoComplete: trip.autoComplete,
+    matchingEnabled: trip.matchingEnabled,
     bookedSeats: options?.bookedSeats ?? [],
     pendingRequestsCount: options?.pendingRequestsCount,
     confirmedBookingsCount: options?.confirmedBookingsCount,
