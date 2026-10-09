@@ -183,7 +183,10 @@ describe("TripPage parity", () => {
     const html = render(<TripPage />, "/bookings?segment=bookings");
     expect(html).toContain("Отменить");
     expect(html).toContain("На рассмотрении");
-    expect(html).toContain("место №2");
+    // Свое место в строке про ВОДИТЕЛЯ не показываем (решение владельца
+    // 2026-10-09): там машина и цвет, а место — данные пассажира. Оно
+    // остаётся в деталях поездки.
+    expect(html).not.toContain("место №");
   });
 
   it("renders driver trips with request rows and guarded actions on active", () => {

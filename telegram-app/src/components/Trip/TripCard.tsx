@@ -83,6 +83,11 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
       : "Водитель";
     // Адреса — только подтверждённым (публичные ответы их маскируют).
     const confirmed = booking.status === "confirmed";
+    // Строка персоны у брони описывает ВОДИТЕЛЯ: машина и цвет. Свое место
+    // («место №N») сюда не пишем — это данные пассажира, и в строке про
+    // водителя они читались как его характеристика. Место живёт в деталях
+    // поездки (BookingPanel: «Место №N · цена») и при выборе места.
+    const driverLine = car;
     return (
       <TripStandardCard
         tripId={booking.trip.id}
@@ -99,7 +104,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
           name: driver.name,
           avatar: driver.avatar,
           rating: driver.rating,
-          subtitle: `${car} · место №${booking.seat}`,
+          subtitle: driverLine,
           showCarIcon: Boolean(driver.car),
         }}
         onOpen={(id) => {

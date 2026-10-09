@@ -29,7 +29,7 @@ describe("TripStandardCard", () => {
         person={{
           name: "Александр",
           rating: 4.9,
-          subtitle: "Lada Vesta · белый · место №1",
+          subtitle: "Lada Vesta · белый",
           showCarIcon: true,
         }}
         footer={<button type="button">Детали поездки</button>}
@@ -47,7 +47,7 @@ describe("TripStandardCard", () => {
     expect(html).toContain("Автовокзал");
     expect(html).toContain("Александр");
     expect(html).toContain("4.9");
-    expect(html).toContain("Lada Vesta · белый · место №1");
+    expect(html).toContain("Lada Vesta · белый");
     expect(html).toContain("Детали поездки");
   });
 
