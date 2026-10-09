@@ -243,6 +243,84 @@ describe("каскад: наши модули обязаны остаться В
   });
 });
 
+describe("каркас: рёбра экрана (рельс Page)", () => {
+  /**
+   * Модуль с осознанно своим рельсом. Реальные измерения (e2e/ui-rhythm.mjs)
+   * подтверждают, что корневые padding'и всех остальных экранов равны
+   * 4/16/16/120 — то есть рельс один, а этот выходит из него по устройству,
+   * а не по недосмотру:
+   *
+   * AccountStatePage — терминальный экран (бан/удаление/ошибка сессии):
+   * колоночный бокс с env(safe-area) ВНУТРИ Page, потому что терминал
+   * показывают без таббара и он не вкладка.
+   *
+   * Первый экран (Page variant="hero") и «вне Telegram» (вне AppRoot) в
+   * список не входят: их модули лежат в components/, а проверка ниже
+   * сканирует только pages/ — там своих корневых паддингов нет вовсе.
+   */
+  const RAIL_EXCEPTIONS = new Set(["AccountStatePage.module.css"]);
+
+  const nameOf = (f: string): string => f.slice(f.lastIndexOf(sep) + 1);
+  const pageCssFiles = (): string[] =>
+    walkCss(join(here, "..", "pages")).filter(
+      (f) => !RAIL_EXCEPTIONS.has(nameOf(f)),
+    );
+
+  it("модуль страницы не заводит второй рельс через env(safe-area)", () => {
+    // Ровно тот способ, которым AccountStatePage расходился с Page:
+    // литеральный верх/низ поверх токенов корня — «рельс в рельсе».
+    const offenders = pageCssFiles()
+      .filter((f) =>
+        /padding[^;{}]*env\(safe-area/.test(stripCssComments(readFileSync(f, "utf8"))),
+      )
+      .map(nameOf);
+    expect(offenders).toEqual([]);
+  });
+
+  it("модуль страницы не заводит второй рельс литеральными px", () => {
+    // Рельс задаётся токенами (--app-page-*). Литерал в `padding` — это
+    // либо устаревшая копия, либо новый экран, который поехал.
+    const offenders = pageCssFiles()
+      .filter((f) => {
+        const code = stripCssComments(readFileSync(f, "utf8"));
+        return [...code.matchAll(/(^|[;{])\s*padding(?:-top|-bottom|-left|-right)?\s*:\s*([^;}]*)/g)]
+          .some((m) => /\d\s*px/.test(m[2] ?? "") && !(m[2] ?? "").includes("var(--"));
+      })
+      .map(nameOf);
+    expect(offenders).toEqual([]);
+  });
+
+  it("Page нигде не переопределён className (иначе рёбра поедут)", () => {
+    // className на Page добавился бы к .page/.pageHero и мог бы перебить
+    // padding: класс-ловушка, который напишет «под себя» ровно один экран.
+    const offenders = walkSource(join(here, "..", "pages"))
+      .filter((file) =>
+        /<Page\b[^>]*\bclassName=/s.test(readFileSync(file, "utf8")),
+      )
+      .map(nameOf);
+    expect(offenders).toEqual([]);
+  });
+
+  it("все маршруты рельса умещаются в Page (корень один)", () => {
+    // Экранов много, а контракт рёбер один: пока у корня экрана нет
+    // НИ ОДНОГО маршрута без Page, паддинги не могут разъехаться.
+    // Страницы-диспетчеры (TripPage → TripActivePage) и вложенные в Sheet
+    // (TripDetailsPage) корня Page не имеют СОЗНАТЕЛЬНО: первый лишь
+    // переадресует, второй живёт в теле модалки со своей геометрией.
+    const noPage = walkSource(join(here, "..", "pages"))
+      .filter((file) => file.endsWith(".tsx"))
+      .filter((file) => !/<Page\b/.test(readFileSync(file, "utf8")))
+      .map(nameOf)
+      .filter(
+        (name) =>
+          !/TripPage|TripDetailsPage|DriverPanel|TripHero|BookingPanel|Complaint|Feedback|TripDateDivider/.test(
+            name,
+          ),
+      );
+    expect(noPage).toEqual([]);
+  });
+});
+
 describe("каскад: остаточные слепые зоны (документированы, не закрыты)", () => {
   // Честная фиксация того, что структурными проверками НЕ ловится:
   // итоговое применение стилей в браузере (порядок инъекции модулей,
