@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   bookingSchema,
   paginatedBookingsResponseSchema,
+  passengerBookingSchema,
 } from "@edem/contracts";
 import { db } from "../db.js";
 import type { AuthEnv } from "../auth/middleware.js";
@@ -10,9 +11,8 @@ import { logger } from "../logger.js";
 import { reportServerError } from "../client-errors/index.js";
 import {
   serializeBooking,
+  serializeTrip,
   serializeUser,
-  formatDateRu,
-  formatTimeRu,
 } from "../serializers/index.js";
 import { ERROR_CODES } from "../errors.js";
 import {
@@ -111,36 +111,25 @@ queriesRouter.get("/my", async (c) => {
 
       passenger: serializeUser(b.passenger),
 
-      trip: {
-        id: b.trip.id,
-        fromCity: b.trip.fromCity,
-        fromAddress: b.trip.fromAddress,
-        toCity: b.trip.toCity,
-        toAddress: b.trip.toAddress,
-        date: formatDateRu(b.trip.departureAt),
-        time: formatTimeRu(b.trip.departureAt),
-        durationMinutes: b.trip.durationMinutes,
-        distanceKm: b.trip.distanceKm,
-        price: b.trip.price,
-        seatsTotal: b.trip.seatsTotal,
-        seatsAvailable: b.trip.seatsAvailable,
-
-        /**
-         * Служебные поля для frontend.
-         */
-        status: b.trip.status as "active" | "cancelled" | "completed",
-        departureAt: b.trip.departureAt.toISOString(),
-
-        // Профиль водителя (платформенный ID наружу не отдаётся).
-        driver: serializeUser(b.trip.driver),
-
-        tags: b.trip.tags,
-        comment: b.trip.comment || undefined,
-      },
+      // Тот же сериализатор, что у /bookings/driver и /bookings/trip/:id:
+      // ручная сборка trip-объекта уже один раз разошлась с контрактом
+      // (пропали обязательные autoComplete/matchingEnabled), и клиент
+      // отбрасывал ответ целиком. Единый источник исключает дрейф.
+      trip: serializeTrip(b.trip),
     };
   });
 
-  return c.json(formatted);
+  const validation = z.array(passengerBookingSchema).safeParse(formatted);
+  if (!validation.success) {
+    logger.error(
+      { issues: validation.error.issues },
+      "passenger_bookings_response_validation_failed",
+    );
+    reportServerError(validation.error, c.req.method, c.req.path);
+    return c.json({ message: "Internal response validation failed" }, 500);
+  }
+
+  return c.json(validation.data);
 });
 
 /**
@@ -246,34 +235,23 @@ queriesRouter.get("/history", async (c) => {
 
       passenger: serializeUser(b.passenger),
 
-      trip: {
-        id: b.trip.id,
-        fromCity: b.trip.fromCity,
-        fromAddress: b.trip.fromAddress,
-        toCity: b.trip.toCity,
-        toAddress: b.trip.toAddress,
-
-        date: formatDateRu(b.trip.departureAt),
-        time: formatTimeRu(b.trip.departureAt),
-
-        durationMinutes: b.trip.durationMinutes,
-        distanceKm: b.trip.distanceKm,
-        price: b.trip.price,
-        seatsTotal: b.trip.seatsTotal,
-        seatsAvailable: b.trip.seatsAvailable,
-
-        status: b.trip.status as "active" | "cancelled" | "completed",
-        departureAt: b.trip.departureAt.toISOString(),
-
-        driver: serializeUser(b.trip.driver),
-
-        tags: b.trip.tags,
-        comment: b.trip.comment || undefined,
-      },
+      // Единый сериализатор (см. комментарий в /my) — иначе ответ снова
+      // разойдётся с tripSchema и клиент отбросит всю историю.
+      trip: serializeTrip(b.trip),
     };
   });
 
-  return c.json(formatted);
+  const validation = z.array(passengerBookingSchema).safeParse(formatted);
+  if (!validation.success) {
+    logger.error(
+      { issues: validation.error.issues },
+      "passenger_history_response_validation_failed",
+    );
+    reportServerError(validation.error, c.req.method, c.req.path);
+    return c.json({ message: "Internal response validation failed" }, 500);
+  }
+
+  return c.json(validation.data);
 });
 
 /**

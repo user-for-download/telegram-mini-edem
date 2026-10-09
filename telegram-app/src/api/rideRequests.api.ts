@@ -29,6 +29,8 @@ const rideRequestListSchema = z.object({
   }),
 });
 
+export type RideRequestsPage = z.infer<typeof rideRequestListSchema>;
+
 /**
  * Ответ приглашения пассажира: 201 (создано) и 200 (повтор по той же паре
  * заявка+поездка) различаются только флагом `duplicate`, поэтому схема одна.
@@ -52,11 +54,20 @@ export type RideRequestInvite = z.infer<typeof rideRequestInviteSchema>;
 export type MutableRideRequestStatus = Exclude<RideRequestStatus, "expired">;
 
 export const rideRequestsApi = {
-  list: (signal?: AbortSignal): Promise<RideRequest[]> =>
+  /**
+   * Свои заявки с пагинацией (GET /ride-requests?page&limit). Раньше
+   * возвращались только items, а pagination выбрасывалась — список молча
+   * упирался в дефолтный limit 20 и старше не показывался вовсе.
+   */
+  list: (
+    page = 1,
+    limit = 20,
+    signal?: AbortSignal,
+  ): Promise<RideRequestsPage> =>
     apiClient.request(
-      "/ride-requests",
+      `/ride-requests?page=${page}&limit=${limit}`,
       { signal },
-      rideRequestListSchema.transform(({ items }) => items),
+      rideRequestListSchema,
     ),
 
   /** Агрегаты по маршрутам: по спросу, затем по ближайшему окну. */

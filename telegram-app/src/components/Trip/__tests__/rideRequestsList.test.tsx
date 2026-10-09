@@ -73,7 +73,35 @@ function mutationState(overrides: Record<string, unknown> = {}) {
 }
 
 function setMocks(requests: Record<string, unknown> = {}) {
-  mockUseRequests.mockReturnValue(queryState(requests));
+  // Бесконечная лента: хук отдаёт { data: { pages: [...] }, ... }.
+  // Хелпер принимает прежний массив items и оборачивает его в одну страницу.
+  const { data, ...rest } = requests;
+  const pageData =
+    data === undefined
+      ? undefined
+      : {
+          pages: [
+            {
+              items: data,
+              pagination: {
+                page: 1,
+                limit: 20,
+                total: Array.isArray(data) ? data.length : 0,
+                totalPages: 1,
+                hasMore: false,
+              },
+            },
+          ],
+        };
+  mockUseRequests.mockReturnValue(
+    queryState({
+      data: pageData,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+      ...rest,
+    }),
+  );
   mockUseUpdate.mockReturnValue(mutationState());
   mockUseStatus.mockReturnValue(mutationState());
   mockUseCancel.mockReturnValue(mutationState());

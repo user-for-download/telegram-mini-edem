@@ -10,6 +10,8 @@ import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Field } from "@/ui/Field";
 import { Notice } from "@/ui/Notice";
 import { Stack } from "@/ui/Stack";
+import { FetchMore } from "@/ui/FetchMore";
+import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import {
   useCancelRideRequestMutation,
   useRideRequestsQuery,
@@ -73,6 +75,17 @@ const RIDE_REQUEST_STATUS_TONES: Readonly<
  */
 export const RideRequestsList = memo(function RideRequestsList() {
   const requests = useRideRequestsQuery();
+  // Бесконечная лента: свои заявки копятся (терминальные остаются в
+  // истории), поэтому список обязан уметь догружать страницы — раньше
+  // pagination выбрасывалась и было видно только первые 20.
+  const items = requests.data?.pages.flatMap((page) => page.items) ?? [];
+  const sentinelRef = useInfiniteSentinel({
+    hasNextPage: requests.hasNextPage,
+    isFetchingNextPage: requests.isFetchingNextPage,
+    fetchNextPage: () => {
+      void requests.fetchNextPage();
+    },
+  });
   const update = useUpdateRideRequestMutation();
   const status = useRideRequestStatusMutation();
   const cancel = useCancelRideRequestMutation();
@@ -161,12 +174,12 @@ export const RideRequestsList = memo(function RideRequestsList() {
       <QueryState
         loading={requests.isLoading}
         error={requests.error}
-        empty={!requests.data?.length}
+        empty={items.length === 0}
         emptyText={EMPTY_STATES.rideRequestsEmpty.description}
         onRetry={() => void requests.refetch()}
       >
         <Stack>
-          {requests.data?.map((request) => (
+          {items.map((request) => (
             <Card key={request.id} className={styles.card}>
               <div className={styles.cardHead}>
                 <Text weight="2" Component="span" className={TRUNCATE}>
@@ -334,6 +347,13 @@ export const RideRequestsList = memo(function RideRequestsList() {
               )}
             </Card>
           ))}
+          <FetchMore
+            hasNextPage={requests.hasNextPage}
+            isFetchingNextPage={requests.isFetchingNextPage}
+            fetchNextPage={() => void requests.fetchNextPage()}
+            sentinelRef={sentinelRef}
+            placeholderLabel="Загрузка ещё запросов"
+          />
         </Stack>
       </QueryState>
     </>

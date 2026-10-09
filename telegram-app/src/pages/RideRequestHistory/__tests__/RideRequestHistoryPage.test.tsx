@@ -77,14 +77,35 @@ function renderPage(): string {
   );
 }
 
-beforeEach(() => {
-  mockUseRequests.mockReturnValue({
-    data: [],
+// Хук списка заявок — бесконечная лента: ответ оборачиваем в одну страницу.
+function infiniteState(items: unknown[]) {
+  return {
+    data: {
+      pages: [
+        {
+          items,
+          pagination: {
+            page: 1,
+            limit: 20,
+            total: items.length,
+            totalPages: 1,
+            hasMore: false,
+          },
+        },
+      ],
+    },
     isLoading: false,
     isError: false,
     error: null,
     refetch: vi.fn(),
-  });
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+  };
+}
+
+beforeEach(() => {
+  mockUseRequests.mockReturnValue(infiniteState([]));
 });
 
 afterEach(() => {
@@ -101,13 +122,7 @@ describe("RideRequestHistoryPage", () => {
   });
 
   it("список заявок выводится на странице", () => {
-    mockUseRequests.mockReturnValue({
-      data: [makeRequest()],
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-    });
+    mockUseRequests.mockReturnValue(infiniteState([makeRequest()]));
 
     const html = renderPage();
 
@@ -118,13 +133,7 @@ describe("RideRequestHistoryPage", () => {
   it("форма создания не встроена в страницу — она в портальном окне", () => {
     // Регресс на возврат к слипшейся шторке: если форма снова окажется в DOM
     // страницы, окно перестанет быть единственным местом создания.
-    mockUseRequests.mockReturnValue({
-      data: [makeRequest()],
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-    });
+    mockUseRequests.mockReturnValue(infiniteState([makeRequest()]));
 
     const html = renderPage();
 

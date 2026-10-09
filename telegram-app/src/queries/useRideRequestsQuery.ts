@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   rideRequestsApi,
   type MutableRideRequestStatus,
@@ -32,9 +32,15 @@ export function useRideRequestFeedQuery(enabled = true) {
 }
 
 export function useRideRequestsQuery(enabled = true) {
-  return useQuery({
-    queryKey: RIDE_REQUEST_KEYS.all,
-    queryFn: ({ signal }) => rideRequestsApi.list(signal),
+  return useInfiniteQuery({
+    // Ключ под RIDE_REQUEST_KEYS.all: инвалидация мутаций заявок по
+    // префиксу `all` обновляет и этот список без отдельной правки.
+    queryKey: [...RIDE_REQUEST_KEYS.all, "mine", "infinite"] as const,
+    queryFn: ({ pageParam, signal }) =>
+      rideRequestsApi.list(pageParam, 20, signal),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.hasMore ? lastPage.pagination.page + 1 : undefined,
     enabled,
     staleTime: 30_000,
   });

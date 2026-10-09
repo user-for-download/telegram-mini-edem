@@ -7,6 +7,7 @@ import { GROW, ROW_BETWEEN, TRUNCATE, BTN_ROW_WRAP } from "@/ui/classes";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
 import { dayLabel, formatDuration } from "@/utils/date";
+import { plural } from "@/utils/plural";
 import { terminalTripStatusLabel } from "@/utils/tripStatus";
 import { hapticFeedback } from "@tma.js/sdk-react";
 import { Phone, Send, ShieldCheck, Star } from "lucide-react";
@@ -78,7 +79,10 @@ export function TripHero({
             <Caption Component="div" className={styles.ratingRow}>
               <Star size={12} className={styles.star} />
               <span>{item.driver.rating.toFixed(1)}</span>
-              <span>({item.driver.reviewsCount} отзывов)</span>
+              <span>
+                ({item.driver.reviewsCount}{" "}
+                {plural(item.driver.reviewsCount, "отзыв", "отзыва", "отзывов")})
+              </span>
             </Caption>
           </div>
         </div>
