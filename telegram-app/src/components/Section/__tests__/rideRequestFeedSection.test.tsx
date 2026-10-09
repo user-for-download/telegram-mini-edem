@@ -2,8 +2,9 @@
 //
 // Агрегацию и сортировку проверяет бэк (интеграционный тест
 // `backend/tests/integration/ride-requests.test.ts`): тут контракт разметки —
-// заголовок, «люди + места + ближайшая дата», скрытие при пустой ленте и
-// анонимность (в строке нет id заявки). Паттерн tripsPages.test.tsx (SSR).
+// заголовок, «люди + места + ближайшая дата», скрытие при пустой ленте,
+// анонимность (в строке нет id заявки) и ОТСУТСТВИЕ кликабельности: лента —
+// витрина спроса, а не навигация. Паттерн tripsPages.test.tsx (SSR).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -15,6 +16,7 @@ vi.mock("@/queries/useRideRequestsQuery", () => ({
 }));
 
 import { RideRequestFeedSection } from "@/components/Section/RideRequestFeedSection";
+import { STATIC_CELL } from "@/ui/classes";
 
 function item(overrides: Record<string, unknown> = {}) {
   return {
@@ -39,12 +41,10 @@ function queryState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function renderSection(
-  onSelect: (fromCityId: string, toCityId: string) => void = () => {},
-): string {
+function renderSection(): string {
   return renderToString(
     <AppRoot platform="base">
-      <RideRequestFeedSection onSelect={onSelect} />
+      <RideRequestFeedSection />
     </AppRoot>,
   );
 }
@@ -85,19 +85,19 @@ describe("RideRequestFeedSection", () => {
     expect(html).toContain("1 человек · 3 места");
   });
 
-  it("строка — та же MenuRow, что в меню профиля", () => {
-    // Витрина спроса обязана читаться как пункты меню. Свой Cell без
-    // `width: 100%` раздувал строку за карточку (553px при секции 356px) и
-    // гонял подпись в две строки, из-за чего шеврон висел посередине.
+  it("строка читается как строка меню: маршрут, иконка, подпись", () => {
+    // Витрина спроса обязана читаться как пункты меню — теми же токенами и
+    // тем же `ui/Cell`, только без интерактивности (см. кейс выше). Раньше
+    // здесь был `ui/MenuRow` с кнопкой и шевроном.
     mockFeed.mockReturnValue(queryState({ data: [item()] }));
 
     const html = renderSection();
 
-    // Имя строки собирает MenuRow: «{label}. {subtitle}».
-    expect(html).toContain(
-      "Заявки Вологда — Череповец. 2 человека · 3 места · 1 июня, 09:00",
-    );
-    // Ширину держит MenuRow (ui/__tests__/menuRow.test.ts пинит width: 100%).
+    expect(html).toContain("Вологда → Череповец");
+    expect(html).toContain("2 человека · 3 места · 1 июня, 09:00");
+    // Иконка маршрута осталась — строка должна читаться как список, а не
+    // как простыня текста.
+    expect(html).toMatch(/<svg/);
   });
 
   it("дата — человеческая, а не ISO", () => {
@@ -126,15 +126,19 @@ describe("RideRequestFeedSection", () => {
     expect(html).not.toContain("11111111-1111-4111-8111-111111111111");
   });
 
-  it("нативная кнопка: строка фокусируется и опознаётся как кнопка", () => {
-    mockFeed.mockReturnValue(queryState({ data: [item()] }));
+  it("строки НЕ кликабельны: это витрина, а не навигация", () => {
+    // Решение владельца 2026-10-09: шаг приглашения снят, спрос остался
+    // информацией. Строка — div (`ui/Cell` без Component="button"), без
+    // шеврона и без курсора указателя: обещать переход, которого нет, нечестно.
+    mockFeed.mockReturnValue(queryState({ data: [item(), item()] }));
 
     const html = renderSection();
 
-    // Реестр #12: интерактивная строка обязана быть нативной кнопкой —
-    // без Component="button" кит рендерит div, и строка не фокусируется.
-    expect(html).toMatch(/<button[^>]*type="button"/);
+    expect(html).not.toMatch(/<button/);
     expect(html).not.toMatch(/<div[^>]*type="button"/);
+    // Класс СТАТИЧНОЙ клетки обязателен: без него кит-овский Tappable
+    // оставил бы cursor:pointer и hover-подложку (ложная кликабельность).
+    expect(html).toContain(STATIC_CELL);
   });
 
   it("заголовок секции — не h1 (имя экрана принадлежит странице)", () => {

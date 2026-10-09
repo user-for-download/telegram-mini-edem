@@ -80,5 +80,16 @@ export const MIN_TARGET = textStyles.minTarget;
  */
 export const AS_BUTTON = buttonResetStyles.asButton;
 
+/**
+ * Статичная строка-информация: клетка без обработчика.
+ *
+ * Кит внутри `Cell` всегда тянет `Tappable` (`cursor:pointer` + hover-подложка)
+ * независимо от `Component`, поэтому строка, по которой нельзя нажать, без
+ * этого класса выглядит кликабельной. Фасад не решает статичность за
+ * вызывающего: интерактивность из пропсов не выводится, а строка уведомлений
+ * интерактивна БЕЗ `Component="button"`.
+ */
+export const STATIC_CELL = styles.staticCell;
+
 /** Loading pulse animation (анимация приложения, disabled under prefers-reduced-motion). */
 export const PULSE = textStyles.pulse;

@@ -4,10 +4,6 @@ import {
   notifyUser,
   tripSnapshotOf,
 } from "../services/notification.service.js";
-import {
-  rideRequestIncludeCities,
-  type RideRequestWithCities,
-} from "./serializers.js";
 
 type TripForMatching = Pick<
   Prisma.TripGetPayload<Prisma.TripDefaultArgs>,
@@ -160,42 +156,4 @@ export async function notifyMatchingRideRequests(
       role: "passenger",
     });
   }
-}
-
-/**
- * Спрос на поездку: активные заявки, подходящие под её маршрут и окно
- * (`GET /trips/:id/requests`, слой «водитель видит спрос»).
- *
- * Зеркало `GET /ride-requests/matching`: там водитель задаёт маршрут и окно
- * руками и получает чужие заявки, здесь — по id поездки. Условия подбора
- * берутся из matchingRideRequestWhere, поэтому «что показали в уведомлениях»
- * и «что показали в экране спроса» — одно и то же.
- *
- * Порядок — свежие сверху (`createdAt desc`), как в `/matching`: водителю
- * важнее те, кто оставил заявку недавно. Лимит 50 — экран вкладки, а не
- * выгрузка; при превышении список обрезан и это задокументировано, а не
- * спрятано.
- *
- * Гейт №2 из трёх: при `matchingEnabled = false` возвращаем пустой список,
- * а НЕ 403/404. Поездка существует, водитель имеет право её читать — просто
- * подбор для неё не предлагали. Эндпоинт остаётся 200 `{ items: [] }`, и
- * клиент берёт сигнал «подбор выключен» из `tripSchema` самой поездки, а не
- * из ответа спроса: форма ответа менять нельзя, иначе по «пустому списку»
- * нельзя отличить «спроса нет» от «подбор выключен».
- */
-export async function findMatchingRideRequests(
-  trip: TripForMatching,
-): Promise<RideRequestWithCities[]> {
-  if (!trip.matchingEnabled) return [];
-  const route = withRoute(trip);
-  if (!route) return [];
-
-  return db.rideRequest.findMany({
-    where: matchingRideRequestWhere(route),
-    // Форма включения — из serializers: разъехавшийся `include` тихо ломает
-    // serializeRideRequest (у него нет защиты от разных include по типу).
-    include: rideRequestIncludeCities,
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
 }

@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../../src/app.js";
 import { db } from "../../src/db.js";
-import { wsManager } from "../../src/services/wsManager.js";
 import { PENDING_BOOKING_TTL_MS } from "../../src/bookings/shared.js";
 import { devMockAccessToken } from "../dev-mock-auth.js";
 
 /**
- * Сквозной сценарий опций поездки: дефолты, три гейта подбора и совместимость
- * с кодом, который новых полей не знает.
+ * Сквозной сценарий опций поездки: дефолты, гейт подбора пассажиров и
+ * совместимость с кодом, который новых полей не знает.
+ *
+ * Канал один: уведомление `ride_request_match` пассажиру при создании поездки.
+ * Обратных каналов (спрос водителю `GET /trips/:id/requests` и WS-хинт
+ * `ride_request:new`) больше нет — по решению владельца от 2026-10-09 спрос
+ * остался витриной на главной, без экрана водителя.
  *
  * Зачем отдельный файл, если гейты проверяются и по частям:
  * главная цена регресса здесь — «забыли ОДНО из трёх мест». Уведомления,
@@ -154,44 +158,8 @@ describe("опции поездки: сквозной сценарий", () => {
    * записи время появиться — и только после этого её отсутствие становится
    * утверждением.
    */
-  /**
-   * Заявка через API, а не прямой вставкой.
-   *
-   * Разница принципиальна: WS-хинт шлёт только эндпоинт
-   * `POST /ride-requests`. Прямой `db.rideRequest.create` путь подсказки не
-   * трогает вообще, и ассерт «хинта нет» прошёл бы вхолостую.
-   */
-  async function publishRequestViaApi() {
-    const res = await app.request("/api/v1/ride-requests", {
-      method: "POST",
-      headers: { ...JSON_HEADERS, ...auth(passengerId) },
-      body: JSON.stringify({
-        fromCityId,
-        toCityId,
-        earliestAt: new Date(Date.now() + 47 * HOUR).toISOString(),
-        latestAt: new Date(Date.now() + 50 * HOUR).toISOString(),
-        expiresAt: FAR_FUTURE.toISOString(),
-        seats: 1,
-      }),
-    });
-    if (res.status !== 201) throw new Error(`publish failed: ${res.status}`);
-    return res.json() as Promise<{ id: string }>;
-  }
-
   async function settle() {
     await new Promise((resolve) => setTimeout(resolve, 300));
-  }
-
-  /** WS-события, адресованные водителю (провайдер не поднимаем — шлём напрямую). */
-  function spyWs() {
-    const sent: string[] = [];
-    vi.spyOn(wsManager, "sendToUser").mockImplementation((userId, event) => {
-      if (userId === driverId) {
-        sent.push(`${event.type}:${JSON.stringify(event)}`);
-      }
-      return 1;
-    });
-    return sent;
   }
 
   it("кейс 1+2: тело без новых полей даёт дефолты, и /trips/my их отдаёт", async () => {
@@ -215,90 +183,35 @@ describe("опции поездки: сквозной сценарий", () => {
     expect(mine?.matchingEnabled).toBe(true);
   });
 
-  it("кейс 5: выключенный подбор молчит В ТРЁХ каналах сразу", async () => {
-    // Смысл кейса — «забыли одно из трёх мест», поэтому все три канала
-    // проверяются на ОДНОЙ поездке и в порядке, который реально их
-    // задевает. Порядок неочевиден и обязан быть таким:
-    //
-    //   заявка ДО поездки  → сработал бы канал 1 (уведомление при создании
-    //                        поездки);
-    //   заявка ПОСЛЕ       → сработал бы канал 3 (хинт при создании заявки).
-    //
-    // Если сделать обе заявки до поездки, канал 3 не сработал бы вовсе (при
-    // создании заявки поездки ещё нет) и ассерт проходил бы вхолостую.
-    const sent = spyWs();
-
-    // 1. Заявка до поездки — чтобы путь уведомления был реально достижим.
+  it("кейс 5: выключенный подбор не уведомляет пассажира о поездке", async () => {
+    // Гейт стоит на пути уведомления о совпадении: заявка ДО поездки, иначе
+    // путь недостижим и ассерт проходил бы вхолостую.
     await createMatchingRequest();
-    const tripId = await createTrip({ matchingEnabled: false });
+    await createTrip({ matchingEnabled: false });
 
-    // Канал 1: ноль уведомлений о совпадении. Ждём окно, в котором запись
-    // ОБЯЗАНА была бы появиться: рассылка fire-and-forget, и «пока нет
-    // записи» без паузы доказывает ровно ничего (MEMORY §14).
+    // Рассылка fire-and-forget: ждём окно, в котором запись ОБЯЗАНА была бы
+    // появиться. Без паузы «пока нет записи» доказывает ровно ничего
+    // (MEMORY §14).
     await settle();
     const notices = await db.notification.findMany({
       where: { userId: passengerId, type: "ride_request_match" },
     });
     expect(notices).toEqual([]);
-
-    // 2. Заявка после поездки — чтобы путь хинта был реально достижим.
-    // Именно через API: прямая вставка в БД не проходит через обработчик,
-    // который шлёт хинт, и проверка была бы пустой.
-    await publishRequestViaApi();
-    await settle();
-
-    // Канал 2: водитель читает пустой спрос — 200, а не 403/404.
-    const demand = await app.request(`/api/v1/trips/${tripId}/requests`, {
-      headers: auth(driverId),
-    });
-    expect(demand.status).toBe(200);
-    expect((await demand.json()).items).toEqual([]);
-
-    // Канал 3: ни одного WS-события про этот спрос.
-    expect(sent.filter((line) => line.includes("ride_request"))).toEqual([]);
   });
 
-  it("кейс 6: включённый подбор работает во всех трёх каналах", async () => {
-    // Регресс на «гейт не съел обычный путь»: если выключатель где-то стоит
-    // не на том месте, водитель потеряет спрос, которого ждал.
-    spyWs();
+  it("кейс 6: включённый подбор уведомляет пассажира", async () => {
+    // Регресс на «гейт не съел обычный путь»: если выключатель стоит не на
+    // том месте, пассажир потеряет уведомления поездки, которых ждал.
     await createMatchingRequest();
     const tripId = await createTrip({ matchingEnabled: true });
 
-    // Рассылка уведомлений fire-and-forget (`void … .catch()` в
-    // trips/index.ts), поэтому ждём появления записи, а не ловим гонку.
     await vi.waitFor(async () => {
       const notices = await db.notification.findMany({
         where: { userId: passengerId, type: "ride_request_match" },
       });
       expect(notices).toHaveLength(1);
+      expect(notices[0]?.deepLink).toBe(`/trips/${tripId}`);
     });
-
-    const demand = await app.request(`/api/v1/trips/${tripId}/requests`, {
-      headers: auth(driverId),
-    });
-    expect(demand.status).toBe(200);
-    expect(((await demand.json()).items as unknown[]).length).toBeGreaterThan(0);
-  });
-
-  it("кейс 3: WS-хинт приходит при публикации заявки под включённую поездку", async () => {
-    // Третий канал проверяется отдельно от уведомлений: хинт шлётся при
-    // СОЗДАНИИ ЗАЯВКИ и адресован водителю (обратное направление), а
-    // уведомление — при создании поездки и адресовано пассажиру. Смешать их
-    // в одном ассерте означало бы не проверить ни один.
-    const sent = spyWs();
-    const tripId = await createTrip({ matchingEnabled: true });
-
-    await publishRequestViaApi();
-
-    await vi.waitFor(() =>
-      expect(
-        sent.some(
-          (line) =>
-            line.includes("ride_request:new") && line.includes(tripId),
-        ),
-      ).toBe(true),
-    );
   });
 
   it("кейс 7: поездка, созданная кодом без новых полей, работает как раньше", async () => {

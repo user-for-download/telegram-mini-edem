@@ -31,24 +31,6 @@ export const wsServerEventSchema = z.discriminatedUnion("type", [
     type: z.literal("notification:new"),
     payload: z.object({ id: z.string() }),
   }),
-  /**
-   * Появился спрос на поездку: пассажир опубликовал заявку, подходящую под
-   * маршрут и окно этой поездки.
-   *
-   * Обратная сторона пересечения заявки и поездки: без него водитель узнавал
-   * о новом попутчике только по `staleTime` карточки спроса (30с) —
-   * `refetchOnWindowFocus` выключен, а WS-события по заявкам не было. Payload
-   * несёт `tripId`, потому что спрос живёт по поездке (`RIDE_REQUEST_KEYS.trip`),
-   * а не глобально: водителю с пятью поездками достаточно обновить ту, чьё
-   * окно пересеклось, и не дёргать остальные.
-   *
-   * Событие не создаёт уведомления в инбоксе — это hint, как `notification:new`:
-   * рендерится карточкой спроса на странице поездки.
-   */
-  z.object({
-    type: z.literal("ride_request:new"),
-    payload: z.object({ tripId: z.string() }),
-  }),
 ]);
 
 export type WsServerEvent = z.infer<typeof wsServerEventSchema>;

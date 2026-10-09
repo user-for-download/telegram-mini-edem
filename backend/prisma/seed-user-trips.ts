@@ -759,25 +759,6 @@ async function main(): Promise<void> {
         createdAt: new Date(now.getTime() - 2 * hourMs),
       },
       {
-        // Приглашение в поездку: получатель — автор заявки rr-tp-2, поездка
-        // t-tp-1 пересекается с её окном (день +3). deep-link не задан: id
-        // поездок здесь слаги (t-tp-*), а бэк принимает в ссылке только
-        // /trips/<uuid> — клиент откроет fallback-маршрут типа. Настоящая
-        // ссылка с UUID появится, если приглашение отправить через UI.
-        userId: USER_ID,
-        type: "driver_invite",
-        title: "Bezz-тест: Водитель приглашает в поездку",
-        body: "Водитель позвал вас в свою поездку. Откройте поездку и забронируйте место.",
-        isRead: false,
-        actorName: "Илья Северов",
-        action: "invited",
-        recipientRole: "passenger",
-        tripFrom: "Вологда",
-        tripTo: "Череповец",
-        tripDepartureAt: m1Departure,
-        createdAt: new Date(now.getTime() - 3 * hourMs),
-      },
-      {
         userId: USER_ID,
         type: "booking_status_changed",
         title: "Bezz-тест: Заявка отклонена",

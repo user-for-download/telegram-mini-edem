@@ -104,7 +104,6 @@ import { TRIP_KEYS } from "@/queries/useTripsQuery";
 import { BOOKING_KEYS } from "@/queries/useBookingsQuery";
 import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
 import { REVIEW_KEYS } from "@/queries/useReviewsQuery";
-import { RIDE_REQUEST_KEYS } from "@/queries/useRideRequestsQuery";
 
 /** Управляемый дубль WebSocket: handshake, события и close — по команде. */
 class FakeWebSocket {
@@ -465,29 +464,6 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     expect(invalidateCallsFor([...NOTIFICATION_KEYS.lists()])).toBe(1);
     // Blanket-инвалидации всего notifications-ключа больше нет.
     expect(invalidateCallsFor([...NOTIFICATION_KEYS.all])).toBe(0);
-  });
-
-  it("ride_request:new чистит спрос по конкретной поездке, а не все заявки", async () => {
-    authenticate();
-    await renderProvider();
-    const ws = lastInstance();
-    await act(async () => {
-      ws.serverOpen();
-      ws.serverMessage({ type: "auth:ok" });
-    });
-    invalidateSpy.mockClear();
-
-    await act(async () => {
-      ws.serverMessage({
-        type: "ride_request:new",
-        payload: { tripId: "t-77" },
-      });
-    });
-
-    // Адрес известен точно, поэтому blanketing по всем заявкам лишний: у
-    // водителя несколько поездок, а спрос изменился только под этой.
-    expect(invalidateCallsFor([...RIDE_REQUEST_KEYS.trip("t-77")])).toBe(1);
-    expect(invalidateCallsFor([...RIDE_REQUEST_KEYS.all])).toBe(0);
   });
 
   it("повтор того же события — дубликат: без повторной инвалидации и нотиса", async () => {

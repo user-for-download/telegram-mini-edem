@@ -9,7 +9,6 @@ import { Search as SearchIcon } from "lucide-react";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { TripCard } from "@/components/Trip/TripCard";
-import { TripDemandCard } from "@/components/Trip/TripDemandCard";
 import { QueryState } from "@/components/QueryState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Stack } from "@/ui/Stack";
@@ -144,16 +143,10 @@ export function TripActivePage() {
   const cancelTripPending = (id: string) =>
     cancelTrip.isPending && cancelTrip.variables === id;
 
-  // Карточка спроса едет СОСЕДОМ своей поездки, а не внутрь неё: строки
-  // заявок — нативные кнопки `ui/MenuRow`, и внутри кликабельной `TripCard`
-  // (корневой onClick + кнопка открытия) они оказались бы вложенными
-  // интерактивными элементами. Соседями они не конфликтуют: тап по строке
-  // сам открывает поездку (см. TripDemandCard).
-  //
-  // Цена решения — по одному запросу на поездку водителя (у него их единицы,
-  // страница ленты берёт по 20). Сводного эндпоинта «спрос по всем моим
-  // поездкам» нет, а лимит публичного чтения — 100/мин: на обычном экране
-  // это единицы запросов, а не сотня.
+  // Спроса (заявок попутчиков) здесь нет: по решению владельца 2026-10-09 он
+  // остался ИНФОРМАЦИЕЙ на главной («Кто ищет попутку») и ничего не просит от
+  // водителя. Раньше он жил карточкой-соседом под каждой поездкой, и список
+  // состоял из двух видов карточек вперемешку.
   const renderDriving = (trip: (typeof driverTrips)[number]) => (
     <Fragment key={`d-${trip.id}`}>
       <TripCard
@@ -164,9 +157,6 @@ export function TripActivePage() {
           cancelPending: cancelTripPending(trip.id),
         }}
       />
-      {/* seatsAvailable — из той же поездки: приглашать некого, когда мест
-          нет, и проверять это отдельным запросом незачем. */}
-      <TripDemandCard tripId={trip.id} seatsAvailable={trip.seatsAvailable} />
       {/* Пин «подбор выключен». Без него молчание карточки спроса неотличимо
           от «спроса нет»: водитель, выключивший подбор, видел бы пустое место
           и не понимал бы, что это его выбор, а не отсутствие людей.

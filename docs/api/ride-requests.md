@@ -17,36 +17,14 @@ Creation is performed in a serializable transaction. Concurrent quota conflicts 
 
 Matching is informational. The passenger must open the trip and submit the normal booking request explicitly.
 
-## Trip-scoped mirror
+## Opting out: `matchingEnabled = false`
 
-- `GET /api/v1/trips/:id/requests` returns active requests of other users whose route matches the trip's directory cities (`fromCityId`/`toCityId`) and whose window overlaps the trip (`earliestAt <= departureAt + durationMinutes && latestAt >= departureAt`). Only the trip's driver may read it (`403` otherwise); an unknown trip is `404`. The requester is not exposed, matching the anonymous demand feed, and the list is capped at 50 entries.
+A trip created with `matchingEnabled: false` is not offered to anyone: **no** `ride_request_match` notification is created when the trip is created.
 
-The matching predicate is shared with the notification pass that runs on trip creation (`backend/src/rideRequests/matching.ts`), so the demand a driver sees is exactly the demand passengers were notified about.
+This is now the **only** surface of the switch — there is no driver-side demand screen to gate. The client learns the state from the trip payload (`matchingEnabled` in `tripSchema`, required and without a default — an unknown value is not "off"), and the trips screen shows an explicit note next to the trip, because "nobody was notified" and "nobody is looking" must not look alike.
 
-### Opting out: `matchingEnabled = false`
-
-A trip created with `matchingEnabled: false` is not offered to anyone. The switch-off applies to **three** surfaces at once, and all three must agree — a gate on only one of them would either notify about a demand that cannot be read back, or send a live hint leading to an empty card:
-
-1. no `ride_request_match` notification is created when the trip is created;
-2. `GET /api/v1/trips/:id/requests` answers `200 { "items": [] }` — **not** `403` and **not** `404`: the trip exists and the driver may read it, the demand was simply never offered;
-3. no `ride_request:new` WebSocket hint is sent to the driver when a matching request appears later.
-
-The client learns about the state from the trip payload (`matchingEnabled` in `tripSchema`, required and without a default — an unknown value is not "off"), never from an empty demand list: an empty list cannot distinguish "no demand" from "you switched it off", which is why the trips screen shows an explicit note in the first case.
-
-The option is editable later through `PATCH /api/v1/trips/:id`; the gates read the flag at request time, so switching it off takes effect immediately and switching it back restores the demand.
+The option is editable later through `PATCH /api/v1/trips/:id`; the gate reads the flag at notification time, so switching it off takes effect immediately.
 
 **The trip is not hidden from search.** `GET /api/v1/trips` is unaffected — passengers still find it and can book it themselves. Opting out suppresses *automatic suggestions*, not availability.
 
-## Driver invites
 
-- `POST /api/v1/ride-requests/:id/invite` with `{ "tripId": "<uuid>" }` lets the driver of that trip invite the author of request `:id`.
-
-The request must still match the trip by the shared predicate (`backend/src/rideRequests/matching.ts`): active, not expired, same directory route, window overlapping the trip, not authored by the driver. Only the trip's driver may invite (`403` otherwise); an unknown trip is `404`, and a request that does not match the trip is indistinguishable from an unknown one (`404`, not `409`) so the endpoint cannot be used to probe the existence of other users' requests.
-
-A trip with no free seats (`seatsAvailable <= 0`) is refused with `409` and **no notification is created** — the invitation would be a dead end. A trip that is not `active` is refused with `409 TRIP_NOT_ACTIVE`.
-
-Exactly one `driver_invite` notification is created per (request, trip) pair. The pair marker lives in the notification body, so a repeated invite returns `200 { "duplicate": true }` with the original `notificationId` instead of a second inbox entry. This is deliberately not the time-windowed `findNotificationDuplicate` used elsewhere: pressing the same button twice is the same gesture, not a new event.
-
-Response: `201 { "invited": true, "duplicate": false, "notificationId": "<uuid>" }` on creation, `200 { "invited": true, "duplicate": true, "notificationId": "<uuid>" }` on a repeat. `notificationId` is `null` when the recipient has notifications turned off.
-
-**No booking is created** — the passenger books themself through `POST /api/v1/bookings`, so neither `Booking.source` nor `Booking.invitedById` exists. The notification carries a `deepLink` of exactly `/trips/<uuid>` (no query, hash or raw user data) plus a trip snapshot; `driver_invite` is not a critical type, so it respects the user's Telegram toggle and no separate Telegram code is needed.

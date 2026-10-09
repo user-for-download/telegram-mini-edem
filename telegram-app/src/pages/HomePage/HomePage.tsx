@@ -100,7 +100,7 @@ export function HomePage() {
       <TripCountersSection />
       <NextTripBanner />
       <TripSearchSection onSearch={goToSearch} />
-      <RideRequestFeedSection onSelect={goToSearch} />
+      <RideRequestFeedSection />
       <EmptyState
         header="Едете на машине?"
         description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы"

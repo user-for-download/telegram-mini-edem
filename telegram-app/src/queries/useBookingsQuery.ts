@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { bookingsApi } from "@/api/bookings.api";
 import { TRIP_KEYS } from "./useTripsQuery";
+import { RIDE_REQUEST_KEYS } from "./useRideRequestsQuery";
 import type { CreateBookingDto, DriverBookingAction } from "@edem/contracts";
 
 export const BOOKING_KEYS = {
@@ -64,12 +65,26 @@ export function useTripBookingsQuery(
   });
 }
 
+/**
+ * Инвалидация после мутаций брони.
+ *
+ * Заявки пассажира (`RIDE_REQUEST_KEYS.all`) — ТОЖЕ обязательный участник:
+ * бронь закрывает подходящие заявки в своей транзакции на бэке (слой 2
+ * «заявка → поездка», `closeRideRequestsForBooking`), и на `/profile/ride-requests`
+ * они должны сменить статус на «Выполнен». Без этой инвалидации список
+ * оставался «Активен» до `staleTime` 30с — то есть пассажир видел бы заявку,
+ * которая уже закрыта его же бронью.
+ *
+ * Импорт односторонний: `useRideRequestsQuery` не знает про брони, поэтому
+ * цикла модулей не возникает.
+ */
 function useInvalidateBookingsAndTrips() {
   const queryClient = useQueryClient();
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.all }),
       queryClient.invalidateQueries({ queryKey: TRIP_KEYS.all }),
+      queryClient.invalidateQueries({ queryKey: RIDE_REQUEST_KEYS.all }),
     ]);
 }
 

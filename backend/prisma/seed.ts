@@ -719,11 +719,11 @@ const CANCELLED_BY_USER = "user";
 
 /**
  * id поездки «инвайт-демо» (водитель u-13). UUID, а не slug `t-*`: на неё
- * ссылается deep-link уведомления driver_invite, а бэк принимает в ссылке
+ * ссылается deep-link уведомления о совпадении, а бэк принимает в ссылке
  * только /trips/<uuid>. Читаемое имя живёт здесь, чтобы фикстуры уведомлений
  * не писали UUID руками.
  */
-const TRIP_INVITE_ID = seedUuid("edem.trip", "t-dev-invite");
+const TRIP_MATCH_ID = seedUuid("edem.trip", "t-dev-invite");
 // Anchor generated dates to the UTC day so repeated runs on the same day
 // produce identical logical timestamps while active fixtures remain future.
 const now = new Date();
@@ -1486,9 +1486,9 @@ const trips: SeedTrip[] = [
   // окно +4..+6д): приглашение получает АВТОР заявки, поэтому для инвайта в
   // инбокс u-dev нужна именно чужая поездка — свои он исключён сам (userId:
   // { not: driverId }). Именно на ней в деве нажимается «Пригласить».
-  // id — TRIP_INVITE_ID (UUID) ради deep-link уведомления driver_invite.
+  // id — TRIP_MATCH_ID (UUID) ради deep-link уведомления о совпадении.
   {
-    id: TRIP_INVITE_ID,
+    id: TRIP_MATCH_ID,
     driverId: "u-13",
     fromCity: "Череповец",
     fromAddress: "Октябрьский проспект",
@@ -2205,7 +2205,6 @@ const SEED_NOTIFICATION_ROLES: Readonly<Record<string, NotificationRole>> = {
   booking_created: "driver",
   booking_status_changed: "passenger",
   ride_request_match: "passenger",
-  driver_invite: "passenger",
   trip_cancelled: "passenger",
   trip_details_changed: "passenger",
   // Адресуется по сюжету: своя завершённая поездка → driver, поездка, на
@@ -2224,7 +2223,7 @@ const SEED_NEUTRAL_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
  * deep-link по правилам бэка (`resolveTelegramDeepLink`): точный маршрут из
  * allowlist либо `/trips/<uuid>`. Старые сид-строки со слагами (`/trips/t-1`)
  * под правило не подпадают намеренно — их помечено как легаси-исключение, и
- * новые строки (например `driver_invite`) обязаны быть валидными.
+ * новые строки обязаны быть валидными.
  */
 const SEED_DEEP_LINK_EXACT: ReadonlySet<string> = new Set([
   "/trips",
@@ -2953,7 +2952,7 @@ async function main() {
       // Подходящая поездка к активной заявке rr-dev-2 (Череповец → Сокол).
       userId: "u-dev",
       type: "ride_request_match",
-      tripId: TRIP_INVITE_ID,
+      tripId: TRIP_MATCH_ID,
       actorId: "u-13",
       isRead: false,
     },
@@ -2990,13 +2989,6 @@ async function main() {
       userId: "u-dev",
       type: "review_rejected",
       actorName: "Модератор",
-      isRead: false,
-    },
-    {
-      userId: "u-dev",
-      type: "driver_invite",
-      tripId: TRIP_INVITE_ID,
-      actorId: "u-13",
       isRead: false,
     },
     {
@@ -3112,13 +3104,6 @@ async function main() {
       (u) => [u.id, u.name],
     ),
   );
-  const inviteKey = (requestId: string, tripId: string): string =>
-    `[request:${requestId};trip:${tripId}]`;
-  // Формат маркера дедупа повторяет рантаймный. Импортировать константу из
-  // rideRequests/matching.ts нельзя: модуль создаёт PrismaClient на импорте,
-  // а сид работает на своём адаптере. Расхождение здесь ударит только на
-  // повторную отправку уведомления в деве (не на данные), поэтому формат
-  // задокументирован тут, а не вынесен в общий модуль.
   const MATCH_MARKER = "ID: ";
 
   const seedNotificationRow = (
@@ -3155,13 +3140,6 @@ async function main() {
         body = `Нашлась подходящая поездка для вашего запроса. Откройте поездку и отправьте заявку на бронирование. ${MATCH_MARKER}${trip?.id ?? ""}`;
         action = "matched";
         break;
-      case "driver_invite": {
-        const requestId = seedRideRequestId("rr-dev-2");
-        title = "Водитель приглашает в поездку";
-        body = `Водитель позвал вас в свою поездку. Откройте поездку и забронируйте место. ${inviteKey(requestId, trip?.id ?? "")}`;
-        action = "invited";
-        break;
-      }
       case "trip_cancelled":
         title = "Поездка отменена";
         body = `Водитель отменил поездку ${route}`;
@@ -3328,7 +3306,7 @@ async function main() {
         );
       }
     }
-    if (n.type === "ride_request_match" || n.type === "driver_invite") {
+    if (n.type === "ride_request_match") {
       if (!trip) throw new Error(`${n.type} без поездки (${n.userId})`);
       const match = [...requestById.values()].find(
         (rr) =>

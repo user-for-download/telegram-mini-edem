@@ -23,11 +23,6 @@ describe("Telegram query key factories", () => {
     expect(RIDE_REQUEST_KEYS.all).toEqual(["ride-requests"]);
     // Спрос на поездку лежит под тем же префиксом: инвалидация по `all`
     // после мутации заявки обновляет и карточку спроса у водителя.
-    expect(RIDE_REQUEST_KEYS.trip("trip-1")).toEqual([
-      "ride-requests",
-      "trip",
-      "trip-1",
-    ]);
     expect(USER_KEYS.detail("user-1")).toEqual([
       "users",
       "detail",

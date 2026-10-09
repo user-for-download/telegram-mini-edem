@@ -1,15 +1,11 @@
 import { IconContainer } from "@telegram-apps/telegram-ui";
 import { Route } from "lucide-react";
-import { MenuRow } from "@/ui/MenuRow";
+import { Cell } from "@/ui/Cell";
 import { Section } from "@/ui/Section";
+import { STATIC_CELL } from "@/ui/classes";
 import { useRideRequestFeedQuery } from "@/queries/useRideRequestsQuery";
 import { moscowDayLabel, moscowDayKey, moscowTimeLabel } from "@/utils/date";
 import { plural } from "@/utils/plural";
-
-interface RideRequestFeedSectionProps {
-  /** id городов справочника, не имена: поиск фильтрует по id. */
-  onSelect: (fromCityId: string, toCityId: string) => void;
-}
 
 /**
  * Лента спроса на главной — суммаризатор по маршрутам: одна строка на пару
@@ -33,8 +29,11 @@ interface RideRequestFeedSectionProps {
  * Дата и время — по Москве (moscowDayKey / moscowTimeLabel): `earliestAt`
  * приходит UTC-ISO, и срез строки показал бы UTC-день и UTC-часы.
  *
- * Тап ведёт в поиск по маршруту заявки — то же, что делали направления:
- * водитель сразу видит, есть ли поездки на этот путь.
+ * **Строки НЕ кликабельны — это витрина, а не навигация** (решение владельца
+ * 2026-10-09). Раньше тап вёл в поиск по маршруту, но шаг приглашения и
+ * «карточка спроса под своей поездкой» сняты: спрос остался информацией, и
+ * обещать переход к действию, которого у водителя нет, нечестно. Поэтому
+ * `ui/Cell` (div) + `STATIC_CELL` — без шеврона, курсора и hover-подложки.
  *
  * «Люди» и «места» — разные числа и показываются оба: человек может просить
  * несколько мест, поэтому «ищут 1 человека» не значит «нужно 1 место». Порядок
@@ -50,9 +49,7 @@ interface RideRequestFeedSectionProps {
  * Загрузка, пусто и ошибка — секция прячется (как NextTripBanner): витрина
  * спроса не должна занимать место на главной заголовком без строк.
  */
-export function RideRequestFeedSection({
-  onSelect,
-}: RideRequestFeedSectionProps) {
+export function RideRequestFeedSection() {
   const feed = useRideRequestFeedQuery();
 
   if (feed.isLoading) return null;
@@ -67,7 +64,6 @@ export function RideRequestFeedSection({
         const nearest = new Date(request.nextAt);
         const date = moscowDayLabel(moscowDayKey(nearest));
         const time = moscowTimeLabel(nearest);
-        const route = `${request.fromCity.name} — ${request.toCity.name}`;
         const people = `${request.people} ${plural(
           request.people,
           "человек",
@@ -81,10 +77,11 @@ export function RideRequestFeedSection({
           "мест",
         )}`;
         return (
-          <MenuRow
+          <Cell
             key={`${request.fromCity.id}:${request.toCity.id}`}
-            label={`Заявки ${route}`}
-            title={`${request.fromCity.name} → ${request.toCity.name}`}
+            // Обязателен: без него кит-овский Tappable оставил бы курсор
+            // указателя и hover-подложку (ложная кликабельность).
+            className={STATIC_CELL}
             subtitle={`${people} · ${seats} · ${date}, ${time}`}
             // Штатный режим кита «content without truncation»: по умолчанию
             // подпись идёт в одну строку с `nowrap` + ellipsis, и при длинном
@@ -92,13 +89,14 @@ export function RideRequestFeedSection({
             // внутренние классы кита не пишем: хеш меняется при bump версии,
             // а `multiline` — публичный проп контракта (Cell.d.ts:25).
             multiline
-            icon={
+            before={
               <IconContainer>
                 <Route size={18} />
               </IconContainer>
             }
-            onClick={() => onSelect(request.fromCity.id, request.toCity.id)}
-          />
+          >
+            {`${request.fromCity.name} → ${request.toCity.name}`}
+          </Cell>
         );
       })}
     </Section>

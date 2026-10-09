@@ -53,11 +53,6 @@ const NOTIFICATION_ROUTES: Readonly<Record<string, string>> = {
   trip_status_changed: "/profile/history",
   trip_details_changed: "/trips",
   ride_request_match: "/trips",
-  // Приглашение водителя: у новых записей deepLink всегда есть
-  // (`/trips/<uuid>`, allowlist на бэке), этот уровень нужен легаси-записям
-  // без него — как и для `ride_request_match`, попутчик попадает в поиск
-  // поездок и открывает приглашённую оттуда.
-  driver_invite: "/trips",
   review_approved: "/reviews",
   review_rejected: "/reviews",
   feedback_replied: "/profile/support",
@@ -93,10 +88,6 @@ const NOTIFICATION_ACTION_LABELS: Readonly<Record<string, string>> = {
   completed: "завершил",
   changed: "изменил",
   matched: "найдена поездка",
-  // Приглашение водителя (`driver_invite`, бэк шлёт action: "invited"):
-  // второй стороной события стоит водитель, поэтому глагол в прошедшем
-  // времени от его имени — как у соседних кодов второй строки ячейки.
-  invited: "пригласил в поездку",
   replied: "ответил",
   approved: "опубликовал",
   rejected: "отклонил",

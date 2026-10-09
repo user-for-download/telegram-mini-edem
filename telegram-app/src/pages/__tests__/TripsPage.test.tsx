@@ -63,13 +63,6 @@ vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
   };
 });
 
-// Спрос на свою поездку (TripDemandCard в TripActivePage, а TripPage
-// рендерит его без обёртки): без мока реальный useQuery вызовется вне
-// QueryClientProvider. Пустой спрос — штатное состояние для этих тестов.
-vi.mock("@/queries/useRideRequestsQuery", () => ({
-  useTripDemandQuery: () => ({ data: [] }),
-}));
-
 import { TripPage } from "@/pages/Trip/TripPage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
