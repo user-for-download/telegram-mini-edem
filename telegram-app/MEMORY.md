@@ -1,65 +1,65 @@
 # telegram-app — MEMORY
 
-> Onboarding-память для следующего агента. Цель: прочитать этот файл и сразу
-> понимать устройство, инварианты, конвенции и подводные камни `telegram-app/`,
-> не переоткрывая кодовую базу.
+> Onboarding memory for the next agent. Goal: read this file and immediately
+> understand the structure, invariants, conventions and pitfalls of `telegram-app/`
+> without rediscovering the codebase.
 >
-> Дополняет, не заменяет: корневой `README.md`, `src/ui/README.md`.
-> Источник истины по пропсам кита — установленный
-> `node_modules/@telegram-apps/telegram-ui/dist/**/*.d.ts` (не docs, не train-дата).
+> Complements, does not replace: the root `README.md`, `src/ui/README.md`.
+> Source of truth for kit props is the installed
+> `node_modules/@telegram-apps/telegram-ui/dist/**/*.d.ts` (not the docs, not training data).
 
-**Состояние:** тесты **1044** (131 файл), бэк **721** (79), контракты **314** (25), e2e-parity **17/17**, контраст под
-числовым стражем `e2e/ui-contrast.mjs`. Реестр отклонений по киту —
-`src/ui/README.md`: **прочитай его до правок UI/форм**.
+**Status:** tests **1044** (131 files), backend **721** (79), contracts **314** (25), e2e-parity **17/17**, contrast under
+the numeric guard `e2e/ui-contrast.mjs`. The registry of deviations from the kit is
+`src/ui/README.md`: **read it before changing UI/forms**.
 
 ---
 
-## 1. Что это
+## 1. What this is
 
-`telegram-app/` — Telegram Mini App (TWA) сервиса попутчиков «Едем».
-Отдельный workspace корневого монорепо `edem` (npm workspaces: `telegram-app`,
+`telegram-app/` is the Telegram Mini App (TWA) of the ride-sharing service "Edem" («Едем»).
+A separate workspace of the root monorepo `edem` (npm workspaces: `telegram-app`,
 `backend`, `webapp`, `packages/*`).
 
-Приложение открывается внутри Telegram WebView: полноэкранный, свой скролл,
-нативный хром рисует клиент. Это диктует всё: HashRouter, безопасные зоны,
-отсутствие PWA, `base: './'`.
+The app opens inside the Telegram WebView: fullscreen, its own scroll,
+the native chrome is drawn by the client. This dictates everything: HashRouter, safe areas,
+no PWA, `base: './'`.
 
-## 2. Стек и пины
+## 2. Stack and pins
 
-| Слой | Пакет | Версия | Замечание |
+| Layer | Package | Version | Note |
 |---|---|---|---|
-| UI-кит | `@telegram-apps/telegram-ui` | **2.1.13 (пин)** | пропсы сверять только по `dist/**/*.d.ts`; версия запинена тестом `src/__tests__/kitContract.test.tsx` |
-| Telegram SDK | `@tma.js/sdk-react` | **3.0.23 (пин)** | скоуп `@tma.js/*` — исторический (переименован в `@telegram-apps/sdk-react`); код и тесты единообразно сидят на `@tma.js@3.0.23`, переезд — отдельная работа, а не дефект (см. §17) |
-| Фреймворк | React | 19.0.1 | `StrictMode` (double-mount учтён везде) |
-| Роутер | react-router-dom | 7.x | **HashRouter** — обязательно для WebView/deep links |
-| Сборка | Vite | 8.x (Rolldown) | `codeSplitting.groups` вместо `manualChunks`; `base: './'` |
+| UI kit | `@telegram-apps/telegram-ui` | **2.1.13 (pin)** | check props only against `dist/**/*.d.ts`; the version is pinned by the test `src/__tests__/kitContract.test.tsx` |
+| Telegram SDK | `@tma.js/sdk-react` | **3.0.23 (pin)** | the `@tma.js/*` scope is historical (renamed to `@telegram-apps/sdk-react`); code and tests uniformly sit on `@tma.js@3.0.23`; migrating is separate work, not a defect (see §17) |
+| Framework | React | 19.0.1 | `StrictMode` (double-mount is accounted for everywhere) |
+| Router | react-router-dom | 7.x | **HashRouter** — mandatory for WebView/deep links |
+| Build | Vite | 8.x (Rolldown) | `codeSplitting.groups` instead of `manualChunks`; `base: './'` |
 | TS | typescript | 5.8 | `strict` + `noUncheckedIndexedAccess` + `isolatedModules` |
-| Состояние сервера | `@tanstack/react-query` | 5.x | один `QueryClient` в `AppConfig.tsx` |
-| Состояние клиента | `zustand` | 5.x | только `useAuthStore` (и мелкие) |
-| Валидация | `zod` | 4.x | ответы API и WS через `@edem/contracts` |
-| Иконки | `lucide-react` | | размеры 28/30px, `strokeWidth={2}` |
-| Тесты | `vitest` + `@testing-library/react` + `jsdom` | | **нет setup-файла** — мок-конфиг per-file |
-| Tailwind | — | | **не используется**; только tgui + CSS-модули |
+| Server state | `@tanstack/react-query` | 5.x | one `QueryClient` in `AppConfig.tsx` |
+| Client state | `zustand` | 5.x | only `useAuthStore` (and small ones) |
+| Validation | `zod` | 4.x | API and WS responses via `@edem/contracts` |
+| Icons | `lucide-react` | | sizes 28/30px, `strokeWidth={2}` |
+| Tests | `vitest` + `@testing-library/react` + `jsdom` | | **no setup file** — mock config per-file |
+| Tailwind | — | | **not used**; only tgui + CSS modules |
 
-## 3. Команды
+## 3. Commands
 
 ```bash
-# из корня репо
+# from the repo root
 npm run dev                       # build:contracts + db:generate + backend:3011 + tg:3012
-npm run dev:tg                    # только telegram-app (Vite :3012)
-npm run build:tg                  # прод-сборка telegram-app
+npm run dev:tg                    # telegram-app only (Vite :3012)
+npm run build:tg                  # production build of telegram-app
 npm run typecheck --workspace=telegram-app
 npm run test --workspace=telegram-app
 npm run lint:eslint:tg-app
-npm run bundle:check              # бюджет бандла (scripts/check-bundle.mjs)
-npm run token:check               # запрет литералов цветов/паддингов (scripts/token-lint.mjs)
+npm run bundle:check              # bundle budget (scripts/check-bundle.mjs)
+npm run token:check               # forbids literal colors/paddings (scripts/token-lint.mjs)
 npm run format:check
 ```
 
-Backend по умолчанию `http://127.0.0.1:3011`, Vite проксирует `/api` → `VITE_API_TARGET`.
-Прод API — `VITE_API_URL` (если не same-origin). Разрешённые Host-хосты — `VITE_ALLOWED_HOSTS` (через запятую).
+Backend by default `http://127.0.0.1:3011`, Vite proxies `/api` → `VITE_API_TARGET`.
+Production API — `VITE_API_URL` (if not same-origin). Allowed Host hosts — `VITE_ALLOWED_HOSTS` (comma-separated).
 
-## 4. Boot-lifecycle (ИНВАРИАНТ, не ломать)
+## 4. Boot lifecycle (INVARIANT, do not break)
 
 `main.tsx:24-45` → `App.tsx:7-13`:
 
@@ -67,489 +67,489 @@ Backend по умолчанию `http://127.0.0.1:3011`, Vite проксируе
 retrieveLaunchParams → await init() → render(<App/>) → post-mount useEffect → signalAppReady()
 ```
 
-- `signalAppReady()` (`miniApp.ready`) живёт **только** в post-mount `useEffect` в `App.tsx`.
-  Перенос к `await init()` погасит скелетон Telegram поверх пустого WebView.
-- `init()` (`init.ts`) порядок: `setDebug` → `initSDK` → macOS-моки → mount
+- `signalAppReady()` (`miniApp.ready`) lives **only** in the post-mount `useEffect` in `App.tsx`.
+  Moving it to `await init()` would hide Telegram's skeleton over an empty WebView.
+- `init()` (`init.ts`) order: `setDebug` → `initSDK` → macOS mocks → mount
   (`backButton`, `settingsButton`, `closingBehavior`, `swipeBehavior`+`disableVertical`,
   `initData.restore`) → `themeParams.mount`+`bindCssVars` → `miniApp.mount` →
   `viewport.mount`+`bindCssVars`+`expand`.
-- `viewport.mount` — единственный `BetterPromise` (await); остальные mount синхронны.
-- Падение `retrieveLaunchParams`/`init` → рендер `EnvUnsupported` (не в Telegram).
-- `swipeBehavior.disableVertical()` — глобально: иначе свайп вниз сворачивает апп.
+- `viewport.mount` is the only `BetterPromise` (await); the other mounts are synchronous.
+- A failure of `retrieveLaunchParams`/`init` → render `EnvUnsupported` (not in Telegram).
+- `swipeBehavior.disableVertical()` — global: otherwise a swipe down collapses the app.
 
-## 5. Dev вне Telegram
+## 5. Dev outside Telegram
 
-`mockEnv.ts` (только `import.meta.env.DEV`, tree-shaken в проде):
-- `isTMA("complete")` — если не TMA, ставится `mockTelegramEnv` с theme/viewport/
-  safe-area/fullscreen-ответами и фейковой initData (`hash: "dev-hash"`, user id 9800001).
-- `markTelegramMockEnv()` взводит window-флаг `__TG_ENV_MOCKED__`; UI через
-  `isTelegramMockEnv()` (`utils/telegram-adapter.ts`) пропускает нативные диалоги
-  (мок не рисует `popup.show`, хотя `isAvailable()` врёт `true`).
-- `dev-hash` принимает backend только при `ALLOW_DEV_AUTH` (см. backend
-  `src/auth/telegramSign.ts`). В проде вне Telegram — `EnvUnsupported`.
-- Мобильный dev требует HTTPS с валидным сертификатом (туннель); self-signed/mkcert
-  ломается на iOS/Android.
+`mockEnv.ts` (only `import.meta.env.DEV`, tree-shaken in production):
+- `isTMA("complete")` — if not a TMA, `mockTelegramEnv` is installed with theme/viewport/
+  safe-area/fullscreen answers and a fake initData (`hash: "dev-hash"`, user id 9800001).
+- `markTelegramMockEnv()` sets the window flag `__TG_ENV_MOCKED__`; the UI, via
+  `isTelegramMockEnv()` (`utils/telegram-adapter.ts`), skips native dialogs
+  (the mock does not draw `popup.show`, although `isAvailable()` lies `true`).
+- `dev-hash` is accepted by the backend only with `ALLOW_DEV_AUTH` (see backend
+  `src/auth/telegramSign.ts`). In production outside Telegram — `EnvUnsupported`.
+- Mobile dev requires HTTPS with a valid certificate (tunnel); self-signed/mkcert
+  breaks on iOS/Android.
 
-## 6. Слоение и правила импортов (закреплено ESLint)
+## 6. Layering and import rules (enforced by ESLint)
 
 `eslint.config.mjs`:
-- Страницы/компоненты импортируют **`@/ui/*`**, не tgui напрямую.
-- `no-restricted-imports` запрещает прямой импорт из кита имён
+- Pages/components import **`@/ui/*`**, not tgui directly.
+- `no-restricted-imports` forbids importing the kit names directly:
   `Button`, `IconButton`, `Card`, `List`, `Cell`, `Section`, `SegmentedControl`
-  (у всех есть обёртки; `Page` заменяет `List`, `Switcher` заменяет
-  `SegmentedControl`). `Cell` — вместе с фасадом `ui/Cell`, `Section` —
-  вместе с `ui/Section`, `SegmentedControl` — вместе с `ui/Switcher`. Компоновочные
-  примитивы (`Divider`, `Text`, `Caption`, `Title`, `Headline`, `Avatar`, `Skeleton`,
-  `Spinner`, `Input`, `Textarea`, `Select`, `Modal`(внутри Sheet), `Snackbar`,
-  `TabsList`, `Placeholder`) — импортируются из кита **напрямую** (осознанно, см.
+  (all of them have wrappers; `Page` replaces `List`, `Switcher` replaces
+  `SegmentedControl`). `Cell` — together with the facade `ui/Cell`, `Section` —
+  together with `ui/Section`, `SegmentedControl` — together with `ui/Switcher`. Layout
+  primitives (`Divider`, `Text`, `Caption`, `Title`, `Headline`, `Avatar`, `Skeleton`,
+  `Spinner`, `Input`, `Textarea`, `Select`, `Modal` (inside Sheet), `Snackbar`,
+  `TabsList`, `Placeholder`) are imported from the kit **directly** (deliberately, see
   `src/ui/README.md`).
-- `src/ui/**` не импортирует `@/pages|components|queries|store|providers`
-  (низ слоя: только кит, `@/ui/*`, `@/hooks/*`, `@/utils/*`).
-- `react-hooks` + `jsx-a11y` recommended для `telegram-app/src/**`.
-- type-aware правила пока **не включены** (шумно/медленно на tgui-типах).
+- `src/ui/**` does not import `@/pages|components|queries|store|providers`
+  (bottom of the layering: only the kit, `@/ui/*`, `@/hooks/*`, `@/utils/*`).
+- `react-hooks` + `jsx-a11y` recommended for `telegram-app/src/**`.
+- type-aware rules are not enabled yet (noisy/slow on tgui types).
 
-## 7. UI-фасад `src/ui/` — главное знание
+## 7. UI facade `src/ui/` — the main knowledge
 
-Полный реестр отклонений — `src/ui/README.md`. Кратко:
+The full registry of deviations — `src/ui/README.md`. In brief:
 
-- Каскад: tgui подключён как `@import ... layer(tgui)` (`index.css:7-8`).
-  Неслойные CSS-модули приложения **всегда** бьют слойный кит — `!important` не нужен,
-  специфичность не важна. Пиннится тестом `src/__tests__/layoutCss.test.ts`.
-- **Удвоение селектора (`.X.X`) поднимает специфичность** (0,2,0 против
-  0,1,0) и матчит элемент с ОДНИМ вхождением класса — проверено в браузере
-  (`el.matches('.a.a') === true` при `class="a"`). Это приём, а не ошибка: в
-  репозитории 39 таких рабочих правил. Против кита он не нужен (решает
-  слой), оправдан только против одноимённого правила потребителя.
-  **Не «чинить» `.X.X` → `.X`: я так сделал в 23 местах и откатил — это
-  снижало специфичность без причины.**
-- **Тот же класс дефекта:** `Field` не добавлял свой
-  класс обёртке, если потребитель ничего не просил, — и общее правило тона
-  подписи поля оказалось бы мёртвым. То же и с китом: `className` у
-  `Select` попадает на внутренний `<label>`, а окраска работает лишь
-  потому, что китовой `select` = `background: inherit`. **Фасадный
-  компонент обязан всегда нести свой класс** — пин в
+- Cascade: tgui is included as `@import ... layer(tgui)` (`index.css:7-8`).
+  The app's non-layered CSS modules **always** beat the layered kit — `!important` is not needed,
+  specificity doesn't matter. Pinned by the test `src/__tests__/layoutCss.test.ts`.
+- **Selector doubling (`.X.X`) raises specificity** (0,2,0 versus
+  0,1,0) and matches an element with ONE occurrence of the class — verified in the browser
+  (`el.matches('.a.a') === true` for `class="a"`). This is a technique, not a mistake: the
+  repository has 39 such working rules. Against the kit it is not needed (the
+  layer decides), justified only against a same-named consumer rule.
+  **Do not "fix" `.X.X` → `.X`: I did that in 23 places and rolled it back — it
+  lowered specificity for no reason.**
+- **The same class of defect:** `Field` did not add its own
+  class to the wrapper if the consumer didn't ask for one — and the shared rule for the field
+  label tone would have been dead. Same with the kit: `className` on
+  `Select` lands on the inner `<label>`, and the coloring works only
+  because the kit's `select` = `background: inherit`. **A facade
+  component must always carry its own class** — pinned in
   `src/__tests__/cssClassReach.test.ts`.
-- **Находка:** `ui/Card` не добавлял `styles.card` в
-  `className` (только `cardDefault`/`cardFlush`), поэтому `.card.card` не
-  матчился ни с чем — карточки рендерились дефолтами кита: radius 20 и
-  фон-литерал `tertiary_bg_color` (`rgb(42,42,42)`) вместо темы Telegram.
-  Пин: класс в DOM — `src/ui/__tests__/card.test.tsx`; «класс не применяется»
-  — `src/__tests__/cssClassReach.test.ts`; каскад в браузере —
-  `e2e/ui-cascade.mjs`. Разбор — `src/ui/README.md`, «Правило, которое не
-  применяется».
-- **Фасад `ui/` — 18 компонентов.** Обёртки кита (вид держит фасад):
+- **Finding:** `ui/Card` did not add `styles.card` to
+  `className` (only `cardDefault`/`cardFlush`), so `.card.card` matched
+  nothing — cards rendered with kit defaults: radius 20 and
+  the literal background `tertiary_bg_color` (`rgb(42,42,42)`) instead of the Telegram theme.
+  Pins: the class in the DOM — `src/ui/__tests__/card.test.tsx`; "class does not apply"
+  — `src/__tests__/cssClassReach.test.ts`; cascade in the browser —
+  `e2e/ui-cascade.mjs`. Write-up — `src/ui/README.md`, "A rule that does not
+  apply".
+- **The `ui/` facade is 18 components.** Kit wrappers (the facade holds the look):
   `Page`←`List`, `Button`, `IconButton`, `Chip`, `Card`, `Sheet`←`Modal`,
   `Field`+`FieldError`←`Input`/`Textarea`/`Select`, `EmptyState`←`Placeholder`,
   `Loading`←`Spinner`+`Placeholder`, `FetchMore`←`Button`, `Cell`,
-  `Section`, `Switcher`←`SegmentedControl`/`Chip` (переключатель
-  «одно из N», семантика `radiogroup`/`tabs` внутри фасада). Свои
-  (свой markup на токенах): `Notice`, `Stack`, `SectionBody`, `CharCounter`.
-  ESLint запрещает прямой импорт кита для `Button`, `IconButton`, `Card`,
+  `Section`, `Switcher`←`SegmentedControl`/`Chip` ("one of N"
+  switch, `radiogroup`/`tabs` semantics inside the facade). Own
+  (own markup on tokens): `Notice`, `Stack`, `SectionBody`, `CharCounter`.
+  ESLint forbids importing the kit directly for `Button`, `IconButton`, `Card`,
   `Cell`, `Section`, `List`, `SegmentedControl`.
-- **`ui/Cell`.** Интерактивная строка обязана быть нативной
-  кнопкой: `Component="button"` — документированный способ кита (Cell.d.ts)
-  и единственный путь с фокусом, Enter/Space и ролью кнопки. Кит UA-стили
-  кнопки **не сбрасывает** (Arial 13.33px, чёрный цвет,
-  `appearance:auto`, `box-sizing` border-box против content-box, ширина
-  356 против 404) — сброс живёт в `ui/buttonReset.module.css` (`AS_BUTTON`),
-  одинаков для обоих корней. Пин: `src/ui/__tests__/cell.test.tsx`.
-- **`Chip` и `Accordion.Summary` с `Component="button"`** (4 + 2 места) текут
-  тем же, поэтому `ui/Chip` несёт `AS_BUTTON`, а `Accordion.Summary`
-  получает константу явно.
+- **`ui/Cell`.** An interactive row must be a native
+  button: `Component="button"` is the kit's documented way (Cell.d.ts)
+  and the only path with focus, Enter/Space and a button role. The kit does **not** reset
+  the UA button styles (Arial 13.33px, black color,
+  `appearance:auto`, `box-sizing` border-box versus content-box, width
+  356 versus 404) — the reset lives in `ui/buttonReset.module.css` (`AS_BUTTON`),
+  identical for both roots. Pin: `src/ui/__tests__/cell.test.tsx`.
+- **`Chip` and `Accordion.Summary` with `Component="button"`** (4 + 2 places) leak
+  the same way, so `ui/Chip` carries `AS_BUTTON`, and `Accordion.Summary`
+  receives the constant explicitly.
 
-## 8. Тема и safe-area (самое неочевидное)
+## 8. Theme and safe-area (the least obvious)
 
 - `AppConfig.tsx`:
-  - `useTguiPlatform()` — iOS→`ios`, всё остальное→`base`; dev-оверрайд платформы
-    (`utils/devPlatform`, `DevToggles`) важнее клиента.
-  - `useTelegramAppearance()` — двойная тема: сигнал `miniApp.isDark` + ручной
-    оверрайд (светлая/тёмная палитры Telegram inline). `AppRoot appearance` +
-    класс `dark` на `<html>` для `--app-*`. `--tg-theme-*` биндятся SDK **инлайном
-    один раз** — при оверрайде переставляются вручную.
-  - `setHeaderColor(bgHex)` — **hex, не keyword**: keyword на iOS-фуллскрине даёт
-    невидимый статус-бар/пилюли; hex выбирает `.Black/.White` по lightness.
-  - `useFullscreenSubscription()` — Bot API 8.0, запрос на mount + повтор через
-    `setTimeout(50)` (viewport монтируется асинхронно); `ConcurrentCallError` глушится.
-- Safe-area (`index.css:21-99`): агрегаторы `--tg-safe-area-*` =
-  `max(env(safe-area-*), SDK-переменные, floor)`. `env()` рядом с SDK-переменной в
-  `max()`, **не** как fallback `var()` (SDK всегда определяет переменную, даже нулём).
-- iOS-баг: в фуллскрине клиент отдаёт `safe_area=0` поверх отрисованного хрома.
-  `useTelegramChromiumFallback.ts` ставит токен-floor `--tg-safe-area-top-min` =
-  `--tg-telegram-chromium-height` (88px, калибровка iPhone 11 / TG 12.9.4) и «пинает»
-  клиент `request('web_app_request_safe_area'|'...content...')`. Менять 88px только
-  синхронно в `index.css` и `DEFAULT_THRESHOLD_PX` хука.
-- `Tabbar`/`FixedLayout bottom` паддит только `env(safe-area-inset-bottom)` (=0 в TG iOS) —
-  компенсируется `max(...)`-токеном.
+  - `useTguiPlatform()` — iOS→`ios`, everything else→`base`; the dev platform override
+    (`utils/devPlatform`, `DevToggles`) takes precedence over the client.
+  - `useTelegramAppearance()` — a dual theme: the `miniApp.isDark` signal + a manual
+    override (light/dark Telegram palettes inline). `AppRoot appearance` +
+    the `dark` class on `<html>` for `--app-*`. `--tg-theme-*` are bound by the SDK **inline
+    once** — on override they are re-set manually.
+  - `setHeaderColor(bgHex)` — **hex, not keyword**: a keyword on iOS fullscreen gives an
+    invisible status bar/pills; hex chooses `.Black/.White` by lightness.
+  - `useFullscreenSubscription()` — Bot API 8.0, request on mount + retry via
+    `setTimeout(50)` (viewport mounts asynchronously); `ConcurrentCallError` is swallowed.
+- Safe-area (`index.css:21-99`): the aggregators `--tg-safe-area-*` =
+  `max(env(safe-area-*), SDK variables, floor)`. `env()` sits next to the SDK variable in
+  `max()`, **not** as a `var()` fallback (the SDK always defines the variable, even as zero).
+- iOS bug: in fullscreen the client reports `safe_area=0` on top of the rendered chrome.
+  `useTelegramChromiumFallback.ts` sets the token-floor `--tg-safe-area-top-min` =
+  `--tg-telegram-chromium-height` (88px, calibrated on iPhone 11 / TG 12.9.4) and "pokes" the
+  client with `request('web_app_request_safe_area'|'...content...')`. Change 88px only
+  in sync in `index.css` and the hook's `DEFAULT_THRESHOLD_PX`.
+- `Tabbar`/`FixedLayout bottom` pad only `env(safe-area-inset-bottom)` (=0 in TG iOS) —
+  compensated by the `max(...)` token.
 
-## 9. Auth и сессия
+## 9. Auth and session
 
-- Вход: `AuthGate.tsx` → `useAuthStore.bootstrap()` (`store/useAuthStore.ts:172`) →
-  `getRawInitData()` (сырая строка, **без пересортировки**, иначе HMAC не сойдётся) →
-  `POST /api/v1/auth/telegram { initData }`. Личность проверяет бэкенд HMAC
-  (`@telegram-apps/init-data-node`); клиентские данные не принимаются на веру.
+- Entry: `AuthGate.tsx` → `useAuthStore.bootstrap()` (`store/useAuthStore.ts:172`) →
+  `getRawInitData()` (raw string, **without re-sorting**, otherwise the HMAC won't match) →
+  `POST /api/v1/auth/telegram { initData }`. Identity is verified by the backend HMAC
+  (`@telegram-apps/init-data-node`); client data is not taken on faith.
 - `AuthStatus`: `idle | initializing | authenticated | unauthenticated | error |
-  background | banned | deleted`. **`error` никогда не выставляется** (везде
-  `unauthenticated`) — недостижимые ветки `AuthGate.tsx:73,179` (см. Findings).
-- **Переход в бан — только через `markBanned()`** (`e46039c`). Прямой
-  `setState({status:"banned"…})` больше не встречается нигде: такой путь
-  забывал `initData`, а апелляция идёт **без токена** и подтверждается этой
-  строкой — форма падала, не отправив запрос. `purgeLaunchParamsCache` при
-  бане не зовётся (бан не логаут). Плюс фолбэк `getRawInitData()` в
-  `submitSupportFeedback` — на случай ветки «403 на /feedback, статус сессии
-  ещё `authenticated`» (`SupportPage`), которая в стор не заходит.
-- 403 `FORBIDDEN` → бан (`banReason`, экран + форма апелляции через публичный
-   `POST /feedback/appeal` с raw initData). 403 `ACCOUNT_DELETED` → «Профиль
-   удалён». Проверять удаление **до** бана. Различение — **по коду**, не по
-   тексту: отдельный код `ACCOUNT_DELETED` и предикат `isAccountDeletedError`
-   живут в **контрактах** (`@edem/contracts`, `schemas/api-error.schema.ts`) —
-   их берёт и бэк, и клиент, поэтому разъехаться они не могут. Фолбэк на текст
-   `Account is deleted` — для старого бэка, у которого кода ещё нет.
-- 429 → cooldown 60с в `AuthGate` (повторные нажатия продлевают rate-limit окно).
-- Фон: `visibilitychange` → `handleBackgroundState`; при возврате refresh, если истёк.
-- `clearSession`/`markAccountDeleted` пуржат кэш launch params SDK
-  (`purgeLaunchParamsCache`: ключи `nlaunchParams` и `tapps/launchParams`) —
-  иначе сырая initData переживает logout в sessionStorage.
+  background | banned | deleted`. **`error` is never set** (everywhere
+  `unauthenticated`) — unreachable branches `AuthGate.tsx:73,179` (see Findings).
+- **Transition to ban — only via `markBanned()`** (`e46039c`). A direct
+  `setState({status:"banned"…})` no longer occurs anywhere: such a path
+  forgot `initData`, and the appeal goes **without a token** and is confirmed by that
+  string — the form failed without sending the request. `purgeLaunchParamsCache` is not
+  called on ban (a ban is not a logout). Plus the `getRawInitData()` fallback in
+  `submitSupportFeedback` — for the branch "403 on /feedback, session status
+  still `authenticated`" (`SupportPage`), which doesn't enter the store.
+- 403 `FORBIDDEN` → ban (`banReason`, screen + appeal form via the public
+  `POST /feedback/appeal` with raw initData). 403 `ACCOUNT_DELETED` → "Profile
+  deleted". Check deletion **before** the ban. Distinction is **by code**, not by
+  text: the separate code `ACCOUNT_DELETED` and the predicate `isAccountDeletedError`
+  live in the **contracts** (`@edem/contracts`, `schemas/api-error.schema.ts`) —
+  both the backend and the client take them, so they cannot diverge. The fallback to the text
+  `Account is deleted` is for the old backend that doesn't have the code yet.
+- 429 → 60s cooldown in `AuthGate` (repeated taps extend the rate-limit window).
+- Background: `visibilitychange` → `handleBackgroundState`; on return, refresh if expired.
+- `clearSession`/`markAccountDeleted` purge the SDK's launch params cache
+  (`purgeLaunchParamsCache`: keys `nlaunchParams` and `tapps/launchParams`) —
+  otherwise the raw initData survives logout in sessionStorage.
 
-## 10. API-клиент (`api/client.ts`)
+## 10. API client (`api/client.ts`)
 
-- `apiClient` — синглтон. Все ответы парсятся Zod-схемой из `@edem/contracts`;
-  невалид → `ApiError("Invalid server response", "INVALID_RESPONSE", 502)`.
-- Таймаут 15s (и в `doFetch`, и в refresh), корректная проброс-отмена внешнего `signal`
-  (в т.ч. уже aborted до старта).
-- `ApiError`: `code`, `status`, `retryAfterMs`, `banReason` (PII, не логируется).
-- **Single-flight refresh** `tryRefresh()`: один запрос на N параллельных 401;
-  `refreshGeneration` инвалидирует применение результата после логаута
+- `apiClient` is a singleton. All responses are parsed with a Zod schema from `@edem/contracts`;
+  invalid → `ApiError("Invalid server response", "INVALID_RESPONSE", 502)`.
+- Timeout 15s (both in `doFetch` and in refresh), correct propagation of cancellation of an external `signal`
+  (including one already aborted before start).
+- `ApiError`: `code`, `status`, `retryAfterMs`, `banReason` (PII, not logged).
+- **Single-flight refresh** `tryRefresh()`: one request for N parallel 401s;
+  `refreshGeneration` invalidates applying the result after logout
   (`invalidatePendingRefresh`). 400/401/403 → `permanent-rejection` (403 `FORBIDDEN` →
-  `emitBanned`/`emitDeleted` + `emitSessionExpired`); прочее → `transient-failure`
-  (сессию не рвём).
-- События (подписки в `AuthGate`/`useAuthStore`/`WsProvider`): `tokenUpdate`,
+  `emitBanned`/`emitDeleted` + `emitSessionExpired`); anything else → `transient-failure`
+  (the session is not torn down).
+- Events (subscriptions in `AuthGate`/`useAuthStore`/`WsProvider`): `tokenUpdate`,
   `sessionExpired`, `banned`, `deleted`, `refreshStart`, `refreshEnd`.
-- Ретраи QueryClient (`AppConfig.tsx:29-58`): 4xx (кроме 408) и `INVALID_RESPONSE` — без
-  ретрая; сеть/5xx — до 3; `staleTime 60s`; `refetchOnWindowFocus:false`; мутации — 0 ретраев.
+- QueryClient retries (`AppConfig.tsx:29-58`): 4xx (except 408) and `INVALID_RESPONSE` — no
+  retry; network/5xx — up to 3; `staleTime 60s`; `refetchOnWindowFocus:false`; mutations — 0 retries.
 
 ## 11. Realtime (ws.v1)
 
-Контракт ws.v1 удалён из дерева — смотри git (бывший
-`docs/migration/telegram-realtime-contract.md`); схемы — `@edem/contracts`
-(`wsServerEventSchema`/`wsClientMessageSchema`). Транспорт-политика — `src/api/ws.ts`.
+The ws.v1 contract was removed from the tree — see git (formerly
+`docs/migration/telegram-realtime-contract.md`); schemas — `@edem/contracts`
+(`wsServerEventSchema`/`wsClientMessageSchema`). Transport policy — `src/api/ws.ts`.
 
-- Сокет открывается только при `status==="authenticated"`. JWT — **первым сообщением**
-  `{"type":"auth","token"}`, **никогда** в URL/query (утечка в логи).
-- Серверный `ping` → клиентский `pong`. Клиентского ping/subscription нет.
+- The socket opens only when `status==="authenticated"`. The JWT — **as the first message**
+  `{"type":"auth","token"}`, **never** in the URL/query (leak into logs).
+- Server `ping` → client `pong`. There is no client ping/subscription.
 - Reconnect: bounded backoff 1s→30s, jitter 0.75..1.25 (`computeReconnectDelay`).
-- Close-политики (`classifyWsClose`): `4403` terminal (без refresh-loop),
-  `1008/4401` auth-refresh (через `apiClient.tryRefresh`), `1000` stop, остальное —
-  reconnect. Внутри 4403 причина (`CloseEvent.reason`) решает, **удалён** аккаунт
-  или **забанен** — экран у них разный; строки бэкенда перечислены в §18.
-- Пауза reconnect в background/offline, resume по `visibilitychange`/`online`.
-- Ресинк после каждого reconnect (`resyncSeq > 0`) — инвалидация
-  `TRIP_KEYS.all`/`BOOKING_KEYS.all`/`NOTIFICATION_KEYS.all` (HTTP refetch, не replay).
-- Дедуп событий: модульное множество `realtimeSeenEvents` (живёт между маунтами и
-  между тестами одного файла — **в тестах ключи уникальны**), cap 200.
-- `notification:new` — только hint, тоста нет. Хинт **сужен**: инвалидирует
-  `NOTIFICATION_KEYS.unreadCount()` + `NOTIFICATION_KEYS.lists()` (текущий список),
-  НЕ blanket `all`. Остальные (`booking:*`, `trip:*`) — инвалидация + Snackbar + haptic.
-- **Строка-настройка = `Cell` + переключатель в `after`, без своих рамок.**
-  Две ловушки:
-  1) `width: 100%` + `padding` + `border` при `box-sizing: content-box` дают
-     переполнение: у профиля было **382px против 356px** родителя, уход за
-     правый край. Дефект маскировали `box-sizing` в одних модулях и
-     отсутствие padding — в других.
-  2) `Section` вставляет `Divider` только между **прямыми** детьми
-     (`Children.map` + `Divider` в Section.js). Обёртка `Stack` прячет строки
-     от кита: разделителей не будет, вместо них свой `gap`.
-  Строка-переключатель не кликабельна целиком: нативный `Switch` внутри
-  `<button>` — невалидная вложенность и двойное срабатывание на Enter/Space.
-   Доп. действие внутри секции, если понадобится, — слот `footer`: отдельным
-   ребёнком его отделил бы разделитель строк. Кнопки сброса темы
-   «Как в Telegram» нет: `themeOverride` живёт в localStorage,
-   переключатель ставит только light/dark, поэтому вернуться к
-   «как в Telegram» из UI нельзя. Путь
-   обратно, если понадобится: 3-состоянийный цикл (auto → light → dark → auto).
-   Пин: `pages/Profile/__tests__/switchRow.test.ts`.
-- **Транспорт разделён: `WebSocketProvider.tsx` = 502 строки + `TelegramRealtimeListener.tsx` = 213 строк.**
-  Доменные подписки уже вынесены в `providers/TelegramRealtimeListener.tsx`;
-  в провайдере остались транспорт (WsProvider) + классификатор 4403 (см. §17).
+- Close policies (`classifyWsClose`): `4403` terminal (no refresh loop),
+  `1008/4401` auth-refresh (via `apiClient.tryRefresh`), `1000` stop, the rest —
+  reconnect. Inside 4403 the reason (`CloseEvent.reason`) decides whether the account was **deleted**
+  or **banned** — the screens differ; the backend strings are listed in §18.
+- Reconnect pause in background/offline, resume on `visibilitychange`/`online`.
+- Resync after every reconnect (`resyncSeq > 0`) — invalidation of
+  `TRIP_KEYS.all`/`BOOKING_KEYS.all`/`NOTIFICATION_KEYS.all` (HTTP refetch, not replay).
+- Event dedup: the module-level set `realtimeSeenEvents` (lives across mounts and
+  across tests of one file — **keys in tests are unique**), cap 200.
+- `notification:new` is only a hint, no toast. The hint is **narrowed**: it invalidates
+  `NOTIFICATION_KEYS.unreadCount()` + `NOTIFICATION_KEYS.lists()` (the current list),
+  NOT a blanket `all`. The others (`booking:*`, `trip:*`) — invalidation + Snackbar + haptic.
+- **A settings row = `Cell` + a switch in `after`, without its own borders.**
+  Two traps:
+  1) `width: 100%` + `padding` + `border` with `box-sizing: content-box` produce
+     overflow: the profile had **382px against the parent's 356px**, running off the
+     right edge. The defect was masked by `box-sizing` in some modules and
+     the absence of padding in others.
+  2) `Section` inserts a `Divider` only between **direct** children
+     (`Children.map` + `Divider` in Section.js). A `Stack` wrapper hides the rows
+     from the kit: there will be no dividers, use your own `gap` instead.
+  A switch row is not clickable as a whole: a native `Switch` inside
+  `<button>` is invalid nesting and a double trigger on Enter/Space.
+   An extra action inside the section, if needed, goes in the `footer` slot: as a separate
+   child the row divider would have separated it. There is no button to reset the theme to
+   "As in Telegram": `themeOverride` lives in localStorage,
+   the switch sets only light/dark, so returning to
+   "as in Telegram" from the UI is impossible. The way
+   back, if needed: a 3-state cycle (auto → light → dark → auto).
+   Pin: `pages/Profile/__tests__/switchRow.test.ts`.
+- **The transport is split: `WebSocketProvider.tsx` = 502 lines + `TelegramRealtimeListener.tsx` = 213 lines.**
+  Domain subscriptions have already been moved to `providers/TelegramRealtimeListener.tsx`;
+  the provider keeps the transport (WsProvider) + the 4403 classifier (see §17).
 
-## 12. Роутинг и deep links
+## 12. Routing and deep links
 
-- `router/AppRouter.tsx`: `HashRouter`; `Shell` держит `NavHeader`, `AppBottomBar`,
-  `route-fade` (CSS, не motion/react — экономия ~39 KiB), `useScrollRestore`.
-- Нативный `backButton`: сначала state-модалка (`handleModalBack`), затем history,
-  fallback в `/bookings` для `/trips/my/new`, иначе `/`.
-- `settingsButton` ведёт в `/profile` везде, кроме профиля.
-- Стартовый `tgWebAppStartParam` разбирается один раз (`didHandleStartParam`):
+- `router/AppRouter.tsx`: `HashRouter`; `Shell` holds `NavHeader`, `AppBottomBar`,
+  `route-fade` (CSS, not motion/react — saves ~39 KiB), `useScrollRestore`.
+- Native `backButton`: first the state modal (`handleModalBack`), then history,
+  fallback to `/bookings` for `/trips/my/new`, otherwise `/`.
+- `settingsButton` leads to `/profile` everywhere except the profile.
+- The start `tgWebAppStartParam` is parsed once (`didHandleStartParam`):
   `resolveStartParamRoute` (`router/deepLinks.ts`) — `trip_<uuid>` → `/trips/<uuid>`,
-  section-токены из `START_PARAM_ROUTES`, неизвестный → `FALLBACK_ROUTE` (`/trips`).
-  В startapp **нельзя** сырые данные пользователя; per-entity id идут через
+  section tokens from `START_PARAM_ROUTES`, unknown → `FALLBACK_ROUTE` (`/trips`).
+  Raw user data **must not** go in startapp; per-entity ids go through
   `Notification.deepLink`.
-- Таб определяется по `location.pathname`; заголовки — `HEADER_TITLE_RULES` на уровне
-  модуля (не пересоздаётся).
-- **Кнопка настроек — там, где нет кнопки «назад» и есть таббар, то есть на
-   корневых маршрутах** (`useSettingsButton(openProfile, isRoot && pathname !== "/profile")`).
-   `/profile` исключён отдельно: тап привёл бы на тот же экран. Не-корневые
-   маршруты — либо поддерево профиля (переход вёл бы на родителя), либо
-   сфокусированный сценарий с возвратом. Нативную кнопку Telegram
-   не измерить вне клиента — это unverifiable.
-- `route-fade` key = только `pathname` (смена query не перемонтирует страницу, чтобы не
-  терять скролл/скелетоны).
+- The tab is determined by `location.pathname`; titles — `HEADER_TITLE_RULES` at module
+  level (not recreated).
+- **The settings button is where there is no "back" button and there is a tab bar, i.e. on
+   root routes** (`useSettingsButton(openProfile, isRoot && pathname !== "/profile")`).
+   `/profile` is excluded separately: a tap would lead to the same screen. Non-root
+   routes are either a subtree of the profile (the transition would lead to the parent), or
+   a focused scenario with a return. The native Telegram button
+   cannot be measured outside the client — this is unverifiable.
+- `route-fade` key = only `pathname` (a query change does not remount the page, so as not to
+  lose scroll/skeletons).
 
-## 13. Query keys и уведомления
+## 13. Query keys and notifications
 
 ### Query keys
 
 `queries/useTripsQuery.ts`: `TRIP_KEYS = { all, lists(), list(filters), my(),
-details(), detail(id) }`. Аналогично `BOOKING_KEYS`, `NOTIFICATION_KEYS`.
+details(), detail(id) }`. Likewise `BOOKING_KEYS`, `NOTIFICATION_KEYS`.
 `NOTIFICATION_KEYS = { all, lists(), inbox(limit, segment), unreadCount() }`.
-Цикл избегается сырым `["bookings"]` в `useInvalidateTripsAndBookings`
-(`useBookingsQuery` импортирует `TRIP_KEYS`).
+The cycle is avoided by the raw `["bookings"]` in `useInvalidateTripsAndBookings`
+(`useBookingsQuery` imports `TRIP_KEYS`).
 
-### Уведомления — что есть (после плана 2026-10-01)
+### Notifications — what exists (after the 2026-10-01 plan)
 
 - **Backend** (`backend/src/notifications/index.ts`): `GET /my` (cursor + `?role=`/`?unreadOnly=`),
-  `GET /unread-count` (owner-scope, лёгкий), `PATCH /:id/read` (scoped `updateMany` + 404),
-  `PATCH /read-all`. Схемы — `unreadCountSchema`, `notificationsQuerySchema` в контрактах.
-- **Retention**: `pruneOldNotifications` в `notification.service.ts` (outbox 30д,
-  inbox read 90д / unread 180д), хук в `processExpiredTrips` (tripWorker), knobs в `env.ts`.
-- **RecipientRole**: `Notification.recipientRole` (String?, миграция
+  `GET /unread-count` (owner-scope, lightweight), `PATCH /:id/read` (scoped `updateMany` + 404),
+  `PATCH /read-all`. Schemas — `unreadCountSchema`, `notificationsQuerySchema` in the contracts.
+- **Retention**: `pruneOldNotifications` in `notification.service.ts` (outbox 30d,
+  inbox read 90d / unread 180d), hook in `processExpiredTrips` (tripWorker), knobs in `env.ts`.
+- **RecipientRole**: `Notification.recipientRole` (String?, migration
   `20261001092913`), `?role=` = stored role OR legacy `NOTIFICATION_ROLE_TYPES` fallback.
-- **notifyUser** (`notification.service.ts`): `createNotification` + WS-hint
-  `notification:new` с `NOTIFICATION_HINT_REFRESH_ID` — только при созданной записи.
-- **Dispatcher** (`workers/notificationDispatcher.ts`): recovery зависших `processing`
-  (`TG_NOTIFICATION_PROCESSING_TIMEOUT_MS`, дефолт 10 мин), `chat_not_found`/`permanent`
-  → терминально, `skipped/no_token` без токена, `trip_details_changed` в критичных.
-- **Client**: бейдж на табе — `useUnreadCountQuery()`; хинт сужен до счётчика + текущего
-  списка; мутации чтения патчат оба кэша (`applyMarkReadCaches`/`applyMarkAllReadCaches`).
+- **notifyUser** (`notification.service.ts`): `createNotification` + WS hint
+  `notification:new` with `NOTIFICATION_HINT_REFRESH_ID` — only when a record was created.
+- **Dispatcher** (`workers/notificationDispatcher.ts`): recovery of stuck `processing`
+  (`TG_NOTIFICATION_PROCESSING_TIMEOUT_MS`, default 10 min), `chat_not_found`/`permanent`
+  → terminal, `skipped/no_token` without a token, `trip_details_changed` among the critical ones.
+- **Client**: the tab badge — `useUnreadCountQuery()`; the hint is narrowed to the counter + the current
+  list; read mutations patch both caches (`applyMarkReadCaches`/`applyMarkAllReadCaches`).
 
-## 14. Тесты — конвенции
+## 14. Tests — conventions
 
-- Запуск: `npm run test --workspace=telegram-app` (vitest run). **Нет setup-файла**:
-  моки (`vi.mock`, matchMedia, ResizeObserver, `AppRoot`-обёртка для tgui) — в каждом
-  файле при необходимости. Для tgui-компонентов используется SSR `renderToString`, а не
-  тестирование внутренностей кита.
-- `src/__tests__/kitContract.test.tsx` — **падает при смене версии tgui**: при апгрейде
-  пройти реестр отклонений `src/ui/README.md` и обновить контракт.
-- `src/__tests__/layoutCss.test.ts` — пин каскада (слой tgui бьётся неслойными модулями).
-- `AppConfig.test.tsx` — контраст палитр темы.
-- Тест `init.mockMacOS.test.ts`, `toSnakeThemeParams.test.ts` — поведение macOS-моков.
-- **1044 тестов** (131 файл). SSR-файлы (`renderToString`) не
-  видят эффектов, поэтому всё, что живёт в эффекте, проверяется **DOM-файлом
-  с `@vitest-environment jsdom`**: `useScrollRestore.dom`, `useTripActions.tick`,
+- Run: `npm run test --workspace=telegram-app` (vitest run). **No setup file**:
+  mocks (`vi.mock`, matchMedia, ResizeObserver, an `AppRoot` wrapper for tgui) — in each
+  file as needed. For tgui components SSR `renderToString` is used, rather than
+  testing the kit's internals.
+- `src/__tests__/kitContract.test.tsx` — **fails when the tgui version changes**: on upgrade
+  go through the deviation registry `src/ui/README.md` and update the contract.
+- `src/__tests__/layoutCss.test.ts` — the cascade pin (the tgui layer is beaten by non-layered modules).
+- `AppConfig.test.tsx` — contrast of the theme palettes.
+- The tests `init.mockMacOS.test.ts`, `toSnakeThemeParams.test.ts` — behavior of the macOS mocks.
+- **1044 tests** (131 files). SSR files (`renderToString`) do not
+  see effects, so everything that lives in an effect is checked by a **DOM file
+  with `@vitest-environment jsdom`**: `useScrollRestore.dom`, `useTripActions.tick`,
   `SearchPage.reset`, `tripStandardCard.a11y`, `tripCountersSection`,
-  `fieldLabelTone` (тон подписи — контракт, а не рендер).
-- **`vi.mock` требует `vi.hoisted`.** Фабрика мока поднимается выше
-  объявления переменной, и без `vi.hoisted` — `ReferenceError: Cannot access
+  `fieldLabelTone` (the label tone is a contract, not a render).
+- **`vi.mock` requires `vi.hoisted`.** The mock factory is hoisted above the
+  variable declaration, and without `vi.hoisted` — `ReferenceError: Cannot access
   'mockX' before initialization`.
-- **Авто-cleanup RTL ВЫКЛЮЧЕН**: `globals: true` не задан, поэтому
-  `afterEach(cleanup)` нужно ставить **вручную** в каждом DOM-файле. Без него
-  размонтированное дерево живёт до конца файла: события достаются старым
-   обработчикам, а модульные хранилища (кэш скролла) портятся следующими
-   тестами.
-- **Нет матчеров jest-dom** (`toBeEnabled`/`toBeDisabled` не существуют) —
-  проверять `element.disabled` напрямую.
-- **Контраст считается в браузере, не в Node.** `color-mix` в Node не
-  вычисляется, а значения токенов принадлежат киту и копировать их в тест
-  нельзя («свойство токена должно быть одно»). Поэтому в vitest живёт
-  **структурный** пин (тон объявлен в обеих темах, смешивается к нужному
-  токену, процент не ниже измеренного минимума), а **числовая граница — в
-  `e2e/ui-contrast.mjs`** (`node e2e/ui-contrast.mjs`, тот же приём, что
-  `ui-cascade.mjs`: vitest читает текст CSS, нужен результат). Покрыты
-  `--app-field-label` (обе темы), тона `Notice`, `--app-muted`.
-- **Три грабли контрастного e2e:**
-  1) **Подложка — композиция, а не первый непрозрачный предок.** Наложить
-     слои на непрозрачного предка, иначе ложное падение.
-  2) **Сравнивать цвета числами, не строками.** Движок отдаёт один цвет
-     то как `rgb(...)`, то как `color(srgb ...)`; сравнение строк даёт
-     0 носителей.
-  3) **Селектор с 0 носителей обязан ПАСТЬ** (`requireMin`), иначе шаг
-     проходит вхолостую. Порог выводится из размера и веса
-     (4.5 / 3:1 крупный), а не берётся из списка.
-- **Проверка, которая проходит, ничего не проверяя, — провал, а не успех.**
-  Если проверка ничего не нашла (`afterEach(cleanup)` пропущен,
-  `requireMin` отсутствует, селектор совпал с нулём элементов) —
-  это дефект теста.
-- **Перед фиксом проверять, что новый тест падает на старом коде.** Иначе
-  тест ничего не пиннит.
-- **Протечка cleanup проверяется ВСЕМИ файлами, а не только новыми:**
-  размонтированное дерево живёт до конца файла (порталы держат ловушки
-  на `document`, таймеры живы) — соседние тесты проверяют чужое дерево.
+- **RTL auto-cleanup is OFF**: `globals: true` is not set, so
+  `afterEach(cleanup)` must be added **manually** in every DOM file. Without it
+  the unmounted tree lives until the end of the file: events reach old
+   handlers, and module-level stores (the scroll cache) are corrupted for the following
+   tests.
+- **No jest-dom matchers** (`toBeEnabled`/`toBeDisabled` do not exist) —
+  check `element.disabled` directly.
+- **Contrast is computed in the browser, not in Node.** `color-mix` is not
+  evaluated in Node, and the token values belong to the kit and cannot be
+  copied into a test ("a token property must be single"). So vitest holds
+  a **structural** pin (the tone is declared in both themes, mixes toward the required
+  token, the percentage is not below the measured minimum), and the **numeric bound is in
+  `e2e/ui-contrast.mjs`** (`node e2e/ui-contrast.mjs`, the same technique as
+  `ui-cascade.mjs`: vitest reads the CSS text, a result is needed). Covered:
+  `--app-field-label` (both themes), the `Notice` tones, `--app-muted`.
+- **Three pitfalls of the contrast e2e:**
+  1) **The backdrop is a composition, not the first opaque ancestor.** Overlay the
+     layers onto an opaque ancestor, otherwise a false failure.
+  2) **Compare colors as numbers, not strings.** The engine returns the same color
+     sometimes as `rgb(...)`, sometimes as `color(srgb ...)`; string comparison yields
+     0 carriers.
+  3) **A selector with 0 carriers must FAIL** (`requireMin`), otherwise the step
+     passes vacuously. The threshold is derived from size and weight
+     (4.5 / 3:1 large), not taken from a list.
+- **A check that passes without checking anything is a failure, not a success.**
+  If the check found nothing (`afterEach(cleanup)` skipped,
+  `requireMin` missing, the selector matched zero elements) —
+  that is a test defect.
+- **Before a fix, verify that the new test fails on the old code.** Otherwise
+  the test pins nothing.
+- **A cleanup leak is checked by ALL files, not only the new ones:**
+  an unmounted tree lives until the end of the file (portals hold traps
+  on `document`, timers are alive) — neighboring tests check someone else's tree.
 
-## 15. Gotchas SDK 3.0.23 (частые грабли)
+## 15. SDK 3.0.23 gotchas (common pitfalls)
 
-- `mockTelegramEnv.onEvent` получает **объект `{ name, params }`**, не кортеж `[method]`
-  (в `@telegram-apps` 3.3.x было иначе — легко получить молча неработающий мок).
-- `themeParams.state()` и `tgWebAppThemeParams` — snake_case; `toSnakeThemeParams`
-  страхует от camelCase-источника.
-- `mount()` синхронны (кроме `viewport.mount`); каждый — **ровно один раз**.
-  `themeParams` монтировать **первым** (`miniApp` читает тему при монтировании).
-- `bindCssVars()` — только после mount своего компонента.
-- `ifAvailable` — no-op (не исключение) на неподдерживаемом методе: доступность
-  проверять явно через `isAvailable()` (см. `shareViaTelegram`, `openTelegramUrl`).
-- Статические `requestSafeAreaInsets/...` удалены в 3.0.x — использовать `request(...)`.
-- `retrieveRawInitData()` — сырая строка; не пересобирать и не сортировать.
+- `mockTelegramEnv.onEvent` receives an **object `{ name, params }`**, not a tuple `[method]`
+  (in `@telegram-apps` 3.3.x it was different — it is easy to get a silently non-working mock).
+- `themeParams.state()` and `tgWebAppThemeParams` are snake_case; `toSnakeThemeParams`
+  guards against a camelCase source.
+- `mount()` calls are synchronous (except `viewport.mount`); each — **exactly once**.
+  Mount `themeParams` **first** (`miniApp` reads the theme on mounting).
+- `bindCssVars()` — only after mounting its own component.
+- `ifAvailable` is a no-op (not an exception) on an unsupported method: check availability
+  explicitly via `isAvailable()` (see `shareViaTelegram`, `openTelegramUrl`).
+- The static `requestSafeAreaInsets/...` were removed in 3.0.x — use `request(...)`.
+- `retrieveRawInitData()` — a raw string; do not reassemble or sort it.
 
-## 16. Skills (загружать через skill tool)
+## 16. Skills (load via the skill tool)
 
-Проектные скиллы, релевантные `telegram-app/` (`.opencode/skills/`):
+Project skills relevant to `telegram-app/` (`.opencode/skills/`):
 
-| Skill | Когда |
+| Skill | When |
 |---|---|
-| `telegram-mini-app` | TWA, init data auth, TG WebView, mockEnv, dev через туннель |
-| `telegram-ui` | пропсы/гочи tgui, замена кастомного UI, отладка рендера в WebView |
-| `ui-ux-pro-max`, `frontend-design` | дизайн новых экранов/компонентов, визуальное направление |
-| `vercel-react-best-practices` | рефактор React, bundle, waterfalls, ре-рендеры (70 правил) |
-| `typescript-advanced-types` | сложная типизация, generic-компоненты, type-safe API |
-| `a11y` | аудит WCAG 2.2 AA перед мержем (фокус, live-regions, контраст, тап-таргеты) |
-| `security-audit` | auth/dev-auth, валидация, rate-limit, WS, error-shape |
-| `code-review-and-quality` | ревью диффа/PR по 5 осям, размер изменений, дед-код |
-| `playwright-e2e` | e2e (`e2e/telegram-*.mjs`), стабильность, reseed-safe |
-| `ponytail` | минимализм: stdlib/нативные решения раньше кода; YAGNI |
-| `context7` / `find-docs` | актуальные доки библиотек по API/конфигу |
-| `prisma-cli`, `prisma-database-setup` | backend-схема/миграции (важно при контрактах) |
-| `hono-api-scaffolder` | API-роуты бэкенда (эндпоинты, Zod, error JSON) |
-| `task-management` | разбиение фичи на подзадачи, зависимости |
+| `telegram-mini-app` | TWA, init data auth, TG WebView, mockEnv, dev through a tunnel |
+| `telegram-ui` | tgui props/gotchas, replacing custom UI, debugging rendering in the WebView |
+| `ui-ux-pro-max`, `frontend-design` | design of new screens/components, visual direction |
+| `vercel-react-best-practices` | React refactoring, bundle, waterfalls, re-renders (70 rules) |
+| `typescript-advanced-types` | complex typing, generic components, type-safe API |
+| `a11y` | WCAG 2.2 AA audit before merge (focus, live regions, contrast, tap targets) |
+| `security-audit` | auth/dev-auth, validation, rate-limit, WS, error shape |
+| `code-review-and-quality` | review of a diff/PR on 5 axes, change size, dead code |
+| `playwright-e2e` | e2e (`e2e/telegram-*.mjs`), stability, reseed-safe |
+| `ponytail` | minimalism: stdlib/native solutions before code; YAGNI |
+| `context7` / `find-docs` | current library docs for API/config |
+| `prisma-cli`, `prisma-database-setup` | backend schema/migrations (important with contracts) |
+| `hono-api-scaffolder` | backend API routes (endpoints, Zod, error JSON) |
+| `task-management` | splitting a feature into subtasks, dependencies |
 
-Ключевые правила из них, применимые здесь:
-- **Correctness first**: тесты покрывают поведение, не реализацию; edge/error пути.
-- **Не оставляй dead code**; не плоди near-duplicate хелперы; не тащи фичевую логику
-  в shared-модуль; следи за размером файла (~1000 строк — сигнал к декомпозиции).
-- **Auth/валидация на границах** — не лениться (это явное исключение из ponytail).
-- **a11y**: icon-only → `aria-label`; async-итоги → `aria-live`; фокус после навигации;
-  `prefers-reduced-motion`; тап ≥44px.
-- **e2e**: без `waitForTimeout` для UI, уникальные данные на прогон, cleanup в `finally`,
-  `pageerror` валит прогон.
-## 17. Findings / кандидаты в работу
+Key rules from them that apply here:
+- **Correctness first**: tests cover behavior, not implementation; edge/error paths.
+- **Don't leave dead code**; don't breed near-duplicate helpers; don't drag feature logic
+  into a shared module; watch file size (~1000 lines is a signal to decompose).
+- **Auth/validation at the boundaries** — don't be lazy (an explicit exception to ponytail).
+- **a11y**: icon-only → `aria-label`; async results → `aria-live`; focus after navigation;
+  `prefers-reduced-motion`; tap ≥44px.
+- **e2e**: no `waitForTimeout` for UI, unique data per run, cleanup in `finally`,
+  `pageerror` fails the run.
+## 17. Findings / candidates for work
 
-**Авторитетный реестр отклонений и находок — `src/ui/README.md`, раздел
-«Реестр отклонений от дефолтов кита».** Здесь только открытые пункты,
-требующие продуктового решения или будущей работы (закрытые удалены
-из таблицы — их состояние живёт в коде и тестах).
+**The authoritative registry of deviations and findings is `src/ui/README.md`, the section
+"Registry of deviations from kit defaults".** Only open items are here,
+requiring a product decision or future work (closed ones were removed
+from the table — their state lives in code and tests).
 
-| Severity | Файл:строка | Что | Направление |
+| Severity | File:line | What | Direction |
 |---|---|---|---|
-| medium | `useAuthStore.ts` (`bootstrapPromise`) | нет таймаута на самом bootstrap: unsettled-промис блокирует все будущие `bootstrap()` | страхуется 15s-таймаутом `apiClient`; при смене транспорта понадобится явный |
-| low | `AppConfig.tsx` | дубль списка `THEME_VAR_NAMES`/палитр | приемлемо, покрыто тестом контраста |
-| low | `backend/src/admin/index.ts:654` | unban **не** переоткрывает WS: клиент после бана держит `terminalTokenRef` и разлогинится до перезапуска приложения | снимать терминал по HTTP-баунсу или документировать «перезапустите апп» |
+| medium | `useAuthStore.ts` (`bootstrapPromise`) | no timeout on bootstrap itself: an unsettled promise blocks all future `bootstrap()` | covered by the 15s timeout of `apiClient`; an explicit one will be needed if the transport changes |
+| low | `AppConfig.tsx` | duplicate list `THEME_VAR_NAMES`/palettes | acceptable, covered by the contrast test |
+| low | `backend/src/admin/index.ts:654` | unban does **not** reopen the WS: after a ban the client holds `terminalTokenRef` and will log out until the app restarts | lift terminal via an HTTP bounce or document "restart the app" |
 
-Канал уведомлений Bot API **реализован и включён по умолчанию**
-(`TELEGRAM_DELIVERY_ENABLED`, дефолт `true`): флаг + токен + согласие.
-Покрыт `backend/tests/e2e/botApiSend.test.ts`.
+The Bot API notification channel is **implemented and enabled by default**
+(`TELEGRAM_DELIVERY_ENABLED`, default `true`): flag + token + consent.
+Covered by `backend/tests/e2e/botApiSend.test.ts`.
 
-### 17.1 Осознанно оставленное (код не менялся, зафиксировано намерение)
+### 17.1 Deliberately left as is (code unchanged, intent recorded)
 
-- **Корневой `onClick` карточки — оставлен сознательно** (реестр #24).
-  `Card` рендерит `<article>`, имеет только проп `type` и **не имеет**
-  `Component` (в отличие от `TappableProps`/`ButtonProps`), поэтому
-  кликабельный Card китом не предусмотрен, а `onClick` проходит типизацию
-  через `extends HTMLAttributes`. Для AT/клавиатуры операция доступна через
-  вложенную нативную кнопку — progressive enhancement, WCAG не нарушен.
-- **`<div>` внутри `<button>` — не дефект.** Следствие документированного
-  паттерна кита: `TappableProps.children` = `ReactNode`, и
-  `Component="button"` с богатыми детьми даёт `button > div`. Реестр #12.
-- **`settingsButton` — только на корневых маршрутах** (см. §12).
+- **The card's root `onClick` was left deliberately** (registry #24).
+  `Card` renders an `<article>`, has only the `type` prop and does **not have**
+  `Component` (unlike `TappableProps`/`ButtonProps`), so
+  a clickable Card is not provided for by the kit, while `onClick` passes typing
+  through `extends HTMLAttributes`. For AT/keyboard the operation is available through
+  a nested native button — progressive enhancement, WCAG is not violated.
+- **A `<div>` inside a `<button>` is not a defect.** A consequence of the kit's documented
+  pattern: `TappableProps.children` = `ReactNode`, and
+  `Component="button"` with rich children gives `button > div`. Registry #12.
+- **`settingsButton` — only on root routes** (see §12).
 
-e2e-parity 17/17. `ADMIN_TOKEN` стенда задан явно в `ecosystem.config.cjs`
-(`backend/src/env.ts` зовёт `dotenv.config()` без `override`, поэтому
-переменные оболочки побеждают `backend/.env`; `override: true` не вариант —
-отдал бы приоритет gitignored `.env` над прод-окружением).
+e2e-parity 17/17. The stand's `ADMIN_TOKEN` is set explicitly in `ecosystem.config.cjs`
+(`backend/src/env.ts` calls `dotenv.config()` without `override`, so
+shell variables win over `backend/.env`; `override: true` is not an option —
+it would give priority to the gitignored `.env` over the production environment).
 
-## 18. Инварианты, добавленные аудитом (не ломать)
+## 18. Invariants added by the audit (do not break)
 
-| Инвариант | Где |
+| Invariant | Where |
 |---|---|
-| Удаление аккаунта различается с баном **по коду** `ACCOUNT_DELETED`, а не по тексту. Код, текст-фолбэк и предикат живут в контрактах (`schemas/api-error.schema.ts`), бэк импортирует оттуда же — сверить нечего, расхождение невозможно по построению. Прикладной код берёт ре-экспорт из `@/api/client` | `useAuthStore.ts`, `ProfilePage.tsx`, `bookingErrors.ts`, `VehicleModal.tsx`, `client.ts` (ре-экспорт) |
-| В ветке `performRefresh` удаление проверяется **вне** «`code === FORBIDDEN`»: с новым кодом внешняя проверка проглотила бы `emitDeleted`, и удалённый уехал бы на экран логина | `client.ts` (`performRefresh`) |
-| 4403 различает удаление и бан по **трём** строкам причины: `Account is deleted` (ws-auth), `Account deleted` (DELETE /me, **без «is»**), `Account is banned`; незнакомая → `banned` + один HTTP-bootstrap с возвратом к дефолту. У close-кадра нет поля `code`, поэтому причина — строка, но и она лежит в `WS_TERMINAL_REASON` в контрактах и импортируется бэком (ws/index.ts, users/index.ts, admin/index.ts) | `WebSocketProvider.tsx` (`classifyTerminalCloseReason`), контракты (`WS_TERMINAL_REASON`) |
-| Подписка сентинела навешивается в момент **появления** узла (эффект на каждом рендере + сверка `observedRef`), а не только на маунте | `useInfiniteSentinel.ts` |
-| Результат refresh не применяется, если сессию уже сняли: guard `if (!get().session) return` | `useAuthStore.ts` (`refreshSession`) |
-| `markRead` оптимистичен: `onMutate` + снапшот обоих кэшей; `markReadInPages` чистая; декремент счётчика ровно один на вызов | `useNotificationsQuery.ts` |
-| Время поездок и уведомлений — только через `moscowDayKey`/`moscowTimeLabel`/`moscowDateLabel` из `utils/date.ts`; `toLocale*` без `timeZone` запрещён | `utils/date.ts` |
-| Счётчик «Прочитать все» — только `useUnreadCountQuery`; сегментный `pages[0].unreadCount` как глобальное запрещён | `NotificationsPage.tsx` |
-| `closingBehavior` — общее состояние клиента: счётчик грязных форм, а не флаг | `useClosingConfirmation.ts` |
-| `apiErrorSchema` в контрактах — **спецификация формы без потребителя**: клиент разбирает тело руками в `toErrorRecord` намеренно (не-JSON/HTML от прокси не должны ронять разбор и терять HTTP-статус). Не подменять на `apiErrorSchema.parse` без замера на кривых телах. Не предлагать там же предикат удаления: webapp — только админка (`/api/v1/admin/*`, сессия по `ADMIN_TOKEN`), состояния удалённого пользователя в ней не бывает | `packages/contracts/src/schemas/api-error.schema.ts`, `api/client.ts` |
-| `ACCOUNT_DELETED_MESSAGE`/`ACCOUNT_DELETED_CODE`/`WS_TERMINAL_REASON` определены один раз в контрактах; мок `@/api/client` обязан повторять их — без этого ветки «удалён» и классификатор 4403 становятся мёртвыми | `packages/contracts/src/schemas/api-error.schema.ts` |
-| `/users/me` описывает **только** `api/profile.ts`; ключи ресурса — `USER_KEYS` в `queries/profile.ts` | `api/profile.ts`, `queries/profile.ts` |
-| Тесты: TZ-зависимое поведение проверяется файлом с принудительным `process.env.TZ`; SSR разделяет соседние текстовые узлы маркером `<!-- -->` | `notificationsTime.tz.test.ts` |
-| `role`/`aria-live`, объявленные на узле **портала**, вешаются на пустую обёртку, а не на текст: `Snackbar` уходит в портал `AppRoot`, и роль досталась обёртке. Роль ставится на сам элемент, несущий текст, и проверяется DOM-тестом — зонд по рендеру её не видит | `components/Toast/ToastProvider.tsx`, `Toast/__tests__/ToastProvider.test.tsx` |
-| `prefers-reduced-motion` для шторки vaul — удвоенный селектор `[vaul-drawer][vaul-drawer]`: он поднимает специфичность без запрещённого `!important` | `index.css` |
-| **Сетевая ошибка справочника — не ошибка валидации:** `cities.isError` обязан давать терминальный `QueryState` с «Повторить», иначе форма висит в загрузке, а submit сообщает «Выберите города из справочника» | `CreateTripPage.tsx` (`cities.isError`) |
-| Ошибка поля привязывается `FieldError` с `id` + `aria-describedby`; `Field`/`CityPickerField` принимают `error`. Непривязанная ошибка читается, но не достигает скринридера при фокусе | `CreateTripPage.tsx` (10 полей), `Field`, `CityPickerField` |
-| Ошибка мутации настроек профиля не проглатывается — показывается через `Notice` (уведомления, видимость отзыва и т. п.) | `ProfilePage.tsx` |
-| `aria-label` строки меню включает видимую подпись, иначе имя теряет половину смысла («История поездок» без «Завершённые и отменённые») | `ProfilePage.tsx` (`MenuRow`) |
-| **Неизвестное число ≠ ноль.** Формулировка «все прочитаны» допустима только когда число известно и равно нулю; при `data === undefined` имя остаётся нейтральным («Прочитать все»), а действие остаётся рабочим — гасить нечем. Ложное утверждение о состоянии в `aria-label` хуже отсутствия числа | `NotificationsPage.tsx` |
-| **Мутация прочтения обязана инвалидировать `lists()` в `onSuccess`, а не только в `onError`.** Патч из ответа одной записи не обновляет ленту целиком. Счётчик не рефетчим — он только что вычислен точно | `useNotificationsQuery.ts` (`useMarkNotificationReadMutation`, `useMarkAllNotificationsReadMutation`) |
-| **Настройка вкл/выкл — `role="switch"`, а не чекбокс.** Китовский `Switch` рендерит `input[type=checkbox]` и роль из обёртки не добавляет, поэтому `role="switch"` ставится явно. `aria-checked` руками не задаём: браузер выводит его из `checked`, а дублирование рискует разойтись с реальным состоянием | `ui/SwitchRow.tsx` (вынесен из `ProfilePage` 2026-10-08: правило нужно не одному экрану — настройки профиля и форма создания поездки) |
-| **Табы профиля: панель обязана быть в DOM.** `aria-controls` вешаем только на выбранный таб: панели рендерятся условно, и у невыбранного таба `getElementById` даёт null. Отрисовывать обе с панели с `hidden` не стали — это грузило бы отзывы при открытых настройках | `ProfilePage.tsx` (`SUBTAB_IDS`, `SUBTAB_PANEL_IDS`, `onSubtabKeyDown`) |
-| **Выбор города — один компонент и всегда по id.** `CitySelectField` (нативный `<select>`) — единственный способ выбрать город: главная, поиск, создание поездки, заявка на посадку. Наружу отдаётся **id** справочника, имя берётся из того же справочника. Причина: подстрочный поиск по имени неоднозначен, а китовский `Multiselect` давал пункты без ролей. Свободный ввод города руками невозможен — это осознанно | `components/CitySelect/CitySelectField.tsx`, `helpers/searchFilters.ts` |
-| **Прогон e2e восстанавливает стенд сидом** (`restoreDevStand` в финальном блоке `telegram-parity`). Шаг `delete: удаление профиля` идёт под `u-dev`, а `DELETE /me` по контракту чистит уведомления пользователя — после прогона у дев-юзера оставалось 0 уведомлений вместо 9, и следующий прогон начинал с неполных данных. `reviveDevUser()` чинит только строку пользователя, сид восстанавливает всё. Сид полностью пересобирает БД, поэтому вызывается **после** уборки прогона | `e2e/telegram-fixtures.mjs` (`restoreDevStand`) |
-| **Имя экрана задаёт страница, не секция.** `NavHeader` помечен `aria-hidden`, поэтому у каждого маршрута обязан быть свой `h1` (обычно `VisuallyHidden Component="h1"`). `headingLevel="h1"` у `Section` — opt-in для «экрана, где секция владеет именем», и на главной он достался секции «Популярные направления»: скринридер объявлял имя секции как имя экрана | `pages/HomePage/HomePage.tsx`, `components/Section/PopularRoutesSection.tsx` |
-| Контраст тона/приглушённого текста считается против **своего худшего фона**, а не против фона секции: это тонированная плашка `--app-*-bg` и серая `#eaeaeb`/`#24303c`. Для тёмного текста худший фон — не белый, а самый тёмный из светлых; для светлого — не `#17212b`, а самый светлый из тёмных. Проверка по фону секции даёт ложное «проходит» | `index.css`, реестр #20 |
-| Тон текста задаётся `color-mix` **с чёрным в светлой теме и с белым в тёмной** (коэффициент — минимальный целый процент для 4.5+); фон `--app-*-bg` остаётся китовым. Тёмные тона переопределяются селектором **`.dark .app-theme`**, а не `.dark`: класс темы на `<html>`, а `.app-theme` — на вложенном корне, и собственное объявление бьёт унаследованное | `index.css` |
-| **Видимая подпись поля — своя, общий тон.** Подпись рисует сам `Field` (видимый `label`), а не kit-`header`: у kit-`header` нет доступного имени, он только на `base` и лежит поверх рамки. Тон — общий `--app-field-label`, правило — в `ui/` (класс `.fieldLabel`), а **не** в модуле потребителя. `Field` **всегда** добавляет свой класс обёртке — иначе правило мертво | `ui/ui.module.css`, `ui/Field.tsx`, `index.css`, пин `ui/__tests__/fieldLabelTone.test.tsx` |
-| **Подложка контрола — серая, подпись и плейсхолдер — в тон.** Все редактируемые поля (`Field`) — на `--tgui--secondary_bg_color`, иначе их не видно на белой секции. Видимая подпись (`h6`) — на прозрачном фоне, без пилюли. Плейсхолдеры — в `--app-muted` (китовый hint ниже AA на сером). Индикация ошибки — `box-shadow`-кольцо кита, серый её не гасит | `ui/ui.module.css`, `ui/Field.tsx`, пин `ui/__tests__/fieldLabelTone.test.tsx`, число — `e2e/ui-contrast.mjs` |
-| **`className` китового `Select` попадает на внутренний `<label>`, не на `<select>`.** `Select` отдаёт в `FormInput` только `header`/`before`/`status`/`className`, остальное — нативному `select`. Окрасить фон controls можно только потому, что китовой `select` = `background: inherit`. Обращение с пропами (`id`, `value`, `onChange`, `disabled`, `aria-*`) при этом корректно ложится на сам `select` | `node_modules/@telegram-apps/telegram-ui/dist/components/Form/{Select,FormInput}/*.js` |
-| **Позиция скролла меряется непрерывно, а не в момент перехода.** Эффект перехода в `useScrollRestore` запускается уже после подмены DOM, а route-модалки прячут фон в `hidden` → документ схлопывается и `window.scrollY` обнуляется ДО чтения. Сохраняется 0, Back возвращает список наверх | `hooks/useScrollRestore.ts`, пин `__tests__/useScrollRestore.dom.test.tsx` |
-| **`hasAuthedRef` сбрасывается только при реальной потере сессии** (`session === null`). Иначе уход в фон (`status="background"`, сокет рвётся, сессия жива) неотличим от логаута, и возвращение из фона — самый частый переход жизненного цикла TMA — не поднимает `resyncSeq`, то есть пропущенное за разрыв не восстанавливается (`refetchOnWindowFocus` выключен) | `WebSocketProvider.tsx`, пин в `__tests__/WebSocketProvider.test.tsx` |
-| **Бан — не логаут: `initData` нужен для апелляции.** `purgeLaunchParamsCache()` зовётся в `clearSession`/`markAccountDeleted`, но **не** при бане. Путь входа один (`markBanned`), иначе ветка WS 4403 или `onBanned` забудут заполнить строку и форма обжалования упадёт | `useAuthStore.ts`, `AuthGate.tsx`, `WebSocketProvider.tsx` |
-| **Словари ошибок и маршрутов ищутся только по СОБСТВЕННЫМ ключам.** `error.code` приходит из тела ответа бэкенда; прямой индекс объекта отдаёт унаследованный член `Object.prototype` (`toString`, `constructor`), а он `!== undefined`. Индекс-сигнатура объявляет значение как `string`, поэтому **типы это не ловят** — нужен `Object.hasOwn` + проверка типа | `helpers/bookingErrors.ts`, контраст `router/deepLinks.ts` |
-| **«Завтра»/«Выходные» — календарные дни, не «сейчас + 24 часа».** `local midnight + 86 400 000 мс` в зоне с переводом часов даёт 23:00 того же дня. Москва фиксирована по смещению, поэтому дефект не виден на московских тестах — TZ-файл форсирует `Europe/Berlin` | `helpers/searchFilters.ts` |
-| **TZ-зависимое поведение проверяется файлом с принудительным `process.env.TZ`.** Дефекты перевода часов и «зона устройства вместо Москвы» **не воспроизводятся** на машине в UTC или в Europe/Moscow — такие тесты проходят и не проверяют ничего | `searchFilters.tz.test.ts` (`Europe/Berlin`), `moscowNumericDate.tz.test.ts` (`America/Los_Angeles`) |
-| **Читать данные инфинити-запроса только полной опциональной цепочкой** (`pages[0]?.pagination?.total`). Пока идёт загрузка, `data` может быть неполным, а вычисление ДО раннего возврата упадёт на `pagination` | `TripCountersSection.tsx` |
-| **`useTripActions`: время «сейчас» двигается один раз, на границе отправления.** Снимок `Date.now()` на маунте замораживал `canCompleteTrip` (чисто клиентский гейт). Интервал не подходит — открытая страница будет ререндерить впустую; таймер ограничен int32, иначе «через месяц» переполняется и стреляет сразу | `pages/TripDetails/useTripActions.ts`, пин `__tests__/useTripActions.tick.test.tsx` |
-| **Догрузка страниц только когда сервер сказал, что данных не хватает** (`total > загружено`) **и** с остановкой по `isFetchNextPageError`. Без гарда на ошибку — бесконечный цикл запросов, потому что `hasNextPage` остаётся `true` | `TripCountersSection.tsx` |
-| **История заявок на попутку и её создание — разные сущности:** список на странице `/profile/ride-requests` (пункт меню профиля рядом с «Историей поездок»), создание — во всплывающем окне `RideRequestCreateModal` (`Sheet`, локальный state + `useModalBack`, роутом не стало). Старая route-backed шторка `/ride-requests`, где список делил тело с формой, удалена: она смешивала управление сущностью с быстрым действием. `useClosingConfirmation` живёт в списке (подтверждение ухода при незавершённом inline-редактировании). `deepLink` заявок в allowlist бэка — `/profile/ride-requests` (`telegramNotifications.ts`) | `components/Trip/RideRequestsList.tsx`, `RideRequestCreateForm.tsx`, `pages/RideRequestHistory/` |
-| **Главная показывает спрос, а не статичные направления:** секция «Кто ищет попутку» = `GET /ride-requests/feed`, который отдаёт **суммаризатор по маршрутам**, а не список заявок: `{ fromCity, toCity, people, seats, nextAt }`. Заменила «Популярные направления» (список городов, вшитый в код). `people` — **разные** люди (`Set` по userId: активных заявок до трёх, две на маршруте ≠ два человека), `seats` — сумма мест; числа разные, поэтому в строке оба («ищут 1 человек · 3 места»). Сортировка — по спросу (`seats desc`), затем по ближайшему окну. Заявку создаёт **пассажир**, поэтому заголовок «кто ищет попутку», а НЕ «кого ищут попутчиком» (та переворачивала роли). Автора бэк не отдаёт — лента анонимная; свои заявки исключены. Агрегация в JS по пулу 500 (Prisma `groupBy` не умеет `count(distinct)`) — граница задокументирована, а не спрятана. Строка — **общий `ui/MenuRow`** (иконка, заголовок, подпись, шеврон): витрина обязана читаться как пункты меню профиля, второй вид строки не заводим. Ключевое в `MenuRow` — `width: 100%`: без него кнопка `Cell` живёт по размеру контента, и длинная подпись растягивала строку за карточку секции (553px при секции 356px на 390-экране), а подпись уходила в две строки и шеврон висел посередине. Пин — `ui/__tests__/menuRow.test.tsx` (разметка + `width: 100%` из CSS). Подпись: «2 человека · 7 мест · Завтра, 08:00», без слов «ищут»/«ближайшая». Тап ведёт в поиск по маршруту. Пусто/загрузка/ошибка → секция **прячется** (как `NextTripBanner`) | `components/Section/RideRequestFeedSection.tsx`, `backend/src/rideRequests/index.ts` |
-| **Водитель зовёт пассажира, а НЕ бронирует за него:** «Пригласить» в карточке спроса (`TripDemandCard` → `TripDemandRow`) бьёт `POST /ride-requests/:id/invite` и создаёт **только** уведомление `driver_invite` с deep-link `/trips/<uuid>` (allowlist бэка) — место пассажир занимает сам через `POST /bookings`. Поэтому у водителя нет и не должно быть «успешной брони», а успех различает **три** исхода: `duplicate` (повтор, второго уведомления не будет) и `notificationId: null` (запись создана, уведомление не доставлено) — оба приходят как 200/201, различать их обязан клиент. Кнопка приглашения — **сосед** строки `ui/MenuRow`, а не слот внутри: `MenuRow` рендерит нативный `<button>`, а кнопка в кнопке — невалидная разметка и сломанный фокус (то же, что реестр #24 у футера карточки). При `seatsAvailable === 0` действие **скрыто**: число мест страница «Поездки» уже держит в руках, отдельный пред-проверочный запрос не заводим, а гонку «последнее место заняли» закрывает 409 с бэка. Ошибка — через общий `bookingErrorMessage`, сырой код бэка в UI не попадает | `components/Trip/TripDemandRow.tsx`, `TripDemandCard.tsx`, `queries/useRideRequestsQuery.ts`, `api/rideRequests.api.ts`, пин `__tests__/tripDemandCard.invite.test.tsx` |
-| **Форма — во всплывающем окне, список — на странице** (единое правило для обращений и жалоб): `/profile/support` (FAQ → «Мои обращения» → `[Создать обращение]`, `FeedbackModal`) и `/profile/reports` (список → `[Подать жалобу]`, `ComplaintModal`). Полноэкранная форма занимала страницу целиком. Хост-managed окно: `Sheet` + `OfflineBanner` (портал перекрывает глобальный баннер), Back через `useModalBack`, список передаётся в форму пропсом (хинт «уже отправлено»). Успех — **тост**, а не inline-`Notice`: окно закрывается, и Notice уехал бы вместе с ним | `pages/Support/FeedbackModal.tsx`, `pages/Reports/ComplaintModal.tsx` |
-| **Поддержка — один экран `/profile/support`:** пункт меню ведёт на страницу, а форма обращения — **во всплывающем окне** (`FeedbackModal`, `Sheet` + локальный state + `useModalBack`), открывается кнопкой «Создать обращение» под «Мои обращения». Страница: FAQ → «Мои обращения» → кнопка. Поэтому e2e, меряющий форму (`telegram-parity`, `ui-contrast`), сначала открывает окно — `ui-contrast` через `prepare: { click, waitFor }`, без него шаг падал бы на «найдено 0 носителей». Шторка `FeedbackModal` с дублем формы удалена, и её кнопка «Мои обращения» была прокладкой к этой же странице. Форма обжалования бана живёт только на терминальном экране (`AccountStatePage`/AuthGate) и в ветке 403 — не в низу страницы. Жалобы на пользователя — только `/profile/reports` | `pages/Support/SupportPage.tsx`, `pages/Profile/ProfilePage.tsx` |
-| **`::-moz-placeholder` — только отдельным правилом, никогда в одном списке с `::placeholder`:** Chromium не знает его и отбрасывает весь список селекторов вместе с валидными, из-за чего тон плейсхолдера молча оставался китовским (2.02:1) во всём WebView на Android. Пин читает CSS: `ui/__tests__/placeholderTone.test.ts`; дефект не виден в jsdom/SSR. Тот же класс ошибок — `page.evaluate` в e2e принимает ровно один аргумент | `ui/ui.module.css`, `ui/README.md` 9c |
-| **Два CTA на главной — раздельные блоки, не две кнопки в одном:** «Едете на машине?» → `Создать поездку` (водитель), «Нужна попутка?» → `Ищу попутку` (пассажир, ведёт в route-backed шторку `/ride-requests`). Заголовок «Едете на машине?» про водителя, пассажиру он враньё. С экрана поиска чип «Ищу попутку» убран — точка входа одна, и она на главной | `pages/HomePage/HomePage.tsx`, пин `__tests__/HomePage.rideRequests.test.tsx` |
-| **Пилюля сегмента даты применяет фильтр сразу, без «Найти»:** `set("dateSegment", …)` менял только `form`, а запрос едет от `submitted` — пилюля отзывалась визуально, а список оставался прежним («фильтр не работает»). Применяется весь набор формы, а не только дата. Остальные контролы (города, цена, теги) остаются на «Найти» — там нужен явный ввод. Следствие: состояние «форма нейтральна, запрос отфильтрован» через пилюлю даты недостижимо, тупик с погасшим сбросом воспроизводится только городами/ценой/тегами | `pages/Search/SearchPage.tsx`, пин `__tests__/SearchPage.dateSegment.test.tsx` |
-| **Перед «Создать заявку» предупреждаем, что поездка уже есть — и это не блокировка:** `RideRequestCreateForm` сначала спрашивает существующий `GET /trips` (те же `fromCityId/toCityId/dateFrom/dateTo`, что и лента поиска — своего эндпоинта ради проверки не заводим) и, если совпадения есть, показывает информирующий диалог. Согласие — переход в карточку поездки и заявка **не создаётся**, отказ — заявка создаётся как раньше. Отдельного бэкенд-эндпоинта тут не будет и дальше: «что уже есть» — тот же read-модельный вопрос, второй контракт означал бы две правды об одном. Даты — `moscowDayKey`, потому что бэк разбирает `dateFrom/dateTo` как московские сутки. | `components/Trip/matchingTripsSearch.ts`, `useMatchingTripCheck.ts`, пин `__tests__/rideRequestCreateForm.preSubmit.test.tsx` |
-| **Дефолты опций поездки равны прежнему поведению, и это необратимое требование.** `Trip.autoComplete = false` → автозавершение по `PENDING_BOOKING_TTL_MS` (+24ч, как было); `Trip.matchingEnabled = true` → безусловный подбор (как было). В `createTripDtoSchema` оба поля `.default(...)`, поэтому 25+ мест `db.trip.create` (сиды, e2e-фикстуры) новых полей не задают. **В ОТВЕТЕ (`tripSchema`) поля обязательны и БЕЗ дефолта** — «неизвестно» ≠ «выключено»: с дефолтом клиент на устаревшем ответе решил бы, что подбор выключен, и показал бы ложный пин | `schema.prisma`, `dto/trip.dto.ts`, `schemas/trip.schema.ts`, пин `backend/tests/integration/trip-create-options.test.ts` |
-| **`.default()` нельзя класть в `baseTripSchema`.** В zod 4 `ZodOptional(ZodDefault(...))` сохраняет rung `defaulted` (`$ZodOptional/optin`), поэтому `.partial()` для `PATCH` подставил бы дефолты даже при отсутствии ключей — `PATCH {price: 900}` молча сбрасывал бы включённые опции, и водитель терял бы свой выбор без единой ошибки. Схема построена так: в базе `z.boolean()` без дефолта, дефолты только в `createTripDtoSchema` через `.extend()` | `packages/contracts/src/dto/trip.dto.ts`, пин `tests/update-trip.dto.test.ts` |
-| **Гейт подбора пассажиров — в ТРЁХ местах, иначе одно из них врёт.** `notifyMatchingRideRequests` (уведомление при создании поездки), `findMatchingRideRequests` (чтение спроса) и `notifyTripsAboutNewRequest` (WS-хинт). Гейт в `matching.ts` рядом с `withRoute`, а не в вызывающем коде, и **на чтении флага в момент обращения**, а не как снимок. Выключенный подбор → `200 {items: []}`, а НЕ 403/404: поездка существует и водитель вправе её читать. Предикат `matchingRideRequestWhere` на обратной стороне НЕ переиспользуется — он отбрасывает автора заявки, а не водителя | `backend/src/rideRequests/matching.ts`, `backend/src/rideRequests/index.ts`, пин `trip-create-options.test.ts` (кейс 5 проверяет все три канала одной поездкой) |
-| **Негативное утверждение требует паузы, иначе оно пустое.** Рассылки уведомлений и WS-хинтов — fire-and-forget (`void … .catch()`), поэтому «сейчас записей нет» выполняется и при СЛОМАННОМ гейте. Прежняя версия кейса «три канала молчат» проходила вхолостую именно так: заявка создавалась прямой вставкой в БД (минуя обработчик, который шлёт хинт) и проверялась без ожидания. Правильный порядок: заявка ДО поездки (путь уведомления) + заявка ПОСЛЕ через API (путь хинта) + пауза + утверждение | `backend/tests/integration/trip-create-options.test.ts`, `ride-request-demand-hint.test.ts` |
-| **Воркер: два прохода и предикат СВОЕГО прохода в claim'е.** Prisma не умеет `departureAt + durationMinutes` в `where`, поэтому opt-in-поездки берутся отдельным узким проходом, а остаток окна добирается в памяти. Claim внутри транзакции использует `autoComplete: claim.autoComplete`: общий cutoff дал бы TOCTOU — поездка, рейс которой ещё идёт, завершилась бы по TTL-отсечке. **Фильтр `autoComplete: false` в кандидатском `where` дефолтного прохода — экономия, а не защита:** защиту даёт claim, и это разные строки с разными причинами. Точность «сразу по окончании рейса» ограничена часовым `CHECK_INTERVAL_MS` | `backend/src/workers/tripWorker.ts`, пин `trip-worker-auto-complete.test.ts` |
-| **Пусто ≠ «выключено»: на экране поездки это сказано словами.** При `matchingEnabled === false` карточка спроса молчит, и без пояснения водитель не отличил бы свой выбор от отсутствия людей. Показ строго `=== false`, а не «не true» — неизвестное значение угадывать нельзя. Пояснение отвечает и на второй вопрос: поездка остаётся видимой обычным поиском, скрытия нет | `pages/TripActive/TripActivePage.tsx`, пин `TripActivePage.test.tsx` |
-| **Фасадный `MenuRow` обязан прокидывать `multiline`, когда подпись несёт значения.** Кит по умолчанию рисует `Cell.subtitle` как `h6` с `white-space: nowrap` + `text-overflow: ellipsis` (проверено в `styles.css`: правило `:not(.tgui-6c49…)` + `>*`), а `multiline` (Cell.d.ts:25, «Allows for multiline content without truncation») это снимает. Лента спроса дважды чинила ширину строки взаимоисключающе: `a4faf98` — `multiline` (перенос), `f2c9da2` — `width:100%` в `MenuRow` и выпил `multiline` («трёхкратная высота»). Второе вернуло обрезку: у подписи «2 человека · 7 мест · Завтра, 08:00» хвост с датой уходил под многоточие. **Оба фикса решают РАЗНЫЕ задачи:** ширину держит `width:100%`, а непотерю данных — `multiline`. Пин: `ui/__tests__/menuRow.test.tsx` (один и тот же ряд с пропом и без даёт разный HTML) | `ui/MenuRow.tsx`, `ui/MenuRow.module.css`, `RideRequestFeedSection.tsx` |
-| **`ui/SwitchRow` — общее правило, а не профильная деталь.** Строка-переключатель живёт в фасаде, потому что нужна минимум двум экранам (настройки профиля и форма создания поездки); пока она была приватной в `ProfilePage`, второе место было бы вынуждено её скопировать, и копия разъехалась бы. `role="switch"` ставится явно (китовский `Switch` — это `input[type=checkbox]`), `aria-checked` руками НЕ задаётся, а строка **не кликабельна целиком**: `Component="button"` на `Cell` запрещён (нативный `Switch` внутри `<button>` — невалидная вложенность и двойное срабатывание) | `ui/SwitchRow.tsx`, реестр UI #30, пин `ui/__tests__/switchRow.test.tsx` (по DOM, не по тексту исходника) |
-| **Обратная сторона пересечения заявка↔поездка — WS-хинт `ride_request:new { tripId }`.** Уведомление при создании поездки шлёт пассажиру, но о новом попутчике водитель узнавал только по `staleTime` 30с (`refetchOnWindowFocus` выключен). Хинт адресовный: спрос живёт по поездке, клиент инвалидирует `RIDE_REQUEST_KEYS.trip(tripId)`, а не `all`. **Предикат НЕ переиспользуется:** `matchingRideRequestWhere` отбрасывает не водителя, а автора заявки — наоборот он исключил бы самого автора. Формула окон симметрична и написана отдельно. **Hint ≠ уведомление:** записи в `notifications` не создаётся, тумблер не касается. Рассылка fire-and-forget (`void … .catch()`), как `notifyMatchingRideRequests`, поэтому сбой сокета не превращает 201 в ошибку | `backend/src/rideRequests/index.ts` (`notifyTripsAboutNewRequest`), `backend/src/rideRequests/matching.ts`, `packages/contracts/src/schemas/ws.schema.ts`, `TelegramRealtimeListener.tsx`, пин `backend/tests/integration/ride-request-demand-hint.test.ts` (12 кейсов) |
-| **Соседние элементы управления различаются содержимым, а не временем.** В карточке спроса рядом стоят N рядов и N кнопок «Пригласить»: имена различаются МЕСТАМИ («2 места»), а не окном — окно у заявок одного человека под одну поездку совпадает, и соседние кнопки получили бы одинаковое имя. Пин `tripDemandCard.invite.test.tsx` | `components/Trip/TripDemandRow.tsx` |
-| **`showConfirm` — СТАНДАРТНЫЙ метод (Bot API 6.2+), отсутствует только ПРОКСИ в SDK.** Комментарий в `tgConfirm` называл его нестандартным — это было неверно (офф-дока `core.telegram.org/bots/webapps`: «shows message in a simple confirmation window with 'OK' and 'Cancel' buttons»). Ответ приходит через `popupClosed`+колбэк, а не возвратом из метода, поэтому проба идёт по наличию функции на `globalThis.Telegram.WebApp`. `window.confirm` — ОСНОВНОЙ механизм и осознанный размен: чужеродный диалог расходится с гайдлайном Telegram «mimic the style of existing components». Закрывается бампом SDK. Финальный `false` обязателен: согласие трактуется как уход из намерения | `helpers/tgConfirm.ts`, `helpers/__tests__/tgConfirm.test.ts` |
-| **Бронь закрывает заявку в той же транзакции и НИКОГДА чужую:** `closeRideRequestsForBooking` вызывается внутри той же Serializable-транзакции, что `booking.create` (закрытие идёт **до** вставки — иначе пассажир получил бы «бронь есть, заявка висит»). Порядок ключей в `where` критичен: спред `matchingRideRequestWhere` возвращает `userId: { not: driverId }`, поэтому спред идёт **первым**, а равенство `userId: passengerId` — после, иначе проверка владельца затирается и любая бронь закрывает заявки посторонних (регресс-тест на это есть). Клиентский `requestId` приоритетен (закрывается только названная), без него сервер закрывает все совпавшие заявки **самого** пассажира — клиенту не доверяем помнить, какую заявку он выполняет. Гонку ловит `updateMany` по `status: active` с проверкой `count`: не сошлось → 409 и откат. | `backend/src/bookings/rideRequests.ts`, пин `backend/tests/integration/booking-closes-ride-request.test.ts` |
-| **День поездки для группировки берём из `departureAt` через `moscowDayKey`, а НЕ из `trip.date`:** бэк отдаёт `trip.date` отформатированной подписью («сб, 15 марта» — `formatDateRu`, ru-RU + Europe/Moscow), а не ISO — `dayLabel()` на такой строке не срабатывает и подписи «Сегодня»/«Завтра» не появляются. Порядок задаёт бэк (`orderBy: [{departureAt:"asc"},{id:"asc"}]`), поэтому группы копим в **соседнюю**, а не через `Map` по ключу: `Map` схлопнул бы день, разорванный другим, и переставил карточки. Пилюля — статичный центрированный `h2` без счётчика (группа, разрезанная страницами, посчиталась бы частично) | `helpers/tripGroups.ts`, `pages/Search/TripDateDivider.tsx` |
+| Account deletion is distinguished from a ban **by the code** `ACCOUNT_DELETED`, not by text. The code, the text fallback and the predicate live in the contracts (`schemas/api-error.schema.ts`), the backend imports from the same place — there is nothing to reconcile, divergence is impossible by construction. Application code takes the re-export from `@/api/client` | `useAuthStore.ts`, `ProfilePage.tsx`, `bookingErrors.ts`, `VehicleModal.tsx`, `client.ts` (re-export) |
+| In the `performRefresh` branch deletion is checked **outside** "`code === FORBIDDEN`": with the new code the outer check would swallow `emitDeleted`, and a deleted user would end up on the login screen | `client.ts` (`performRefresh`) |
+| 4403 distinguishes deletion from a ban by **three** reason strings: `Account is deleted` (ws-auth), `Account deleted` (DELETE /me, **without "is"**), `Account is banned`; an unknown one → `banned` + one HTTP bootstrap with a return to the default. The close frame has no `code` field, so the reason is a string, but it too lives in `WS_TERMINAL_REASON` in the contracts and is imported by the backend (ws/index.ts, users/index.ts, admin/index.ts) | `WebSocketProvider.tsx` (`classifyTerminalCloseReason`), contracts (`WS_TERMINAL_REASON`) |
+| The sentinel subscription is attached at the moment the node **appears** (an effect on every render + a check against `observedRef`), not only on mount | `useInfiniteSentinel.ts` |
+| The refresh result is not applied if the session has already been dropped: guard `if (!get().session) return` | `useAuthStore.ts` (`refreshSession`) |
+| `markRead` is optimistic: `onMutate` + a snapshot of both caches; `markReadInPages` is pure; the counter decrement is exactly one per call | `useNotificationsQuery.ts` |
+| The time of trips and notifications — only via `moscowDayKey`/`moscowTimeLabel`/`moscowDateLabel` from `utils/date.ts`; `toLocale*` without `timeZone` is forbidden | `utils/date.ts` |
+| The "Mark all as read" counter — only `useUnreadCountQuery`; the segment `pages[0].unreadCount` as a global one is forbidden | `NotificationsPage.tsx` |
+| `closingBehavior` is shared client state: a counter of dirty forms, not a flag | `useClosingConfirmation.ts` |
+| `apiErrorSchema` in the contracts is **a shape specification without a consumer**: the client parses the body by hand in `toErrorRecord` intentionally (non-JSON/HTML from a proxy must not break the parsing and lose the HTTP status). Do not replace with `apiErrorSchema.parse` without measuring on malformed bodies. Do not propose a deletion predicate there either: the webapp is only the admin panel (`/api/v1/admin/*`, session by `ADMIN_TOKEN`), and the deleted-user state does not exist in it | `packages/contracts/src/schemas/api-error.schema.ts`, `api/client.ts` |
+| `ACCOUNT_DELETED_MESSAGE`/`ACCOUNT_DELETED_CODE`/`WS_TERMINAL_REASON` are defined once in the contracts; the mock of `@/api/client` must repeat them — without that the "deleted" branches and the 4403 classifier become dead | `packages/contracts/src/schemas/api-error.schema.ts` |
+| `/users/me` is described **only** by `api/profile.ts`; the resource keys are `USER_KEYS` in `queries/profile.ts` | `api/profile.ts`, `queries/profile.ts` |
+| Tests: TZ-dependent behavior is checked by a file with a forced `process.env.TZ`; SSR separates adjacent text nodes with the marker `<!-- -->` | `notificationsTime.tz.test.ts` |
+| `role`/`aria-live` declared on a **portal** node end up on an empty wrapper, not on the text: `Snackbar` goes into the `AppRoot` portal, and the role went to the wrapper. The role is put on the element that carries the text itself, and is checked by a DOM test — a probe by render does not see it | `components/Toast/ToastProvider.tsx`, `Toast/__tests__/ToastProvider.test.tsx` |
+| `prefers-reduced-motion` for the vaul sheet — a doubled selector `[vaul-drawer][vaul-drawer]`: it raises specificity without the forbidden `!important` | `index.css` |
+| **A network error of the directory is not a validation error:** `cities.isError` must give a terminal `QueryState` with "Retry", otherwise the form hangs in loading, and submit reports "Choose cities from the directory" | `CreateTripPage.tsx` (`cities.isError`) |
+| A field error is bound by `FieldError` with `id` + `aria-describedby`; `Field`/`CityPickerField` accept `error`. An unbound error is readable, but does not reach the screen reader on focus | `CreateTripPage.tsx` (10 fields), `Field`, `CityPickerField` |
+| An error from the profile-settings mutation is not swallowed — it is shown through `Notice` (notifications, review visibility, etc.) | `ProfilePage.tsx` |
+| The `aria-label` of a menu row includes the visible caption, otherwise the name loses half its meaning ("Trip history" without "Completed and cancelled") | `ProfilePage.tsx` (`MenuRow`) |
+| **An unknown number ≠ zero.** The wording "all read" is allowed only when the number is known and equals zero; with `data === undefined` the name stays neutral ("Mark all as read"), and the action stays functional — there is nothing to disable. A false statement about the state in `aria-label` is worse than the absence of a number | `NotificationsPage.tsx` |
+| **The read mutation must invalidate `lists()` in `onSuccess`, not only in `onError`.** A patch from a single record's response does not update the whole feed. The counter is not refetched — it was just computed exactly | `useNotificationsQuery.ts` (`useMarkNotificationReadMutation`, `useMarkAllNotificationsReadMutation`) |
+| **An on/off setting is `role="switch"`, not a checkbox.** The kit's `Switch` renders `input[type=checkbox]` and does not add a role from the wrapper, so `role="switch"` is set explicitly. We do not set `aria-checked` by hand: the browser derives it from `checked`, and duplicating it risks diverging from the real state | `ui/SwitchRow.tsx` (extracted from `ProfilePage` on 2026-10-08: the rule is needed by more than one screen — profile settings and the trip creation form) |
+| **Profile tabs: the panel must be in the DOM.** `aria-controls` is attached only to the selected tab: panels are rendered conditionally, and for an unselected tab `getElementById` returns null. We did not render both with the panel as `hidden` — that would load the reviews while settings are open | `ProfilePage.tsx` (`SUBTAB_IDS`, `SUBTAB_PANEL_IDS`, `onSubtabKeyDown`) |
+| **City selection is one component and always by id.** `CitySelectField` (a native `<select>`) is the only way to choose a city: home, search, trip creation, boarding request. The directory **id** is passed outward, the name is taken from the same directory. Reason: substring search by name is ambiguous, and the kit's `Multiselect` gave items without roles. Free-form manual city entry is impossible — this is deliberate | `components/CitySelect/CitySelectField.tsx`, `helpers/searchFilters.ts` |
+| **The e2e run restores the stand with the seed** (`restoreDevStand` in the final block of `telegram-parity`). The step `delete: profile deletion` runs under `u-dev`, and `DELETE /me` by contract wipes the user's notifications — after the run the dev user had 0 notifications instead of 9, and the next run started with incomplete data. `reviveDevUser()` fixes only the user row, the seed restores everything. The seed fully rebuilds the DB, so it is called **after** the run's cleanup | `e2e/telegram-fixtures.mjs` (`restoreDevStand`) |
+| **The screen name is set by the page, not by a section.** `NavHeader` is marked `aria-hidden`, so every route must have its own `h1` (usually `VisuallyHidden Component="h1"`). `headingLevel="h1"` on `Section` is an opt-in for "a screen where the section owns the name", and on the home page it went to the "Popular destinations" section: the screen reader announced the section name as the screen name | `pages/HomePage/HomePage.tsx`, `components/Section/PopularRoutesSection.tsx` |
+| The contrast of tone/muted text is computed against **its own worst background**, not against the section background: that is the tinted plate `--app-*-bg` and the gray `#eaeaeb`/`#24303c`. For dark text the worst background is not white but the darkest of the light ones; for light text — not `#17212b` but the lightest of the dark ones. A check against the section background gives a false "passes" | `index.css`, registry #20 |
+| The text tone is set by `color-mix` **with black in the light theme and with white in the dark one** (the coefficient is the minimum whole percentage for 4.5+); the `--app-*-bg` background stays the kit's. Dark tones are overridden by the selector **`.dark .app-theme`**, not `.dark`: the theme class is on `<html>`, and `.app-theme` is on the nested root, and its own declaration beats the inherited one | `index.css` |
+| **The visible field label is its own, with a shared tone.** The label is drawn by `Field` itself (a visible `label`), not by the kit `header`: the kit `header` has no accessible name, exists only on `base` and sits on top of the border. The tone is the shared `--app-field-label`, the rule lives in `ui/` (class `.fieldLabel`), and **not** in the consumer's module. `Field` **always** adds its own class to the wrapper — otherwise the rule is dead | `ui/ui.module.css`, `ui/Field.tsx`, `index.css`, pin `ui/__tests__/fieldLabelTone.test.tsx` |
+| **The control backdrop is gray, the label and placeholder are in tone.** All editable fields (`Field`) sit on `--tgui--secondary_bg_color`, otherwise they are not visible on a white section. The visible label (`h6`) is on a transparent background, without a pill. Placeholders are in `--app-muted` (the kit's hint is below AA on gray). The error indication is the kit's `box-shadow` ring, gray does not extinguish it | `ui/ui.module.css`, `ui/Field.tsx`, pin `ui/__tests__/fieldLabelTone.test.tsx`, the number — `e2e/ui-contrast.mjs` |
+| **The kit `Select`'s `className` lands on the inner `<label>`, not on the `<select>`.** `Select` passes to `FormInput` only `header`/`before`/`status`/`className`, the rest goes to the native `select`. The controls background can be colored only because the kit's `select` = `background: inherit`. The handling of props (`id`, `value`, `onChange`, `disabled`, `aria-*`) in turn lands correctly on the `select` itself | `node_modules/@telegram-apps/telegram-ui/dist/components/Form/{Select,FormInput}/*.js` |
+| **The scroll position is measured continuously, not at the moment of transition.** The transition effect in `useScrollRestore` runs already after the DOM swap, and route modals hide the background with `hidden` → the document collapses and `window.scrollY` resets to zero BEFORE it is read. 0 is saved, Back returns the list to the top | `hooks/useScrollRestore.ts`, pin `__tests__/useScrollRestore.dom.test.tsx` |
+| **`hasAuthedRef` is reset only on a real loss of the session** (`session === null`). Otherwise going to the background (`status="background"`, the socket drops, the session is alive) is indistinguishable from a logout, and returning from the background — the most frequent transition in the TMA lifecycle — does not raise `resyncSeq`, i.e. what was missed during the gap is not restored (`refetchOnWindowFocus` is off) | `WebSocketProvider.tsx`, pin in `__tests__/WebSocketProvider.test.tsx` |
+| **A ban is not a logout: `initData` is needed for the appeal.** `purgeLaunchParamsCache()` is called in `clearSession`/`markAccountDeleted`, but **not** on a ban. There is one entry path (`markBanned`), otherwise the WS 4403 branch or `onBanned` would forget to fill the string and the appeal form would fail | `useAuthStore.ts`, `AuthGate.tsx`, `WebSocketProvider.tsx` |
+| **Error and route dictionaries are looked up only by OWN keys.** `error.code` comes from the backend response body; a direct object index returns an inherited `Object.prototype` member (`toString`, `constructor`), and it is `!== undefined`. The index signature declares the value as `string`, so **types do not catch this** — you need `Object.hasOwn` + a type check | `helpers/bookingErrors.ts`, by contrast `router/deepLinks.ts` |
+| **"Tomorrow"/"Weekend" are calendar days, not "now + 24 hours".** `local midnight + 86 400 000 ms` in a zone with a DST shift gives 23:00 of the same day. Moscow is fixed by offset, so the defect is not visible in Moscow tests — the TZ file forces `Europe/Berlin` | `helpers/searchFilters.ts` |
+| **TZ-dependent behavior is checked by a file with a forced `process.env.TZ`.** DST defects and "device zone instead of Moscow" **do not reproduce** on a machine in UTC or in Europe/Moscow — such tests pass and check nothing | `searchFilters.tz.test.ts` (`Europe/Berlin`), `moscowNumericDate.tz.test.ts` (`America/Los_Angeles`) |
+| **Read infinite-query data only through a full optional chain** (`pages[0]?.pagination?.total`). While loading, `data` may be incomplete, and a computation BEFORE the early return will crash on `pagination` | `TripCountersSection.tsx` |
+| **`useTripActions`: the "now" time advances once, at the departure boundary.** A snapshot of `Date.now()` on mount froze `canCompleteTrip` (a purely client-side gate). An interval does not fit — an open page would re-render in vain; the timer is limited to int32, otherwise "in a month" overflows and fires immediately | `pages/TripDetails/useTripActions.ts`, pin `__tests__/useTripActions.tick.test.tsx` |
+| **Load more pages only when the server said the data is insufficient** (`total > loaded`) **and** stopping on `isFetchNextPageError`. Without a guard on the error — an infinite request loop, because `hasNextPage` stays `true` | `TripCountersSection.tsx` |
+| **The history of ride requests and their creation are different entities:** the list is on the page `/profile/ride-requests` (a profile menu item next to "Trip history"), creation is in the popup window `RideRequestCreateModal` (`Sheet`, local state + `useModalBack`, not a route). The old route-backed sheet `/ride-requests`, where the list shared the body with the form, was removed: it mixed managing an entity with a quick action. `useClosingConfirmation` lives in the list (confirmation of leaving during unfinished inline editing). The `deepLink` of requests in the backend allowlist is `/profile/ride-requests` (`telegramNotifications.ts`) | `components/Trip/RideRequestsList.tsx`, `RideRequestCreateForm.tsx`, `pages/RideRequestHistory/` |
+| **The home page shows demand, not static destinations:** the section "Who is looking for a ride" = `GET /ride-requests/feed`, which returns **a per-route summarizer**, not a list of requests: `{ fromCity, toCity, people, seats, nextAt }`. It replaced "Popular destinations" (a city list hardcoded in the code). `people` is **distinct** people (`Set` by userId: up to three active requests, two on a route ≠ two people), `seats` is the sum of seats; the numbers differ, so the row shows both ("1 person looking · 3 seats"). Sorting is by demand (`seats desc`), then by the nearest window. A request is created by the **passenger**, hence the title "who is looking for a ride", and NOT "who is being looked for as a fellow traveler" (that one inverted the roles). The backend does not return the author — the feed is anonymous; own requests are excluded. Aggregation in JS over a pool of 500 (Prisma `groupBy` cannot do `count(distinct)`) — the boundary is documented, not hidden. The row is the **shared `ui/MenuRow`** (icon, title, caption, chevron): the showcase must read like the profile menu items, we do not introduce a second kind of row. The key point in `MenuRow` is `width: 100%`: without it the `Cell` button lives at the size of its content, and a long caption stretched the row beyond the section card (553px against a section of 356px on a 390 screen), and the caption wrapped to two lines and the chevron hung in the middle. Pin — `ui/__tests__/menuRow.test.tsx` (markup + `width: 100%` from the CSS). The caption: "2 people · 7 seats · Tomorrow, 08:00", without the words "looking"/"nearest". A tap leads to the search by route. Empty/loading/error → the section **hides** (like `NextTripBanner`) | `components/Section/RideRequestFeedSection.tsx`, `backend/src/rideRequests/index.ts` |
+| **The driver invites the passenger, and does NOT book for them:** "Invite" in the demand card (`TripDemandCard` → `TripDemandRow`) hits `POST /ride-requests/:id/invite` and creates **only** a `driver_invite` notification with the deep link `/trips/<uuid>` (backend allowlist) — the passenger takes the seat themselves via `POST /bookings`. So the driver has no and must not have a "successful booking", and success distinguishes **three** outcomes: `duplicate` (a repeat, no second notification will be created) and `notificationId: null` (the record was created, the notification was not delivered) — both arrive as 200/201, and the client is obliged to tell them apart. The invite button is a **neighbor** of the `ui/MenuRow` row, not a slot inside: `MenuRow` renders a native `<button>`, and a button in a button is invalid markup and broken focus (the same as registry #24 for the card footer). When `seatsAvailable === 0` the action is **hidden**: the page "Trips" already holds the number of seats in hand, we do not introduce a separate pre-check request, and the race "the last seat was taken" is closed by the 409 from the backend. The error goes through the shared `bookingErrorMessage`, the raw backend code does not reach the UI | `components/Trip/TripDemandRow.tsx`, `TripDemandCard.tsx`, `queries/useRideRequestsQuery.ts`, `api/rideRequests.api.ts`, pin `__tests__/tripDemandCard.invite.test.tsx` |
+| **The form is in a popup window, the list is on a page** (a single rule for support requests and complaints): `/profile/support` (FAQ → "My requests" → `[Create request]`, `FeedbackModal`) and `/profile/reports` (list → `[File a complaint]`, `ComplaintModal`). A fullscreen form took up the whole page. A host-managed window: `Sheet` + `OfflineBanner` (the portal overlays the global banner), Back via `useModalBack`, the list is passed into the form as a prop (the "already sent" hint). Success is a **toast**, not an inline `Notice`: the window closes, and the Notice would leave with it | `pages/Support/FeedbackModal.tsx`, `pages/Reports/ComplaintModal.tsx` |
+| **Support is one screen `/profile/support`:** the menu item leads to the page, and the request form is **in a popup window** (`FeedbackModal`, `Sheet` + local state + `useModalBack`), opened by the "Create request" button under "My requests". The page: FAQ → "My requests" → button. Therefore the e2e that measures the form (`telegram-parity`, `ui-contrast`) first opens the window — `ui-contrast` via `prepare: { click, waitFor }`, without it the step would fail with "found 0 carriers". The `FeedbackModal` sheet with a duplicate of the form was removed, and its "My requests" button was a shim to this very page. The ban appeal form lives only on the terminal screen (`AccountStatePage`/AuthGate) and in the 403 branch — not at the bottom of the page. Complaints about a user — only `/profile/reports` | `pages/Support/SupportPage.tsx`, `pages/Profile/ProfilePage.tsx` |
+| **`::-moz-placeholder` — only as a separate rule, never in one list with `::placeholder`:** Chromium does not know it and discards the entire selector list together with the valid ones, because of which the placeholder tone silently stayed the kit's (2.02:1) across the whole WebView on Android. The pin reads the CSS: `ui/__tests__/placeholderTone.test.ts`; the defect is not visible in jsdom/SSR. The same class of mistakes — `page.evaluate` in e2e takes exactly one argument | `ui/ui.module.css`, `ui/README.md` 9c |
+| **Two CTAs on the home page are separate blocks, not two buttons in one:** "Driving a car?" → `Create trip` (driver), "Need a ride?" → `Looking for a ride` (passenger, leads to the route-backed sheet `/ride-requests`). The heading "Driving a car?" is about the driver, for the passenger it is a lie. The "Looking for a ride" chip was removed from the search screen — there is one entry point, and it is on the home page | `pages/HomePage/HomePage.tsx`, pin `__tests__/HomePage.rideRequests.test.tsx` |
+| **The date segment pill applies the filter immediately, without "Find":** `set("dateSegment", …)` changed only `form`, while the request goes from `submitted` — the pill responded visually, but the list stayed the same ("the filter doesn't work"). The whole form set is applied, not only the date. The other controls (cities, price, tags) stay on "Find" — explicit input is needed there. Consequence: the state "form neutral, request filtered" via the date pill is unreachable, the dead end with an extinguished reset reproduces only with cities/price/tags | `pages/Search/SearchPage.tsx`, pin `__tests__/SearchPage.dateSegment.test.tsx` |
+| **Before "Create request" we warn that a trip already exists — and this is not a block:** `RideRequestCreateForm` first queries the existing `GET /trips` (the same `fromCityId/toCityId/dateFrom/dateTo` as the search feed — we do not introduce an endpoint of our own for the check) and, if there are matches, shows an informing dialog. Consent — a transition to the trip card and the request is **not created**, refusal — the request is created as before. There will be no separate backend endpoint here, now or later: "what already exists" is the same read-model question, a second contract would mean two truths about one thing. Dates — `moscowDayKey`, because the backend parses `dateFrom/dateTo` as Moscow days. | `components/Trip/matchingTripsSearch.ts`, `useMatchingTripCheck.ts`, pin `__tests__/rideRequestCreateForm.preSubmit.test.tsx` |
+| **The defaults of trip options equal the previous behavior, and this is an irreversible requirement.** `Trip.autoComplete = false` → auto-completion by `PENDING_BOOKING_TTL_MS` (+24h, as before); `Trip.matchingEnabled = true` → unconditional matching (as before). In `createTripDtoSchema` both fields have `.default(...)`, so 25+ places of `db.trip.create` (seeds, e2e fixtures) do not set the new fields. **In the RESPONSE (`tripSchema`) the fields are required and WITHOUT a default** — "unknown" ≠ "off": with a default, a client on a stale response would decide that matching is off and show a false pin | `schema.prisma`, `dto/trip.dto.ts`, `schemas/trip.schema.ts`, pin `backend/tests/integration/trip-create-options.test.ts` |
+| **`.default()` must not be put into `baseTripSchema`.** In zod 4 `ZodOptional(ZodDefault(...))` keeps the rung `defaulted` (`$ZodOptional/optin`), so `.partial()` for `PATCH` would substitute defaults even when the keys are absent — `PATCH {price: 900}` would silently reset the enabled options, and the driver would lose their choice without a single error. The schema is built so: the base has `z.boolean()` without a default, defaults only in `createTripDtoSchema` via `.extend()` | `packages/contracts/src/dto/trip.dto.ts`, pin `tests/update-trip.dto.test.ts` |
+| **The passenger-matching gate is in THREE places, otherwise one of them lies.** `notifyMatchingRideRequests` (notification on trip creation), `findMatchingRideRequests` (reading demand) and `notifyTripsAboutNewRequest` (WS hint). The gate is in `matching.ts` next to `withRoute`, not in the calling code, and **on reading the flag at the moment of the call**, not as a snapshot. Matching off → `200 {items: []}`, and NOT 403/404: the trip exists and the driver has the right to read it. The predicate `matchingRideRequestWhere` is NOT reused on the reverse side — it drops the request's author, not the driver | `backend/src/rideRequests/matching.ts`, `backend/src/rideRequests/index.ts`, pin `trip-create-options.test.ts` (case 5 checks all three channels with one trip) |
+| **A negative assertion requires a pause, otherwise it is empty.** The notification and WS hint broadcasts are fire-and-forget (`void … .catch()`), so "there are no records right now" holds even with a BROKEN gate. The previous version of the case "three channels are silent" passed vacuously in exactly this way: the request was created by a direct DB insert (bypassing the handler that sends the hint) and checked without waiting. The correct order: a request BEFORE the trip (the notification path) + a request AFTER via the API (the hint path) + a pause + the assertion | `backend/tests/integration/trip-create-options.test.ts`, `ride-request-demand-hint.test.ts` |
+| **Worker: two passes and the predicate of ITS OWN pass in the claim.** Prisma cannot do `departureAt + durationMinutes` in `where`, so opt-in trips are taken by a separate narrow pass, and the remainder of the window is topped up in memory. The claim inside the transaction uses `autoComplete: claim.autoComplete`: a shared cutoff would give a TOCTOU — a trip whose journey is still going would be completed by the TTL cutoff. **The filter `autoComplete: false` in the candidate `where` of the default pass is an optimization, not a protection:** the protection is given by the claim, and these are different lines with different reasons. The accuracy "right at the end of the journey" is limited by the hourly `CHECK_INTERVAL_MS` | `backend/src/workers/tripWorker.ts`, pin `trip-worker-auto-complete.test.ts` |
+| **Empty ≠ "off": on the trip screen this is said in words.** With `matchingEnabled === false` the demand card is silent, and without an explanation the driver could not tell their choice from the absence of people. It is shown strictly on `=== false`, not "not true" — an unknown value must not be guessed. The explanation also answers a second question: the trip stays visible through ordinary search, there is no hiding | `pages/TripActive/TripActivePage.tsx`, pin `TripActivePage.test.tsx` |
+| **The facade `MenuRow` must pass `multiline` through when the caption carries values.** By default the kit draws `Cell.subtitle` as an `h6` with `white-space: nowrap` + `text-overflow: ellipsis` (verified in `styles.css`: the rule `:not(.tgui-6c49…)` + `>*`), and `multiline` (Cell.d.ts:25, "Allows for multiline content without truncation") removes this. The demand feed fixed the row width twice, mutually exclusively: `a4faf98` — `multiline` (wrapping), `f2c9da2` — `width:100%` in `MenuRow` and dropped `multiline` ("triple height"). The second brought the truncation back: in the caption "2 people · 7 seats · Tomorrow, 08:00" the tail with the date went under the ellipsis. **Both fixes solve DIFFERENT tasks:** the width is held by `width:100%`, and the non-loss of data — by `multiline`. Pin: `ui/__tests__/menuRow.test.tsx` (the same row with the prop and without gives different HTML) | `ui/MenuRow.tsx`, `ui/MenuRow.module.css`, `RideRequestFeedSection.tsx` |
+| **`ui/SwitchRow` is a shared rule, not a profile detail.** The switch row lives in the facade because at least two screens need it (profile settings and the trip creation form); while it was private to `ProfilePage`, the second place would have been forced to copy it, and the copy would have drifted. `role="switch"` is set explicitly (the kit's `Switch` is an `input[type=checkbox]`), `aria-checked` is NOT set by hand, and the row is **not clickable as a whole**: `Component="button"` on `Cell` is forbidden (a native `Switch` inside `<button>` is invalid nesting and a double trigger) | `ui/SwitchRow.tsx`, UI registry #30, pin `ui/__tests__/switchRow.test.tsx` (by DOM, not by the source text) |
+| **The reverse side of the request↔trip intersection is the WS hint `ride_request:new { tripId }`.** The notification on trip creation goes to the passenger, but the driver learned about a new fellow traveler only through the `staleTime` of 30s (`refetchOnWindowFocus` is off). The hint is addressed: demand lives per trip, the client invalidates `RIDE_REQUEST_KEYS.trip(tripId)`, not `all`. **The predicate is NOT reused:** `matchingRideRequestWhere` drops not the driver but the request's author — the other way round it would have excluded the author themselves. The window formula is symmetric and written separately. **Hint ≠ notification:** no record is created in `notifications`, the toggle does not apply. The broadcast is fire-and-forget (`void … .catch()`), like `notifyMatchingRideRequests`, so a socket failure does not turn a 201 into an error | `backend/src/rideRequests/index.ts` (`notifyTripsAboutNewRequest`), `backend/src/rideRequests/matching.ts`, `packages/contracts/src/schemas/ws.schema.ts`, `TelegramRealtimeListener.tsx`, pin `backend/tests/integration/ride-request-demand-hint.test.ts` (12 cases) |
+| **Adjacent controls differ by content, not by time.** In the demand card N rows and N "Invite" buttons stand side by side: the names differ by SEATS ("2 seats"), not by the window — the window for one person's requests under one trip is the same, and adjacent buttons would get the same name. Pin `tripDemandCard.invite.test.tsx` | `components/Trip/TripDemandRow.tsx` |
+| **`showConfirm` is a STANDARD method (Bot API 6.2+), only the PROXY in the SDK is missing.** The comment in `tgConfirm` called it non-standard — that was wrong (the official doc `core.telegram.org/bots/webapps`: "shows message in a simple confirmation window with 'OK' and 'Cancel' buttons"). The answer comes through `popupClosed`+callback, not as the method's return value, so the probe goes by the presence of the function on `globalThis.Telegram.WebApp`. `window.confirm` is the PRIMARY mechanism and a deliberate trade-off: a foreign dialog diverges from Telegram's guideline "mimic the style of existing components". It is closed by an SDK bump. The final `false` is mandatory: consent is interpreted as a departure from the intent | `helpers/tgConfirm.ts`, `helpers/__tests__/tgConfirm.test.ts` |
+| **A booking closes a request in the same transaction and NEVER someone else's:** `closeRideRequestsForBooking` is called inside the same Serializable transaction as `booking.create` (the closing goes **before** the insert — otherwise the passenger would get "booking exists, request still hanging"). The order of keys in `where` is critical: the spread of `matchingRideRequestWhere` returns `userId: { not: driverId }`, so the spread goes **first**, and the equality `userId: passengerId` — after, otherwise the owner check is overwritten and any booking closes strangers' requests (there is a regression test for this). The client's `requestId` takes priority (only the named one is closed), without it the server closes all matching requests of the passenger **themselves** — we do not trust the client to remember which request it is fulfilling. The race is caught by `updateMany` on `status: active` with a `count` check: mismatch → 409 and rollback. | `backend/src/bookings/rideRequests.ts`, pin `backend/tests/integration/booking-closes-ride-request.test.ts` |
+| **The trip day for grouping is taken from `departureAt` via `moscowDayKey`, NOT from `trip.date`:** the backend returns `trip.date` as a formatted caption ("Sat, 15 March" — `formatDateRu`, ru-RU + Europe/Moscow), not ISO — `dayLabel()` does not work on such a string and the "Today"/"Tomorrow" captions do not appear. The order is set by the backend (`orderBy: [{departureAt:"asc"},{id:"asc"}]`), so groups are accumulated into the **adjacent** one, not through a `Map` by key: a `Map` would collapse a day interrupted by another and reorder the cards. The pill is a static centered `h2` without a counter (a group cut by pages would be counted partially) | `helpers/tripGroups.ts`, `pages/Search/TripDateDivider.tsx` |
 
-## 19. Куда смотреть дальше
+## 19. Where to look next
 
-- `README.md` (корень) — продукт, деплой, env.
-- Бывшие `docs/migration/*` и отчёты деплоя удалены из дерева — смотри git.
-- `docs/deployment/telegram-staging-checklist.md` — живой прод-чеклист.
-- `docs/adr/telegram-notification-delivery.md` — доставка уведомлений (inbox + WS + Bot API).
-- `e2e/telegram-parity.mjs`, `e2e/telegram-realtime.mjs` — сценарии.
-- `packages/contracts/src/index.ts` — Zod-схемы/DTO, общие с backend.
-- `webapp/` — админка (shadcn-style), отдельный слой; не путать с mini-app.
-- `.tmp/sessions/2026-10-01-notifications-fix/context.md` — контекст плана уведомлений.
-- `.tmp/sessions/2026-10-01-tg-bugfix-audit/context.md` — контекст аудита (B1–B12).
+- `README.md` (root) — product, deployment, env.
+- The former `docs/migration/*` and deployment reports were removed from the tree — see git.
+- `docs/deployment/telegram-staging-checklist.md` — the live production checklist.
+- `docs/adr/telegram-notification-delivery.md` — notification delivery (inbox + WS + Bot API).
+- `e2e/telegram-parity.mjs`, `e2e/telegram-realtime.mjs` — scenarios.
+- `packages/contracts/src/index.ts` — Zod schemas/DTOs shared with the backend.
+- `webapp/` — the admin panel (shadcn-style), a separate layer; do not confuse with the mini-app.
+- `.tmp/sessions/2026-10-01-notifications-fix/context.md` — context of the notifications plan.
+- `.tmp/sessions/2026-10-01-tg-bugfix-audit/context.md` — context of the audit (B1–B12).
 - `.tmp/sessions/2026-10-05-tg-bugfix-audit-2/context.md` + `.tmp/tasks/tg-bugfix-audit-2/
-  — контекст и подзадачи аудита (все закрыты). Перед новой правкой
-  **прочитай реестр `src/ui/README.md`** — там записаны действующие
-  отклонения от кита.
+  — context and subtasks of the audit (all closed). Before a new change
+  **read the registry `src/ui/README.md`** — the current deviations
+  from the kit are recorded there.
 
-## 2026-10-08 — Аудит логики tg-app: 10 исправлений
+## 2026-10-08 — Audit of tg-app logic: 10 fixes
 
-Найдено ревью (typecheck/eslint/тесты были зелёными — дефекты не покрыты тестами):
+Found by review (typecheck/eslint/tests were green — the defects were not covered by tests):
 
-1. EditTripForm — `durationMinutes` округлялся до часов при сохранении (110→120, 125→120). Исходные минуты теперь сохраняются, конверсия — только если поле правили.
-2. RideRequestCreateForm — не было гейта на время предпроверки `checkTrip`: двойной тап создавал две заявки. Добавлен `submittingRef` (сброс в `onSettled`/при отказе).
-3. WebSocketProvider — 4403 с неизвестной причиной возвращал бан-экран даже после успешного `bootstrap` (authenticated). Авторитетны `authenticated/banned/deleted`; дефолт «banned» — только на неопределённом исходе.
-4. searchFilters.dateSegmentToRange — сегменты дат считались по зоне устройства, а бэк режет `dateFrom/dateTo` по Москве (`moscowDateBoundary`). Переведено на `moscowDayKey`.
-5. date.ts — добавлен `moscowDayLabel`; tripGroups/RideRequestFeedSection/TripDemandCard не считают «Сегодня/Завтра» по локальной зоне.
-6. HomePage.closeVehicle — замыкание видело `vehicle=null` и гасило `pendingCreate` (сценарий «добавил авто → на форму создания»). Читает стор в момент закрытия.
-7. WebSocketProvider — единый слот `lastMessage` терял кадры при серии доставок. Прямая доставка через `subscribeEvent`.
-8. useAuthStore.applyDeleted — не чистил launch params cache. Добавлен `purgeLaunchParamsCache()`.
-9. telegram-adapter.getRawInitData — пустая строка не нормализовалась в `undefined`. Теперь `|| undefined`.
-10. WebSocketProvider — unmount при активной сессии не закрывал сокет. Добавлен отдельный unmount-эффект (ротация токена сокет не рвёт).
+1. EditTripForm — `durationMinutes` was rounded to hours on save (110→120, 125→120). The original minutes are now preserved, conversion only if the field was edited.
+2. RideRequestCreateForm — there was no gate on the time of the pre-check `checkTrip`: a double tap created two requests. Added `submittingRef` (reset in `onSettled`/on refusal).
+3. WebSocketProvider — 4403 with an unknown reason returned the ban screen even after a successful `bootstrap` (authenticated). `authenticated/banned/deleted` are authoritative; the default "banned" — only for an undetermined outcome.
+4. searchFilters.dateSegmentToRange — date segments were computed by the device zone, while the backend cuts `dateFrom/dateTo` by Moscow (`moscowDateBoundary`). Switched to `moscowDayKey`.
+5. date.ts — added `moscowDayLabel`; tripGroups/RideRequestFeedSection/TripDemandCard no longer compute "Today/Tomorrow" by the local zone.
+6. HomePage.closeVehicle — the closure saw `vehicle=null` and extinguished `pendingCreate` (the scenario "added a car → to the creation form"). It reads the store at the moment of closing.
+7. WebSocketProvider — the single `lastMessage` slot lost frames on a series of deliveries. Direct delivery via `subscribeEvent`.
+8. useAuthStore.applyDeleted — did not clear the launch params cache. Added `purgeLaunchParamsCache()`.
+9. telegram-adapter.getRawInitData — an empty string was not normalized to `undefined`. Now `|| undefined`.
+10. WebSocketProvider — unmount with an active session did not close the socket. Added a separate unmount effect (token rotation does not tear the socket down).
 
-Регрессионные тесты: `date.test`, `searchFilters.moscow.tz.test` (новый), `telegram-adapter.test`, `rideRequestCreateForm.submit.test`, `WebSocketProvider.test`.
-Итог: tsc/eslint чисто; 133 файла / 1059 тестов зелёные.
+Regression tests: `date.test`, `searchFilters.moscow.tz.test` (new), `telegram-adapter.test`, `rideRequestCreateForm.submit.test`, `WebSocketProvider.test`.
+Result: tsc/eslint clean; 133 files / 1059 tests green.
