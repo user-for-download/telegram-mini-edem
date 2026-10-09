@@ -8,7 +8,7 @@
 > Source of truth for kit props is the installed
 > `node_modules/@telegram-apps/telegram-ui/dist/**/*.d.ts` (not the docs, not training data).
 
-**Status:** tests **1044** (131 files), backend **721** (79), contracts **314** (25), e2e-parity **17/17**, contrast under
+**Status:** tests **1059** (133 files), backend **721** (79), contracts **314** (25), e2e-parity **17/17**, contrast under
 the numeric guard `e2e/ui-contrast.mjs`. The registry of deviations from the kit is
 `src/ui/README.md`: **read it before changing UI/forms**.
 
@@ -304,6 +304,11 @@ details(), detail(id) }`. Likewise `BOOKING_KEYS`, `NOTIFICATION_KEYS`.
 The cycle is avoided by the raw `["bookings"]` in `useInvalidateTripsAndBookings`
 (`useBookingsQuery` imports `TRIP_KEYS`).
 
+`RIDE_REQUEST_KEYS = { all, trip(tripId) }` (`queries/useRideRequestsQuery.ts`).
+The own-requests list is an infinite query under `[...all, "mine", "infinite"]`
+(the mutation hook invalidates the whole `all` prefix). The demand feed lives
+under `useRideRequestFeedQuery` — a separate key, not `all`.
+
 ### Notifications — what exists (after the 2026-10-01 plan)
 
 - **Backend** (`backend/src/notifications/index.ts`): `GET /my` (cursor + `?role=`/`?unreadOnly=`),
@@ -519,6 +524,7 @@ it would give priority to the gitignored `.env` over the production environment)
 | **`showConfirm` is a STANDARD method (Bot API 6.2+), only the PROXY in the SDK is missing.** The comment in `tgConfirm` called it non-standard — that was wrong (the official doc `core.telegram.org/bots/webapps`: "shows message in a simple confirmation window with 'OK' and 'Cancel' buttons"). The answer comes through `popupClosed`+callback, not as the method's return value, so the probe goes by the presence of the function on `globalThis.Telegram.WebApp`. `window.confirm` is the PRIMARY mechanism and a deliberate trade-off: a foreign dialog diverges from Telegram's guideline "mimic the style of existing components". It is closed by an SDK bump. The final `false` is mandatory: consent is interpreted as a departure from the intent | `helpers/tgConfirm.ts`, `helpers/__tests__/tgConfirm.test.ts` |
 | **A booking closes a request in the same transaction and NEVER someone else's:** `closeRideRequestsForBooking` is called inside the same Serializable transaction as `booking.create` (the closing goes **before** the insert — otherwise the passenger would get "booking exists, request still hanging"). The order of keys in `where` is critical: the spread of `matchingRideRequestWhere` returns `userId: { not: driverId }`, so the spread goes **first**, and the equality `userId: passengerId` — after, otherwise the owner check is overwritten and any booking closes strangers' requests (there is a regression test for this). The client's `requestId` takes priority (only the named one is closed), without it the server closes all matching requests of the passenger **themselves** — we do not trust the client to remember which request it is fulfilling. The race is caught by `updateMany` on `status: active` with a `count` check: mismatch → 409 and rollback. | `backend/src/bookings/rideRequests.ts`, pin `backend/tests/integration/booking-closes-ride-request.test.ts` |
 | **The trip day for grouping is taken from `departureAt` via `moscowDayKey`, NOT from `trip.date`:** the backend returns `trip.date` as a formatted caption ("Sat, 15 March" — `formatDateRu`, ru-RU + Europe/Moscow), not ISO — `dayLabel()` does not work on such a string and the "Today"/"Tomorrow" captions do not appear. The order is set by the backend (`orderBy: [{departureAt:"asc"},{id:"asc"}]`), so groups are accumulated into the **adjacent** one, not through a `Map` by key: a `Map` would collapse a day interrupted by another and reorder the cards. The pill is a static centered `h2` without a counter (a group cut by pages would be counted partially) | `helpers/tripGroups.ts`, `pages/Search/TripDateDivider.tsx` |
+| **A contract-shaped response is built by the single serializer and validates itself.** Hand-built `trip`/`booking` objects are forbidden: `GET /bookings/my` and `/bookings/history` assembled the nested `trip` inline and silently dropped the required `autoComplete`/`matchingEnabled`, so the client rejected the whole array with `INVALID_RESPONSE` ("Invalid server response") right after login. All booking/trip responses must go through `serializeTrip`/`serializeBooking` (`serializers/index.ts`) and `safeParse` their own payload (as `/bookings/driver` and `/bookings/trip/:id` do) — then a drift becomes a server 500 with a log, not a silent client-side rejection. Pinned by the runtime route sweep and `backend/tests/integration/telegram-parity.test.ts` | `backend/src/bookings/queries.ts`, `backend/src/serializers/index.ts` |
 
 ## 19. Where to look next
 
@@ -553,3 +559,15 @@ Found by review (typecheck/eslint/tests were green — the defects were not cove
 
 Regression tests: `date.test`, `searchFilters.moscow.tz.test` (new), `telegram-adapter.test`, `rideRequestCreateForm.submit.test`, `WebSocketProvider.test`.
 Result: tsc/eslint clean; 133 files / 1059 tests green.
+
+## 2026-10-09 — Contract drift after login (`/bookings/my` + `/history`): 4 fixes
+
+Found by a live runtime probe (Playwright against `:3012` with the dev login) — tsc/eslint/tests were green, because no test crossed the client parser with a real payload.
+
+1. **Backend `GET /bookings/my` and `/bookings/history` hand-built the nested `trip` and omitted the required `autoComplete`/`matchingEnabled`.** The client's Zod parser rejected the whole array → `ApiError("Invalid server response", INVALID_RESPONSE, 502)`. This is what "broke login": the auth request itself returned 200, but the Home summary, `/bookings` (Все/Пассажир) and `/profile/history` immediately rendered errors. Regression from the trip-options feature: the response schema made both fields required, only these two hand-built serializers were not updated. Fixed by routing through `serializeTrip` (single source) + `safeParse` of the response, like the sibling routes. Invariant added to §18.
+2. `bookingErrorMessage` — `INVALID_RESPONSE` was absent from `CODE_MESSAGES`, so the raw English `ApiError.message` leaked into the `Notice`. Added a Russian message.
+3. `TripHero` — hardcoded `"{n} отзывов"` → `plural()`.
+4. **Own ride-requests list was silently capped at 20:** `rideRequestsApi.list` discarded `pagination` (`.transform(({items}) => items)`) while the backend defaults to `limit=20`. Converted to an infinite query (`useInfiniteQuery` under `[...RIDE_REQUEST_KEYS.all, "mine", "infinite"]`, so prefix invalidation still works) + `FetchMore`/sentinel in `RideRequestsList`.
+
+Regression tests updated: `rideRequestsList.test.tsx`, `RideRequestHistoryPage.test.tsx` (infinite-query shape).
+Verification: typecheck (both workspaces) clean; telegram-app 1059/1059, backend 721/721; eslint + format:check clean; live route sweep all-routes `ZOD: none`.
