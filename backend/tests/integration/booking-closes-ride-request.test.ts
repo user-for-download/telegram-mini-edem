@@ -23,7 +23,7 @@ import { devMockAccessToken } from "../dev-mock-auth.js";
  * - атомарность: сбой внутри транзакции откатывает и закрытие заявки, и
  *   бронь — «бронь есть, заявка висит» в продукте не бывает.
  *
- * Паттерны репо (см. ride-request-invite.test.ts, trip-ride-requests.test.ts,
+ * Паттерны репо (см. ride-requests.test.ts, trip-ride-request-notify.test.ts,
  * booking-conflicts.test.ts): app.request() вместо supertest, dev mock-токены,
  * уникальные telegramUserId (BigInt-счётчик) и города, относительные даты от
  * общей базы, уборка в обратном порядке зависимостей (уведомления → брони →

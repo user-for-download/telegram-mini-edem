@@ -720,8 +720,12 @@ async function main(): Promise<void> {
   // Заголовки сохраняют префикс «Bezz-тест»: по нему идёт чистка прошлого
   // прогона (deleteMany по title contains), без него повторный запуск оставил
   // бы старые строки. Тексты дальше — по рантайм-шаблонам (bookings/create.ts,
-  // bookings/status.ts, trips/index.ts, rideRequests/index.ts), иначе прод-сид
+  // bookings/status.ts, trips/index.ts, rideRequests/matching.ts), иначе прод-сид
   // проверял бы формулировки, которых в проде нет.
+  //
+  // Ссылка на `rideRequests/index.ts` убрана 2026-10-09 вместе со шагом
+  // приглашения: уведомления о заявках создаёт только `matching.ts`, в
+  // `index.ts` не осталось ни одного createNotification.
   //
   // Получатель здесь — ПАССАЖИР, поэтому водительских типов (booking_created)
   // здесь быть не может: рантайм шлёт их владельцу поездки, а не пассажиру.
