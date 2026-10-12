@@ -1,10 +1,12 @@
 import type { FC, PropsWithChildren } from "react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import {
+  InvalidLaunchParamsError,
+  LaunchParamsRetrieveError,
   miniApp,
+  retrieveLaunchParams,
   themeParams,
-  useLaunchParams,
   useSignal,
   viewport,
 } from "@tma.js/sdk-react";
@@ -243,6 +245,57 @@ function useFullscreenSubscription(): void {
   }, []);
 }
 
+/**
+ * Платформа клиента Telegram: 'ios' или 'base'.
+ *
+ * Раньше здесь стоял `useLaunchParams()` ВНУТРИ try/catch — прямое нарушение
+ * Rules of Hooks: useLaunchParams оборачивает вызов в `useMemo`, то есть
+ * исключение прилетало ВНУТРИ хука, и catch его глушил, оставляя внутренний
+ * учёт React недописанным. Ловить исключение вокруг хука нельзя в принципе.
+ *
+ * `retrieveLaunchParams()` — обычная функция, try/catch для неё законен: вне
+ * Telegram она бросает LaunchParamsRetrieveError (дев-стенд в браузере).
+ * Поле `tgWebAppPlatform` в сыром ответе уже camelCase — `useLaunchParams()`
+ * без аргумента тоже отдавал сырые ключи, поведение не меняется.
+ *
+ * Результат кэшируется на модуле: параметры запуска задаются при открытии
+ * и за сессию не меняются, а хук-обёртка их кэшировала лишь на время жизни
+ * компонента. Побочный плюс — нет повторного обращения к окружению на
+ * каждом рендере AppConfig.
+ */
+/**
+ * Платформа клиента Telegram: 'ios' или 'base'.
+ *
+ * Раньше здесь стоял `useLaunchParams()` ВНУТРИ try/catch — прямое нарушение
+ * Rules of Hooks: useLaunchParams оборачивает вызов в `useMemo`, то есть
+ * исключение прилетало ВНУТРИ хука, и catch его глушил, оставляя внутренний
+ * учёт React недописанным. Ловить исключение вокруг хука нельзя в принципе.
+ *
+ * `retrieveLaunchParams()` — обычная функция, try/catch для неё законен: вне
+ * Telegram она бросает LaunchParamsRetrieveError (дев-стенд в браузере).
+ * Поле `tgWebAppPlatform` в сыром ответе уже camelCase — `useLaunchParams()`
+ * без аргумента тоже отдавал сырые ключи, поведение не меняется.
+ *
+ * Экспортируется ради теста: чистая функция без хуков и без состояния.
+ */
+export function readClientPlatform(): "base" | "ios" {
+  try {
+    return retrieveLaunchParams().tgWebAppPlatform === "ios" ? "ios" : "base";
+  } catch (error) {
+    // Ловим ТОЛЬКО документированное «мы вне Telegram» — сюда попадает
+    // дев-стенд в браузере. Широкий catch маскировал бы TypeError от
+    // сломанного импорта под «платформа base» — ровно ту ошибку, которую
+    // этот try/catch и должен был убрать.
+    if (
+      !(error instanceof LaunchParamsRetrieveError) &&
+      !(error instanceof InvalidLaunchParamsError)
+    ) {
+      throw error;
+    }
+    return "base";
+  }
+}
+
 /** Платформа telegram-ui для AppRoot: только 'base' | 'ios' (iOS — нативный
  * вид, Android/десктоп/веб — нейтральный 'base'). Dev-стенд переключает
  * кнопками в шапке (utils/devPlatform) — оверрайд важнее клиента.
@@ -250,13 +303,9 @@ function useFullscreenSubscription(): void {
  * и ui/Sheet, поэтому фасады и каркас всегда на одной платформе. */
 function useTguiPlatform(): "base" | "ios" {
   const devPlatform = useDevPlatform();
-  let client: "base" | "ios" = "base";
-  try {
-    const p = useLaunchParams().tgWebAppPlatform;
-    if (p === "ios") client = "ios";
-  } catch {
-    // launch params недоступны (крайний случай) — нейтральный base.
-  }
+  // Параметры запуска задаются при открытии и за сессию не меняются, поэтому
+  // одного вычисления достаточно — ровно ту же мемоизацию давал useLaunchParams.
+  const client = useMemo(() => readClientPlatform(), []);
   return resolveAppRootPlatform(devPlatform, client);
 }
 
