@@ -76,6 +76,10 @@ export function TripHero({
         <button
           type="button"
           className={styles.driverOpen}
+          // Глагол — в aria-label: без него скринридер слышит «кнопка,
+          // Иван…» и цель не названа. Label заменяет имя целиком, поэтому
+          // рейтинг и счётчик в него не входят (M7 аудита).
+          aria-label={`Открыть профиль: ${item.driver.name}`}
           onClick={() =>
             openUserProfile({
               id: item.driver.id,

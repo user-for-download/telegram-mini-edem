@@ -41,6 +41,9 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
         <button
           type="button"
           className={styles.author}
+          // Глагол — в aria-label: иначе дата из authorBody войдёт в имя
+          // кнопки («Анна 12 сентября»), а действие не названо (M7 аудита).
+          aria-label={`Открыть профиль: ${review.author.name}`}
           onClick={() =>
             openUserProfile({
               id: review.author.id,

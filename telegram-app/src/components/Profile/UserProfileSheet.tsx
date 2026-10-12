@@ -19,6 +19,16 @@ import styles from "./UserProfileSheet.module.css";
  * (serializePublicUser) его не содержит — телефон отдаётся только
  * владельцу и подтверждённой стороне деталей поездки. Поэтому шапка шторки
  * рендерится без phone — и не выдумывает его, даже если в initial он есть.
+ *
+ * Запрос живёт ЗДЕСЬ, а не в теле: заголовок шторки (имя + aria-labelledby)
+ * обязан отражать догруженные данные, а не застывший initial (M2 аудита).
+ * При открытии только по id заголовок сначала «Профиль», затем имя.
+ *
+ * Ошибка НЕ затирает показанный initial (M1 аудита): initial пришёл с
+ * экрана, который пользователь только что видел, — показывать вместо него
+ * полноэкранный loadError из-за фонового 429/500 значило бы отбирать
+ * данные, которые уже на руках. Ветка ошибки — только когда показать
+ * нечего (нет ни initial, ни данных).
  */
 export function UserProfileSheet({
   target,
@@ -31,50 +41,45 @@ export function UserProfileSheet({
   // Нативная кнопка «Назад» закрывает шторку, а не уводит с экрана:
   // без этой подписки Back ушёл бы по истории вместе с экраном.
   useModalBack(onClose, open);
-
-  return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title={target?.initial?.name ?? "Профиль"}
-    >
-      {target ? <UserProfileBody target={target} /> : null}
-    </Sheet>
-  );
-}
-
-function UserProfileBody({ target }: { target: UserProfileTarget }) {
-  const user = useUserQuery(target.id);
+  // Запрос висит всегда (disabled при закрытой шторке): при открытии
+  // enabled false→true, а staleTime 0 — данные всегда stale, поэтому
+  // открытие ревалидирует профиль. Это же сужает окно stale-initial
+  // для удалённого пользователя (M4 аудита) до одного фетча.
+  const user = useUserQuery(target?.id ?? "", { enabled: open });
   // Пока идёт догрузка, рисуем то, что вызывающий уже знает (initial):
   // карточка не мигает пустотой, если данные уже были на руках.
-  const shown = user.data ?? target.initial;
+  const shown = user.data ?? target?.initial;
 
   return (
-    <QueryState
-      loading={user.isLoading && !shown}
-      error={user.error}
-      empty={!shown}
-      emptyText="Не удалось загрузить профиль"
-      onRetry={() => void user.refetch()}
-    >
-      {shown ? (
-        <Stack>
-          <ProfileHero user={shown} />
-          {shown.about ? (
-            <div className={styles.about}>
-              <Caption className={styles.aboutLabel}>О себе</Caption>
-              <Text>{shown.about}</Text>
-            </div>
+    <Sheet open={open} onClose={onClose} title={shown?.name ?? "Профиль"}>
+      {target ? (
+        <QueryState
+          loading={user.isLoading && !shown}
+          error={shown ? undefined : user.error}
+          empty={!shown}
+          emptyText="Не удалось загрузить профиль"
+          onRetry={() => void user.refetch()}
+        >
+          {shown ? (
+            <Stack>
+              <ProfileHero user={shown} />
+              {shown.about ? (
+                <div className={styles.about}>
+                  <Caption className={styles.aboutLabel}>О себе</Caption>
+                  <Text>{shown.about}</Text>
+                </div>
+              ) : null}
+              {shown.car ? (
+                <div className={styles.car}>
+                  <Text weight="2">
+                    {`${shown.car.model} · ${shown.car.color}`}
+                  </Text>
+                </div>
+              ) : null}
+            </Stack>
           ) : null}
-          {shown.car ? (
-            <div className={styles.car}>
-              <Text weight="2">
-                {`${shown.car.model} · ${shown.car.color}`}
-              </Text>
-            </div>
-          ) : null}
-        </Stack>
+        </QueryState>
       ) : null}
-    </QueryState>
+    </Sheet>
   );
 }

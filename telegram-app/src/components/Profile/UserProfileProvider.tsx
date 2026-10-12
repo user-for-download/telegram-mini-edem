@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -64,12 +65,32 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   );
 }
 
+let warnedOutsideProvider = false;
+
 /**
  * Открыть шторку профиля. Вне провайдера — no-op (см. выше), чтобы
  * презентационные компоненты оставались рендерящимися без обёртки.
+ *
+ * No-op — молчаливый по необходимости, но не бесшумный в dev: забытый
+ * Provider на новом экране давал бы мёртвые клики без единого сигнала
+ * (M5 аудита). Предупреждение — один раз за сессию и только в dev: в проде
+ * трешак в консоль пользователю не нужен.
  */
 export function useOpenUserProfile(): (target: UserProfileTarget) => void {
-  return useContext(UserProfileContext)?.open ?? noop;
+  const context = useContext(UserProfileContext);
+  // Предупреждение — в эффекте, а не в рендере: присвоение module-флага
+  // в рендере нарушает purity-правило (side effect), эффект — нет.
+  // В SSR (renderToString) эффекты не выполняются — там тихо.
+  useEffect(() => {
+    if (!context && import.meta.env.DEV && !warnedOutsideProvider) {
+      warnedOutsideProvider = true;
+      console.warn(
+        "[UserProfile] useOpenUserProfile вне UserProfileProvider: " +
+          "тап по человеку ничего не откроет. Оберните экран в провайдер.",
+      );
+    }
+  }, [context]);
+  return context?.open ?? noop;
 }
 
 function noop(): void {

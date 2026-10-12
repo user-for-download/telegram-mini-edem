@@ -15,14 +15,19 @@ vi.mock("@/components/Profile/UserProfileProvider", () => ({
 }));
 
 const { ReviewCard } = await import("@/components/ReviewCard/ReviewCard");
+import type { Review } from "@edem/contracts";
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
 
-const REVIEW = {
+// Полный Review по контракту, а не `as never`: фикстура обязана дрейфовать
+// вместе с контрактом — иначе рассинхрон с бэкендом тест не заметит
+// (MINOR аудита).
+const REVIEW: Review = {
   id: "r-1",
+  targetRole: "driver",
   rating: 5,
   text: "Всё отлично, поехал бы снова",
   status: "published",
@@ -36,7 +41,7 @@ const REVIEW = {
     reviewsCount: 3,
     tripsCount: 12,
   },
-} as never;
+};
 
 function renderCard() {
   return render(

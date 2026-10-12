@@ -110,11 +110,14 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
         }
         person={{
           // Водитель — чужой пользователь: id открывает шторку профиля.
+          // Счётчики настоящие, из объекта водителя: initial шторки не
+          // имеет права выдумывать «поездок: 0» (M3 аудита).
           id: driver.id,
           name: driver.name,
           avatar: driver.avatar,
           rating: driver.rating,
           reviewsCount: driver.reviewsCount,
+          tripsCount: driver.tripsCount,
           subtitle: driverLine,
           showCarIcon: Boolean(driver.car),
         }}

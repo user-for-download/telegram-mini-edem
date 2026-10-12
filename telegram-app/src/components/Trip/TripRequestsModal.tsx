@@ -46,6 +46,10 @@ function PassengerHead({ booking }: { booking: TripBooking }) {
     <button
       type="button"
       className={styles.rowInfo}
+      // Глагол — в aria-label: иначе в имя втягиваются место и комментарий
+      // («Мария место 2 · …»), а действие не названо (M7 аудита). Label
+      // заменяет имя целиком — место/комментарий в него не входят.
+      aria-label={`Открыть профиль: ${booking.passenger.name}`}
       onClick={() =>
         openUserProfile({
           id: booking.passenger.id,

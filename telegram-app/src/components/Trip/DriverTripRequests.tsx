@@ -220,6 +220,9 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
           <button
             type="button"
             className={styles.requestPerson}
+            // Глагол — в aria-label: голое имя не говорит, что будет
+            // (M7 аудита). Label заменяет имя целиком.
+            aria-label={`Открыть профиль: ${booking.passenger.name}`}
             onClick={(event) => {
               event.stopPropagation();
               openUserProfile({

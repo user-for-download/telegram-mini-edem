@@ -27,12 +27,14 @@ export function feedPerson(trip: Trip): TripStandardPerson {
   const car = trip.driver.car;
   return {
     // Водитель — чужой пользователь: id делает строку персоны открываемой
-    // (шторка профиля). Рейтинг в ленте рисуется без числа отзывов
-    // (reviewsCount не переносим) — карточка это допускает.
+    // (шторка профиля). Счётчики — настоящие, из объекта водителя: initial
+    // шторки не выдумывает «поездок: 0» (M3 аудита).
     id: trip.driver.id,
     name: trip.driver.name,
     avatar: trip.driver.avatar,
     rating: trip.driver.rating,
+    reviewsCount: trip.driver.reviewsCount,
+    tripsCount: trip.driver.tripsCount,
     subtitle: car ? `${car.model} · ${car.color}` : "Водитель",
     showCarIcon: Boolean(car),
   };

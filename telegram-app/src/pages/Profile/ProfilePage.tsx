@@ -152,7 +152,8 @@ export function ProfilePage() {
                 секций — h2 (гарантирует фасад ui/Section). */}
             <VisuallyHidden Component="h1">Профиль</VisuallyHidden>
             {/* Шапка профиля: центрированная витрина. Поверхность —
-                Section без заголовка, роль шапки — .hero. */}
+                Section без заголовка, сама шапка — общий ProfileHero
+                (свой CSS-модуль) со слотом кнопки правки. */}
             <Section>
               <SectionBody>
                 {/* Шапка — общий ProfileHero: тот же блок показывается в

@@ -36,6 +36,8 @@ function renderCard(
         person={{
           name: "Александр",
           rating: 4.9,
+          reviewsCount: 12,
+          tripsCount: 30,
           subtitle: "Lada Vesta · белый",
         }}
         onOpen={() => {}}
@@ -63,6 +65,8 @@ describe("TripStandardCard: персона другого человека", () 
         id: "u-9",
         name: "Александр",
         rating: 4.9,
+        reviewsCount: 12,
+        tripsCount: 30,
         subtitle: "Водитель",
       },
     });
@@ -82,6 +86,8 @@ describe("TripStandardCard: персона другого человека", () 
         id: "u-9",
         name: "Александр",
         rating: 4.9,
+        reviewsCount: 12,
+        tripsCount: 30,
         subtitle: "Водитель",
       },
       onOpen,
@@ -94,7 +100,9 @@ describe("TripStandardCard: персона другого человека", () 
   });
 
   it("без id персона остаётся НЕинтерактивной (свой «Вы водитель»)", () => {
-    renderCard({ person: { name: "Вы водитель", subtitle: "Пассажиры: 2" } });
+    renderCard({
+      person: { name: "Вы водитель", subtitle: "Пассажиры: 2", tripsCount: 7 },
+    });
     expect(
       screen.queryByRole("button", { name: /Открыть профиль/ }),
     ).toBeNull();

@@ -72,11 +72,6 @@
   fill: currentColor;
 }
 
-/* Текст отзыва: расслабленный интерлиньяж (было leading-relaxed 1.625). */
-.body {
-  line-height: 1.625;
-}
-
 /* Подвал: маршрут слева, статус справа, штрих сверху (было pt-1 border-t). */
 .foot {
   display: flex;

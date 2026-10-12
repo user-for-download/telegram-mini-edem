@@ -34,11 +34,23 @@ import { handleModalBack } from "@/utils/modalBack";
 
 const refetch = vi.fn();
 
+// Состояние запроса — изменяемое: кейсы M1/M2 подменяют data/error под
+// себя, а не живут на одном статичном моке.
+const { mockQuery } = vi.hoisted(() => ({
+  mockQuery: {
+    current: {
+      data: null as null | Record<string, unknown>,
+      isLoading: false,
+      error: null as unknown,
+    },
+  },
+}));
+
 vi.mock("@/queries/profile", () => ({
   useUserQuery: () => ({
-    data: null,
-    isLoading: false,
-    error: null,
+    data: mockQuery.current.data,
+    isLoading: mockQuery.current.isLoading,
+    error: mockQuery.current.error,
     refetch,
   }),
 }));
@@ -46,6 +58,7 @@ vi.mock("@/queries/profile", () => ({
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  mockQuery.current = { data: null, isLoading: false, error: null };
 });
 
 const FULL: UserProfileTarget = {
@@ -156,6 +169,72 @@ describe("UserProfileSheet: содержимое", () => {
     expect(screen.getAllByText("Мария").length).toBeGreaterThan(0);
     expect(screen.queryByText("О себе")).toBeNull();
     expect(screen.queryByText("Lada Vesta · белый")).toBeNull();
+  });
+});
+
+describe("UserProfileSheet: ошибка не затирает показанное (M1)", () => {
+  it("фоновый 500 при живом initial — карточка на месте, а не loadError", () => {
+    // Сценарий: шторка открыта по initial, фоновый refetch (например,
+    // инвалидация после отзыва) упал. Показывать вместо карточки
+    // полноэкранный loadError — значит отбирать данные, которые уже
+    // на руках у пользователя.
+    mockQuery.current = {
+      data: null,
+      isLoading: false,
+      error: new Error("Internal Server Error"),
+    };
+    renderWithProvider();
+    clickOpen();
+
+    expect(screen.getAllByText("Александр Иванов").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Не удалось загрузить/i)).toBeNull();
+  });
+
+  it("без initial ошибка показывается с повтором", () => {
+    // Открытие только по id (initial опционален): показать нечего —
+    // здесь loadError честен, и retry зовёт refetch.
+    mockQuery.current = {
+      data: null,
+      isLoading: false,
+      error: new Error("Internal Server Error"),
+    };
+    render(
+      <AppRoot platform="base">
+        <UserProfileProvider>
+          <Probe target={{ id: "u-9" }} />
+        </UserProfileProvider>
+      </AppRoot>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Открыть профиль" }));
+
+    expect(screen.getByRole("button", { name: "Повторить" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Повторить" }));
+    expect(refetch).toHaveBeenCalled();
+  });
+});
+
+describe("UserProfileSheet: заголовок следует данным (M2)", () => {
+  it("догруженное имя заменяет initial в заголовке", () => {
+    // Открыли по устаревшему initial, сервер вернул новое имя: заголовок
+    // шторки (и aria-labelledby диалога) обязан отрази́ть данные, а не
+    // застывший initial.
+    mockQuery.current = {
+      data: {
+        id: "u-1",
+        name: "Александр Петров",
+        avatar: null,
+        rating: 4.9,
+        reviewsCount: 12,
+        tripsCount: 34,
+      },
+      isLoading: false,
+      error: null,
+    };
+    renderWithProvider();
+    clickOpen();
+
+    expect(screen.getAllByText("Александр Петров").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Александр Иванов")).toBeNull();
   });
 });
 

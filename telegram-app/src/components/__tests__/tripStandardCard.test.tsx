@@ -29,6 +29,8 @@ describe("TripStandardCard", () => {
         person={{
           name: "Александр",
           rating: 4.9,
+          reviewsCount: 12,
+          tripsCount: 30,
           subtitle: "Lada Vesta · белый",
           showCarIcon: true,
         }}
@@ -58,7 +60,11 @@ describe("TripStandardCard", () => {
         price={null}
         departureAt={null}
         headerStatus={<StatusPill tone="success">Активна</StatusPill>}
-        person={{ name: "Вы водитель", subtitle: "Свободно 3 из 3" }}
+        person={{
+          name: "Вы водитель",
+          subtitle: "Свободно 3 из 3",
+          tripsCount: 7,
+        }}
         onOpen={() => {}}
       />,
     );
@@ -76,6 +82,7 @@ describe("TripStandardCard", () => {
         person={{
           name: "Вы водитель",
           subtitle: "Пассажиры: 4",
+          tripsCount: 7,
           passengers: [
             { id: "p1", name: "Иван", avatar: "https://t.me/1.png" },
             { id: "p2", name: "Пётр", avatar: "https://t.me/2.png" },
@@ -96,7 +103,12 @@ describe("TripStandardCard", () => {
       <TripStandardCard
         {...TRIP}
         headerStatus={<StatusPill tone="info">Свободно 1</StatusPill>}
-        person={{ name: "Вы водитель", subtitle: "Пассажиры: 0", passengers: [] }}
+        person={{
+          name: "Вы водитель",
+          subtitle: "Пассажиры: 0",
+          passengers: [],
+          tripsCount: 7,
+        }}
         onOpen={() => {}}
       />,
     );

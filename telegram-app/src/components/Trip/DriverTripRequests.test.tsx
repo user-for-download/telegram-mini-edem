@@ -29,7 +29,9 @@ function makeBooking(overrides: Record<string, unknown> = {}) {
     status: "pending",
     comment: "еду с рюкзаком",
     trip: { id: "t-1" },
-    passenger: { name: "Пётр", avatar: undefined, rating: 4.8 },
+    // id пассажира — как в проде: иначе SSR-путь «open с undefined-id»
+    // никто не ловит (MINOR аудита).
+    passenger: { id: "p-1", name: "Пётр", avatar: undefined, rating: 4.8 },
     ...overrides,
   };
 }

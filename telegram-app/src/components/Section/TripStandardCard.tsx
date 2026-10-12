@@ -22,6 +22,16 @@ export interface TripStandardPerson {
   rating?: number | null;
   /** Число отзывов за рейтингом: без него 5.0/0.0 неотличимы от «нет оценки». */
   reviewsCount?: number | null;
+  /**
+   * Число поездок для initial шторки. Опционально — но все пути С КНОПКОЙ
+   * (бронь, лента) передают настоящий счётчик водителя (иначе initial
+   * выдумывал бы «поездок: 0», M3 аудита; пинится toEqual-тестами
+   * feedCardProps). `?? 0` ниже — последний рубеж для гипотетических
+   * будущих вызывающих, в проде не срабатывает: фикстуры вроде
+   * TripActivePage (driver без счётчиков) доказали, что обязательность
+   * здесь ломает рантайм там, где раньше рендерилось.
+   */
+  tripsCount?: number | null;
   subtitle: string;
   showCarIcon?: boolean;
   /**
@@ -95,7 +105,11 @@ export function TripStandardCard({
   // значит не может лежать ВНУТРИ кнопки открытия: вложенные кнопки
   // запрещены, и это держит a11y-контракт карточки. Такой случай
   // вынесен наружу рядом с personOverride.
-  const personAsButton = person.id !== undefined && !hasInteractiveOverride;
+  //
+  // Сужение через отдельную переменную вместо каста `as string` ниже:
+  // каст пережил бы смену гарда молча, а здесь несовпадение — ошибка типов.
+  const personId = !hasInteractiveOverride ? person.id : undefined;
+  const personAsButton = personId !== undefined;
   const openUserProfile = useOpenUserProfile();
 
   const personCell = !hasInteractiveOverride ? (
@@ -204,24 +218,27 @@ export function TripStandardCard({
         <button
           type="button"
           className={styles.personButton}
+          // Глагол — в aria-label, а не скрытым спаном: иначе имя звучало
+          // бы дважды («Открыть профиль: Александр» + видимый «Александр»
+          // + рейтинг из aria-label пилюли). Label заменяет вычисление
+          // имени целиком — видимый текст и рейтинг в него не входят.
+          aria-label={`Открыть профиль: ${person.name}`}
           onClick={(event) => {
             event.stopPropagation();
             openUserProfile({
-              id: person.id as string,
+              id: personId,
               initial: {
                 name: person.name,
                 avatar: person.avatar ?? null,
                 rating: person.rating ?? 0,
                 reviewsCount: person.reviewsCount ?? 0,
-                tripsCount: 0,
+                // Ноль — только если вызывающий не передал счётчик; все
+                // пути с кнопкой передают настоящий (см. tripsCount выше).
+                tripsCount: person.tripsCount ?? 0,
               },
             });
           }}
         >
-          {/* Глагол скрыто: имя кнопки — это имя человека плюс намерение. */}
-          <span className={VISUALLY_HIDDEN}>
-            {`Открыть профиль: ${person.name}`}
-          </span>
           {personCell}
         </button>
       )}
