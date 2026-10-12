@@ -128,9 +128,63 @@ describe("ProfilePage header", () => {
     // осознанно: бейдж показывает только оценку.
     expect(html).not.toContain("Telegram верифицирован");
     expect(html).not.toContain("4.9 (12)");
-    expect(html).toContain("Поездок");
-    expect(html).toContain("42");
+    // Плитки статистики убраны: те же три числа стоят строкой метрик в
+    // шапке, дубль на одном экране читался как четыре показателя.
+    expect(html).toContain("поездок: 42");
+    expect(html).not.toContain("Поездок");
     expect(html).toContain("Редактировать профиль");
+  });
+
+  it("плитки показателей не дублируют строку метрик", () => {
+    mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
+    const html = render(<ProfilePage />);
+    // Дубль отслеживаем по ярлыкам плиток: в шапке подписи строчные
+    // («поездок: N», «N отзывов»), у плиток они были отдельными
+    // заголовками «Поездок» / «Отзывов». Считать сами числа нельзя —
+    // они встречаются и в других секциях экрана.
+    expect(html).not.toContain("Поездок");
+    expect(html).not.toContain("Отзывов");
+    expect(html).toContain("поездок: 42");
+    expect(html).toContain("12 отзывов");
+  });
+
+  // Шапка перестроена в центрированную витрину: аватар 96, имя, телефон,
+  // строка метрик и кнопка правки по центру.
+  it("шапка-витрина: телефон и метрики в одну строку", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({ data: makeProfile({ phone: "+7 900 123-45-67" }) }),
+    );
+    const html = render(<ProfilePage />);
+
+    expect(html).toContain("+7 900 123-45-67");
+    expect(html).toContain("поездок: 42");
+    expect(html).toContain("отзывов");
+    expect(html).toContain("Редактировать профиль");
+  });
+
+  it("без телефона строка не рисуется, шапка не пустая", () => {
+    // phone необязателен в контракте — отсутствие = не указан, а не 0.
+    mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
+    const html = render(<ProfilePage />);
+
+    expect(html).toContain("Александр");
+    expect(html).not.toContain("+7");
+  });
+
+  it("число отзывов склоняется, а не пишется «отзывов» на все числа", () => {
+    // Рядом стоит пилюля рейтинга, которая при нуле отзывов показывает
+    // прочерк. «0 отзывов» рядом с прочерком читается как ошибка подписи.
+    for (const [count, word] of [
+      [1, "отзыв"],
+      [2, "отзыва"],
+      [5, "отзывов"],
+    ] as const) {
+      mockUseProfile.mockReturnValue(
+        queryState({ data: makeProfile({ reviewsCount: count }) }),
+      );
+      const html = render(<ProfilePage />);
+      expect(html).toContain(`${count} ${word}`);
+    }
   });
 
   it("секции настроек: авто, уведомления, поддержка, опасная зона", () => {

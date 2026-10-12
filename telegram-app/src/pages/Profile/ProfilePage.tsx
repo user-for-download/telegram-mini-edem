@@ -1,14 +1,14 @@
 import { useRef, useState } from "react";
 import {
   Avatar,
-  Badge,
   Caption,
   Headline,
   IconContainer,
-  Text,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { RatingPill } from "@/components/RatingPill";
+import { plural } from "@/utils/plural";
 import { MenuRow } from "@/ui/MenuRow";
 import { SwitchRow } from "@/ui/SwitchRow";
 
@@ -22,6 +22,7 @@ import {
   Star,
   TriangleAlert,
   Volume2,
+  Edit3,
 } from "lucide-react";
 import { miniApp, useSignal } from "@tma.js/sdk-react";
 import { useNavigate } from "react-router-dom";
@@ -33,7 +34,7 @@ import { SectionBody } from "@/ui/SectionBody";
 import { Section } from "@/ui/Section";
 import { Stack } from "@/ui/Stack";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { GROW, INFO, PROSE_TEXT, TRUNCATE } from "@/ui/classes";
+import { HINT } from "@/ui/classes";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { isAccountDeletedError, ApiError } from "@/api/client";
 import {
@@ -48,13 +49,6 @@ import {
 } from "@/utils/appSettings";
 import { haptic } from "@/utils/haptics";
 import styles from "./ProfilePage.module.css";
-import { formatRating } from "@/helpers/rating";
-
-/** Обрезка в одну строку + блочный display (span/caption-типографика tgui).
- * ellipsis-рецепт — канонный TRUNCATE из @/ui/classes, block — локальный. */
-const TRUNCATE_BLOCK = `${TRUNCATE} ${styles.truncateBlock}`;
-
-
 
 /**
  * Каскад удаления аккаунта — юридический текст в одном месте.
@@ -160,269 +154,250 @@ export function ProfilePage() {
                 страницах»), поэтому имя экрана даёт скрытый h1, а заголовки
                 секций — h2 (гарантирует фасад ui/Section). */}
             <VisuallyHidden Component="h1">Профиль</VisuallyHidden>
-            {/* Шапка профиля: поверхность — Section без заголовка. */}
+            {/* Шапка профиля: центрированная витрина. Поверхность —
+                Section без заголовка, роль шапки — .hero. */}
             <Section>
               <SectionBody>
-                <div className={styles.headerRow}>
+                <div className={styles.hero}>
                   <Avatar
-                    size={48}
+                    size={96}
                     src={profile.data.avatar}
                     acronym={(profile.data.name ?? "П")
                       .slice(0, 2)
                       .toUpperCase()}
                   />
-                  <div className={GROW}>
-                    <Headline weight="2" className={TRUNCATE_BLOCK}>
-                      {profile.data.name}
-                    </Headline>
-                    <div className={styles.ratingRow}>
-                      <Badge type="number" mode="secondary" large>
-                        <Star size={11} />
-                        <span>
-                          {formatRating(
-                            profile.data.rating,
-                            profile.data.reviewsCount,
-                          )}
-                        </span>
-                      </Badge>
-                    </div>
+                  <Headline weight="2" className={styles.heroName}>
+                    {profile.data.name}
+                  </Headline>
+                  {/* Телефон сервера отдаёт только владельцу — поле
+                      необязательное, без него строка просто не рисуется. */}
+                  {profile.data.phone ? (
+                    <Caption className={styles.heroPhone}>
+                      {profile.data.phone}
+                    </Caption>
+                  ) : null}
+                  {/* Метрики в одну строку: «поездок · рейтинг · отзывов».
+                      Рейтинг идёт пилюлей и без отзывов показывает прочерк
+                      (hasRating), поэтому число рядом обязано быть с
+                      правильным склонением — иначе «0 отзывов» читается
+                      как ошибка. */}
+                  <div className={styles.heroMeta}>
+                    <Caption>{`поездок: ${profile.data.tripsCount}`}</Caption>
+                    <Caption aria-hidden="true">·</Caption>
+                    <RatingPill
+                      value={profile.data.rating}
+                      reviewsCount={profile.data.reviewsCount}
+                    />
+                    <Caption>{`${profile.data.reviewsCount} ${plural(
+                      profile.data.reviewsCount,
+                      "отзыв",
+                      "отзыва",
+                      "отзывов",
+                    )}`}</Caption>
                   </div>
+                  {/* Не stretched: кнопка правки не основное действие
+                      экрана, по центру она читается как вторичная. */}
+                  <Button
+                    size="s"
+                    variant="gray"
+                    className={styles.heroEdit}
+                    before={<Edit3 size={15} />}
+                    onClick={() => {
+                      haptic.light();
+                      navigate("/profile/edit");
+                    }}
+                  >
+                    Редактировать профиль
+                  </Button>
                 </div>
 
                 {profile.data.about && (
-                  <Text Component="p" className={PROSE_TEXT}>
-                    {profile.data.about}
-                  </Text>
+                  <Caption className={HINT}>{profile.data.about}</Caption>
                 )}
-
-                <div className={styles.stats}>
-                  <div className={styles.stat}>
-                    <Text weight="2" Component="div">
-                      {profile.data.tripsCount}
-                    </Text>
-                    <Caption Component="div" className={styles.statLabel}>
-                      Поездок
-                    </Caption>
-                  </div>
-                  <div className={styles.stat}>
-                    <Text weight="2" Component="div" className={INFO}>
-                      {profile.data.reviewsCount}
-                    </Text>
-                    <Caption Component="div" className={styles.statLabel}>
-                      Отзывов
-                    </Caption>
-                  </div>
-                  <div className={styles.stat}>
-                    <Text
-                      weight="2"
-                      Component="div"
-                      className={styles.statRating}
-                    >
-                      {formatRating(
-                        profile.data.rating,
-                        profile.data.reviewsCount,
-                      )}
-                    </Text>
-                    <Caption Component="div" className={styles.statLabel}>
-                      Рейтинг
-                    </Caption>
-                  </div>
-                </div>
-
-                <Button
-                  stretched
-                  size="s"
-                  onClick={() => {
-                    haptic.light();
-                    navigate("/profile/edit");
-                  }}
-                >
-                  Редактировать профиль
-                </Button>
+                {/* Плитки «Поездки / Отзывы / Рейтинг» убраны: те же три
+                    числа уже стоят строкой метрик выше, а дубль на одном
+                    экране читался как «четыре показателя» вместо трёх. */}
               </SectionBody>
             </Section>
 
             <Stack>
-                <Section header="Мои поездки">
-                  <MenuRow
-                    label="История поездок"
-                    icon={
-                      <IconContainer>
-                        <History size={18} />
-                      </IconContainer>
-                    }
-                    title="История поездок"
-                    subtitle="Завершённые и отменённые поездки"
-                    onClick={() => {
-                      haptic.light();
-                      navigate("/profile/history");
-                    }}
-                  />
-                  {/* Заявки на попутку — отдельная страница /profile/ride-requests.
+              <Section header="Мои поездки">
+                <MenuRow
+                  label="История поездок"
+                  icon={
+                    <IconContainer>
+                      <History size={18} />
+                    </IconContainer>
+                  }
+                  title="История поездок"
+                  subtitle="Завершённые и отменённые поездки"
+                  onClick={() => {
+                    haptic.light();
+                    navigate("/profile/history");
+                  }}
+                />
+                {/* Заявки на попутку — отдельная страница /profile/ride-requests.
                       Список заявок (статусы, пауза, отмена) — это
                       управление сущностью, ему нужна страница, а не
                       всплывающее окно; создание заявки живёт в окне. */}
-                  <MenuRow
-                    label="История запросов"
-                    icon={
-                      <IconContainer>
-                        <ClipboardList size={18} />
-                      </IconContainer>
-                    }
-                    title="История запросов"
-                    subtitle="Мои заявки на попутку"
-                    onClick={() => {
-                      haptic.light();
-                      navigate("/profile/ride-requests");
-                    }}
-                  />
-                  {/* Отзывы — отдельная страница /reviews (свои вкладки
+                <MenuRow
+                  label="История запросов"
+                  icon={
+                    <IconContainer>
+                      <ClipboardList size={18} />
+                    </IconContainer>
+                  }
+                  title="История запросов"
+                  subtitle="Мои заявки на попутку"
+                  onClick={() => {
+                    haptic.light();
+                    navigate("/profile/ride-requests");
+                  }}
+                />
+                {/* Отзывы — отдельная страница /reviews (свои вкладки
                       «Мои / Новая / Обо мне»). */}
-                  <MenuRow
-                    label="Отзывы"
-                    icon={
-                      <IconContainer>
-                        <Star size={18} />
-                      </IconContainer>
-                    }
-                    title="Отзывы"
-                    subtitle={`Мои отзывы и отзывы обо мне · ${profile.data.reviewsCount}`}
-                    onClick={() => {
-                      haptic.light();
-                      navigate("/reviews");
-                    }}
-                  />
-                </Section>
-                <Section header="Мой автомобиль (для поездок)">
-                  <MenuRow
-                    label={
-                      profile.data.car ? "Автомобиль" : "Добавить автомобиль"
-                    }
-                    icon={
-                      <IconContainer>
-                        <Car size={18} />
-                      </IconContainer>
-                    }
-                    title={
-                      profile.data.car ? "Автомобиль" : "Добавить автомобиль"
-                    }
-                    subtitle={
-                      profile.data.car
-                        ? `${profile.data.car.model} · ${profile.data.car.color}`
-                        : "Добавьте автомобиль, чтобы создавать поездки"
-                    }
-                    onClick={() => navigate("/vehicle")}
-                  />
-                </Section>
-                <Section header="Внешний вид">
-                  <SwitchRow
-                    label="Тёмная тема"
-                    icon={
-                      <IconContainer>
-                        <Moon size={18} />
-                      </IconContainer>
-                    }
-                    title="Тёмная тема"
-                    subtitle={
-                      dark
-                        ? `Включена тёмная тема${themeOverride ? "" : " (как в Telegram)"}`
-                        : `Включена светлая тема${themeOverride ? "" : " (как в Telegram)"}`
-                    }
-                    checked={dark}
-                    onChange={(next) => {
-                      setThemeOverride(next ? "dark" : "light");
-                      haptic.light();
-                    }}
-                  />
-                </Section>
-                <Section header="Уведомления и звуки">
-                  {/* Ошибка сохранения настроек — видимая, через MutationError. */}
-                  <MutationError
-                    error={saveNotifications.error}
-                    fallback="Не удалось сохранить настройки уведомлений"
-                  />
-                  <SwitchRow
-                    label="Уведомления"
-                    icon={
-                      <IconContainer>
-                        <Bell size={18} />
-                      </IconContainer>
-                    }
-                    title="Уведомления"
-                    subtitle="Брони, статусы поездок, ответы поддержки"
-                    checked={notifChecked}
-                    onChange={toggleNotifications}
-                  />
-                  <SwitchRow
-                    label="Звуковые эффекты"
-                    icon={
-                      <IconContainer>
-                        <Volume2 size={18} />
-                      </IconContainer>
-                    }
-                    title="Звуковые эффекты"
-                    subtitle="Звуковые сигналы и вибрация"
-                    checked={soundEnabled}
-                    onChange={(next) => {
-                      setSoundEnabled(next);
-                      if (next) haptic.light();
-                    }}
-                  />
-                </Section>
-                <Section header="Сервис и помощь">
-                  <MenuRow
-                    label="Служба поддержки"
-                    icon={
-                      <IconContainer>
-                        <TriangleAlert size={18} />
-                      </IconContainer>
-                    }
-                    title="Служба поддержки"
-                    subtitle="Вопросы и обращения — ответим в течение нескольких минут"
-                    onClick={() => {
-                      // Страница /profile/support — единственный экран
-                      // поддержки: FAQ, форма обращения и мои обращения.
-                      // Раньше здесь открывалась шторка с дублем той же
-                      // формы, которая сама вела на эту страницу.
-                      haptic.light();
-                      navigate("/profile/support");
-                    }}
-                  />
-                  <MenuRow
-                    label="Жалобы"
-                    icon={
-                      <IconContainer>
-                        <Flag size={18} />
-                      </IconContainer>
-                    }
-                    title="Жалобы"
-                    subtitle="Сообщить о проблеме с пользователем"
-                    onClick={() => navigate("/profile/reports")}
-                  />
-                </Section>
-                {/* Опасная зона — как Add Account официалки: секция,
+                <MenuRow
+                  label="Отзывы"
+                  icon={
+                    <IconContainer>
+                      <Star size={18} />
+                    </IconContainer>
+                  }
+                  title="Отзывы"
+                  subtitle={`Мои отзывы и отзывы обо мне · ${profile.data.reviewsCount}`}
+                  onClick={() => {
+                    haptic.light();
+                    navigate("/reviews");
+                  }}
+                />
+              </Section>
+              <Section header="Мой автомобиль (для поездок)">
+                <MenuRow
+                  label={
+                    profile.data.car ? "Автомобиль" : "Добавить автомобиль"
+                  }
+                  icon={
+                    <IconContainer>
+                      <Car size={18} />
+                    </IconContainer>
+                  }
+                  title={
+                    profile.data.car ? "Автомобиль" : "Добавить автомобиль"
+                  }
+                  subtitle={
+                    profile.data.car
+                      ? `${profile.data.car.model} · ${profile.data.car.color}`
+                      : "Добавьте автомобиль, чтобы создавать поездки"
+                  }
+                  onClick={() => navigate("/vehicle")}
+                />
+              </Section>
+              <Section header="Внешний вид">
+                <SwitchRow
+                  label="Тёмная тема"
+                  icon={
+                    <IconContainer>
+                      <Moon size={18} />
+                    </IconContainer>
+                  }
+                  title="Тёмная тема"
+                  subtitle={
+                    dark
+                      ? `Включена тёмная тема${themeOverride ? "" : " (как в Telegram)"}`
+                      : `Включена светлая тема${themeOverride ? "" : " (как в Telegram)"}`
+                  }
+                  checked={dark}
+                  onChange={(next) => {
+                    setThemeOverride(next ? "dark" : "light");
+                    haptic.light();
+                  }}
+                />
+              </Section>
+              <Section header="Уведомления и звуки">
+                {/* Ошибка сохранения настроек — видимая, через MutationError. */}
+                <MutationError
+                  error={saveNotifications.error}
+                  fallback="Не удалось сохранить настройки уведомлений"
+                />
+                <SwitchRow
+                  label="Уведомления"
+                  icon={
+                    <IconContainer>
+                      <Bell size={18} />
+                    </IconContainer>
+                  }
+                  title="Уведомления"
+                  subtitle="Брони, статусы поездок, ответы поддержки"
+                  checked={notifChecked}
+                  onChange={toggleNotifications}
+                />
+                <SwitchRow
+                  label="Звуковые эффекты"
+                  icon={
+                    <IconContainer>
+                      <Volume2 size={18} />
+                    </IconContainer>
+                  }
+                  title="Звуковые эффекты"
+                  subtitle="Звуковые сигналы и вибрация"
+                  checked={soundEnabled}
+                  onChange={(next) => {
+                    setSoundEnabled(next);
+                    if (next) haptic.light();
+                  }}
+                />
+              </Section>
+              <Section header="Сервис и помощь">
+                <MenuRow
+                  label="Служба поддержки"
+                  icon={
+                    <IconContainer>
+                      <TriangleAlert size={18} />
+                    </IconContainer>
+                  }
+                  title="Служба поддержки"
+                  subtitle="Вопросы и обращения — ответим в течение нескольких минут"
+                  onClick={() => {
+                    // Страница /profile/support — единственный экран
+                    // поддержки: FAQ, форма обращения и мои обращения.
+                    // Раньше здесь открывалась шторка с дублем той же
+                    // формы, которая сама вела на эту страницу.
+                    haptic.light();
+                    navigate("/profile/support");
+                  }}
+                />
+                <MenuRow
+                  label="Жалобы"
+                  icon={
+                    <IconContainer>
+                      <Flag size={18} />
+                    </IconContainer>
+                  }
+                  title="Жалобы"
+                  subtitle="Сообщить о проблеме с пользователем"
+                  onClick={() => navigate("/profile/reports")}
+                />
+              </Section>
+              {/* Опасная зона — как Add Account официалки: секция,
                     в ней красная надпись-кнопка, описание — в футере
                     секции. Кнопки «Выйти» нет. */}
-                <Section
-                  header="Опасная зона"
-                  footer={DELETE_ACCOUNT_WARNING}
-                >
-                  <MutationError
-                    error={remove.error}
-                    fallback="Не удалось удалить профиль"
-                  />
-                  <ConfirmPopup
-                    label="Удалить профиль"
-                    confirmLabel="Удалить окончательно"
-                    description={`Аккаунт будет анонимизирован. ${DELETE_ACCOUNT_WARNING}`}
-                    pending={remove.isPending}
-                    disabled={remove.isPending}
-                    mode="plain"
-                    destructive
-                    onConfirm={() => remove.mutate()}
-                  />
-                </Section>
-              </Stack>
+              <Section header="Опасная зона" footer={DELETE_ACCOUNT_WARNING}>
+                <MutationError
+                  error={remove.error}
+                  fallback="Не удалось удалить профиль"
+                />
+                <ConfirmPopup
+                  label="Удалить профиль"
+                  confirmLabel="Удалить окончательно"
+                  description={`Аккаунт будет анонимизирован. ${DELETE_ACCOUNT_WARNING}`}
+                  pending={remove.isPending}
+                  disabled={remove.isPending}
+                  mode="plain"
+                  destructive
+                  onConfirm={() => remove.mutate()}
+                />
+              </Section>
+            </Stack>
           </Page>
         )}
       </QueryState>

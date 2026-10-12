@@ -3,54 +3,40 @@
  * токены --app-* в src/index.css), поэтому отступы уровней «экран» и
  * «тело секции» здесь не дублируются. Цвета только --tgui--* / --app-*. */
 
-/* Шапка профиля: аватар + имя/рейтинг. Зазор 14px — вне сетки токенов,
- * оставлен литералом ради пиксель-паритета (U3: только механизм). */
-.headerRow {
+/* Шапка профиля — центрированная витрина: аватар 96, имя, телефон, строка
+ * «поездок · рейтинг · отзывов» и кнопка правки.
+ * Отступы и цвета — из токенов, литералов нет. */
+.hero {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-}
-
-/* Текстовая колонка, которая обязана ужиматься — рецепт GROW из
- * @/ui/classes. */
-
-/* Обрезка в одну строку: рецепт — TRUNCATE из @/ui/classes; здесь только
- * блочный display для span/caption-вариантов tgui-типографики (в TRUNCATE
- * его нет осознанно — он иначе ломал бы флекс-раскладки). */
-.truncateBlock {
-  display: block;
-}
-
-/* Строка рейтинга под именем (токены: зазор xs, отступ 2xs). */
-.ratingRow {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-xs);
-  margin-top: var(--app-space-2xs);
-}
-
-/* Статистика: три равные колонки над разделителем (было grid-cols-3). */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--app-space-xs);
-  padding-top: var(--app-space-xs);
-  border-top: 1px solid var(--tgui--outline);
-}
-
-/* Плитка статистики: поездки/отзывы/рейтинг. */
-.stat {
-  padding: var(--app-space-xs);
-  border-radius: var(--app-radius-md);
-  background: var(--tgui--tertiary_bg_color);
   text-align: center;
 }
 
-.statLabel {
+.heroName {
+  margin-top: var(--app-space-sm);
+  overflow-wrap: anywhere;
+}
+
+/* Телефон и строка метрик — приглушённые: это справочные подписи, а не
+ * главный текст экрана. */
+.heroPhone {
+  margin-top: var(--app-space-2xs);
   color: var(--app-muted);
 }
 
-.statRating {
-  color: var(--app-rating);
+.heroMeta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-xs);
+  margin-top: var(--app-space-sm);
+  color: var(--app-muted);
 }
 
+/* Кнопка правки по центру: не тянется на всю ширину — это не основное
+ * действие экрана. */
+.heroEdit {
+  margin-top: var(--app-space-md);
+}
