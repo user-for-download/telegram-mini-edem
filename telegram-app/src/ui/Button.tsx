@@ -7,7 +7,7 @@ import { MIN_TARGET } from "@/ui/classes";
  * не меняем, но выбор «какая это кнопка» перестаёт быть выбором mode).
  */
 export type ButtonVariant =
-  "primary" | "secondary" | "ghost" | "outline" | "white";
+  "primary" | "secondary" | "ghost" | "outline" | "white" | "gray";
 
 const MODES = {
   primary: "filled",
@@ -15,6 +15,7 @@ const MODES = {
   ghost: "plain",
   outline: "outline",
   white: "white",
+  gray: "gray",
 } as const;
 
 export interface ButtonProps extends Omit<
@@ -26,7 +27,10 @@ export interface ButtonProps extends Omit<
    * secondary (по умолчанию) — обычное действие;
    * ghost — «тихая» кнопка-ссылка;
    * outline — действие с рамкой (тихие переходы, чипы-кнопки);
-   * white — белая кнопка на тонированной поверхности.
+   * white — белая кнопка на тонированной поверхности;
+   * gray — приглушённая заливка без акцента: шапки профиля, второстепенные
+   * действия вроде «Редактировать профиль». Отличие от secondary (bezeled)
+   * — gray не несёт рамки и читается фоном, а не контуром.
    */
   variant?: ButtonVariant;
 }

@@ -81,6 +81,7 @@ describe("фасад: смысловые variant указывают на реа�
         ghost: <Button variant="ghost">ок</Button>,
         outline: <Button variant="outline">ок</Button>,
         white: <Button variant="white">ок</Button>,
+        gray: <Button variant="gray">ок</Button>,
       },
     },
     {
