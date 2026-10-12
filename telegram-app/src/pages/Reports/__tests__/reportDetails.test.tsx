@@ -1,6 +1,6 @@
 // SSR-тесты тела попапа жалобы (`ReportDetailsBody`).
 //
-// Тело экспортируется отдельно от `ReportDetailsSheet` намеренно: Modal кита
+// Тело экспортируется отдельно от `ReportDetailsModal` намеренно: Modal кита
 // — портал, в renderToString не попадает (тот же приём, что у
 // `TripRequestsBody` в TripRequestsModal).
 //
@@ -11,7 +11,7 @@ import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import type { Report } from "@edem/contracts";
 
-import { ReportDetailsBody } from "@/pages/Reports/ReportDetailsSheet";
+import { ReportDetailsBody } from "@/pages/Reports/ReportDetailsModal";
 
 function report(overrides: Partial<Report> = {}): Report {
   return {
@@ -80,5 +80,31 @@ describe("ReportDetailsBody: содержимое попапа", () => {
 
   it("без ответа модерации блока нет", () => {
     expect(renderBody()).not.toContain("Ответ модерации");
+  });
+});
+
+describe("Тело попапа: Placeholder без картинки", () => {
+  // Жалоба — короткий текст со статусом, а не иллюстрация: картинка в
+  // Placeholder читалась бы как «данных нет». Раньше здесь была своя вёрстка
+  // (шапка + пилюля + Notice), которая выглядела тяжелее самой сути.
+  it("не рисует img — слот картинки Placeholder пустой", () => {
+    expect(renderBody()).not.toContain("<img");
+  });
+
+  it("категория и тип уехали в заголовок Placeholder", () => {
+    const html = renderBody(report({ category: "spam", targetType: "user" }));
+    expect(html).toContain("Спам · Пользователь");
+  });
+
+  it("статус виден и в попапе, а не только в пилюле-заглушке", () => {
+    expect(renderBody(report({ status: "resolved" }))).toContain("Рассмотрена");
+  });
+
+  it("переносы строк жалобы сохраняются", () => {
+    // Описание — свободный текст пользователя; без pre-wrap переносы
+    // склеились бы в кашу.
+    expect(
+      renderBody(report({ description: "строка 1\nстрока 2" })),
+    ).toContain("строка 1\nстрока 2");
   });
 });

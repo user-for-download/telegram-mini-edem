@@ -5,7 +5,7 @@ import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Cell } from "@/ui/Cell";
 import { Button } from "@/ui/Button";
 import { ComplaintModal } from "./ComplaintModal";
-import { ReportDetailsSheet } from "./ReportDetailsSheet";
+import { ReportDetailsModal } from "./ReportDetailsModal";
 import { useModalBack } from "@/utils/modalBack";
 
 import type { Report } from "@edem/contracts";
@@ -40,7 +40,7 @@ import styles from "./ReportsPage.module.css";
  *
  * Было `Card` с развёрнутым текстом: длинное описание и ответ модерации
  * раздавливали ленту, и страница выглядела иначе, чем остальные списки
- * приложения. Полный текст и ответ уехали в попап (ReportDetailsSheet).
+ * приложения. Полный текст и ответ уехали в попап (ReportDetailsModal).
  *
  * Строка ВСЕГДА интерактивна (тап открывает попап), поэтому нативная кнопка
  * `Component="button"` — свой `onKeyDown` не нужен, Enter/Space сработают
@@ -196,7 +196,7 @@ export function ReportsPage() {
           </SectionBody>
         </Section>
       </Page>
-      <ReportDetailsSheet
+      <ReportDetailsModal
         report={selected}
         onClose={() => setSelectedId(null)}
       />

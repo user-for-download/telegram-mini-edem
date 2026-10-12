@@ -66,23 +66,42 @@
   color: var(--app-danger);
 }
 
-/* Шапка попапа: категория/тип слева, статус-пилюля справа. Раньше это была
- * шапка карточки в списке; переехала в попап вместе с текстом. */
-.head {
-  display: flex;
+/* Тело попапа: Placeholder центрирует header/description, поэтому вложенный
+ * стек выравниваем по левому краю и растягиваем на ширину — иначе узкая
+ * колонка текста внутри крупного блока читается как обрывок. */
+.details {
   align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--app-space-xs);
+  text-align: left;
 }
 
-.headText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+/* Дата подачи — приглушённая, это справка, а не главный смысл. */
+.detailsDate {
+  color: var(--app-muted);
 }
 
-/* Пилюля статуса в шапке не сжимается. */
-.head > *:last-child {
-  flex-shrink: 0;
+.detailsText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Статус в попапе — тот же тон, что строка в ленте. Пилюли здесь нет:
+ * Placeholder работает крупными блоками, пилюля выглядела бы вставкой. */
+.detailsStatus {
+  color: var(--app-muted);
+}
+
+.detailsStatus[data-tone="warning"] {
+  color: var(--app-warning);
+}
+
+.detailsStatus[data-tone="info"] {
+  color: var(--app-info);
+}
+
+.detailsStatus[data-tone="success"] {
+  color: var(--app-success);
+}
+
+.detailsStatus[data-tone="danger"] {
+  color: var(--app-danger);
 }

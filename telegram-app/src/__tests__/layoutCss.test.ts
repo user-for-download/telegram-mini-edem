@@ -305,7 +305,7 @@ describe("каркас: рёбра экрана (рельс Page)", () => {
     // Экранов много, а контракт рёбер один: пока у корня экрана нет
     // НИ ОДНОГО маршрута без Page, паддинги не могут разъехаться.
     // Страницы-диспетчеры (TripPage → TripActivePage) и вложенные в Sheet
-    // (TripDetailsPage, BookingPanel, ReportDetailsSheet) корня Page не
+    // (TripDetailsPage, BookingPanel, ReportDetailsModal) корня Page не
     // имеют СОЗНАТЕЛЬНО: первый лишь переадресует, остальные живут в теле
     // модалки со своей геометрией.
     const noPage = walkSource(join(here, "..", "pages"))
@@ -314,7 +314,7 @@ describe("каркас: рёбра экрана (рельс Page)", () => {
       .map(nameOf)
       .filter(
         (name) =>
-          !/TripPage|TripDetailsPage|DriverPanel|TripHero|BookingPanel|Complaint|Feedback|TripDateDivider|ReportDetailsSheet/.test(
+          !/TripPage|TripDetailsPage|DriverPanel|TripHero|BookingPanel|Complaint|Feedback|TripDateDivider|ReportDetailsModal/.test(
             name,
           ),
       );
