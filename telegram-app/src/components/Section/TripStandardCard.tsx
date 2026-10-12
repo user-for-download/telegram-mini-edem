@@ -13,6 +13,7 @@ import { AvatarStack } from "@/components/Trip/AvatarStack";
 import { Card } from "@/ui/Card";
 import { Cell } from "@/ui/Cell";
 import { VISUALLY_HIDDEN } from "@/ui/classes";
+import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
 import styles from "./TripStandardCard.module.css";
 
 export interface TripStandardPerson {
@@ -29,6 +30,12 @@ export interface TripStandardPerson {
    * рейтинг ему не интересен, а пассажиры — да.
    */
   passengers?: TripPassenger[];
+  /**
+   * id человека, если это ДРУГОЙ пользователь. Тогда строка персоны
+   * становится отдельной кнопкой-соседом и открывает шторку профиля.
+   * Не задан у «Вы водитель» — там персона это сам пользователь.
+   */
+  id?: string;
 }
 
 export interface TripStandardCardProps {
@@ -84,6 +91,48 @@ export function TripStandardCard({
   // остаётся onClick, а кнопка гасит всплытие, чтобы не открыть дважды.
   // Клавиатура получила нативную кнопку: фокус, Enter/Space, роль — из коробки.
   const hasInteractiveOverride = personOverride !== undefined;
+  // Персона другого человека — интерактив (открывает шторку профиля), а
+  // значит не может лежать ВНУТРИ кнопки открытия: вложенные кнопки
+  // запрещены, и это держит a11y-контракт карточки. Такой случай
+  // вынесен наружу рядом с personOverride.
+  const personAsButton = person.id !== undefined && !hasInteractiveOverride;
+  const openUserProfile = useOpenUserProfile();
+
+  const personCell = !hasInteractiveOverride ? (
+    <Cell
+      className={styles.person}
+      before={
+        <Avatar
+          size={40}
+          src={person.avatar ?? undefined}
+          acronym={person.name.slice(0, 2).toUpperCase()}
+        />
+      }
+      subtitle={
+        <Caption level="1" Component="p" weight="2">
+          <span className={styles.car}>
+            {person.showCarIcon && <CarFront size={14} aria-hidden />}
+            {person.subtitle}
+          </span>
+        </Caption>
+      }
+      after={
+        person.passengers !== undefined ? (
+          <AvatarStack users={person.passengers} />
+        ) : (
+          <RatingPill
+            size="s"
+            value={person.rating ?? null}
+            reviewsCount={person.reviewsCount ?? null}
+          />
+        )
+      }
+    >
+      <Subheadline level="2" Component="p" weight="1">
+        {person.name}
+      </Subheadline>
+    </Cell>
+  ) : null;
 
   const content = (
     <>
@@ -126,41 +175,7 @@ export function TripStandardCard({
           </div>
         ))}
       </div>
-      {!hasInteractiveOverride && (
-        <Cell
-          className={styles.person}
-          before={
-            <Avatar
-              size={40}
-              src={person.avatar ?? undefined}
-              acronym={person.name.slice(0, 2).toUpperCase()}
-            />
-          }
-          subtitle={
-            <Caption level="1" Component="p" weight="2">
-              <span className={styles.car}>
-                {person.showCarIcon && <CarFront size={14} aria-hidden />}
-                {person.subtitle}
-              </span>
-            </Caption>
-          }
-          after={
-            person.passengers !== undefined ? (
-              <AvatarStack users={person.passengers} />
-            ) : (
-              <RatingPill
-                size="s"
-                value={person.rating ?? null}
-                reviewsCount={person.reviewsCount ?? null}
-              />
-            )
-          }
-        >
-          <Subheadline level="2" Component="p" weight="1">
-            {person.name}
-          </Subheadline>
-        </Cell>
-      )}
+      {!personAsButton && personCell}
     </>
   );
 
@@ -181,6 +196,35 @@ export function TripStandardCard({
         <span className={VISUALLY_HIDDEN}>Открыть поездку</span>
         {content}
       </button>
+      {/* Персона другого человека — сосед кнопки открытия (как
+          personOverride), и отдельная кнопка со своим действием.
+          Гасит всплытие: иначе корневой onClick карточки открыл бы
+          детали поездки поверх шторки профиля. */}
+      {personAsButton && (
+        <button
+          type="button"
+          className={styles.personButton}
+          onClick={(event) => {
+            event.stopPropagation();
+            openUserProfile({
+              id: person.id as string,
+              initial: {
+                name: person.name,
+                avatar: person.avatar ?? null,
+                rating: person.rating ?? 0,
+                reviewsCount: person.reviewsCount ?? 0,
+                tripsCount: 0,
+              },
+            });
+          }}
+        >
+          {/* Глагол скрыто: имя кнопки — это имя человека плюс намерение. */}
+          <span className={VISUALLY_HIDDEN}>
+            {`Открыть профиль: ${person.name}`}
+          </span>
+          {personCell}
+        </button>
+      )}
       {hasInteractiveOverride && personOverride}
       {footer && <div className={styles.footer}>{footer}</div>}
     </Card>

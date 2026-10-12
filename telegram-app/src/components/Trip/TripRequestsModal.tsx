@@ -27,11 +27,49 @@ import {
 } from "@/queries/useBookingsQuery";
 import { Card } from "@/ui/Card";
 import { Stack } from "@/ui/Stack";
+import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
 import styles from "./TripModals.module.css";
 
 type TripBooking = NonNullable<
   ReturnType<typeof useTripBookingsQuery>["data"]
 >["pages"][number]["items"][number];
+
+/**
+ * Шапка карточки заявки: аватар + имя + место — кнопка шторки профиля
+ * пассажира. Кнопка целиком (не только имя): в блоке нет вложенных
+ * интерактивов, поэтому avatar+имя кликабельны вместе. Статус и действия
+ * остаются соседями кнопки.
+ */
+function PassengerHead({ booking }: { booking: TripBooking }) {
+  const openUserProfile = useOpenUserProfile();
+  return (
+    <button
+      type="button"
+      className={styles.rowInfo}
+      onClick={() =>
+        openUserProfile({
+          id: booking.passenger.id,
+          initial: booking.passenger,
+        })
+      }
+    >
+      <LazyAvatar
+        size={40}
+        src={booking.passenger.avatar}
+        acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
+        alt={booking.passenger.name}
+      />
+      <div className={GROW}>
+        <Text Component="div" className={TRUNCATE}>
+          {booking.passenger.name}
+        </Text>
+        <Caption Component="div">
+          {`место ${booking.seat}${booking.comment ? ` · «${booking.comment}»` : ""}`}
+        </Caption>
+      </div>
+    </button>
+  );
+}
 
 /** Карточка ожидающей заявки с Accept/Decline (таргеты ≥44px, min-h). */
 const PendingBookingCard = memo(function PendingBookingCard({
@@ -48,22 +86,7 @@ const PendingBookingCard = memo(function PendingBookingCard({
   return (
     <Card className={styles.card}>
       <div className={styles.cardHead}>
-        <div className={styles.rowInfo}>
-          <LazyAvatar
-            size={40}
-            src={booking.passenger.avatar}
-            acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
-            alt={booking.passenger.name}
-          />
-          <div className={GROW}>
-            <Text Component="div" className={TRUNCATE}>
-              {booking.passenger.name}
-            </Text>
-            <Caption Component="div">
-              {`место ${booking.seat}${booking.comment ? ` · «${booking.comment}»` : ""}`}
-            </Caption>
-          </div>
-        </div>
+        <PassengerHead booking={booking} />
         <StatusPill tone="warning" className={SHRINK}>
           Ожидает решения
         </StatusPill>
@@ -99,20 +122,7 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
 }) {
   return (
     <Card className={styles.cardRow}>
-      <div className={styles.rowInfo}>
-        <LazyAvatar
-          size={40}
-          src={booking.passenger.avatar}
-          acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
-          alt={booking.passenger.name}
-        />
-        <div className={GROW}>
-          <Text Component="div" className={TRUNCATE}>
-            {booking.passenger.name}
-          </Text>
-          <Caption Component="div">{`место ${booking.seat}`}</Caption>
-        </div>
-      </div>
+      <PassengerHead booking={booking} />
       <StatusPill tone="success" className={SHRINK}>
         Подтверждён
       </StatusPill>
@@ -140,23 +150,11 @@ const ClosedBookingCard = memo(function ClosedBookingCard({
 }: {
   booking: TripBooking;
 }) {
-  const label = CLOSED_LABELS[booking.status === "cancelled" ? "cancelled" : "declined"];
+  const label =
+    CLOSED_LABELS[booking.status === "cancelled" ? "cancelled" : "declined"];
   return (
     <Card className={styles.cardRow}>
-      <div className={styles.rowInfo}>
-        <LazyAvatar
-          size={40}
-          src={booking.passenger.avatar}
-          acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
-          alt={booking.passenger.name}
-        />
-        <div className={GROW}>
-          <Text Component="div" className={TRUNCATE}>
-            {booking.passenger.name}
-          </Text>
-          <Caption Component="div">{`место ${booking.seat}`}</Caption>
-        </div>
-      </div>
+      <PassengerHead booking={booking} />
       <StatusPill tone="danger" className={SHRINK}>
         {label}
       </StatusPill>
@@ -187,11 +185,7 @@ export function TripRequestsModal({
   // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
   // текст только на iOS.
   return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title="Заявки пассажиров"
-    >
+    <Sheet open={open} onClose={onClose} title="Заявки пассажиров">
       <TripRequestsBody tripId={tripId} />
     </Sheet>
   );
@@ -253,7 +247,8 @@ export const TripRequestsBody = memo(function TripRequestsBody({
   const closed = useMemo(
     () =>
       items.filter(
-        (booking) => booking.status === "declined" || booking.status === "cancelled",
+        (booking) =>
+          booking.status === "declined" || booking.status === "cancelled",
       ),
     [items],
   );
@@ -284,10 +279,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
           action={
             <>
               {!forbidden && (
-                <Button
-                  stretched
-                  onClick={() => void requests.refetch()}
-                >
+                <Button stretched onClick={() => void requests.refetch()}>
                   Повторить
                 </Button>
               )}
@@ -378,10 +370,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
           isFetchingNextPage={requests.isFetchingNextPage}
           fetchNextPage={() => void requests.fetchNextPage()}
         />
-        <Button
-          stretched
-          onClick={() => navigate("/bookings?segment=driving")}
-        >
+        <Button stretched onClick={() => navigate("/bookings?segment=driving")}>
           К моим поездкам
         </Button>
       </Stack>

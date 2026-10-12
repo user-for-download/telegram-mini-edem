@@ -64,7 +64,8 @@ export type TripCardVariant =
 function isCancellable(trip: Trip, now: Date = new Date()): boolean {
   if (trip.status === "cancelled" || trip.status === "completed") return false;
   const departureAt = Date.parse(trip.departureAt ?? "");
-  if (Number.isFinite(departureAt) && departureAt <= now.getTime()) return false;
+  if (Number.isFinite(departureAt) && departureAt <= now.getTime())
+    return false;
   return true;
 }
 
@@ -108,9 +109,12 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
           <StatusPill tone={status.tone}>{status.label}</StatusPill>
         }
         person={{
+          // Водитель — чужой пользователь: id открывает шторку профиля.
+          id: driver.id,
           name: driver.name,
           avatar: driver.avatar,
           rating: driver.rating,
+          reviewsCount: driver.reviewsCount,
           subtitle: driverLine,
           showCarIcon: Boolean(driver.car),
         }}

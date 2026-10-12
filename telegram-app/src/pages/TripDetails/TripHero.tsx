@@ -5,6 +5,7 @@ import { IconButton } from "@/ui/IconButton";
 import { Stack } from "@/ui/Stack";
 import { GROW, ROW_BETWEEN, TRUNCATE, BTN_ROW_WRAP } from "@/ui/classes";
 import { LazyAvatar } from "@/components/LazyAvatar";
+import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
 import { formatDuration, relativeMoscowDay } from "@/utils/date";
 import { plural } from "@/utils/plural";
@@ -39,6 +40,7 @@ export function TripHero({
   arrival,
   onShare,
 }: TripHeroProps) {
+  const openUserProfile = useOpenUserProfile();
   return (
     <>
       <div className={styles.routeCard}>
@@ -67,30 +69,51 @@ export function TripHero({
       </div>
 
       <div className={styles.driverCard}>
-        <div className={styles.driverRow}>
-          <LazyAvatar
-            size={40}
-            src={item.driver.avatar}
-            acronym={item.driver.name.slice(0, 1).toUpperCase()}
-            alt={item.driver.name}
-          />
-          <div className={GROW}>
-            <Text weight="2" Component="div" className={styles.nameRow}>
-              <span className={TRUNCATE}>{item.driver.name}</span>
-              {item.driver.isVerified && (
-                <ShieldCheck size={15} className={styles.verified} />
-              )}
-            </Text>
-            <Caption Component="div" className={styles.ratingRow}>
-              <Star size={12} className={styles.star} />
-              <span>{item.driver.rating.toFixed(1)}</span>
-              <span>
-                ({item.driver.reviewsCount}{" "}
-                {plural(item.driver.reviewsCount, "отзыв", "отзыва", "отзывов")})
-              </span>
-            </Caption>
+        {/* Карточка водителя открывает шторку его профиля. Кнопка —
+            сосед блока действий справа, а не их родитель: вложенные
+            кнопки запрещены, и «Позвонить»/«Поделиться» остаются
+            самостоятельными действиями. */}
+        <button
+          type="button"
+          className={styles.driverOpen}
+          onClick={() =>
+            openUserProfile({
+              id: item.driver.id,
+              initial: item.driver,
+            })
+          }
+        >
+          <div className={styles.driverRow}>
+            <LazyAvatar
+              size={40}
+              src={item.driver.avatar}
+              acronym={item.driver.name.slice(0, 1).toUpperCase()}
+              alt={item.driver.name}
+            />
+            <div className={GROW}>
+              <Text weight="2" Component="div" className={styles.nameRow}>
+                <span className={TRUNCATE}>{item.driver.name}</span>
+                {item.driver.isVerified && (
+                  <ShieldCheck size={15} className={styles.verified} />
+                )}
+              </Text>
+              <Caption Component="div" className={styles.ratingRow}>
+                <Star size={12} className={styles.star} />
+                <span>{item.driver.rating.toFixed(1)}</span>
+                <span>
+                  ({item.driver.reviewsCount}{" "}
+                  {plural(
+                    item.driver.reviewsCount,
+                    "отзыв",
+                    "отзыва",
+                    "отзывов",
+                  )}
+                  )
+                </span>
+              </Caption>
+            </div>
           </div>
-        </div>
+        </button>
 
         <div className={styles.driverActions}>
           <IconButton
@@ -136,7 +159,12 @@ export function TripHero({
           вплотную к кнопке без отрицательного марджина (было .pullUp
           margin-top:-8px поверх ритма 12 — те же 4px, U3). */}
       <Stack gap="2xs">
-        <Button size="m" stretched before={<Send size={16} />} onClick={onShare}>
+        <Button
+          size="m"
+          stretched
+          before={<Send size={16} />}
+          onClick={onShare}
+        >
           Поделиться поездкой с попутчиком в Telegram
         </Button>
         {shareStatus && (

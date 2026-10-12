@@ -195,6 +195,35 @@
   gap: 0;
 }
 
+/*
+ * Кнопка персоны другого человека — сосед кнопки открытия, не её потомок
+ * (вложенные кнопки запрещены, см. .open). Держит ту же полосу Cell внутри
+ * и гасит всплытие, чтобы корневой onClick карточки не открыл детали.
+ * UA-сброс как у .open, но без полосы hairline — это не футер.
+ */
+.personButton.personButton {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Фокус виден: с клавиатуры персону тоже надо открыть. */
+.personButton.personButton:focus-visible {
+  outline: 2px solid var(--tgui--link_color);
+  outline-offset: -2px;
+  border-radius: var(--app-radius-card, 16px);
+}
+
 /* Слот действий: кнопки под персоной, с верхней hairline. */
 .footer {
   display: flex;

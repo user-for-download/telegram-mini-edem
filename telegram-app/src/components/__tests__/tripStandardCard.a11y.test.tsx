@@ -25,13 +25,19 @@ const TRIP = {
   price: 450,
 };
 
-function renderCard(props: Partial<React.ComponentProps<typeof TripStandardCard>>) {
+function renderCard(
+  props: Partial<React.ComponentProps<typeof TripStandardCard>>,
+) {
   return render(
     <AppRoot platform="base">
       <TripStandardCard
         {...TRIP}
         headerStatus={<StatusPill tone="warning">Ожидает</StatusPill>}
-        person={{ name: "Александр", rating: 4.9, subtitle: "Lada Vesta · белый" }}
+        person={{
+          name: "Александр",
+          rating: 4.9,
+          subtitle: "Lada Vesta · белый",
+        }}
         onOpen={() => {}}
         {...props}
       />
@@ -45,6 +51,55 @@ function openButton(): HTMLButtonElement {
   expect(button.tagName).toBe("BUTTON");
   return button as HTMLButtonElement;
 }
+
+describe("TripStandardCard: персона другого человека", () => {
+  // Персона с id — интерактив (шторка профиля), поэтому обязана быть
+  // СОСЕДОМ кнопки открытия, как personOverride. Эти два теента фиксируют
+  // ровно это правило: кнопка открытия не должна наехать вложенной
+  // кнопкой, а тап по персоне не должен открывать детали поездки.
+  it("персона с id — сосед кнопки открытия, не её потомок", () => {
+    renderCard({
+      person: {
+        id: "u-9",
+        name: "Александр",
+        rating: 4.9,
+        subtitle: "Водитель",
+      },
+    });
+    const button = openButton();
+    // Внутри кнопки открытия по-прежнему 0 вложенных кнопок.
+    expect(button.querySelectorAll("button")).toHaveLength(0);
+    // Сама кнопка персоны есть и имеет доступное имя с намерением.
+    expect(
+      screen.getByRole("button", { name: /Открыть профиль: Александр/ }),
+    ).toBeTruthy();
+  });
+
+  it("тап по персоне открывает профиль и НЕ открывает детали поездки", () => {
+    const onOpen = vi.fn();
+    renderCard({
+      person: {
+        id: "u-9",
+        name: "Александр",
+        rating: 4.9,
+        subtitle: "Водитель",
+      },
+      onOpen,
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /Открыть профиль: Александр/ }),
+    );
+    // Персона гасит всплытие — корневой onOpen карточки не должен сработать.
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("без id персона остаётся НЕинтерактивной (свой «Вы водитель»)", () => {
+    renderCard({ person: { name: "Вы водитель", subtitle: "Пассажиры: 2" } });
+    expect(
+      screen.queryByRole("button", { name: /Открыть профиль/ }),
+    ).toBeNull();
+  });
+});
 
 describe("TripStandardCard: открытие доступно с клавиатуры", () => {
   it("с футером: открытие — настоящая кнопка, а не div без роли", () => {

@@ -27,7 +27,6 @@
   background: var(--tgui--tertiary_bg_color);
 }
 
-
 /* Карточка водителя: поверхность секции + hairline кит-обводки
  * (не ui/Card: без тени), паддинг 16 и радиус — из токенов карточки. */
 .driverCard {
@@ -39,6 +38,34 @@
   border-radius: var(--app-card-radius);
   background: var(--tgui--section_bg_color);
   border: 1px solid var(--tgui--outline);
+}
+
+/* Кнопка «открыть профиль водителя» — сосед блока действий, а не его
+   родитель: кнопки «Позвонить»/«Поделиться» внутри неё были бы вложенными.
+   Занимает свободное место и ужимается, чтобы длинное имя не выдавило
+   действия. UA-сброс кнопки (шрифт/рамка/фон) — тот же, что у .open
+   в TripStandardCard. */
+.driverOpen {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Фокус виден: карточка водителя открывается и с клавиатуры. */
+.driverOpen:focus-visible {
+  outline: 2px solid var(--tgui--link_color);
+  outline-offset: 2px;
+  border-radius: var(--app-card-radius);
 }
 
 /* Строка «аватар + имя»: обязана ужиматься. */

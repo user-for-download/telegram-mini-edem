@@ -43,12 +43,31 @@
   gap: var(--app-space-xs);
 }
 
-/* Строка «аватар + имя»: ужимается, текст не распирает карточку. */
+/* Строка «аватар + имя»: ужимается, текст не распирает карточку.
+   Это кнопка шторки профиля пассажира, поэтому UA-сброс кнопки
+   (иначе Arial 13.33px, серый фон и рамка ломают вид строки) и
+   видимый фокус. */
 .rowInfo {
   display: flex;
   align-items: center;
   gap: var(--app-space-xs);
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.rowInfo:focus-visible {
+  outline: 2px solid var(--tgui--link_color);
+  outline-offset: 2px;
+  border-radius: var(--app-radius-sm);
 }
 
 /* Два поля в ряд (даты «с» и «по»). */
@@ -84,4 +103,3 @@
 .declineButton {
   color: var(--tgui--destructive_text_color);
 }
-

@@ -14,6 +14,7 @@ import { haptic } from "@/utils/haptics";
 import { nativeConfirm } from "@/utils/telegram-adapter";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
+import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
 import {
   useDriverRequestsQuery,
   useUpdateBookingStatusMutation,
@@ -40,6 +41,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
   const toast = useToast();
   const query = useDriverRequestsQuery();
   const updateStatus = useUpdateBookingStatusMutation();
+  const openUserProfile = useOpenUserProfile();
 
   const pending = (query.data ?? []).filter(
     (booking) => booking.trip.id === tripId && booking.status === "pending",
@@ -57,16 +59,13 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
     status: "confirmed" | "declined",
   ) => {
     haptic.light();
-    const confirmed =
-      await nativeConfirm({
-        title:
-          status === "confirmed"
-            ? "Подтвердить пассажира?"
-            : "Отклонить заявку?",
-        message: `${booking.passenger.name} · место №${booking.seat}`,
-        confirmText: status === "confirmed" ? "Подтвердить" : "Отклонить",
-        destructive: status === "declined",
-      });
+    const confirmed = await nativeConfirm({
+      title:
+        status === "confirmed" ? "Подтвердить пассажира?" : "Отклонить заявку?",
+      message: `${booking.passenger.name} · место №${booking.seat}`,
+      confirmText: status === "confirmed" ? "Подтвердить" : "Отклонить",
+      destructive: status === "declined",
+    });
     if (!confirmed) return;
     act(booking.id, booking.passenger.name, status);
   };
@@ -153,13 +152,13 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
 
   // Кнопки −/+ гасят всплытие сами. Обёртка с onClick запрещена jsx-a11y.
   return (
-      <div className={styles.requestsList}>
-        {updateStatus.error && (
-          <Notice role="alert" tone="danger" variant="text">
-            {bookingErrorMessage(updateStatus.error)}
-          </Notice>
-        )}
-        {pending.map((booking) => (
+    <div className={styles.requestsList}>
+      {updateStatus.error && (
+        <Notice role="alert" tone="danger" variant="text">
+          {bookingErrorMessage(updateStatus.error)}
+        </Notice>
+      )}
+      {pending.map((booking) => (
         <Cell
           key={booking.id}
           className={styles.requestCell}
@@ -182,9 +181,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
                 <Armchair size={14} aria-hidden />
                 {`место №${booking.seat}`}
               </span>
-              {booking.comment?.trim()
-                ? ` · «${booking.comment.trim()}»`
-                : ""}
+              {booking.comment?.trim() ? ` · «${booking.comment.trim()}»` : ""}
             </Caption>
           }
           after={
@@ -216,11 +213,27 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
             </span>
           }
         >
-          <Subheadline level="2" Component="p" weight="1">
-            {booking.passenger.name}
-          </Subheadline>
+          {/* Имя пассажира — кнопка шторки профиля. Cell целиком кнопкой
+              быть не может: в его after живут IconButton −/+, и кнопка
+              внутри кнопки запрещена. Поэтому интерактивно только имя —
+              аватар в слоте before остаётся декоративным. */}
+          <button
+            type="button"
+            className={styles.requestPerson}
+            onClick={(event) => {
+              event.stopPropagation();
+              openUserProfile({
+                id: booking.passenger.id,
+                initial: booking.passenger,
+              });
+            }}
+          >
+            <Subheadline level="2" Component="p" weight="1">
+              {booking.passenger.name}
+            </Subheadline>
+          </button>
         </Cell>
       ))}
-      </div>
+    </div>
   );
 }

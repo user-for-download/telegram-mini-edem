@@ -26,6 +26,10 @@ export function feedSeats(trip: Pick<Trip, "seatsAvailable">): FeedSeats {
 export function feedPerson(trip: Trip): TripStandardPerson {
   const car = trip.driver.car;
   return {
+    // Водитель — чужой пользователь: id делает строку персоны открываемой
+    // (шторка профиля). Рейтинг в ленте рисуется без числа отзывов
+    // (reviewsCount не переносим) — карточка это допускает.
+    id: trip.driver.id,
     name: trip.driver.name,
     avatar: trip.driver.avatar,
     rating: trip.driver.rating,

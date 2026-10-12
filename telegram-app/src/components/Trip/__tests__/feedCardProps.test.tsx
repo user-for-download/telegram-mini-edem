@@ -66,6 +66,8 @@ describe("feedSeats: пилюля мест по остатку", () => {
 describe("feedPerson: персона ленты — водитель", () => {
   it("имя/аватар/рейтинг водителя; без авто — subtitle «Водитель»", () => {
     expect(feedPerson(makeTrip())).toEqual({
+      // id делает строку персоны открываемой (шторка профиля водителя)
+      id: "u-driver",
       name: "Иван Водителев",
       avatar: AVATAR_SRC,
       rating: 4.8,
@@ -83,6 +85,7 @@ describe("feedPerson: персона ленты — водитель", () => {
       },
     };
     expect(feedPerson(trip)).toEqual({
+      id: "u-driver",
       name: "Иван Водителев",
       avatar: AVATAR_SRC,
       rating: 4.8,
