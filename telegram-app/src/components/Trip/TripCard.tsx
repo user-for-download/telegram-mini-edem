@@ -143,7 +143,6 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
                   description="Заявка будет отменена, а место снова станет доступно."
                   pending={cancelPending}
                   destructive
-                  actionsEnd
                   mode="outline"
                   onConfirm={() => onCancel(booking.id)}
                 />
@@ -207,7 +206,6 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
                 description="Поездка станет недоступна, а пассажиры получат уведомление."
                 pending={cancelPending}
                 destructive
-                actionsEnd
                 mode="outline"
                 onConfirm={() => onCancel(trip.id)}
               />

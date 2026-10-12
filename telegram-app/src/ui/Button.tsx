@@ -46,7 +46,7 @@ export interface ButtonProps extends Omit<
  * Component, type, ref) прокидываются без изменений.
  *
  * Деструктив — НЕ вариант кнопки: красные действия идут через
- * ConfirmPopup/ConfirmAction (`mode="plain"` + `destructive`), чтобы
+ * ConfirmPopup/ConfirmSheet (`mode="plain"` + `destructive`), чтобы
  * опасное действие всегда было под подтверждением.
  */
 export function Button({

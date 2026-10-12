@@ -58,7 +58,7 @@
   gap: var(--app-space-sm);
 }
 
-/* Обёртка ConfirmAction: сама не участвует в раскладке (было contents),
+/* Обёртка ConfirmPopup: сама не участвует в раскладке (было contents),
  * но её кнопка обязана держать ту же высоту, что соседние (44px). */
 .contentsBtn {
   display: contents;

@@ -2,21 +2,38 @@ import { useState } from "react";
 import type { MouseEvent } from "react";
 
 import { Button } from "@/ui/Button";
+import type { ButtonVariant } from "@/ui/Button";
 import { popup } from "@tma.js/sdk-react";
-import { ConfirmAction, CONFIRM_MODE_VARIANT, type ConfirmMode } from "@/components/ConfirmAction";
 import { isTelegramMockEnv } from "@/utils/telegram-adapter";
-import styles from "./ConfirmAction.module.css";
+import { ConfirmSheet } from "@/components/ConfirmSheet";
+import styles from "./ConfirmPopup.module.css";
+
+/** Публичный параметр mode (совместимость с прежними вызовами) → variant. */
+const CONFIRM_MODE_VARIANT = {
+  filled: "primary",
+  bezeled: "secondary",
+  plain: "ghost",
+  outline: "outline",
+  white: "white",
+} as const satisfies Record<string, ButtonVariant>;
+
+export type ConfirmMode = keyof typeof CONFIRM_MODE_VARIANT;
 
 /**
  * Confirm-guard через нативный popup клиента (как AlertController
  * официального клиента: заголовок + текст последствий + [Отмена |
- * красная деструктивная]). Вне Telegram (dev-браузер) popup недоступен —
- * молча откатываемся на инлайн ConfirmAction (тот же API пропсов).
- * NB: под mockTelegramEnv (dev) isAvailable() врёт (true), а диалога
- * мок показать не может. Браузер — среда разработки: подтверждения
- * там не нужны, кнопка выполняет действие сразу, без панели
- * (см. isTelegramMockEnv). Инлайн ConfirmAction остаётся фолбэком
- * только для реальных клиентов без popup (старые версии).
+ * красная деструктивная]).
+ *
+ * ГДЕ ЧТО ПОКАЗЫВАЕТСЯ:
+ * - Telegram, popup доступен → нативный алерт клиента. Эта ветка не
+ *   менялась и не меняется: выбор делает `popup.show.isAvailable()`.
+ * - Браузер (dev-стенд), popup недоступен → ConfirmSheet на китовом Sheet.
+ * - Telegram для macOS (mockTelegramEnv): SDK врёт `isAvailable() === true`,
+ *   а показать нечем → тоже ConfirmSheet.
+ *
+ * Про macOS важно: до этого мок-ветка выполняла деструктивное действие
+ * СРАЗУ, вообще без подтверждения — «Удалить профиль» на macOS удалял
+ * аккаунт одним тапом. Теперь там тот же Sheet, что и на стенде.
  *
  * Маппинг (лимиты нативного popup: title ≤64, message ≤256, ≤3 кнопок):
  * title/text кнопки = confirmLabel, message = description, системная
@@ -35,7 +52,6 @@ export function ConfirmPopup({
   mode = "bezeled",
   disabled = false,
   destructive = false,
-  actionsEnd = false,
   className,
   onConfirm,
 }: {
@@ -46,13 +62,11 @@ export function ConfirmPopup({
   mode?: ConfirmMode;
   disabled?: boolean;
   destructive?: boolean;
-  /** Инлайн-фолбэк: кнопки панели к правому краю (см. ConfirmAction). */
-  actionsEnd?: boolean;
-  /** Класс на кнопку-триггер (нативный MIN_TARGET); фолбэк-панель — без него. */
+  /** Класс на кнопку-триггер (нативный MIN_TARGET). */
   className?: string;
   onConfirm: () => void;
 }) {
-  const [fallback, setFallback] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const stop = (event: MouseEvent) => event.stopPropagation();
 
@@ -63,10 +77,10 @@ export function ConfirmPopup({
       .filter(Boolean)
       .join(" ") || undefined;
 
-  // Мок-окружение (dev-браузер): браузер — среда разработки,
-  // подтверждения не нужны — кнопка выполняет действие сразу.
-  if (isTelegramMockEnv()) {
-    return (
+  const openSheet = () => setSheetOpen(true);
+
+  return (
+    <>
       <Button
         variant={CONFIRM_MODE_VARIANT[mode]}
         size="s"
@@ -75,70 +89,57 @@ export function ConfirmPopup({
         className={triggerClassName}
         onClick={(event) => {
           stop(event);
-          onConfirm();
+          // Мок-окружение (Telegram macOS): нативный popup недоступен,
+          // несмотря на isAvailable() === true. Проверяем ДО вызова popup,
+          // иначе он зависнет на неразрешённом промисе.
+          if (isTelegramMockEnv()) {
+            openSheet();
+            return;
+          }
+          void (async () => {
+            // ifAvailable отдаёт кортеж [called, promise], а не значение —
+            // поэтому явная проверка isAvailable() + прямой вызов show(),
+            // резолвящий buttonId (null = закрыт без выбора = отмена).
+            try {
+              if (!popup.show.isAvailable()) {
+                openSheet();
+                return;
+              }
+              const buttonId = await popup.show({
+                title: confirmLabel,
+                message: description,
+                buttons: [
+                  { id: "cancel", type: "cancel" },
+                  {
+                    id: "confirm",
+                    type: destructive ? "destructive" : "default",
+                    text: confirmLabel,
+                  },
+                ],
+              });
+              if (buttonId === "confirm") {
+                onConfirm();
+              }
+            } catch {
+              openSheet();
+            }
+          })();
         }}
       >
         {label}
       </Button>
-    );
-  }
-
-  if (fallback) {
-    return (
-      <ConfirmAction
-        label={label}
+      <ConfirmSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
         confirmLabel={confirmLabel}
         description={description}
         pending={pending}
-        mode={mode}
-        disabled={disabled}
         destructive={destructive}
-        actionsEnd={actionsEnd}
-        onConfirm={onConfirm}
+        onConfirm={() => {
+          setSheetOpen(false);
+          onConfirm();
+        }}
       />
-    );
-  }
-
-  return (
-    <Button
-      variant={CONFIRM_MODE_VARIANT[mode]}
-      size="s"
-      stretched
-      disabled={disabled || pending}
-      className={triggerClassName}
-      onClick={(event) => {
-        stop(event);
-        void (async () => {
-          // ifAvailable отдаёт кортеж [called, promise], а не значение —
-          // поэтому явная проверка isAvailable() + прямой вызов show(),
-          // резолвящий buttonId (null = закрыт без выбора = отмена).
-          try {
-            if (!popup.show.isAvailable()) {
-              setFallback(true);
-              return;
-            }
-            const buttonId = await popup.show({
-              title: confirmLabel,
-              message: description,
-              buttons: [
-                { id: "cancel", type: "cancel" },
-                {
-                  id: "confirm",
-                  type: destructive ? "destructive" : "default",
-                  text: confirmLabel,
-                },
-              ],
-            });
-            if (buttonId === "confirm") {
-              onConfirm();
-            }
-          } catch {
-            setFallback(true);
-          }
-        })();
-      }}
-    >
-      {label}
-    </Button>
+    </>
   );
 }

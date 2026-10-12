@@ -1,13 +1,19 @@
 // @vitest-environment jsdom
-// Рендер-тесты ConfirmPopup: триггер с label, описание скрыто до клика
-// (нативный popup вне SSR), пропсы один в один как у ConfirmAction.
-// Фолбэк: вне Telegram popup.show.isAvailable() false — клик по триггеру
-// переключает на инлайн ConfirmAction.
+// Рендер-тесты ConfirmPopup.
+//
+// Ключевое разделение веток — по наличию нативного алерта Telegram:
+//
+//   Telegram, popup доступен  → popup.show() — нативный диалог клиента
+//   браузер (dev-стенд)        → ConfirmSheet (popup.show.isAvailable() === false)
+//   Telegram для macOS (mock)  → ConfirmSheet (SDK врёт isAvailable() === true)
+//
+// Последняя ветка — регресс на безопасность: мок-окружение раньше
+// выполняло деструктивное действие СРАЗУ, без подтверждения, то есть
+// «Удалить профиль» на macOS удалял аккаунт одним тапом.
 import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 
-// @vitest-environment jsdom — только для фолбэк-теста ниже (act + root).
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { act } from "react";
@@ -32,14 +38,23 @@ function render(): string {
   );
 }
 
+/** Клик по триггеру. Возвращает текст, который появился на экране. */
+async function clickTrigger(root: Root, container: HTMLElement) {
+  const trigger = container.querySelector("button");
+  await act(async () => {
+    trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  return document.body.textContent ?? "";
+}
+
 describe("ConfirmPopup", () => {
-  it("триггер с label, без инлайн-панели до клика", () => {
+  it("триггер с label, без описания до подтверждения", () => {
     const html = render();
     expect(html).toContain("Отменить");
     expect(html).not.toContain("Поездка станет недоступна.");
   });
 
-  describe("фолбэк без Telegram", () => {
+  describe("фолбэк без Telegram (браузер)", () => {
     let root: Root;
     let container: HTMLDivElement;
 
@@ -56,8 +71,8 @@ describe("ConfirmPopup", () => {
       container.remove();
     });
 
-    it("клик по триггеру показывает инлайн-подтверждение", async () => {
-      await act(async () => {
+    function mount(onConfirm = () => {}) {
+      return act(async () => {
         root.render(
           <AppRoot platform="base">
             <ConfirmPopup
@@ -65,56 +80,56 @@ describe("ConfirmPopup", () => {
               confirmLabel="Отменить поездку"
               description="Поездка станет недоступна."
               destructive
-              onConfirm={() => {}}
+              onConfirm={onConfirm}
             />
           </AppRoot>,
         );
       });
-      // Клик 1: нативного popup нет — откат на инлайн ConfirmAction.
-      // Клик 2: armed — панель с описанием.
-      for (let i = 0; i < 2; i += 1) {
-        const trigger = container.querySelector("button");
-        expect(trigger?.textContent).toContain("Отменить");
-        await act(async () => {
-          trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-        });
-      }
-      expect(container.innerHTML).toContain("Поездка станет недоступна.");
+    }
+
+    it("один клик открывает шторку с описанием", async () => {
+      // popup.show.isAvailable() вне Telegram === false, поэтому НАТИВНЫЙ
+      // алерт не показывается — открывается наша шторка.
+      await mount();
+      const text = await clickTrigger(root, container);
+      expect(text).toContain("Поездка станет недоступна.");
+      expect(text).toContain("Отмена");
     });
 
-    it("actionsEnd прижимает кнопки панели к правому краю", async () => {
-      await act(async () => {
-        root.render(
-          <AppRoot platform="base">
-            <ConfirmPopup
-              label="Отменить"
-              confirmLabel="Отменить поездку"
-              description="Поездка станет недоступна."
-              destructive
-              actionsEnd
-              onConfirm={() => {}}
-            />
-          </AppRoot>,
-        );
-      });
-      // Клик 1: откат на инлайн. Клик 2: armed — панель.
-      for (let i = 0; i < 2; i += 1) {
-        const trigger = container.querySelector("button");
-        await act(async () => {
-          trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-        });
-      }
-      const buttons = [...container.querySelectorAll("button")];
-      const confirm = buttons.find((b) =>
+    it("подтверждение в шторке выполняет действие", async () => {
+      const onConfirm = vi.fn();
+      await mount(onConfirm);
+      await clickTrigger(root, container);
+
+      const confirm = [...document.body.querySelectorAll("button")].find((b) =>
         b.textContent?.includes("Отменить поездку"),
       );
-      // Панель — родитель кнопки подтверждения (канон: confirmPanelEnd
-      // вместо tailwind items-end).
-      expect(confirm?.parentElement?.className).toContain("confirmPanelEnd");
+      expect(confirm).toBeTruthy();
+      await act(async () => {
+        confirm?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it("отмена в шторке НЕ выполняет действие", async () => {
+      const onConfirm = vi.fn();
+      await mount(onConfirm);
+      await clickTrigger(root, container);
+
+      const cancel = [...document.body.querySelectorAll("button")].find(
+        (b) => b.textContent?.trim() === "Отмена",
+      );
+      expect(cancel).toBeTruthy();
+      await act(async () => {
+        cancel?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+
+      expect(onConfirm).not.toHaveBeenCalled();
     });
   });
 
-  describe("мок-окружение (dev-браузер)", () => {
+  describe("мок-окружение (Telegram для macOS)", () => {
     let root: Root;
     let container: HTMLDivElement;
 
@@ -131,36 +146,34 @@ describe("ConfirmPopup", () => {
         root.unmount();
       });
       container.remove();
-      delete (window as unknown as Record<string, unknown>)[
-        "__TG_ENV_MOCKED__"
-      ];
+      delete (window as unknown as Record<string, unknown>)["__TG_ENV_MOCKED__"];
       expect(isTelegramMockEnv()).toBe(false);
     });
 
-    it("действие сразу, без подтверждения: один клик — onConfirm", async () => {
+    it("ТРЕБУЕТ подтверждения, а не выполняет действие сразу", async () => {
+      // Регресс безопасности: раньше мок-ветка звала onConfirm() прямо из
+      // триггера. На macOS «Удалить профиль» проходило без вопроса.
       const onConfirm = vi.fn();
       await act(async () => {
         root.render(
           <AppRoot platform="base">
             <ConfirmPopup
-              label="Отменить"
-              confirmLabel="Отменить поездку"
-              description="Поездка станет недоступна."
+              label="Удалить профиль"
+              confirmLabel="Да, удалить профиль"
+              description="Аккаунт будет анонимизирован."
               destructive
-              actionsEnd
               onConfirm={onConfirm}
             />
           </AppRoot>,
         );
       });
-      // Браузер — dev-среда: никакой панели, один клик — действие.
-      const trigger = container.querySelector("button");
-      expect(trigger?.textContent).toContain("Отменить");
-      await act(async () => {
-        trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      });
-      expect(onConfirm).toHaveBeenCalledTimes(1);
-      expect(container.innerHTML).not.toContain("Поездка станет недоступна.");
+
+      const text = await clickTrigger(root, container);
+
+      // Никакого действия — показано подтверждение.
+      expect(onConfirm).not.toHaveBeenCalled();
+      expect(text).toContain("Аккаунт будет анонимизирован.");
+      expect(text).toContain("Да, удалить профиль");
     });
   });
 });
