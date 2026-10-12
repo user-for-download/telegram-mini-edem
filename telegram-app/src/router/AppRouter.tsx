@@ -31,6 +31,7 @@ import { RideRequestHistoryPage } from "@/pages/RideRequestHistory/RideRequestHi
 import { TripRequestsRoute } from "@/components/Trip/TripRequestsModal";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { EditProfileRoute } from "@/components/Profile/EditProfileModal";
+import { UserProfileProvider } from "@/components/Profile/UserProfileProvider";
 import { useUnreadCountQuery } from "@/queries/useNotificationsQuery";
 import { ReviewsPage } from "@/pages/Reviews/ReviewsPage";
 import { SettingsRoute } from "@/components/Profile/SettingsModal";
@@ -181,14 +182,19 @@ export function Shell() {
         />
       }
     >
-      {/* Route-fade без motion: CSS-анимация вместо motion/react (−39 KiB
-          gzip из initial-бандла). Ключ — только pathname: смена query-string
-          не должна перемонтировать страницу (скелетоны, потеря
-          скролла). Уважение reduced-motion — класс route-fade
-          (AppShell.module.css). */}
-      <div key={location.pathname} className={ROUTE_FADE_CLASS}>
-        <Outlet />
-      </div>
+      {/* Провайдер шторки профиля другого человека — одна шторка на всё
+          приложение, состояние живёт выше Outlet и переживает смену
+          маршрута (открыл из «Поиска», ушёл в детали — шторка осталась). */}
+      <UserProfileProvider>
+        {/* Route-fade без motion: CSS-анимация вместо motion/react (−39 KiB
+            gzip из initial-бандла). Ключ — только pathname: смена query-string
+            не должна перемонтировать страницу (скелетоны, потеря
+            скролла). Уважение reduced-motion — класс route-fade
+            (AppShell.module.css). */}
+        <div key={location.pathname} className={ROUTE_FADE_CLASS}>
+          <Outlet />
+        </div>
+      </UserProfileProvider>
     </AppShell>
   );
 }

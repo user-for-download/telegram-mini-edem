@@ -39,6 +39,25 @@ export function useProfileQuery(options?: {
   });
 }
 
+/**
+ * Публичный профиль другого пользователя (шторка профиля: тап по
+ * водителю, пассажиру или автору отзыва).
+ *
+ * Ключ — общий с USER_KEYS.detail: этот ключ уже был заведён под
+ * инвалидацию жертвы после отзыва, и он же теперь читается здесь.
+ * Поэтому новый отзыв обновит открытый профиль без ручной связки.
+ *
+ * enabled по Boolean(id): пустой id — это не запрос, а шторка, которая
+ * ещё не открыта (или закрылась на другом человеке).
+ */
+export function useUserQuery(id: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: USER_KEYS.detail(id),
+    queryFn: ({ signal }) => profileApi.getUser(id, signal),
+    enabled: (options?.enabled ?? true) && Boolean(id),
+  });
+}
+
 export function useProfileUpdateMutation() {
   const queryClient = useQueryClient();
   return useMutation({

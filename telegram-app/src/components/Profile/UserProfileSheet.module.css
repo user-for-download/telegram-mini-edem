@@ -1,0 +1,17 @@
+/* Шторка профиля другого человека. Каркас (отступы, скролл, заголовок) —
+ * общий ui/Sheet; здесь только локальные блоки «О себе» и автомобиль. */
+
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2xs);
+}
+
+.aboutLabel {
+  color: var(--app-muted);
+}
+
+.car {
+  display: flex;
+  align-items: center;
+}

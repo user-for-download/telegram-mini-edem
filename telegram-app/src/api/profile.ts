@@ -28,6 +28,26 @@ export const profileApi = {
   getCurrentUser: (signal?: AbortSignal): Promise<User> =>
     apiClient.request("/users/me", { signal }, userSchema),
 
+  /**
+   * Публичный профиль другого пользователя (GET /users/:id).
+   *
+   * Тот же ресурс, что и /users/me, поэтому схема ответа та же —
+   * userSchema. Сервер отдаёт сокращённый набор (serializePublicUser):
+   * без телефона, настроек уведомлений и номера онбординга, все эти поля
+   * в контракте опциональны, так что валидация проходит без изменений
+   * контракта. Ответ fail-closed: невалидный ответ превращается в
+   * ApiError INVALID_RESPONSE, а не в битые данные UI.
+   *
+   * id кодируется: он приходит из ответа сервера, и подстановка его в
+   * путь как есть сломала бы маршрут на id со спецсимволами.
+   */
+  getUser: (id: string, signal?: AbortSignal): Promise<User> =>
+    apiClient.request(
+      `/users/${encodeURIComponent(id)}`,
+      { signal },
+      userSchema,
+    ),
+
   updateProfile: (data: ProfileUpdateDto): Promise<User> =>
     apiClient.request(
       "/users/me",
