@@ -31,6 +31,15 @@ export default defineConfig(({ mode }) => {
     resolve: {
       // Один React на весь workspace: dedupe сводит копии к корневой.
       dedupe: ["react", "react-dom"],
+      // У кита telegram-ui нет exports-map, а `hooks/usePlatform` приходится
+      // брать глубоким импортом `@telegram-apps/telegram-ui/dist/...`
+      // (не экспортируется из индекса) — это ESM-путь. Если корень пакета
+      // резолвится по `main`, AppRoot берёт CJS-копию контекста, а потребитель
+      // читает ESM: два разных AppRootContext, и ЛЮБОЙ тест, открывающий
+      // ui/Sheet, падает с «[TGUI] Wrap your app with <AppRoot>», хотя AppRoot
+      // в тесте есть. Сборка и dev берут `module` — фиксируем это явно, чтобы
+      // и vitest-окружение вело себя как прод.
+      mainFields: ["module", "jsnext:main", "jsnext", "main"],
       alias: {
         "@": path.resolve(import.meta.dirname, "./src"),
         "@edem/contracts": path.resolve(

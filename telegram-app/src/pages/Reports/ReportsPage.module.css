@@ -4,25 +4,85 @@
  * внутренние стеки Stack (src/ui/ui.module.css). Здесь остались только
  * локальные роли ниже уровня секции. */
 
-/* Карточка жалобы: раскладка поверх ui/Card (паддинг 16 даёт Card,
- * было p-3.5 → 14px; унификация 14→16 по решению сессии). */
-.card {
+/* Лента строк: кит ставит Divider между соседними Cell, поэтому роль
+ * контейнера — только снять лишние отступы. Обёртка нужна из-за
+ * QueryState: пустое состояние и лента — разные ветки, и без общего
+ * контейнера пустое состояние приклеилось бы к кнопке «Подать жалобу». */
+.list {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-xs);
 }
 
-/* Шапка карточки: категория слева, статус справа. */
-.cardHead {
+/* Последняя строка — Cell кита даёт свой нижний паддинг; в списке без
+ * рамок он накапливается. Обрезаем только у самой нижней. */
+.list > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Правая колонка строки (Info кита): шеврон сверху, дата диммером снизу.
+ * Правила продублированы из NotificationsPage.module.css — строки жалоб и
+ * уведомлений должны читаться одинаково; при правке тянем оба места. */
+.cell.cell > :last-child {
+  align-self: stretch;
+}
+
+/* Шеврон открытия попапа — декоративен, намекает на переход. */
+.chevron {
+  color: var(--app-muted);
+}
+
+/* Дата второй строкой Info — компактно: мельче подписи кита и строго в одну
+ * строку, иначе «09.09.2026» переносится и колонка становится трёхстрочной. */
+.info.info {
+  text-align: right;
+}
+
+.info.info :global(.tgui-4af039094fb946b4) {
+  font-size: 11px;
+  line-height: 1.33;
+  white-space: nowrap;
+}
+
+/* Строка 3 — статус жалобы: тон из тех же токенов, что у StatusPill, но
+ * текстом. Цвет здесь — подсказка, смысл всегда в словах (a11y: color + text),
+ * поэтому состояние читается и на серой теме, и при дальтонизме. */
+.status {
+  color: var(--app-muted);
+}
+
+.status[data-tone="warning"] {
+  color: var(--app-warning);
+}
+
+.status[data-tone="info"] {
+  color: var(--app-info);
+}
+
+.status[data-tone="success"] {
+  color: var(--app-success);
+}
+
+.status[data-tone="danger"] {
+  color: var(--app-danger);
+}
+
+/* Шапка попапа: категория/тип слева, статус-пилюля справа. Раньше это была
+ * шапка карточки в списке; переехала в попап вместе с текстом. */
+.head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--app-space-xs);
 }
 
-/* Пилюля статуса в шапке не сжимается. */
-.pill {
-  flex-shrink: 0;
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-
+/* Пилюля статуса в шапке не сжимается. */
+.head > *:last-child {
+  flex-shrink: 0;
+}

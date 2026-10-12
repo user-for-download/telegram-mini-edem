@@ -1,84 +1,100 @@
 import { memo, useState } from "react";
-import { Caption, Text, VisuallyHidden } from "@telegram-apps/telegram-ui";
-import { Notice } from "@/ui/Notice";
+import { VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { PROSE } from "@/ui/classes";
+import { Cell } from "@/ui/Cell";
 import { Button } from "@/ui/Button";
 import { ComplaintModal } from "./ComplaintModal";
+import { ReportDetailsSheet } from "./ReportDetailsSheet";
 import { useModalBack } from "@/utils/modalBack";
 
 import type { Report } from "@edem/contracts";
-import { Card } from "@/ui/Card";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
-import { Flag } from "lucide-react";
-import {
-  StatusPill,
-  type StatusTone,
-} from "@/components/StatusPill/StatusPill";
+import { ChevronRight, Flag } from "lucide-react";
+import { Info } from "@telegram-apps/telegram-ui";
 import { QueryState } from "@/components/QueryState";
 import { Page } from "@/ui/Page";
 import { Section } from "@/ui/Section";
 import { SectionBody } from "@/ui/SectionBody";
-import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
 import { haptic } from "@/utils/haptics";
 import { moscowNumericDate } from "@/utils/date";
 import { useMyReportsQuery } from "@/queries/useReportQuery";
+import { REPORT_STATUS_LABELS } from "./reportValidation";
 import {
-  REPORT_CATEGORY_LABELS,
-  REPORT_STATUS_LABELS,
-  REPORT_TARGET_TYPE_LABELS,
-} from "./reportValidation";
+  reportCellAriaLabel,
+  reportPreviewSubtitle,
+  reportPreviewTitle,
+  reportStatusTone,
+} from "./reportPreview";
 import styles from "./ReportsPage.module.css";
 
 // Дата жалобы — по Москве, как всё остальное время в приложении
 // (moscowNumericDate). Локальная копия toLocaleDateString без timeZone
 // показывала дату в зоне устройства: жалоба от 01.10 22:30 UTC клиенту
 // в Лос-Анджелесе приходила как «01.10.2026» вместо «02.10.2026».
-const formatDate = moscowNumericDate;
 
-/** Тон статус-пилюли жалобы: ожидание — warning, работа — info,
- * решение — success, отказ — danger. */
-function reportStatusTone(status: Report["status"]): StatusTone {
-  switch (status) {
-    case "resolved":
-      return "success";
-    case "rejected":
-      return "danger";
-    case "in_review":
-      return "info";
-    default:
-      return "warning";
-  }
-}
-
-const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
+/**
+ * Строка жалобы — как строка уведомления: три короткие строки + правая
+ * колонка с шевроном и датой.
+ *
+ * Было `Card` с развёрнутым текстом: длинное описание и ответ модерации
+ * раздавливали ленту, и страница выглядела иначе, чем остальные списки
+ * приложения. Полный текст и ответ уехали в попап (ReportDetailsSheet).
+ *
+ * Строка ВСЕГДА интерактивна (тап открывает попап), поэтому нативная кнопка
+ * `Component="button"` — свой `onKeyDown` не нужен, Enter/Space сработают
+ * сами. В уведомлениях пришлось городить `div`+`role="button"`+`onKeyDown`
+ * только из-за их обработчика; здесь такого требования нет, и удвоенного
+ * вызова не будет.
+ */
+const ReportCell = memo(function ReportCell({
+  report,
+  onOpen,
+}: {
+  report: Report;
+  onOpen: (id: string) => void;
+}) {
+  const subtitle = reportPreviewSubtitle(report);
   return (
-    <Card className={styles.card}>
-      <div className={styles.cardHead}>
-        <Text weight="2" Component="span">
-          {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
-        </Text>
-        <StatusPill
-          tone={reportStatusTone(report.status)}
-          className={styles.pill}
+    <Cell
+      Component="button"
+      type="button"
+      className={styles.cell}
+      subtitle={subtitle}
+      /* Строка 3 — статус: та же трёхстрочная раскладка, что у уведомлений
+         (title / subtitle / description). Статус в ленте обязателен — по
+         нему видно, какие жалобы уже рассмотрены, а в попапе пришлось бы
+         открывать каждую. Текстом, а не пилюлей: в правой колонке уже дата,
+         и второй «остров» тянул бы строку в две части. Смысл всегда
+         продублирован словами, цвет — только подсказка (a11y: color + text). */
+      description={
+        <span
+          data-testid={`report-status-${report.id}`}
+          data-tone={reportStatusTone(report.status)}
+          className={styles.status}
         >
           {REPORT_STATUS_LABELS[report.status]}
-        </StatusPill>
-      </div>
-      <Caption Component="span">{formatDate(report.createdAt)}</Caption>
-      <Text Component="div" className={PROSE}>
-        {report.description}
-      </Text>
-      {/* Ответ модерации (resolutionNote из контракта). */}
-      {report.resolutionNote ? (
-        <Notice tone={report.status === "resolved" ? "success" : "info"}>
-          <strong>Ответ модерации</strong>
-          {report.resolutionNote}
-        </Notice>
-      ) : null}
-    </Card>
+        </span>
+      }
+      after={
+        <Info
+          type="text"
+          className={styles.info}
+          subtitle={moscowNumericDate(report.createdAt)}
+        >
+          <ChevronRight size={16} className={styles.chevron} aria-hidden />
+        </Info>
+      }
+      aria-label={reportCellAriaLabel(report)}
+      data-testid={`report-cell-${report.id}`}
+      onClick={() => {
+        haptic.light();
+        onOpen(report.id);
+      }}
+    >
+      {reportPreviewTitle(report)}
+    </Cell>
   );
 });
 
@@ -86,10 +102,11 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
  * Жалобы — отдельная страница /profile/reports (без Modal/портала):
  * тело — полноэкранная страница без смены контракта.
  *
- * - создание: тип объекта + идентификатор + категория + описание (≤ 2000);
+ * - список своих жалоб строками `Cell` (как уведомления), детали — в попапе
+ *   по тапу;
+ * - создание жалобы — в отдельном окне (ComplaintModal);
  * - клиентский хинт лимита «1 жалоба навсегда» (hasExistingReport),
- *   сервер — источник правды (409);
- * - список своих жалоб со статусами модерации.
+ *   сервер — источник правды (409).
  *
  * Dirty-guard: useClosingConfirmation держит нативное подтверждение
  * закрытия миника при черновике (targetId/description) — на странице это
@@ -100,11 +117,21 @@ const ReportCard = memo(function ReportCard({ report }: { report: Report }) {
  * aria-live, ошибки — role=alert, успех — role=status.
  */
 export function ReportsPage() {
-  // Форма жалобы — во всплывающем окне (ComplaintModal): страница показывает
-  // список и ответы модерации, Back закрывает окно через useModalBack.
   const [complaintOpen, setComplaintOpen] = useState(false);
-  useModalBack(() => setComplaintOpen(false), complaintOpen);
+  // Открытая жалоба держим по id, а не самим объектом: после инвалидации
+  // кэша (отправлена новая жалоба, статус уехал в «На рассмотрении»)
+  // страница должна перерисовать попап по новым данным, а не держать копию.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const myReports = useMyReportsQuery();
+
+  const selected =
+    myReports.data?.find((report) => report.id === selectedId) ?? null;
+
+  useModalBack(() => setComplaintOpen(false), complaintOpen);
+  // Подписка на Back для попапа идёт ПОСЛЕ формы подачи: стек LIFO, и при
+  // открытых обоих окнах верхним должен закрываться попап — последний, кто
+  // подписался. Обратный порядок закрыл бы форму подачи вместо деталей.
+  useModalBack(() => setSelectedId(null), selected !== null);
 
   // Бан mid-session: requireUser отвечает 403 — терминальный экран вместо
   // общей ошибки (паттерн ProfilePage; глобальные случаи закрывает AuthGate).
@@ -139,11 +166,17 @@ export function ReportsPage() {
                   description={EMPTY_STATES.reportsEmpty.description}
                 />
               ) : (
-                <Stack>
+                /* Лента — прямые Cell внутри Section: кит сам вставляет
+                   Divider между строками (паттерн NotificationsPage). */
+                <div className={styles.list}>
                   {myReports.data.map((report) => (
-                    <ReportCard key={report.id} report={report} />
+                    <ReportCell
+                      key={report.id}
+                      report={report}
+                      onOpen={setSelectedId}
+                    />
                   ))}
-                </Stack>
+                </div>
               )}
             </QueryState>
             {/* Подать жалобу — из окна: страница отвечает за список и ответы
@@ -163,6 +196,10 @@ export function ReportsPage() {
           </SectionBody>
         </Section>
       </Page>
+      <ReportDetailsSheet
+        report={selected}
+        onClose={() => setSelectedId(null)}
+      />
       <ComplaintModal
         open={complaintOpen}
         onClose={() => setComplaintOpen(false)}
