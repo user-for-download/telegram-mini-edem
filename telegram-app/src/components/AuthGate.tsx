@@ -15,6 +15,13 @@ import { SectionBody } from "@/ui/SectionBody";
 // 60 с — только запасной вариант, если сервер поле не прислал.
 const RATE_LIMIT_COOLDOWN_S = 60;
 
+// Полная перезагрузка окна: единственный способ заново прочитать данные
+// запуска Telegram. Обычный bootstrap повторяет запрос с тем же истёкшим
+// initData и получает тот же 401.
+const reloadApp = () => {
+  window.location.reload();
+};
+
 function rateLimitCooldownS(error: {
   retryAfterMs?: number;
 }): number {
@@ -251,6 +258,27 @@ export const AuthGate: FC<PropsWithChildren> = ({ children }) => {
               label="Попробовать снова"
               onClick={() => void bootstrap()}
             />
+          }
+        />
+      );
+    }
+    // 401 от /auth/telegram — это НЕ «плохой интернет», а истёкшие данные
+    // запуска Telegram. `auth_date` в initData фиксируется при открытии
+    // мини-приложения, а бэкенд проверяет TTL (TG_INIT_DATA_TTL_SECONDS, по
+    // умолчанию час) и отдаёт 401 БЕЗ кода. Обновить initData на месте
+    // нельзя: в @tma.js/sdk@3.0.23 есть только initData.restore(), метода
+    // запроса новых данных нет. Прежняя ветка ловила такой 401 общим текстом
+    // «Проверьте подключение к интернету» и кнопкой ПОВТОРА, который
+    // повторял тот же 401 — тупик с враньём на экране.
+    if (lastAuthError?.status === 401) {
+      return (
+        <AccountStatePage
+          title="Данные входа устарели"
+          description="Telegram хранит данные входа мини-приложения около часа. Откройте мини-приложение заново — восстановить сессию внутри открытого окна нельзя."
+          action={
+            // Полная перезагрузка — единственное, что заново читает данные
+            // запуска; обычный bootstrap повторял бы тот же отказ.
+            <RetryAction label="Перезагрузить" onClick={reloadApp} />
           }
         />
       );

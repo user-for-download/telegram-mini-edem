@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Avatar,
   Badge,
@@ -48,6 +48,7 @@ import {
 } from "@/utils/appSettings";
 import { haptic } from "@/utils/haptics";
 import styles from "./ProfilePage.module.css";
+import { formatRating } from "@/helpers/rating";
 
 /** Обрезка в одну строку + блочный display (span/caption-типографика tgui).
  * ellipsis-рецепт — канонный TRUNCATE из @/ui/classes, block — локальный. */
@@ -95,13 +96,29 @@ export function ProfilePage() {
     notifEnabled ?? profile.data?.notificationsEnabled ?? true;
 
   // Один флаг бэкенда на оба канала: тогглы in-app и Telegram — зеркала.
+  // Синхронный гейт (ref), а не isPending: два быстрых тапа до ре-рендера
+  // оба проходили проверку state и слали два PATCH. Тот же приём, что в
+  // остальных формах приложения.
+  const notifSavingRef = useRef(false);
   const toggleNotifications = (next: boolean) => {
-    if (saveNotifications.isPending) return;
+    if (notifSavingRef.current) return;
     const previous = notifChecked;
     haptic.light();
     setNotifEnabled(next);
+    notifSavingRef.current = true;
     saveNotifications.mutate(next, {
-      onSuccess: () => haptic.success(),
+      onSettled: () => {
+        notifSavingRef.current = false;
+      },
+      onSuccess: () => {
+        haptic.success();
+        // Локальный оверрайд — только на время запроса. Не сбросив его,
+        // тоггл навсегда переставал следить за profile.data.notificationsEnabled
+        // и показывал своё (один раз заданное) значение: серверное изменение —
+        // с другого устройства, от модерации, из соседнего useProfileUpdate —
+        // игнорировалось без возможности пересинхронизироваться.
+        setNotifEnabled(null);
+      },
       onError: () => {
         haptic.error();
         setNotifEnabled(previous);
@@ -161,7 +178,12 @@ export function ProfilePage() {
                     <div className={styles.ratingRow}>
                       <Badge type="number" mode="secondary" large>
                         <Star size={11} />
-                        <span>{`${profile.data.rating.toFixed(1)}`}</span>
+                        <span>
+                          {formatRating(
+                            profile.data.rating,
+                            profile.data.reviewsCount,
+                          )}
+                        </span>
                       </Badge>
                     </div>
                   </div>
@@ -196,7 +218,10 @@ export function ProfilePage() {
                       Component="div"
                       className={styles.statRating}
                     >
-                      {profile.data.rating.toFixed(1)}
+                      {formatRating(
+                        profile.data.rating,
+                        profile.data.reviewsCount,
+                      )}
                     </Text>
                     <Caption Component="div" className={styles.statLabel}>
                       Рейтинг

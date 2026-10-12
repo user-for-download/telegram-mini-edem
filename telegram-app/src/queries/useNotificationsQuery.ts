@@ -254,9 +254,13 @@ export function useMarkNotificationReadMutation() {
       applyMarkReadCaches(queryClient, updated.id, updated);
       // Патч выше — из ОТВЕТА одной записи, список целиком сервер не
       // переотдавал: без рефетча закэшированная лента останется прежней.
-      // Invalidate именно lists(): счётчик только что вычислен точно,
-      // рефетчить его тут нечего.
-      void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.lists() });
+      // Но рефетчим ТОЛЬКО кэши, где эта запись лежит: инвалидация всего
+      // lists() перезапрашивала все загруженные страницы всех сегментов
+      // (см. keysContainingNotification) и выжигала лимит /notifications/my.
+      // Счётчик только что вычислен точно — его не трогаем.
+      for (const key of keysContainingNotification(queryClient, updated.id)) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
     },
   });
 }
@@ -279,4 +283,36 @@ export function useMarkAllNotificationsReadMutation() {
       void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.lists() });
     },
   });
+}
+
+/**
+ * Ключи списков inbox, в которых реально лежит уведомление `id`.
+ *
+ * Регресс L7: `onSuccess` инвалидировал `lists()` — префикс, под который
+ * попадают ВСЕ сегменты («Новые», «Водитель», «Пассажир»). На
+ * `useInfiniteQuery` инвалидация перезапрашивает НЕ только видимую
+ * страницу, а все уже загруженные по очереди (infiniteQueryBehavior:
+ * `remainingPages = oldPages.length`). Итог: один тап по непрочитанной
+ * точке при 10 пролистанных страницах «Новых» и 3 кэшированных
+ * «Водителя» — это 13 последовательных запросов к /notifications/my на
+ * эндпоинте с лимитером. То есть действие пользователя само исчерпывало
+ * бюджет, которого ему же и не хватало.
+ *
+ * Уведомление лежит в конкретном сегменте, поэтому инвалидируем ровно
+ * те кэши, где оно найдено. Пусто (уведомление вне кэша — например,
+ * лента другого сегмента) — не инвалидируем ничего: точный патч выше
+ * уже применился, а пустой refetch тут только тратит квоту.
+ */
+export function keysContainingNotification(
+  queryClient: QueryClient,
+  id: string,
+): Array<readonly unknown[]> {
+  const entries = queryClient.getQueriesData<InfiniteData<NotificationsPage>>({
+    queryKey: NOTIFICATION_KEYS.lists(),
+  });
+  return entries
+    .filter(([, data]) =>
+      data?.pages.some((page) => page.items.some((item) => item.id === id)),
+    )
+    .map(([key]) => key);
 }

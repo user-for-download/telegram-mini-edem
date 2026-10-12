@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, formatMoscowDateTime, moscowDayLabel, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
+import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, formatMoscowDateTime, fromMoscowDateTimeInput, relativeMoscowDay, moscowDayKey, moscowDayLabel, moscowTimeLabel, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
 
 const NOW = new Date(2026, 8, 10, 15, 0, 0); // четверг 2026-09-10
 
@@ -116,5 +116,94 @@ describe("formatMoscowDateTime", () => {
   it("returns a dash for missing or invalid input", () => {
     expect(formatMoscowDateTime(undefined)).toBe("—");
     expect(formatMoscowDateTime("не дата")).toBe("—");
+  });
+});
+
+describe("fromMoscowDateTimeInput", () => {
+  // Регресс: ввод «08:00» раньше читался в зоне устройства, из-за чего
+  // поездка публиковалась на час (Dubai) или на семь часов (Нью-Йорк)
+  // раньше времени, которое водитель видит в своей же ленте.
+  // Инвариант проверяется через московские форматтеры — они не зависят от
+  // зоны процесса, поэтому тест честен в любом TZ.
+  it("reads the wall clock as Moscow regardless of device timezone", () => {
+    const parsed = fromMoscowDateTimeInput("2026-10-20T08:00");
+    expect(parsed).not.toBeNull();
+    expect(moscowTimeLabel(parsed!)).toBe("08:00");
+    expect(moscowDayKey(parsed!)).toBe("2026-10-20");
+  });
+
+  it("resolves the same instant for the same wall clock on every device", () => {
+    // Москва — UTC+3 без перехода, поэтому 08:00 МСК это всегда 05:00Z.
+    // Раньше здесь получалось 08:00Z у клиента в Дубае и 12:00Z в Нью-Йорке.
+    expect(fromMoscowDateTimeInput("2026-10-20T08:00")?.toISOString()).toBe(
+      "2026-10-20T05:00:00.000Z",
+    );
+    expect(fromMoscowDateTimeInput("2026-01-15T23:45")?.toISOString()).toBe(
+      "2026-01-15T20:45:00.000Z",
+    );
+  });
+
+  it("handles midnight and end of day", () => {
+    expect(fromMoscowDateTimeInput("2026-10-20T00:00")?.toISOString()).toBe(
+      "2026-10-19T21:00:00.000Z",
+    );
+    expect(fromMoscowDateTimeInput("2026-10-20T23:59")?.toISOString()).toBe(
+      "2026-10-20T20:59:00.000Z",
+    );
+  });
+
+  it("keeps the entered calendar day across the UTC boundary", () => {
+    // Полночь МСК = 21:00 предыдущего дня UTC. Наивный разбор дал бы
+    // 20 октября, и поездка уехала бы на день раньше введенного.
+    const parsed = fromMoscowDateTimeInput("2026-10-20T00:30");
+    expect(moscowDayKey(parsed!)).toBe("2026-10-20");
+  });
+
+  it("returns null for malformed input instead of an invalid date", () => {
+    expect(fromMoscowDateTimeInput("")).toBeNull();
+    expect(fromMoscowDateTimeInput("не дата")).toBeNull();
+    expect(fromMoscowDateTimeInput("2026-10-20")).toBeNull();
+    // Месяц 13 Date.UTC тихо перекатывает на январь следующего года.
+    expect(fromMoscowDateTimeInput("2026-13-01T08:00")).toBeNull();
+    expect(fromMoscowDateTimeInput("2026-10-20T25:00")).toBeNull();
+    expect(fromMoscowDateTimeInput("2026-10-20T08:61")).toBeNull();
+    expect(fromMoscowDateTimeInput("2026-00-10T08:00")).toBeNull();
+  });
+});
+
+describe("relativeMoscowDay", () => {
+  // Регресс L2: подписи на карточке поездки и в истории звали dayLabel(trip.date),
+  // а бэк отдаёт trip.date ГОТОВОЙ ПОДПИСЬЮ ru-RU («ср, 16 сентября»,
+  // serializers/index.ts formatDateRu). Regex ждал ISO-день, new Date такую
+  // строку не разбирает -> функция отдавала строку как есть, и «Сегодня»/
+  // «Завтра» были недостижимы.
+  const NOW = new Date("2026-09-16T12:00:00.000Z");
+
+  it("сегодня/завтра/вчера по ISO-моменту отправления", () => {
+    expect(relativeMoscowDay("2026-09-16T09:00:00.000Z", NOW)).toBe("Сегодня");
+    expect(relativeMoscowDay("2026-09-17T09:00:00.000Z", NOW)).toBe("Завтра");
+    expect(relativeMoscowDay("2026-09-15T09:00:00.000Z", NOW)).toBe("Вчера");
+  });
+
+  it("чужая подпись бэка не ломает разбор: берём дату из departureAt", () => {
+    // Ровно то, что приходило из API: 16 сентября 2026, 12:00 МСК.
+    expect(relativeMoscowDay("2026-09-16T09:00:00.000Z", NOW)).not.toContain(
+      "сентября",
+    );
+  });
+
+  it("текущий год без года, чужой год — с годом", () => {
+    // Поездка 2030 обязана показывать год, иначе «1 июня» читается как
+    // прошедшая дата (регресс поймал tripDetailsPage.test).
+    expect(relativeMoscowDay("2030-06-01T06:00:00.000Z", NOW)).toBe(
+      "1 июня 2030",
+    );
+    expect(relativeMoscowDay("2026-12-24T06:00:00.000Z", NOW)).toBe("24 декабря");
+  });
+
+  it("нечитаемый ввод — прочерк, а не «Invalid Date»", () => {
+    expect(relativeMoscowDay(undefined, NOW)).toBe("—");
+    expect(relativeMoscowDay("", NOW)).toBe("—");
+    expect(relativeMoscowDay("не дата", NOW)).toBe("—");
   });
 });

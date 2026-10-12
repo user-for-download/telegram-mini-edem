@@ -190,3 +190,48 @@ describe("RideRequestsList: состояния", () => {
     expect(renderList()).toContain('data-tap-target="44"');
   });
 });
+
+// Регресс H3: статус `expired` не пишет никто, кроме сида. Просроченная
+// заявка навсегда остаётся active/paused, но сервер возврат в active
+// отклоняет (409 CONFLICT). UI обещал «Возобновить», который всегда падал,
+// и заявка становилась недоступна через интерфейс навсегда.
+describe("RideRequestsList: просроченная заявка", () => {
+  const expiredAt = "2020-01-01T00:00:00.000Z";
+
+  it("скрывает «Возобновить» у paused с истёкшим сроком", () => {
+    setMocks({
+      data: [makeRequest({ status: "paused", expiresAt: expiredAt })],
+    });
+    const html = renderList();
+    expect(html).not.toContain("Возобновить");
+  });
+
+  it("подпись не врёт: вместо «На паузе» — «Истёк»", () => {
+    setMocks({
+      data: [makeRequest({ status: "paused", expiresAt: expiredAt })],
+    });
+    const html = renderList();
+    expect(html).toContain("Истёк");
+    expect(html).not.toContain("На паузе");
+  });
+
+  it("скрывает паузу и правку у active с истёкшим сроком", () => {
+    setMocks({
+      data: [makeRequest({ status: "active", expiresAt: expiredAt })],
+    });
+    const html = renderList();
+    expect(html).not.toContain("Поставить на паузу");
+    expect(html).not.toContain("Редактировать");
+    expect(html).toContain("Срок действия истёк");
+  });
+
+  it("действующая заявка сохраняет все действия", () => {
+    setMocks({
+      data: [makeRequest({ status: "paused", expiresAt: "2030-01-02T10:00:00.000Z" })],
+    });
+    const html = renderList();
+    expect(html).toContain("Возобновить");
+    expect(html).toContain("На паузе");
+    expect(html).not.toContain("Срок действия истёк");
+  });
+});

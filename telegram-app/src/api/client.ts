@@ -55,7 +55,21 @@ export interface TokenUpdate {
   user?: AuthResponse["user"];
 }
 
-export type RefreshResult = "success" | "permanent-rejection" | "transient-failure";
+/**
+ * Итог попытки обновить токен.
+ *
+ * `rate-limited` выделен из `transient-failure` намеренно: 429 — это НЕ
+ * микросбой, а «сервер просит подождать». Реагировать на него обычным
+ * reconnect нельзя — тот немедленно переподключается с ТЕМ ЖЕ протухшим
+ * токеном, снова получает 4401, снова зовёт refresh и выжигает лимит
+ * (REFRESH_RATE_MAX), не восстановившись. Поэтому наружу уходит и
+ * `retryAfterMs`, который бэкенд уже присылает в теле ответа.
+ */
+export type RefreshResult =
+  | { kind: "success" }
+  | { kind: "permanent-rejection" }
+  | { kind: "transient-failure" }
+  | { kind: "rate-limited"; retryAfterMs: number };
 
 type TokenUpdateListener = (tokens: TokenUpdate) => void;
 type BannedListener = (banReason: string | null) => void;
@@ -202,7 +216,17 @@ export class ApiClient {
     this.refreshGeneration++;
   }
 
-  async request<T>(endpoint: string, options: RequestInit = {}, schema: ZodType<T>): Promise<T> {
+  /** Снять таймер тела ответа, если он ещё жив (doFetch его заводит). */
+  private disposeBodyTimer(response: Response): void {
+    this.bodyTimers.get(response)?.dispose();
+    this.bodyTimers.delete(response);
+  }
+
+  async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    schema: ZodType<T>,
+  ): Promise<T> {
     const response = await this.doFetch(endpoint, options);
 
     // Если 401 и это НЕ сам auth-эндпоинт — пробуем refresh
@@ -212,48 +236,97 @@ export class ApiClient {
       this.refreshTokenValue
     ) {
       const refreshResult = await this.tryRefresh();
-      if (refreshResult === "success") {
+      if (refreshResult.kind === "success") {
+        // Тело первого ответа мы не читаем — его таймер и слушатель отмены
+        // надо снять руками, иначе они живут до таймауна и держат замыкание.
+        this.disposeBodyTimer(response);
         // Повторяем исходный запрос с новым токеном
         const retryResponse = await this.doFetch(endpoint, options);
         if (!retryResponse.ok) {
-          const errorData: unknown = await retryResponse.json().catch(() => ({}));
-          const errorRecord = toErrorRecord(errorData);
-          throw new ApiError(
-            errorRecord.message ?? `HTTP error ${retryResponse.status}`,
-            errorRecord.code,
-            retryResponse.status,
-            errorRecord.retryAfterMs,
-            readBanReason(errorData),
-          );
+          throw await this.errorFromResponse(retryResponse);
         }
         return this.parseResponse(retryResponse, schema);
       }
     }
 
     if (!response.ok) {
+      // Ошибочный ответ читается мимо parseResponse — снимаем таймер здесь,
+      // иначе он провисит 15 с после каждой неудачи.
+      throw await this.errorFromResponse(response);
+    }
+
+    return this.parseResponse(response, schema);
+  }
+
+  /**
+   * ApiError из не-2xx ответа.
+   *
+   * Тело читается здесь, а не в parseResponse, поэтому таймер тела снимается
+   * в finally: иначе каждый неуспешный запрос держал бы 15-секундный таймер
+   * и слушатель отмены на сигнале вызывающего.
+   */
+  private async errorFromResponse(response: Response): Promise<ApiError> {
+    try {
       const errorData: unknown = await response.json().catch(() => ({}));
       const errorRecord = toErrorRecord(errorData);
-      throw new ApiError(
+      return new ApiError(
         errorRecord.message ?? `HTTP error ${response.status}`,
         errorRecord.code,
         response.status,
         errorRecord.retryAfterMs,
         readBanReason(errorData),
       );
+    } finally {
+      this.disposeBodyTimer(response);
     }
-
-    return this.parseResponse(response, schema);
   }
 
-  private async parseResponse<T>(response: Response, schema: ZodType<T>): Promise<T> {
+  /**
+   * Таймеры, которые живут ДО ЧТЕНИЯ ТЕЛА.
+   *
+   * Раньше `clearTimeout` стоял в `finally` у `fetch`, то есть таймер снимался
+   * сразу после прихода ЗАГОЛОВКОВ, а `response.json()` шёл уже без него.
+   * Случай «бэкенд/proxy отдал заголовки и завис на теле» — обычное дело в
+   * мобильной сети — оставлял `await response.json()` навсегда: мутация
+   * висела в `isPending` (кнопка отправки заблокирована), а ветка
+   * «Таймаут запроса» не срабатывала никогда.
+   *
+   * Поэтому очистка перенесена в `parseResponse` (finally): таймер живёт
+   * ровно столько, сколько читается тело. `timedOut` нужен там же: abort
+   * контроллера рвёт и поток тела, поэтому прерывание чтения приходит в
+   * `json()` как AbortError, и без флага оно выглядело бы как «сервер вернул
+   * мусор» (502) вместо честного «Таймаут запроса».
+   */
+  private bodyTimers = new WeakMap<
+    Response,
+    { dispose: () => void; timedOut: () => boolean }
+  >();
+
+  private async parseResponse<T>(
+    response: Response,
+    schema: ZodType<T>,
+  ): Promise<T> {
+    const pending = this.bodyTimers.get(response);
     let data: unknown;
     try {
-      data = await response.json();
-    } catch {
-      // Бэкенд/прокси вернул не-JSON на успешный статус (пустое тело, HTML
-      // от nginx) — приводим к стандартизированному ApiError, а не
-      // пробрасываем голый SyntaxError мимо обработки ошибок.
+      data = await this.readBody(response);
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      // Тело оборвалось НАШИМ таймаутом: это не «сервер вернул мусор».
+      if (
+        pending?.timedOut() &&
+        error instanceof DOMException &&
+        error.name === "AbortError"
+      ) {
+        throw new ApiError("Таймаут запроса", "REQUEST_TIMEOUT", 408);
+      }
+      // Бэкенд/прокси вернул не-JSON на успешный статус (HTML от nginx) —
+      // приводим к стандартизированному ApiError, а не пробрасываем голый
+      // SyntaxError мимо обработки ошибок.
       throw new ApiError("Invalid server response", "INVALID_RESPONSE", 502);
+    } finally {
+      pending?.dispose();
+      this.bodyTimers.delete(response);
     }
 
     const parsed = schema.safeParse(data);
@@ -264,7 +337,23 @@ export class ApiClient {
     return parsed.data;
   }
 
-  private async doFetch(endpoint: string, options: RequestInit): Promise<Response> {
+  /**
+   * Тело ответа с учётом таймаута doFetch: 204/пустое тело — не ошибка,
+   * а валидный «ничего нет». Раньше `response.json()` на таком ответе
+   * падал, и успешный запрос превращался в синтетический 502.
+   */
+  private async readBody(response: Response): Promise<unknown> {
+    const empty =
+      response.status === 204 ||
+      response.status === 205 ||
+      response.headers.get("content-length") === "0";
+    return empty ? undefined : response.json();
+  }
+
+  private async doFetch(
+    endpoint: string,
+    options: RequestInit,
+  ): Promise<Response> {
     // Сливаем через Headers: принимает plain-объект, массив пар и сам
     // Headers (спред `...headers` у Headers-объекта давал бы `{}` —
     // заголовки вызывающего молча терялись).
@@ -290,23 +379,39 @@ export class ApiClient {
     if (options.signal?.aborted) {
       controller.abort(options.signal.reason);
     } else {
-      options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+      options.signal?.addEventListener("abort", abortFromCaller, {
+        once: true,
+      });
     }
 
     try {
-      return await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers,
         signal: controller.signal,
       });
+      // Таймер НЕ снимаем здесь: он должен жить до конца чтения тела
+      // (см. bodyTimers в parseResponse).
+      this.bodyTimers.set(response, {
+        dispose: () => {
+          clearTimeout(timeoutId);
+          options.signal?.removeEventListener("abort", abortFromCaller);
+        },
+        timedOut: () => timedOut,
+      });
+      return response;
     } catch (error) {
-      if (timedOut && error instanceof DOMException && error.name === "AbortError") {
+      if (
+        timedOut &&
+        error instanceof DOMException &&
+        error.name === "AbortError"
+      ) {
+        clearTimeout(timeoutId);
         throw new ApiError("Таймаут запроса", "REQUEST_TIMEOUT", 408);
       }
-      throw error;
-    } finally {
       clearTimeout(timeoutId);
       options.signal?.removeEventListener("abort", abortFromCaller);
+      throw error;
     }
   }
 
@@ -341,7 +446,7 @@ export class ApiClient {
 
   private async performRefresh(): Promise<RefreshResult> {
     if (!this.refreshTokenValue) {
-      return "permanent-rejection";
+      return { kind: "permanent-rejection" };
     }
 
     const generationAtStart = this.refreshGeneration;
@@ -360,7 +465,11 @@ export class ApiClient {
         if (!response.ok) {
           // 401 — refresh-токен отозван или истёк безвозвратно:
           // уведомляем подписчиков, чтобы сбросить сессию.
-          if (response.status === 400 || response.status === 401 || response.status === 403) {
+          if (
+            response.status === 400 ||
+            response.status === 401 ||
+            response.status === 403
+          ) {
             // 403 с кодом FORBIDDEN = бан. Дополнительно уведомляем подписчиков
             // о бане с banReason из тела ответа, чтобы стор сразу показал плашку
             // без ожидания повторного bootstrap. Для 400/401 срабатывает только
@@ -375,31 +484,44 @@ export class ApiClient {
               if (isAccountDeletedError(record)) {
                 this.emitDeleted();
                 this.emitSessionExpired();
-                return "permanent-rejection";
+                return { kind: "permanent-rejection" };
               }
               if (record.code === "FORBIDDEN") {
                 this.emitBanned(readBanReason(errorBody));
                 this.emitSessionExpired();
-                return "permanent-rejection";
+                return { kind: "permanent-rejection" };
               }
             }
             this.emitSessionExpired();
-            return "permanent-rejection";
+            return { kind: "permanent-rejection" };
           }
-          return "transient-failure";
+          // 429: refresh ограничен по частоте. НЕ «transient-failure» —
+          // немедленный reconnect выжигает тот самый лимит и не лечит.
+          if (response.status === 429) {
+            const body = await response.json().catch(() => ({}));
+            const waitMs = toErrorRecord(body).retryAfterMs;
+            return {
+              kind: "rate-limited",
+              // Бэкенд шлёт retryAfterMs; если его нет — ждём минимальный
+              // вежливый интервал вместо мгновенного повтора.
+              retryAfterMs:
+                typeof waitMs === "number" && waitMs > 0 ? waitMs : 30_000,
+            };
+          }
+          return { kind: "transient-failure" };
         }
 
         const parsed = authResponseSchema.safeParse(await response.json());
         if (!parsed.success) {
           console.error("[ApiClient] Invalid refresh response:", parsed.error);
-          return "transient-failure";
+          return { kind: "transient-failure" };
         }
         const data = parsed.data;
 
         // Сессия была очищена, пока шёл запрос (invalidatePendingRefresh) —
         // не применяем токены и не воскрешаем сессию.
         if (this.refreshGeneration !== generationAtStart) {
-          return "transient-failure";
+          return { kind: "transient-failure" };
         }
 
         this.token = data.accessToken;
@@ -412,12 +534,12 @@ export class ApiClient {
           expiresIn: data.expiresIn,
           user: data.user,
         });
-        return "success";
+        return { kind: "success" };
       } finally {
         clearTimeout(timeoutId);
       }
     } catch {
-      return "transient-failure";
+      return { kind: "transient-failure" };
     }
   }
 }

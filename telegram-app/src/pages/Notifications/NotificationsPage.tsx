@@ -36,6 +36,7 @@ import {
   useNotificationsInboxQuery,
   useUnreadCountQuery,
 } from "@/queries/useNotificationsQuery";
+import { listBlockingError } from "@/helpers/listBlockingError";
 
 /**
  * Fallback-карта маршрута по типу уведомления.
@@ -399,7 +400,7 @@ export function NotificationsPage() {
       <MutationError error={markRead.error ?? markAll.error} />
       <QueryState
         loading={inbox.isLoading}
-        error={inbox.error}
+        error={listBlockingError(inbox)}
         empty={false}
         emptyText=""
         skeleton={<NotificationCardsSkeleton />}
@@ -482,6 +483,7 @@ export function NotificationsPage() {
               hasNextPage={inbox.hasNextPage}
               isFetchingNextPage={inbox.isFetchingNextPage}
               fetchNextPage={() => void inbox.fetchNextPage()}
+              error={inbox.isFetchNextPageError ? inbox.error : null}
               sentinelRef={sentinelRef}
               placeholder={<NotificationCardSkeleton />}
               placeholderLabel="Загрузка ещё уведомлений"

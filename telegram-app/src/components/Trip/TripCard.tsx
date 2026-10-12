@@ -52,13 +52,20 @@ export type TripCardVariant =
     };
 
 /**
- * Отмена доступна только для отменяемых статусов (active).
+ * Отмена доступна только для отменяемых статусов (active) И до отправления.
  * Статус в контракте опционален — поездка без статуса считается
  * активной (легаси-данные), кнопку скрываем только для терминальных
  * cancelled/completed.
+ *
+ * `departureAt` — тоже гейт: автоархив наступает лишь через 24ч после
+ * отправления, поэтому уехавшая поездка ещё долго остаётся `active` с живой
+ * кнопкой отмены, которую бэкенд всё равно отклоняет (409 TRIP_IN_PAST).
  */
-function isCancellable(trip: Trip): boolean {
-  return trip.status !== "cancelled" && trip.status !== "completed";
+function isCancellable(trip: Trip, now: Date = new Date()): boolean {
+  if (trip.status === "cancelled" || trip.status === "completed") return false;
+  const departureAt = Date.parse(trip.departureAt ?? "");
+  if (Number.isFinite(departureAt) && departureAt <= now.getTime()) return false;
+  return true;
 }
 
 /**

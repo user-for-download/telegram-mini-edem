@@ -25,10 +25,29 @@ export function HomePage() {
   const hasCar = (vehicleQuery.vehicle ?? null) !== null;
   const vehicleReady = !vehicleQuery.isLoading && !vehicleQuery.isFetching;
   const [vehicleOpen, setVehicleOpen] = useState(false);
+
   // Шторка открыта из CTA «Создать поездку»: после успешного сохранения
   // уходим на форму создания (а не остаёмся на Главной).
   const [pendingCreate, setPendingCreate] = useState(false);
-  useModalBack(() => setVehicleOpen(false), vehicleOpen);
+
+  const closeVehicle = () => {
+    // Ручное закрытие без сохранения: флаг намерения сбрасываем только
+    // когда авто так и не появилось — иначе выше уже ушли на форму.
+    // Стор читаем в момент закрытия: на успешном сохранении onSuccess
+    // мутации кладёт юзера в стор ДО вызова onClose, а рендер-замыкание
+    // HomePage к этому моменту ещё старое и видело бы `vehicle === null`
+    // (и гасило намерение).
+    const user = useAuthStore.getState().user;
+    if (!user?.car) setPendingCreate(false);
+    setVehicleOpen(false);
+  };
+
+  // Back обязан гасить и флаг намерения: closeVehicle специально НЕ
+  // гасит pendingCreate, если авто появилось (тогда уход на форму создания
+  // уже состоялся). Через Back шторка закрывается без сохранения, и оставшийся
+  // флаг через эффект ниже утаскивал пользователя на форму создания стоит ли
+  // он того — сразу после того, как он отказался заполнять авто.
+  useModalBack(closeVehicle, vehicleOpen);
 
   // id городов, не имена: поиск фильтрует по справочнику, а имя
   // неоднозначно («Москва» входит в «Москва-…»).
@@ -79,18 +98,6 @@ export function HomePage() {
     }
   }, [pendingCreate, vehicleOpen, vehicleReady, hasCar, navigate]);
 
-  const closeVehicle = () => {
-    // Ручное закрытие без сохранения: флаг намерения сбрасываем только
-    // когда авто так и не появилось — иначе выше уже ушли на форму.
-    // Стор читаем в момент закрытия: на успешном сохранении onSuccess
-    // мутации кладёт юзера в стор ДО вызова onClose, а рендер-замыкание
-    // HomePage к этому моменту ещё старое и видело бы `vehicle === null`
-    // (и гасило намерение).
-    const user = useAuthStore.getState().user;
-    if (!user?.car) setPendingCreate(false);
-    setVehicleOpen(false);
-  };
-
   return (
     <Page>
       {/* Имя экрана — здесь, а не в заголовке секции (реестр #15):
@@ -121,11 +128,7 @@ export function HomePage() {
         header="Нужна попутка?"
         description="Оставьте заявку с маршрутом и датой — водители с подходящей поездкой её увидят"
         action={
-          <Button
-            size="l"
-            before={<Users size={16} />}
-            onClick={openCreate}
-          >
+          <Button size="l" before={<Users size={16} />} onClick={openCreate}>
             Ищу попутку
           </Button>
         }

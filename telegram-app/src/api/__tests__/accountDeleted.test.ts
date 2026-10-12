@@ -94,7 +94,7 @@ describe("refresh: 403 удалённого аккаунта", () => {
       code: ACCOUNT_DELETED_CODE,
       message: ACCOUNT_DELETED_MESSAGE,
     });
-    expect(result).toBe("permanent-rejection");
+    expect(result).toEqual({ kind: "permanent-rejection" });
     expect(deleted).toHaveLength(1);
     expect(banned).toHaveLength(0);
     expect(expired).toBe(1);

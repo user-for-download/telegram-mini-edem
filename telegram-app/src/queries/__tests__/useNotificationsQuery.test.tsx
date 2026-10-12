@@ -42,6 +42,7 @@ import type { Notification, NotificationsPage } from "@edem/contracts";
 import {
   NOTIFICATION_KEYS,
   applyMarkReadCaches,
+  keysContainingNotification,
   markReadInPages,
   useMarkNotificationReadMutation,
   useNotificationsInboxQuery,
@@ -400,5 +401,56 @@ describe("useMarkNotificationReadMutation: оптимизм и откат (B4)",
     expect(data?.pages[0]?.items[0]).toMatchObject({ actorName: "Сергей" });
     // onSuccess не должен декрементить повторно (в кэше уже прочитано).
     expect(client.getQueryData(NOTIFICATION_KEYS.unreadCount())).toBe(1);
+  });
+});
+
+/**
+ * Регресс L7: один тап по непрочитанной точке перезапрашивал ВСЕ
+ * загруженные страницы ВСЕХ сегментов.
+ *
+ * Инвалидация префикса `lists()` на useInfiniteQuery перезапрашивает не
+ * видимую страницу, а все уже загруженные по очереди
+ * (infiniteQueryBehavior: `remainingPages = oldPages.length`). При 10
+ * пролистанных страницах «Новых» и 3 кэшированных «Водителя» один тап давал
+ * 13 последовательных запросов к /notifications/my — эндпоинту с лимитером.
+ * То есть действие пользователя само исчерпывало бюджет, которого ему же и
+ * не хватало.
+ */
+describe("keysContainingNotification: точечная инвалидация (L7)", () => {
+  it("возвращает только сегменты, где запись реально лежит", () => {
+    const client = new QueryClient();
+    seedList(client, "unread", "n-1", false, 1);
+    seedList(client, "driver", "n-other", false, 0);
+    client.setQueryData([...NOTIFICATION_KEYS.inbox(20, "driver")], {
+      pages: [{ items: [makeNotification("n-other", false)], nextCursor: null, unreadCount: 0 }],
+      pageParams: [undefined],
+    });
+
+    const keys = keysContainingNotification(client, "n-1");
+
+    // Только «Новые»: «Водитель» про другой объект и трогать его незачем.
+    expect(keys).toEqual([[...NOTIFICATION_KEYS.inbox(20, "unread")]]);
+  });
+
+  it("запись есть в нескольких сегментах — вернуть все её", () => {
+    const client = new QueryClient();
+    seedList(client, "unread", "n-1", false, 1);
+    seedList(client, "driver", "n-1", false, 1);
+
+    const keys = keysContainingNotification(client, "n-1");
+
+    expect(keys).toHaveLength(2);
+  });
+
+  it("записи нет нигде — пустой список, лишних рефетчей не будет", () => {
+    const client = new QueryClient();
+    seedList(client, "unread", "n-1", false, 1);
+
+    expect(keysContainingNotification(client, "n-9")).toEqual([]);
+  });
+
+  it("пустой кэш не роняет", () => {
+    const client = new QueryClient();
+    expect(keysContainingNotification(client, "n-1")).toEqual([]);
   });
 });

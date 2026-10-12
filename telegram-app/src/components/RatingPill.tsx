@@ -1,10 +1,24 @@
 import { Star } from "lucide-react";
 import { Chip as TguiChip } from "@telegram-apps/telegram-ui";
+import { hasRating } from "@/helpers/rating";
 import styles from "./RatingPill.module.css";
 
 interface RatingPillProps {
-  /** Значение рейтинга 0…5, null — ещё нет оценок. */
+  /** Значение рейтинга 0…5. */
   value: number | null;
+  /**
+   * Сколько отзывов за оценкой. Нужен, чтобы отличить ОТСУТСТВИЕ рейтинга
+   * от его значения: контракт отдаёт `rating` обязательным (`min(0).max(5)`),
+   * поэтому ветка `value == null` из API недостижима, а «рейтинга нет»
+   * приходит как ЧИСЛО:
+   *   - 5.0 — новый пользователь (`auth/index.ts` создаёт rating: 5),
+   *     у которого ноль отзывов: без проверки он светился бы идеальной
+   *     оценкой при пустом профиле;
+   *   - 0.0 — `recomputeUserRating` обнуляет, когда опубликованных отзывов
+   *     не осталось (например, админ удалил последний).
+   * Оба значения при `reviewsCount === 0` показываем прочерком.
+   */
+  reviewsCount?: number | null;
   /** Размер пилюли. */
   size?: "m" | "s";
 }
@@ -12,10 +26,16 @@ interface RatingPillProps {
 /**
  * Пилюля рейтинга «★ 4.9» на нативном `Chip` кита (mode mono, Component span):
  * звезда lucide в слоте before, десятичный разделитель — точка,
- * null — прочерк. Фон и текст — из переменных темы UI-кита.
+ * нет оценки — прочерк. Фон и текст — из переменных темы UI-кита.
  */
-export function RatingPill({ value, size = "m" }: RatingPillProps) {
-  const clamped = value == null ? null : Math.min(5, Math.max(0, value));
+export function RatingPill({
+  value,
+  reviewsCount,
+  size = "m",
+}: RatingPillProps) {
+  const clamped = hasRating(value, reviewsCount)
+    ? Math.min(5, Math.max(0, value as number))
+    : null;
   const label =
     clamped == null
       ? "Рейтинг пока отсутствует"

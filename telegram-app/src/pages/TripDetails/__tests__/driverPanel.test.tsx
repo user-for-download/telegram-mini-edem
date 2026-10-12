@@ -81,6 +81,7 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 function renderPanel(
   trip: Record<string, unknown>,
   bookings: ReturnType<typeof tripBookings>,
+  departed = false,
 ): string {
   mockUseTripBookings.mockReturnValue(bookings);
   mockUseCancelTrip.mockReturnValue(mutationState());
@@ -92,7 +93,8 @@ function renderPanel(
           tripId="t-1"
           status="active"
           isActive
-          canCompleteTrip={false}
+          canCompleteTrip={departed}
+          departed={departed}
           editing={false}
           onToggleEdit={vi.fn()}
           trip={trip as never}
@@ -167,6 +169,7 @@ describe("DriverPanel: счётчик заявок точный за преде�
             tripId="t-1"
             status="active"
             isActive
+            departed={false}
             canCompleteTrip={false}
             editing={false}
             onToggleEdit={vi.fn()}
@@ -180,5 +183,31 @@ describe("DriverPanel: счётчик заявок точный за преде�
     expect(html).toContain("Заявки пассажиров");
     expect(html).not.toContain("(12)");
     expect(html).not.toContain("Повторить");
+  });
+});
+
+describe("DriverPanel: уехавшую поездку отменить нельзя", () => {
+  // Регресс: `/trips/:id/cancel` проверял только status === "active", а
+  // автоархив наступает через 24ч после отправления. В это окно водитель
+  // видел живую «Отменить поездку» для рейса, который уже в пути, и
+  // отмена сносила confirmed-брони пассажиров ПОСЛЕ поездки.
+  const emptyBookings = tripBookings([{ items: [] }]);
+
+  it("скрывает отмену после отправления", () => {
+    const html = renderPanel({}, emptyBookings, true);
+    expect(html).not.toContain("Отменить поездку");
+    expect(html).toContain("Отмена недоступна после отправления");
+  });
+
+  it("оставляет завершение доступным после отправления", () => {
+    const html = renderPanel({}, emptyBookings, true);
+    expect(html).toContain("Завершить поездку");
+    expect(html).not.toContain("Завершение станет доступно");
+  });
+
+  it("показывает отмену, пока поездка ещё не уехала", () => {
+    const html = renderPanel({}, emptyBookings, false);
+    expect(html).toContain("Отменить поездку");
+    expect(html).toContain("Завершить поездку");
   });
 });

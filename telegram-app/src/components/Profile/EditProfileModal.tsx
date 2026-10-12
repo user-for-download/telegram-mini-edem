@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { Input, Textarea } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
 import { Field } from "@/ui/Field";
@@ -93,7 +93,14 @@ export const EditProfileBody = memo(function EditProfileBody({
       phone !== (profile.data?.phone ?? ""),
   );
 
+  // Защита от двойного сабмита: ref синхронен (в отличие от state), второй
+  // клик до ре-рендера не отправит второй запрос. Тот же приём, что в
+  // VehicleModal / ReviewsPage / ComplaintForm — раньше эта форма была
+  // единственной без него, и `disabled={update.isPending}` не спасал:
+  // он действует только ПОСЛЕ коммита.
+  const isSubmittingRef = useRef(false);
   const save = () => {
+    if (isSubmittingRef.current) return;
     const error = validateProfileFields(name, about, phone);
     if (error) {
       haptic.error();
@@ -103,6 +110,7 @@ export const EditProfileBody = memo(function EditProfileBody({
     }
     setFieldError(null);
     setInvalidField(null);
+    isSubmittingRef.current = true;
     update.mutate(normalizeProfileForm(name, about, phone), {
       onSuccess: () => {
         haptic.success();
@@ -110,6 +118,9 @@ export const EditProfileBody = memo(function EditProfileBody({
         onDone();
       },
       onError: () => haptic.error(),
+      onSettled: () => {
+        isSubmittingRef.current = false;
+      },
     });
   };
 

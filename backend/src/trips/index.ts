@@ -1064,6 +1064,19 @@ tripsRouter.patch("/:id/cancel", requireUser, cancelTripLimiter, async (c) => {
         if (trip.status !== "active") {
           throw new TripError(TripErrors.notActive(), "Trip is not active");
         }
+        // Отменять уже уехавшую поездку нельзя. Без этого гейта водитель
+        // мог отменить рейс в пути (автоархив наступает лишь через 24ч после
+        // отправления, `bookings/shared.ts`), и confirmed-брони пассажиров
+        // переводились в cancelled ПОСЛЕ поездки — попутчику приходило
+        // «Поездка отменена» уже в пути, а `cancelled` не даёт оставить отзыв
+        // (bookings/queries.ts canReview). Тот же гейт, что и в редактировании
+        // и в /complete: отправление — точка невозврата.
+        if (trip.departureAt <= new Date()) {
+          throw new TripError(
+            TripErrors.departed(),
+            "Trip has already departed",
+          );
+        }
 
         // Пассажиров собираем ДО updateMany: после перевода броней в cancelled
         // выборка по pending/confirmed вернёт пустой массив.

@@ -19,6 +19,8 @@ export interface TripStandardPerson {
   name: string;
   avatar?: string | null;
   rating?: number | null;
+  /** Число отзывов за рейтингом: без него 5.0/0.0 неотличимы от «нет оценки». */
+  reviewsCount?: number | null;
   subtitle: string;
   showCarIcon?: boolean;
   /**
@@ -146,7 +148,11 @@ export function TripStandardCard({
             person.passengers !== undefined ? (
               <AvatarStack users={person.passengers} />
             ) : (
-              <RatingPill size="s" value={person.rating ?? null} />
+              <RatingPill
+                size="s"
+                value={person.rating ?? null}
+                reviewsCount={person.reviewsCount ?? null}
+              />
             )
           }
         >

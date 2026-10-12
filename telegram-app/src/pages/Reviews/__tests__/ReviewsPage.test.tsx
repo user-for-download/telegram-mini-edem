@@ -53,11 +53,19 @@ vi.mock("@/store/useAuthStore", () => ({
         initData: null,
         lastAuthError: null,
       }),
-    { setState: () => {}, getState: () => ({ user: { id: "u-me", name: "Я" } }) },
+    {
+      setState: () => {},
+      getState: () => ({ user: { id: "u-me", name: "Я" } }),
+    },
   ),
 }));
 
-import { ReviewsBody, type ReviewsTab } from "@/pages/Reviews/ReviewsPage";
+import {
+  ReviewsBody,
+  reviewTargetKey,
+  selectReviewablePassengers,
+  type ReviewsTab,
+} from "@/pages/Reviews/ReviewsPage";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const ME = {
@@ -133,20 +141,24 @@ function infiniteState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function setQueries(overrides: {
-  my?: Record<string, unknown>;
-  available?: Record<string, unknown>;
-  about?: Record<string, unknown>;
-  profile?: Record<string, unknown>;
-  bookings?: Record<string, unknown>;
-  create?: Record<string, unknown>;
-} = {}) {
+function setQueries(
+  overrides: {
+    my?: Record<string, unknown>;
+    available?: Record<string, unknown>;
+    about?: Record<string, unknown>;
+    profile?: Record<string, unknown>;
+    bookings?: Record<string, unknown>;
+    create?: Record<string, unknown>;
+  } = {},
+) {
   mockUseMyReviews.mockReturnValue(queryState({ data: [], ...overrides.my }));
   mockUseAvailableTrips.mockReturnValue(
     queryState({ data: [], ...overrides.available }),
   );
   mockUseInfinite.mockReturnValue(infiniteState(overrides.about));
-  mockUseProfile.mockReturnValue(queryState({ data: ME, ...overrides.profile }));
+  mockUseProfile.mockReturnValue(
+    queryState({ data: ME, ...overrides.profile }),
+  );
   mockUseTripBookings.mockReturnValue(
     infiniteState({ data: undefined, ...overrides.bookings }),
   );
@@ -262,5 +274,90 @@ describe("ReviewsBody: три вкладки, закрытие — кнопка 
     const html = renderBody();
     expect(html).toContain("Не удалось загрузить данные");
     expect(html).toContain("Повторить");
+  });
+});
+
+/**
+ * Регресс M3: форма подсовывала адресата, которого уже оценили.
+ *
+ * Бэкенд оставляет поездку в `available-trips`, пока НЕ ОЦЕНЁН хоть один
+ * подтверждённый пассажир, но отметку «кто уже оценён» по поездке не
+ * отдаёт. Список строился из всех confirmed-броней (`createdAt desc`), а
+ * цель по умолчанию — первый элемент. После отзыва о P1 он оставался
+ * первым, и следующий отзыв уходил в 409 ALREADY_REVIEWED: форма вела
+ * пользователя гарантированно в ошибку.
+ */
+describe("selectReviewablePassengers: отзыв не предлагается повторно", () => {
+  const P1 = { id: "u-p1", name: "Пётр Первый" };
+  const P2 = { id: "u-p2", name: "Полина Вторая" };
+  const booking = (
+    passenger: { id: string; name?: string },
+    status = "confirmed",
+  ) => ({
+    status,
+    passenger,
+  });
+
+  it("до отзыва доступны оба подтверждённых пассажира", () => {
+    const result = selectReviewablePassengers(
+      [booking(P1), booking(P2)],
+      "t-1",
+      new Set(),
+    );
+    expect(result.map((p) => p.id)).toEqual(["u-p1", "u-p2"]);
+  });
+
+  it("после отзыва о P1 он исчезает из выбора", () => {
+    // Ровно состояние после успешной отправки: reviewedTargets содержит P1.
+    const reviewed = new Set([reviewTargetKey("t-1", "u-p1")]);
+    const result = selectReviewablePassengers(
+      [booking(P1), booking(P2)],
+      "t-1",
+      reviewed,
+    );
+    // Список не пустой и не содержит P1 — следующий отзыв уйдёт по P2,
+    // а не в 409 по только что оценённому.
+    expect(result.map((p) => p.id)).toEqual(["u-p2"]);
+  });
+
+  it("отметка привязана к поездке: в другой поездке P1 снова доступен", () => {
+    const reviewed = new Set([reviewTargetKey("t-1", "u-p1")]);
+    const result = selectReviewablePassengers([booking(P1)], "t-2", reviewed);
+    expect(result.map((p) => p.id)).toEqual(["u-p1"]);
+  });
+
+  it("не-подтверждённые брони адресатами не являются", () => {
+    const result = selectReviewablePassengers(
+      [
+        booking(P1, "pending"),
+        booking(P2, "declined"),
+        booking({ id: "u-p3", name: "Третий" }),
+      ],
+      "t-1",
+      new Set(),
+    );
+    expect(result.map((p) => p.id)).toEqual(["u-p3"]);
+  });
+
+  it("дубли броней на одного человека схлопываются", () => {
+    const result = selectReviewablePassengers(
+      [booking(P1), booking(P1), booking(P2)],
+      "t-1",
+      new Set(),
+    );
+    expect(result.map((p) => p.id)).toEqual(["u-p1", "u-p2"]);
+  });
+
+  it("все оценены — пустой список, а не возврат к первому", () => {
+    const reviewed = new Set([
+      reviewTargetKey("t-1", "u-p1"),
+      reviewTargetKey("t-1", "u-p2"),
+    ]);
+    const result = selectReviewablePassengers(
+      [booking(P1), booking(P2)],
+      "t-1",
+      reviewed,
+    );
+    expect(result).toEqual([]);
   });
 });

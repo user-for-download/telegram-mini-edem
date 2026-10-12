@@ -269,6 +269,24 @@ describe("buildMatchingTripsQuery: маршрут и окно дат", () => {
   });
 });
 
+/** Водитель фикстуры trip(): меняем только id, чтобы «своя/чужая». */
+const DRIVER = {
+  id: "u-1",
+  name: "Иван",
+  avatar: "https://example.com/ivan.jpg",
+  rating: 4.8,
+  reviewsCount: 10,
+  tripsCount: 12,
+};
+
+/** Окно заявки, достающее все фикстуры выше. */
+const WINDOW = {
+  fromCityId: "c-1",
+  toCityId: "c-2",
+  earliest: "2026-10-08T08:00",
+  latest: "2026-10-10T20:00",
+} as const;
+
 describe("pickMatchingTrip: в какую поездку вести", () => {
   it("предпочитает поездку со свободными местами", () => {
     const items = [
@@ -276,10 +294,62 @@ describe("pickMatchingTrip: в какую поездку вести", () => {
       trip({ id: "free", seatsAvailable: 1 }),
     ];
 
-    expect(pickMatchingTrip(items)?.id).toBe("free");
+    expect(pickMatchingTrip(items, WINDOW, "u-other")?.id).toBe("free");
   });
 
   it("пустой выдачи — null", () => {
-    expect(pickMatchingTrip([])).toBeNull();
+    expect(pickMatchingTrip([], WINDOW, "u-other")).toBeNull();
+  });
+});
+
+// Регресс H1: предпроверка предлагала поездки, на которые сервер заявку не
+// подставил бы. GET /trips не исключает текущего пользователя, поэтому водитель
+// уходил в СВОЮ карточку, а подбор выключенного водителя предлагался как
+// «открыть поездку вместо заявки».
+describe("pickMatchingTrip: предикат совпадает с серверным", () => {
+  it("исключает СВОЮ поездку — сервер её заявке не подставит", () => {
+    const own = trip({ id: "own", driver: { ...DRIVER, id: "u-me" } });
+    expect(pickMatchingTrip([own], WINDOW, "u-me")).toBeNull();
+  });
+
+  it("свою поездку пропускает, чужие оставляет", () => {
+    const own = trip({ id: "own", driver: { ...DRIVER, id: "u-me" } });
+    const foreign = trip({ id: "foreign", driver: { ...DRIVER, id: "u-other" } });
+    expect(pickMatchingTrip([own, foreign], WINDOW, "u-me")?.id).toBe("foreign");
+  });
+
+  it("исключает поездку с выключенным подбором", () => {
+    const off = trip({ id: "off", matchingEnabled: false });
+    expect(pickMatchingTrip([off], WINDOW, "u-other")).toBeNull();
+  });
+
+  it("исключает поездку, ушедшую ДО окна заявки", () => {
+    // Отправление 2026-10-07T00:00Z, длительность 300 мин → рейс закончился
+    // 2026-10-07T05:00Z. Окно открывается 2026-10-08T05:00Z (08:00 МСК):
+    // пересечения нет.
+    const early = trip({ id: "early", departureAt: "2026-10-07T00:00:00.000Z" });
+    expect(pickMatchingTrip([early], WINDOW, "u-other")).toBeNull();
+  });
+
+  it("учитывает длительность: рейс, дотянувшийся до окна, остаётся кандидатом", () => {
+    // Тот же отправной момент, но 12 часов в пути — до начала окна ещё едет.
+    // Проверка по календарным дням (moscowDayKey) поймала бы это раньше;
+    // сервер ловит по пересечению интервалов — должен и клиент.
+    const longRide = trip({
+      id: "long",
+      departureAt: "2026-10-08T00:00:00.000Z",
+      durationMinutes: 720,
+    });
+    expect(pickMatchingTrip([longRide], WINDOW, "u-other")?.id).toBe("long");
+  });
+
+  it("оставляет поездку, уходящую внутри окна", () => {
+    const inside = trip({ id: "inside", departureAt: "2026-10-08T09:00:00.000Z" });
+    expect(pickMatchingTrip([inside], WINDOW, "u-other")?.id).toBe("inside");
+  });
+
+  it("до загрузки профиля (userId пуст) чужие поездки не теряются", () => {
+    const foreign = trip({ id: "foreign", driver: { ...DRIVER, id: "u-other" } });
+    expect(pickMatchingTrip([foreign], WINDOW, null)?.id).toBe("foreign");
   });
 });

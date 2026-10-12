@@ -14,7 +14,7 @@ import { QueryState } from "@/components/QueryState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { haptic } from "@/utils/haptics";
-import { dayLabel } from "@/utils/date";
+import { relativeMoscowDay } from "@/utils/date";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { usePassengerHistoryQuery } from "@/queries/useBookingsQuery";
 import { useInfiniteMyTripsQuery } from "@/queries/useTripsQuery";
@@ -146,7 +146,7 @@ export function TripHistoryPage() {
                       )}
                     </IconContainer>
                   }
-                  subtitle={`${dayLabel(trip.date)}, ${trip.time} · ${status}`}
+                  subtitle={`${relativeMoscowDay(trip.departureAt)}, ${trip.time} · ${status}`}
                   after={
                     needReview ? (
                       <Badge type="number" mode="critical">
@@ -156,7 +156,14 @@ export function TripHistoryPage() {
                       <span className={styles.price}>{`${trip.price} ₽`}</span>
                     )
                   }
-                  onClick={() => open(trip.id)}
+                  // needReview ведёт на /reviews, а не в карточку: красный
+                  // бейдж и aria-label обещали «оставьте отзыв», а карточка
+                  // поездки кнопки отзыва не содержит — обещание было
+                  // неисполнимым, и единственный путь к отзыву оставался
+                  // недостижимым с этой подсказки.
+                  onClick={() =>
+                    needReview ? navigate("/reviews") : open(trip.id)
+                  }
                   aria-label={
                     needReview
                       ? `Поездка ${trip.fromCity} — ${trip.toCity}, ${status}, оставьте отзыв`

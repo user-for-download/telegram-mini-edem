@@ -281,6 +281,13 @@
   gap: var(--app-space-sm);
 }
 
+/* Сбой догрузки: role=alert, поэтому текст должен быть контрастным,
+   а не «призрачный» серый secondary-текст скинета. */
+.fetchMoreError {
+  color: var(--tgui-destructive-text-color, var(--app-color-danger, #d14343));
+  text-align: center;
+}
+
 /* Счётчик символов поля (ui/CharCounter): вправо, под контролом. */
 .fieldCounter {
   text-align: right;

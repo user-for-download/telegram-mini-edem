@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isRideRequestExpired,
   rideRequestErrorMessage,
   validateRideRequestWindow,
 } from "@/components/Trip/rideRequestValidation";
@@ -66,5 +67,39 @@ describe("rideRequestErrorMessage: перевод zod в русский + пол
     for (const path of [["seats"], ["fromCityId"], ["toCityId"], ["earliestAt"], ["latestAt"], ["expiresAt"], ["x"]]) {
       expect(rideRequestErrorMessage(path).message).not.toMatch(/[A-Za-z]{4,}/);
     }
+  });
+});
+
+// Регресс H3: статус `expired` не пишет никто, кроме сида (ни воркер, ни
+// админский маршрут). Просроченная заявка навсегда остаётся active/paused,
+// а сервер отклоняет возврат в active с 409 (rideRequests/index.ts).
+describe("isRideRequestExpired", () => {
+  const NOW = new Date("2026-10-20T12:00:00.000Z");
+
+  it("считает истёкшей заявку, чей срок прошёл", () => {
+    expect(
+      isRideRequestExpired({ expiresAt: "2026-10-20T11:59:00.000Z" }, NOW),
+    ).toBe(true);
+  });
+
+  it("не трогает заявку со сроком в будущем", () => {
+    expect(
+      isRideRequestExpired({ expiresAt: "2026-10-20T12:00:01.000Z" }, NOW),
+    ).toBe(false);
+  });
+
+  it("на границе срок уже истёк — ровно как решит сервер", () => {
+    // Сервер отклоняет возврат в active при `expiresAt <= now`
+    // (rideRequests/index.ts), поэтому на равенстве кнопку прячем: показать
+    // её значит предложить действие, которое гарантированно даст 409.
+    expect(
+      isRideRequestExpired({ expiresAt: "2026-10-20T12:00:00.000Z" }, NOW),
+    ).toBe(true);
+  });
+
+  it("неразобранный срок НЕ считаем истёкшим", () => {
+    // Иначе скрыли бы действия у заявки, у которой срок просто не приехал.
+    expect(isRideRequestExpired({ expiresAt: "" }, NOW)).toBe(false);
+    expect(isRideRequestExpired({ expiresAt: "не дата" }, NOW)).toBe(false);
   });
 });

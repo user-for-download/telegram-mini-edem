@@ -9,6 +9,7 @@
 // нет»), а решение «идти или не идти» — здесь.
 import { useCallback } from "react";
 import { tgConfirm } from "@/helpers/tgConfirm";
+import { useAuthStore } from "@/store/useAuthStore";
 import {
   findMatchingTrip,
   matchingTripMessage,
@@ -26,9 +27,10 @@ import {
 export function useMatchingTripCheck(
   onNavigate: (route: string) => void,
 ): (draft: RouteWindowDraft, routeLabel: string) => Promise<boolean> {
+  const userId = useAuthStore((state) => state.user?.id ?? null);
   return useCallback(
     async (draft, routeLabel) => {
-      const found = await findMatchingTrip(draft);
+      const found = await findMatchingTrip(draft, userId);
       if (found === null) return true;
       const confirmed = await tgConfirm(
         matchingTripMessage(routeLabel, found.total),
@@ -37,6 +39,6 @@ export function useMatchingTripCheck(
       onNavigate(tripCardRoute(found.trip.id));
       return false;
     },
-    [onNavigate],
+    [onNavigate, userId],
   );
 }

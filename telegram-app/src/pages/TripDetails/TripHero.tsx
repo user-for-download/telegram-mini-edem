@@ -6,7 +6,7 @@ import { Stack } from "@/ui/Stack";
 import { GROW, ROW_BETWEEN, TRUNCATE, BTN_ROW_WRAP } from "@/ui/classes";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
-import { dayLabel, formatDuration } from "@/utils/date";
+import { formatDuration, relativeMoscowDay } from "@/utils/date";
 import { plural } from "@/utils/plural";
 import { terminalTripStatusLabel } from "@/utils/tripStatus";
 import { hapticFeedback } from "@tma.js/sdk-react";
@@ -43,7 +43,12 @@ export function TripHero({
     <>
       <div className={styles.routeCard}>
         <Caption className={ROW_BETWEEN} Component="div">
-          <span>{dayLabel(item.date)}</span>
+          {/* moscowDayLabel от departureAt, а НЕ dayLabel(item.date):
+              бэк отдаёт trip.date подписью ru-RU («ср, 16 сентября»,
+              serializers/index.ts formatDateRu), её /\d{4}-\d{2}-\d{2}$/
+              не берёт, new Date такую строку не разбирает — и «Сегодня»/
+              «Завтра» на карточке поездки были недостижимы. */}
+          <span>{relativeMoscowDay(item.departureAt)}</span>
           <span>
             {terminalTripStatusLabel(item.status) ??
               `В пути ~ ${formatDurationLocal(item.durationMinutes)}`}{" "}

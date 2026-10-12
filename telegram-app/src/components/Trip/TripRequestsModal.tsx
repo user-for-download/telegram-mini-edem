@@ -120,6 +120,50 @@ const ConfirmedBookingCard = memo(function ConfirmedBookingCard({
   );
 });
 
+/** Подпись и тон закрытой заявки. Отклонённая и отменённая — разные слова,
+ *  но обе закрыты и обе недоступны для действий. */
+const CLOSED_LABELS: Record<"declined" | "cancelled", string> = {
+  declined: "Отклонён",
+  cancelled: "Отменён",
+};
+
+/**
+ * Карточка закрытой заявки (declined/cancelled) — только чтение.
+ *
+ * Раньше такие строки приезжали из `/bookings/trip/:tripId` (там нет
+ * фильтра по статусу), попадали в `items`, но не рисовались НИ ОДНОЙ из
+ * двух групп. Водитель, отклонивший последнюю заявку, получал пустое тело
+ * без пустого состояния и без единой карточки.
+ */
+const ClosedBookingCard = memo(function ClosedBookingCard({
+  booking,
+}: {
+  booking: TripBooking;
+}) {
+  const label = CLOSED_LABELS[booking.status === "cancelled" ? "cancelled" : "declined"];
+  return (
+    <Card className={styles.cardRow}>
+      <div className={styles.rowInfo}>
+        <LazyAvatar
+          size={40}
+          src={booking.passenger.avatar}
+          acronym={booking.passenger.name.slice(0, 1).toUpperCase()}
+          alt={booking.passenger.name}
+        />
+        <div className={GROW}>
+          <Text Component="div" className={TRUNCATE}>
+            {booking.passenger.name}
+          </Text>
+          <Caption Component="div">{`место ${booking.seat}`}</Caption>
+        </div>
+      </div>
+      <StatusPill tone="danger" className={SHRINK}>
+        {label}
+      </StatusPill>
+    </Card>
+  );
+});
+
 /**
  * Заявки пассажиров — route-backed шторка поверх «Поездок»; роут /trips/my/:tripId/requests остаётся источником правды,
  * точки входа TripActivePage + TripDetailsPage (DriverSection) — тот же navigate —
@@ -204,6 +248,19 @@ export const TripRequestsBody = memo(function TripRequestsBody({
     () => items.filter((booking) => booking.status === "confirmed"),
     [items],
   );
+  // Закрытые заявки не принимают решений, но показываются: без них водитель,
+  // отклонивший последнюю, видел пустое тело вместо истории поездки.
+  const closed = useMemo(
+    () =>
+      items.filter(
+        (booking) => booking.status === "declined" || booking.status === "cancelled",
+      ),
+    [items],
+  );
+  // Пустое состояние — про отсутствие заявок вообще. Закрытые заявки тоже
+  // заявки: при items.length > 0 пустое состояние показывать нельзя, иначе
+  // водитель, отклонивший последнюю, увидит «Заявок нет» над своим списком.
+  const hasAny = items.length > 0;
   // Per-row pending (как в DriverTripRequests): лоадится только
   // обрабатываемая строка, остальные остаются интерактивными.
   const actingId = update.isPending ? update.variables?.id : undefined;
@@ -259,7 +316,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
             {bookingErrorMessage(update.error)}
           </Notice>
         )}
-        {!items.length && (
+        {!hasAny && (
           <EmptyState header={EMPTY_STATES.tripRequestsEmpty.header} />
         )}
         {pending.length > 0 && (
@@ -303,6 +360,16 @@ export const TripRequestsBody = memo(function TripRequestsBody({
             </Caption>
             {confirmed.map((booking) => (
               <ConfirmedBookingCard key={booking.id} booking={booking} />
+            ))}
+          </Stack>
+        )}
+        {closed.length > 0 && (
+          <Stack aria-label="Закрытые заявки">
+            <Caption weight="2" Component="span" className={styles.groupLabel}>
+              {`Закрытые (${closed.length})`}
+            </Caption>
+            {closed.map((booking) => (
+              <ClosedBookingCard key={booking.id} booking={booking} />
             ))}
           </Stack>
         )}

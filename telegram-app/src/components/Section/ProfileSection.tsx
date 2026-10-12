@@ -21,7 +21,11 @@ export function ProfileSection() {
           haptic.light();
           navigate("/profile");
         }}
-        after={<RatingPill size="m" value={profile.data?.rating ?? null} />}
+        after={<RatingPill
+          size="m"
+          value={profile.data?.rating ?? null}
+          reviewsCount={profile.data?.reviewsCount ?? null}
+        />}
         before={
           <Avatar
             size={48}

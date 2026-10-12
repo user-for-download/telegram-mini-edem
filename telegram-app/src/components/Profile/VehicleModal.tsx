@@ -121,7 +121,15 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
               Чтобы публиковать поездки, добавьте автомобиль.
             </Caption>
           )}
-          <VehicleForm vehicle={vehicle} onDone={onDone} />
+          {/* key по наличию автомобиля: после удаления useRemoveVehicleMutation
+              пишет пользователя без машины в общий кэш ["users","me"], `vehicle`
+              становится null, но VehicleForm без key НЕ перемонтируется и
+              продолжает держать удалённые значения в полях. Последствия были
+              реальными: «Сохранить» молча создавал только что удалённую машину,
+              а useClosingConfirmation сравнивал поля с пустым автомобилем и
+              спрашивал «отменить изменения?» при ВЫХОДЕ из приложения.
+              Тот же приём, что key={profile.data?.id} в EditProfileModal. */}
+          <VehicleForm key={vehicle ? "has-vehicle" : "no-vehicle"} vehicle={vehicle} onDone={onDone} />
           {vehicle && (
             <>
               <ConfirmPopup

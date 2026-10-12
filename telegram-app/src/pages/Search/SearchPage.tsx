@@ -17,6 +17,8 @@ import {
   Search as SearchIcon,
 } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { mergeUniqueById } from "@/helpers/mergeUniqueById";
+import { listBlockingError } from "@/helpers/listBlockingError";
 import { QueryState } from "@/components/QueryState";
 import { TripCardsSkeleton } from "@/components/Skeletons";
 import { TripStandardCard } from "@/components/Section/TripStandardCard";
@@ -115,8 +117,10 @@ export function SearchPage() {
   const trips = useInfiniteTripsQuery(buildSearchFilters(submitted));
   // items мемоизируем по trips.data: без этого flatMap даёт новый массив на
   // каждом рендере и useMemo ниже пересчитывал бы группы вхолостую.
+  // mergeUniqueById, а не flatMap: /trips — offset-пагинация по живому списку,
+  // новая поездка в начале сдвигает окно и повторяет граничную строку.
   const items = useMemo(
-    () => trips.data?.pages.flatMap((page) => page.items) ?? [],
+    () => mergeUniqueById(trips.data?.pages),
     [trips.data],
   );
   // Группы дат для пилюль-заголовков: чисто видовая группировка уже
@@ -339,7 +343,7 @@ export function SearchPage() {
 
         <QueryState
           loading={trips.isLoading}
-          error={trips.error}
+          error={listBlockingError(trips)}
           empty={false}
           emptyText=""
           skeleton={<TripCardsSkeleton />}
@@ -396,6 +400,7 @@ export function SearchPage() {
                 hasNextPage={trips.hasNextPage}
                 isFetchingNextPage={trips.isFetchingNextPage}
                 fetchNextPage={() => void trips.fetchNextPage()}
+                error={trips.isFetchNextPageError ? trips.error : null}
                 sentinelRef={sentinelRef}
                 placeholder={
                   <div className={styles.loadingMore}>

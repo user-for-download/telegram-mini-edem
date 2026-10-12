@@ -209,3 +209,61 @@ describe("TripRequestsBody: a11y", () => {
     expect(html).toContain('data-tap-target="44"');
   });
 });
+
+describe("TripRequestsBody: закрытые заявки не оставляют пустое тело", () => {
+  // Регресс: бэкенд `/bookings/trip/:tripId` отдаёт заявки БЕЗ фильтра по
+  // статусу, поэтому declined/cancelled попадали в items и подавляли пустое
+  // состояние, но не рисовались ни одной из двух групп. Водитель, отклонивший
+  // последнюю заявку, видел пустую шторку без единой карточки.
+  it("показывает отклонённую заявку вместо пустого тела", () => {
+    setMocks(
+      pageWithItems([
+        makeBooking({ id: "b-3", status: "declined", comment: undefined }),
+      ]),
+    );
+
+    const html = renderBody();
+
+    expect(html).toContain("Анна Пассажирова");
+    expect(html).toContain("Закрытые (1)");
+    expect(html).toContain("Отклонён");
+    // Пустое состояние про ОТКРЫТЫЕ заявки здесь показывать нельзя.
+    expect(html).not.toContain("Заявок нет");
+  });
+
+  it("показывает отменённую заявку отдельной подписью", () => {
+    setMocks(
+      pageWithItems([
+        makeBooking({ id: "b-4", status: "cancelled", comment: undefined }),
+      ]),
+    );
+
+    const html = renderBody();
+
+    expect(html).toContain("Закрытые (1)");
+    expect(html).toContain("Отменён");
+  });
+
+  it("пустое состояние появляется, когда открытых заявок не осталось", () => {
+    setMocks(pageWithItems([]));
+
+    const html = renderBody();
+
+    expect(html).toContain("Заявок нет");
+  });
+
+  it("смешанный список: открытые и закрытые в своих группах", () => {
+    setMocks(
+      pageWithItems([
+        makeBooking({ id: "b-5", status: "confirmed", comment: undefined }),
+        makeBooking({ id: "b-6", status: "declined", comment: undefined }),
+      ]),
+    );
+
+    const html = renderBody();
+
+    expect(html).toContain("Подтверждены (1)");
+    expect(html).toContain("Закрытые (1)");
+    expect(html).not.toContain("Заявок нет");
+  });
+});

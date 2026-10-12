@@ -98,6 +98,20 @@ describe("TripCard driving cancel guard", () => {
     expect(html).toContain("Поделиться поездкой");
   });
 
+  // Регресс: автоархив наступает лишь через 24ч после отправления, поэтому
+  // уехавшая поездка долго остаётся `active` с живой кнопкой отмены, которую
+  // бэкенд отклоняет 409 TRIP_IN_PAST.
+  it("уехавшая поездка: кнопки отмены нет, даже при status active", () => {
+    const html = renderDriving(
+      makeTrip({
+        status: "active",
+        departureAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      }),
+    );
+    expect(html).not.toContain("Отменить поездку");
+    expect(html).toContain("Поделиться поездкой");
+  });
+
   it("cancelled/completed: кнопки отмены нет, шаринг остался", () => {
     for (const status of ["cancelled", "completed"] as const) {
       const html = renderDriving(makeTrip({ status }));

@@ -20,6 +20,14 @@ export interface FetchMoreProps {
   placeholderLabel?: string;
   /** Текст кнопки. */
   label?: string;
+  /**
+   * Ошибка догрузки. `hasNextPage` после сбоя остаётся истинным, поэтому без
+   * этого кнопка выглядит как обычное «Показать ещё» и не даёт понять, что
+   * страница не загрузилась. Рендерим внятный текст и aria-live: страницы
+   * обычно цепляются автодогрузкой, то есть без объявления об ошибке её
+   * заметят только прокрутив вниз.
+   */
+  error?: unknown;
 }
 
 /**
@@ -37,6 +45,7 @@ export function FetchMore({
   placeholder,
   placeholderLabel,
   label = "Показать ещё",
+  error,
 }: FetchMoreProps) {
   if (!hasNextPage) return null;
   return (
@@ -57,13 +66,18 @@ export function FetchMore({
           {placeholder}
         </div>
       ) : null}
+      {error ? (
+        <p role="alert" className={styles.fetchMoreError}>
+          Не удалось загрузить ещё. Попробуйте ещё раз.
+        </p>
+      ) : null}
       <Button
         stretched
         loading={isFetchingNextPage}
         disabled={isFetchingNextPage}
         onClick={() => void fetchNextPage()}
       >
-        {label}
+        {error ? "Повторить загрузку" : label}
       </Button>
     </>
   );

@@ -17,6 +17,8 @@ interface DriverPanelProps {
   status: string | undefined;
   isActive: boolean;
   canCompleteTrip: boolean;
+  /** Отправление уже прошло. Отменять такую поездку нельзя (бэкенд 409). */
+  departed: boolean;
   editing: boolean;
   onToggleEdit: () => void;
   trip: Parameters<typeof EditTripForm>[0]["trip"];
@@ -31,6 +33,7 @@ export function DriverPanel({
   status,
   isActive,
   canCompleteTrip,
+  departed,
   editing,
   onToggleEdit,
   trip,
@@ -111,14 +114,24 @@ export function DriverPanel({
               Завершение станет доступно после времени отправления.
             </p>
           )}
-          <ConfirmPopup
-            label="Отменить поездку"
-            confirmLabel="Отменить поездку"
-            description="Поездка станет недоступна, а пассажиры получат уведомление об отмене."
-            pending={cancelTrip.isPending}
-            destructive
-            onConfirm={() => cancelTrip.mutate(tripId)}
-          />
+          {!departed && (
+            <ConfirmPopup
+              label="Отменить поездку"
+              confirmLabel="Отменить поездку"
+              description="Поездка станет недоступна, а пассажиры получат уведомление об отмене."
+              pending={cancelTrip.isPending}
+              // Отменяем мысленно нажатой «Завершить» — действие на ту же
+              // поездку, оно не должно проходить, пока PATCH в полёте.
+              disabled={cancelTrip.isPending || completeTrip.isPending}
+              destructive
+              onConfirm={() => cancelTrip.mutate(tripId)}
+            />
+          )}
+          {departed && (
+            <p className={styles.hintXs}>
+              Отмена недоступна после отправления — поездку можно завершить.
+            </p>
+          )}
           {(cancelTrip.error || completeTrip.error) && (
             <Notice tone="danger" variant="text">
               {bookingErrorMessage(cancelTrip.error ?? completeTrip.error)}

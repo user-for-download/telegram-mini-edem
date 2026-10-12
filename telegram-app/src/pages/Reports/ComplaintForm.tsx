@@ -138,6 +138,13 @@ export function ComplaintForm({
               const next = event.target.value;
               if (!isReportTargetType(next)) return;
               setTargetType(next);
+              // id цели ОБЯЗАН с её типом: оставленный от поездки uuid при
+              // смене типа на «пользователь» ушёл бы в 403 canReport=false,
+              // а пользователю показывали объяснение ПРО поездку — про
+              // несуществующий объект другого типа. Сбрасываем вместе с
+              // прочими полями формы.
+              setTargetId("");
+              setFieldError(null);
               if (formError) setFormError(null);
             }}
           >

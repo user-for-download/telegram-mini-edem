@@ -42,6 +42,7 @@ import {
 } from "@/pages/Reviews/reviewValidation";
 import { plural } from "@/utils/plural";
 import styles from "./ReviewsPage.module.css";
+import { formatRating } from "@/helpers/rating";
 
 export type ReviewsTab = "mine" | "new" | "about";
 
@@ -96,11 +97,50 @@ export function ReviewsPage() {
     </Page>
   );
 }
+/** Ключ «поездка:кто» — тем же составом, каким бэкенд считает reviewedTargets
+ *  в available-trips (`reviews/index.ts`). */
+export const reviewTargetKey = (tripId: string, targetUserId: string): string =>
+  `${tripId}:${targetUserId}`;
+
+/** Минимальный срез брони для отбора адресатов. */
+interface ReviewableBooking {
+  status: string;
+  passenger: { id: string };
+}
 
 /**
- * Тело отзывов (мемоизировано — тяжёлые списки). Без PageHeader: закрытие
- * страницы — кнопка «Назад» NavHeader / нативный Back.
+ * Кого водитель ещё может оценить в этой поездке.
+ *
+ * Бэкенд оставляет поездку в `available-trips`, пока не оценён ХОТЯ БЫ ОДИН
+ * подтверждённый пассажир, но отметку «кто уже оценён» по поездке не отдаёт.
+ * Без фильтра список состоял из всех confirmed-броней, а цель по умолчанию —
+ * первый элемент (заказы `createdAt desc`, то есть последний забронировавший).
+ * После отзыва о P1 он оставался первым, и следующий отзыв уходил в
+ * ALREADY_REVIEWED: форма вела пользователя гарантированно в ошибку.
+ *
+ * Чистая функция (вместо inline-фильтра), чтобы правило проверялось тестом:
+ * переход состояния «отзыв отправлен → список изменился» в SSR-рендере
+ * недоступен.
  */
+export function selectReviewablePassengers<T extends ReviewableBooking>(
+  bookings: readonly T[],
+  tripId: string,
+  reviewedTargets: ReadonlySet<string>,
+): Array<T["passenger"]> {
+  const seen = new Set<string>();
+  const result: Array<T["passenger"]> = [];
+  for (const booking of bookings) {
+    if (booking.status !== "confirmed") continue;
+    if (seen.has(booking.passenger.id)) continue;
+    if (reviewedTargets.has(reviewTargetKey(tripId, booking.passenger.id))) {
+      continue;
+    }
+    seen.add(booking.passenger.id);
+    result.push(booking.passenger);
+  }
+  return result;
+}
+
 export const ReviewsBody = memo(function ReviewsBody({
   initialTab = "mine",
 }: {
@@ -116,6 +156,12 @@ export const ReviewsBody = memo(function ReviewsBody({
   const create = useCreateReviewMutation();
 
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  // Кого уже оценили за эту сессию: сервис такой отметки не отдаёт, а без
+  // неё форма повторно предлагает только что оценённого (см.
+  // selectReviewablePassengers).
+  const [reviewedTargets, setReviewedTargets] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [selectedPassengerId, setSelectedPassengerId] = useState<string | null>(
     null,
   );
@@ -133,7 +179,7 @@ export const ReviewsBody = memo(function ReviewsBody({
   // второй клик до ре-рендера не отправит второй запрос.
   const submitGuard = useRef(false);
 
-const trips = useMemo(() => available.data ?? [], [available.data]);
+  const trips = useMemo(() => available.data ?? [], [available.data]);
   const selectedTrip: Trip | null =
     trips.find((trip) => trip.id === selectedTripId) ?? trips[0] ?? null;
 
@@ -148,16 +194,12 @@ const trips = useMemo(() => available.data ?? [], [available.data]);
   });
   const passengers: User[] = useMemo(() => {
     if (!isDriverTrip) return [];
-    const seen = new Map<string, User>();
-    for (const page of tripBookings.data?.pages ?? []) {
-      for (const booking of page.items) {
-        if (booking.status === "confirmed" && !seen.has(booking.passenger.id)) {
-          seen.set(booking.passenger.id, booking.passenger);
-        }
-      }
-    }
-    return [...seen.values()];
-  }, [isDriverTrip, tripBookings.data]);
+    return selectReviewablePassengers(
+      tripBookings.data?.pages.flatMap((page) => page.items) ?? [],
+      selectedTrip?.id ?? "",
+      reviewedTargets,
+    );
+  }, [isDriverTrip, tripBookings.data, reviewedTargets, selectedTrip?.id]);
 
   // Цель отзыва: пассажир всегда пишет водителю; водитель выбирает
   // пассажира (явный выбор > первый в списке).
@@ -172,11 +214,21 @@ const trips = useMemo(() => available.data ?? [], [available.data]);
     [about.data],
   );
 
-  const pickTrip = (tripId: string) => {
-    setSelectedTripId(tripId);
-    setSelectedPassengerId(null);
+  // Смена адресата = смена того, О КОМ пишется отзыв. Текст и оценка
+  // относятся к человеку, а не к форме, поэтому при переходе на другого
+  // адресата их надо сбрасывать: иначе написанное про одного уходило
+  // другому (в т.ч. другому ВОДИТЕЛЮ при смене поездки).
+  const resetTarget = (tripId: string | null, passengerId: string | null) => {
+    if (tripId !== null) setSelectedTripId(tripId);
+    setSelectedPassengerId(passengerId);
+    setText("");
+    setRating(5);
     setFormError(null);
     setSuccess(false);
+  };
+
+  const pickTrip = (tripId: string) => {
+    resetTarget(tripId, null);
   };
 
   const submit = () => {
@@ -214,6 +266,13 @@ const trips = useMemo(() => available.data ?? [], [available.data]);
           haptic.success();
           setText("");
           setRating(5);
+          // Запоминаем «поездка:кто», чтобы пассажир не вернулся в список
+          // выбора и следующий отзыв не ушёл в тот же 409.
+          setReviewedTargets((current) => {
+            const next = new Set(current);
+            next.add(reviewTargetKey(selectedTrip.id, targetUser.id));
+            return next;
+          });
           // Сбрасываем выбор: reviewed-поездка уйдёт из available-trips
           // инвалидацией, повторный сабмит той же цели упёрся бы в
           // ALREADY_REVIEWED; заодно гаснет dirty-бит закрытия.
@@ -249,9 +308,7 @@ const trips = useMemo(() => available.data ?? [], [available.data]);
 
   const pickTab = (next: ReviewsTab) => setTab(next);
 
-
-
-return (
+  return (
     <Stack>
       <Switcher
         options={TABS}
@@ -297,7 +354,7 @@ return (
           </QueryState>
         )}
 
-{tab === "new" && (
+        {tab === "new" && (
           <QueryState
             loading={available.isLoading}
             error={available.error}
@@ -335,8 +392,7 @@ return (
                         {...field}
                         value={targetUser?.id ?? ""}
                         onChange={(event) => {
-                          setSelectedPassengerId(event.target.value);
-                          if (formError) setFormError(null);
+                          resetTarget(null, event.target.value);
                         }}
                       >
                         {passengers.map((passenger) => (
@@ -377,7 +433,10 @@ return (
                   )}
                 </Field>
                 {text.length > 0 && (
-                  <CharCounter value={text.length} max={REVIEW_TEXT_MAX_LENGTH} />
+                  <CharCounter
+                    value={text.length}
+                    max={REVIEW_TEXT_MAX_LENGTH}
+                  />
                 )}
 
                 {formError && (
@@ -405,7 +464,7 @@ return (
           </QueryState>
         )}
 
-{tab === "about" && (
+        {tab === "about" && (
           <QueryState
             loading={profile.isLoading || about.isLoading}
             error={profile.error ?? about.error}
@@ -420,7 +479,7 @@ return (
             {profile.data && (
               <Card className={styles.emptyCard}>
                 <Text weight="2" Component="p">
-                  {`Рейтинг ${profile.data.rating.toFixed(1)} · ${profile.data.reviewsCount} ${plural(profile.data.reviewsCount, "отзыв", "отзыва", "отзывов")}`}
+                  {`Рейтинг ${formatRating(profile.data.rating, profile.data.reviewsCount)} · ${profile.data.reviewsCount} ${plural(profile.data.reviewsCount, "отзыв", "отзыва", "отзывов")}`}
                 </Text>
                 <Caption Component="p" className={styles.emptyNote}>
                   Рейтинг учитывает только опубликованные отзывы

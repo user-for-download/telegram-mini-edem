@@ -291,7 +291,7 @@ describe("useAuthStore.refreshSession: сессия снята параллел�
     expect(useAuthStore.getState().status).toBe("unauthenticated");
 
     // Refresh завершается транзиентно (сеть/5xx) — состояние не меняем.
-    settle("transient-failure");
+    settle({ kind: "transient-failure" });
     await inflight;
 
     const state = useAuthStore.getState();
@@ -314,7 +314,7 @@ describe("useAuthStore.refreshSession: сессия снята параллел�
     await vi.waitFor(() => expect(mockTryRefresh).toHaveBeenCalledTimes(1));
     await useAuthStore.getState().clearSession("Session expired");
 
-    settle("permanent-rejection");
+    settle({ kind: "permanent-rejection" });
     await inflight;
 
     const state = useAuthStore.getState();
@@ -323,7 +323,7 @@ describe("useAuthStore.refreshSession: сессия снята параллел�
   });
 
   it("transient-failure при живой сессии возвращает активный статус", async () => {
-    mockTryRefresh.mockResolvedValue("transient-failure");
+    mockTryRefresh.mockResolvedValue({ kind: "transient-failure" });
     seedBackgroundSession();
 
     await useAuthStore.getState().refreshSession();
@@ -336,7 +336,7 @@ describe("useAuthStore.refreshSession: сессия снята параллел�
   });
 
   it("permanent-rejection при живой сессии сбрасывает её", async () => {
-    mockTryRefresh.mockResolvedValue("permanent-rejection");
+    mockTryRefresh.mockResolvedValue({ kind: "permanent-rejection" });
     seedBackgroundSession();
 
     await useAuthStore.getState().refreshSession();
@@ -365,7 +365,7 @@ describe("useAuthStore.refreshSession: сессия снята параллел�
       banReason: "Спам",
     });
 
-    settle("permanent-rejection");
+    settle({ kind: "permanent-rejection" });
     await inflight;
 
     const state = useAuthStore.getState();

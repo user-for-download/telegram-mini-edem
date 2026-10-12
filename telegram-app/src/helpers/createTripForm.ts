@@ -1,5 +1,6 @@
 import { createTripDtoSchema, type TripTag } from "@edem/contracts";
 import type { z } from "zod";
+import { fromMoscowDateTimeInput } from "@/utils/date";
 
 /** Payload POST /trips — тип из схемы (бэкенд — авторитет). */
 export type CreateTripPayload = z.infer<typeof createTripDtoSchema>;
@@ -117,8 +118,12 @@ export function validateCreateTripDraft(
       field: !fromCity ? "create-from" : "create-to",
     };
   }
-  const departureAt = new Date(draft.date);
-  if (!Number.isFinite(departureAt.getTime()) || departureAt <= now) {
+  // Строка из datetime-local не несёт зоны, поэтому её разбирает
+  // fromMoscowDateTimeInput, а НЕ `new Date(value)`: тот читает время в
+  // зоне устройства, и поездка уезжала бы на час (Dubai) / на семь часов
+  // (Нью-Йорк) раньше того, что водитель увидит в ленте. См. utils/date.
+  const departureAt = fromMoscowDateTimeInput(draft.date);
+  if (departureAt === null || departureAt <= now) {
     return {
       ok: false,
       error: "Укажите будущие дату и время отправления",

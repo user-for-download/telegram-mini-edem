@@ -179,3 +179,33 @@ export function rideRequestErrorMessage(
       return { field: null, message: "Проверьте параметры запроса" };
   }
 }
+
+/** Минимальный срез заявки, нужный для проверки срока. */
+interface ExpirableRequest {
+  expiresAt: string;
+}
+
+/**
+ * Истёк ли срок заявки.
+ *
+ * Статус `expired` не спасает: его пишет ТОЛЬКО сид — ни воркер, ни админский
+ * маршрут этого не делают (проверено по backend/src). Поэтому просроченная
+ * заявка навсегда остаётся `active`/`paused`, и UI обязан считать срок сам.
+ *
+ * Сервер это уже учитывает: возврат `active` из `paused` при
+ * `expiresAt <= now` даёт 409 CONFLICT
+ * (`rideRequests/index.ts`). Без этой проверки кнопка «Возобновить»
+ * обещала действие, которое всегда отклонялось, и заявка становилась
+ * недоступна через UI навсегда.
+ *
+ * Неразобранный `expiresAt` НЕ считаем истёкшим: тогда скрыли бы кнопку
+ * у заявки, у которой срок просто не приехал.
+ */
+export function isRideRequestExpired(
+  request: ExpirableRequest,
+  now: Date = new Date(),
+): boolean {
+  const expiresAt = Date.parse(request.expiresAt);
+  if (!Number.isFinite(expiresAt)) return false;
+  return expiresAt <= now.getTime();
+}

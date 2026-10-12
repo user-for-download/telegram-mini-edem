@@ -166,7 +166,7 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
   const accessToken = useAuthStore((state) => state.session?.accessToken ?? null);
 
   const connectRef = useRef<() => void>(() => {});
-  const scheduleReconnectRef = useRef<() => void>(() => {});
+  const scheduleReconnectRef = useRef<(minDelayMs?: number) => void>(() => {});
 
   const subscribeEvent = useCallback(
     (type: WsServerEvent["type"], handler: (payload: unknown) => void) => {
@@ -185,7 +185,15 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
     [],
   );
 
-  const scheduleReconnect = useCallback(() => {
+  /**
+   * Запланировать переподключение.
+   *
+   * `minDelayMs` — нижняя граница ожидания для случаев, когда сервер прямо
+   * попросил подождать (429 /auth/refresh с retryAfterMs). Обычный backoff
+   * растёт максимум до 30с, но тут важно не «переподключиться поскорее»,
+   * а не вызвать refresh до конца окна лимитера.
+   */
+  const scheduleReconnect = useCallback((minDelayMs?: number) => {
     if (
       disposedRef.current ||
       reconnectTimeoutRef.current ||
@@ -197,7 +205,7 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
     }
 
     const attempt = reconnectAttemptRef.current++;
-    const delay = computeReconnectDelay(attempt);
+    const delay = Math.max(computeReconnectDelay(attempt), minDelayMs ?? 0);
 
     reconnectTimeoutRef.current = window.setTimeout(() => {
       reconnectTimeoutRef.current = null;
@@ -362,9 +370,14 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
 
         const refreshResult = await apiClient.tryRefresh();
 
-        if (refreshResult === "success") {
+        if (refreshResult.kind === "success") {
           if (!disposedRef.current) connectRef.current();
-        } else if (refreshResult === "transient-failure") {
+        } else if (refreshResult.kind === "rate-limited") {
+          // 429: ждём ровно столько, сколько попросил бэкенд, и НЕ дёргаем
+          // refresh раньше — иначе цикл «connect → 4401 → refresh → 429»
+          // выжигает лимит (REFRESH_RATE_MAX), не восстановившись.
+          scheduleReconnectRef.current(refreshResult.retryAfterMs);
+        } else if (refreshResult.kind === "transient-failure") {
           scheduleReconnectRef.current();
         }
         // permanent-rejection: стоп, сессией занимается AuthGate
@@ -387,7 +400,7 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
   useEffect(() => {
     const unsubscribeRefreshEnd = apiClient.onRefreshEnd((result) => {
       if (
-        result === "permanent-rejection" ||
+        result.kind === "permanent-rejection" ||
         disposedRef.current ||
         terminalTokenRef.current ||
         wsRef.current ||
@@ -396,8 +409,14 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
 
       // Refresh не удался (сеть/5xx) — планируем reconnect с backoff,
       // иначе WS-канал останется мёртвым до следующего online/visibility.
-      if (result === "transient-failure") {
+      if (result.kind === "transient-failure") {
         scheduleReconnectRef.current();
+        return;
+      }
+      // 429: тот же backoff, но не раньше конца окна лимитера — иначе
+      // повторный refresh выжигает бюджет, которого сам ждём.
+      if (result.kind === "rate-limited") {
+        scheduleReconnectRef.current(result.retryAfterMs);
         return;
       }
 

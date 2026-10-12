@@ -216,7 +216,14 @@ export function CreateTripForm({
     });
   };
 
-  if (cities.isLoading || vehicleChecking) {
+  // Только isLoading, НЕ vehicleChecking: isFetching поднимается при каждом
+  // монтировании (refetchOnMount: "always") и при refetchOnReconnect, а такая
+  // замена подменяла половину заполненной формы экраном «Загружаем форму…»
+  // и уводила кнопку публикации из досягаемости — при живом соединении,
+  // то есть на ровно том экране, где водитель уже печатает. Для ЭФФЕКТА
+  // авто-открытия шторки нужен свежий ответ (vehicleChecking) — он и ждёт
+  // refetch, чтобы не открыть модалку там, где авто есть.
+  if (cities.isLoading || vehicleQuery.isLoading) {
     // Page variant="hero" — без него Placeholder из Loading стоит сверху.
     // Подпись честно называет ОБА ожидания: список городов и проверку автомобиля.
     return (

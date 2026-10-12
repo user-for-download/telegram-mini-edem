@@ -121,6 +121,7 @@ export function TripDetailsPage() {
           status={item.status}
           isActive={actions.isActive}
           canCompleteTrip={actions.canCompleteTrip}
+          departed={actions.departed}
           editing={actions.editing}
           onToggleEdit={actions.toggleEditing}
           trip={item}

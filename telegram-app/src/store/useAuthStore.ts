@@ -314,7 +314,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // сбой возвращал бы status="authenticated" при session === null.
           if (!get().session) return;
 
-          if (refreshResult === "permanent-rejection") {
+          if (refreshResult.kind === "permanent-rejection") {
             // Бан (403 FORBIDDEN) идёт тем же путём: onBanned уже выставил
             // status="banned" — не затираем плашку бана логаутом.
             // Удалённый аккаунт — аналогично: onDeleted уже выставил
@@ -323,7 +323,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               return;
             }
             await get().clearSession("Refresh failed");
-          } else if (refreshResult === "transient-failure") {
+          } else if (
+            refreshResult.kind === "transient-failure" ||
+            // 429 — не отказ сессии: токен протух, но он ещё применим.
+            // Сбрасывать сессию нельзя, иначе rate-limit превращается в
+            // logout. Статус, как и при транзиентном сбое, возвращаем в
+            // активный; восстановит следующий refresh после окна лимита.
+            refreshResult.kind === "rate-limited"
+          ) {
             // Транзиентный сбой (сеть/5xx/невалидный ответ): сессию НЕ
             // сбрасываем — следующий запрос повторит refresh и восстановится.
             // Возвращаем только активный статус; user/session не трогаем.

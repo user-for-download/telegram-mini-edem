@@ -127,3 +127,51 @@ describe("ComplaintForm: ввод и отправка", () => {
     expect(mockToastShow).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Регресс L6: id цели жил своей жизнью при смене типа.
+ *
+ * Пользователь вставлял uuid поездки, переключал «Тип объекта» на
+ * «Пользователь» и отправлял. Уходил trip-uuid с `targetType: "user"`,
+ * бэк отвечал 403 (`canReport` для чужого/несуществующего объекта), а
+ * `reportErrorMessage` показывал объяснение ПРО ПОЕЗДКУ — про объект
+ * другого типа, которого в форме даже не было.
+ */
+describe("ComplaintForm: смена типа объекта сбрасывает id", () => {
+  it("не отправляет id от предыдущего типа", () => {
+    renderForm();
+
+    fill("22222222-2222-4222-8222-222222222222");
+    // Меняем тип: id поездки больше невалиден для пользователя.
+    fireEvent.change(screen.getByLabelText("Что случилось"), {
+      target: { value: "user" },
+    });
+
+    expect(
+      (screen.getByLabelText("Идентификатор объекта") as HTMLInputElement).value,
+    ).toBe("");
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it("id нового типа используется как введённый", () => {
+    renderForm();
+
+    fireEvent.change(screen.getByLabelText("Что случилось"), {
+      target: { value: "user" },
+    });
+    fireEvent.change(
+      screen.getByLabelText("Идентификатор объекта"),
+      { target: { value: "33333333-3333-4333-8333-333333333333" } },
+    );
+    fireEvent.change(screen.getByLabelText("Описание"), {
+      target: { value: "Спам в чате" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Отправить жалобу" }));
+
+    const mutate = mockMutate.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(mutate).toMatchObject({
+      targetType: "user",
+      targetId: "33333333-3333-4333-8333-333333333333",
+    });
+  });
+});
