@@ -12,7 +12,10 @@ import { tripsRouter } from "./trips/index.js";
 import { bookingsRouter } from "./bookings/index.js";
 import { reviewsRouter } from "./reviews/index.js";
 import { feedbackRouter } from "./feedback/index.js";
-import { clientErrorsRouter, reportServerError } from "./client-errors/index.js";
+import {
+  clientErrorsRouter,
+  reportServerError,
+} from "./client-errors/index.js";
 import { usersRouter } from "./users/index.js";
 import { adminRouter } from "./admin/index.js";
 import { citiesRouter } from "./cities/index.js";
@@ -33,8 +36,15 @@ import {
   renderTelegramMetrics,
 } from "./services/telegramMetrics.js";
 import { tokensEqual } from "./utils/timingSafeEqual.js";
+import { registerNotificationSubscribers } from "./events/notificationSubscriber.js";
 
 export const app = new Hono();
+
+// Подписки уведомлений на доменные события — один раз на модуль.
+// Здесь, а не в index.ts: тесты импортируют app напрямую, и регистрация
+// в точке входа оставила бы их без подписок. Модуль выполняется один
+// раз, флаг идемпотентности в register — вторая страховка.
+registerNotificationSubscribers();
 
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 export { injectWebSocket };
@@ -87,7 +97,7 @@ app.use(
     allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     maxAge: 600,
-  })
+  }),
 );
 
 /**
@@ -118,7 +128,7 @@ app.use("*", async (c, next) => {
         errored,
         durationMs: Date.now() - startedAt,
       },
-      "http_request"
+      "http_request",
     );
   }
 });
@@ -142,7 +152,7 @@ app.use("*", async (c, next) => {
   if (env.isProduction) {
     c.header(
       "Strict-Transport-Security",
-      "max-age=31536000; includeSubDomains; preload"
+      "max-age=31536000; includeSubDomains; preload",
     );
   }
 });
@@ -157,8 +167,11 @@ app.use(
   bodyLimit({
     maxSize: 100 * 1024,
     onError: (c) =>
-      c.json({ code: ERROR_CODES.PAYLOAD_TOO_LARGE, message: "Payload too large" }, 413),
-  })
+      c.json(
+        { code: ERROR_CODES.PAYLOAD_TOO_LARGE, message: "Payload too large" },
+        413,
+      ),
+  }),
 );
 
 // Webhook Telegram-бота: секрет в path, сравнение timing-safe.
@@ -186,7 +199,7 @@ app.get("/health", async (c) => {
       db: dbOk,
       time: new Date().toISOString(),
     },
-    dbOk ? 200 : 503
+    dbOk ? 200 : 503,
   );
 });
 
@@ -217,11 +230,9 @@ app.get("/metrics", async (c) => {
   }
 
   const tgMetrics = await getTelegramDeliveryMetrics();
-  return c.text(
-    metricsSnapshot() + renderTelegramMetrics(tgMetrics),
-    200,
-    { "Content-Type": "text/plain; charset=utf-8" },
-  );
+  return c.text(metricsSnapshot() + renderTelegramMetrics(tgMetrics), 200, {
+    "Content-Type": "text/plain; charset=utf-8",
+  });
 });
 
 app.route("/api/v1/auth", authRouter);
@@ -250,16 +261,25 @@ if (env.isProduction) {
     try {
       return fs.readFileSync(path.join(distPath, "index.html"), "utf-8");
     } catch {
-      logger.error({ distPath }, `Frontend build (index.html) not found for ${label}`);
+      logger.error(
+        { distPath },
+        `Frontend build (index.html) not found for ${label}`,
+      );
       return null;
     }
   };
   const tgIndexHtml =
-    env.TELEGRAM_HOSTS.length > 0 ? readIndex(tgDistPath, "telegram-app") : null;
+    env.TELEGRAM_HOSTS.length > 0
+      ? readIndex(tgDistPath, "telegram-app")
+      : null;
 
-  const tgStatic = serveStatic({ root: path.relative(process.cwd(), tgDistPath) });
+  const tgStatic = serveStatic({
+    root: path.relative(process.cwd(), tgDistPath),
+  });
 
-  const isTelegramHost = (c: { req: { header: (name: string) => string | undefined } }): boolean => {
+  const isTelegramHost = (c: {
+    req: { header: (name: string) => string | undefined };
+  }): boolean => {
     if (env.TELEGRAM_HOSTS.length === 0) return false;
     const host = (c.req.header("host") || "").split(":")[0].toLowerCase();
     return env.TELEGRAM_HOSTS.includes(host);
@@ -308,7 +328,7 @@ export function handleUnhandledError(error: Error, c: Context) {
       method: c.req.method,
       path: c.req.path,
     },
-    "unhandled_error"
+    "unhandled_error",
   );
 
   if (env.SENTRY_DSN) {
@@ -320,7 +340,7 @@ export function handleUnhandledError(error: Error, c: Context) {
 
   return c.json(
     { code: ERROR_CODES.INTERNAL_ERROR, message: "Internal server error" },
-    500
+    500,
   );
 }
 

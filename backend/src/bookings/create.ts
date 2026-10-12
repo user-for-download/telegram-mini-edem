@@ -28,10 +28,7 @@ import {
 } from "./shared.js";
 import { closeRideRequestsForBooking } from "./rideRequests.js";
 import { logBusinessEvent } from "../logger/business.js";
-import {
-  notifyUser,
-  tripSnapshotOf,
-} from "../services/notification.service.js";
+import { domainEvents } from "../events/domainEvents.js";
 import { wsManager } from "../ws/manager.js";
 
 export const createRouter = new Hono<AuthEnv>();
@@ -297,19 +294,23 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
       seat,
     });
 
-    await notifyUser({
-      userId: booking.trip.driverId,
-      type: "booking_created",
-      title: "Новая заявка на место",
-      body: `Получена новая заявка на место ${seat} в поездке ${booking.trip.fromCity} → ${booking.trip.toCity}`,
-      // Тап открывает шторку деталей поездки водителя.
-      fragment: `/trips/${tripId}`,
-      // Вторая строка — «имя • действие», третья — снапшот поездки.
-      actorName: booking.passenger.name,
-      action: "created",
-      tripSnapshot: tripSnapshotOf(booking.trip),
-      // Получатель — водитель поездки.
-      role: "driver",
+    // Уведомление водителю — через доменное событие: здесь только факты,
+    // которые роут уже держит, а inbox-запись форматирует подписчик
+    // (events/notificationSubscriber.ts). emit не бросает (ошибки
+    // слушателей изолированы и логируются), await сохраняет прежний
+    // порядок «сначала запись, потом ответ».
+    await domainEvents.emit("booking.created", {
+      bookingId: booking.id,
+      tripId,
+      seat,
+      driverId: booking.trip.driverId,
+      passengerName: booking.passenger.name,
+      trip: {
+        fromCity: booking.trip.fromCity,
+        toCity: booking.trip.toCity,
+        price: booking.trip.price,
+        departureAt: booking.trip.departureAt,
+      },
     });
 
     // Внешняя доставка водителю идёт через outbox→диспетчер (Bot API,

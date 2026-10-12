@@ -16,10 +16,7 @@ import { getSanitizedBody } from "../middleware/sanitize.js";
 import { ERROR_CODES } from "../errors.js";
 import { activeBookingWhere, BookingError } from "./shared.js";
 import { logBusinessEvent } from "../logger/business.js";
-import {
-  notifyUser,
-  tripSnapshotOf,
-} from "../services/notification.service.js";
+import { domainEvents } from "../events/domainEvents.js";
 import { wsManager } from "../ws/manager.js";
 
 export const statusRouter = new Hono<AuthEnv>();
@@ -273,19 +270,23 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
       driverId: user.id,
     });
 
-    await notifyUser({
-      userId: passengerId,
-      type: "booking_status_changed",
-      title: newStatus === "confirmed" ? "Заявка подтверждена" : "Заявка отклонена",
-      body: `Водитель ${newStatus === "confirmed" ? "подтвердил" : "отклонил"} вашу заявку в поездке ${updated.booking.trip.fromCity} → ${updated.booking.trip.toCity}`,
-      // Тап открывает шторку деталей поездки.
-      fragment: `/trips/${updated.booking.trip.id}`,
-      // Вторая строка — «имя • действие», третья — снапшот поездки.
-      actorName: user.name,
-      action: newStatus,
-      tripSnapshot: tripSnapshotOf(updated.booking.trip),
-      // Получатель — пассажир (автор заявки).
-      role: "passenger",
+    // Уведомление пассажиру — через доменное событие: здесь только факты,
+    // inbox-запись форматирует подписчик
+    // (events/notificationSubscriber.ts). emit не бросает, await сохраняет
+    // прежний порядок «сначала запись, потом ответ».
+    await domainEvents.emit("booking.status_changed", {
+      bookingId: id,
+      tripId: updated.booking.tripId,
+      oldStatus,
+      newStatus,
+      passengerId,
+      driverName: user.name,
+      trip: {
+        fromCity: updated.booking.trip.fromCity,
+        toCity: updated.booking.trip.toCity,
+        price: updated.booking.trip.price,
+        departureAt: updated.booking.trip.departureAt,
+      },
     });
 
     wsManager.sendToUser(passengerId, {

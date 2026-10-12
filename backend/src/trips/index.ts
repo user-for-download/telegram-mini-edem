@@ -13,10 +13,7 @@ import { env } from "../env.js";
 import { logger } from "../logger.js";
 import { requireUser, type AuthUser } from "../auth/middleware.js";
 import { optionalAuth } from "../auth/optionalMiddleware.js";
-import {
-  serializeTrip,
-  serializeTripPassenger,
-} from "../serializers/index.js";
+import { serializeTrip, serializeTripPassenger } from "../serializers/index.js";
 import {
   publicReadLimiter,
   mutationLimiter,
@@ -31,6 +28,7 @@ import {
   notifyUser,
   tripSnapshotOf,
 } from "../services/notification.service.js";
+import { domainEvents } from "../events/domainEvents.js";
 import { wsManager } from "../ws/manager.js";
 import { notifyMatchingRideRequests } from "../rideRequests/matching.js";
 import {
@@ -255,16 +253,12 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
   // бы поездки из других городов. Неизвестный id обязан давать пусто.
   if (fromCityId) {
     const name = await cityNameById(fromCityId);
-    where.fromCity = name
-      ? { equals: name, mode: "insensitive" }
-      : { in: [] };
+    where.fromCity = name ? { equals: name, mode: "insensitive" } : { in: [] };
   }
 
   if (toCityId) {
     const name = await cityNameById(toCityId);
-    where.toCity = name
-      ? { equals: name, mode: "insensitive" }
-      : { in: [] };
+    where.toCity = name ? { equals: name, mode: "insensitive" } : { in: [] };
   }
 
   if (dateFrom) {
@@ -1161,30 +1155,27 @@ tripsRouter.patch("/:id/cancel", requireUser, cancelTripLimiter, async (c) => {
 
   const { updated, uniquePassengers } = result;
 
-  // notifyUser глотает ошибки внутри, поэтому параллелим безопасно.
-  await Promise.all(
-    uniquePassengers.map(async (pid) => {
-      await notifyUser({
-        userId: pid,
-        type: "trip_cancelled",
-        title: "Поездка отменена",
-        body: `Водитель отменил поездку ${updated.fromCity} → ${updated.toCity}`,
-        // Тап открывает шторку деталей отменённой поездки.
-        fragment: `/trips/${updated.id}`,
-        // Вторая строка — «имя • действие», третья — снапшот поездки.
-        actorName: user.name,
-        action: "cancelled",
-        tripSnapshot: tripSnapshotOf(updated),
-        // Получатели — пассажиры отменённой поездки.
-        role: "passenger",
-      });
+  // Уведомления пассажирам — через доменное событие: здесь только факты
+  // (подписчик форматирует inbox-записи), живые WS-хинты — ниже отдельным
+  // циклом: это обновление ленты, а не уведомления. emit не бросает.
+  await domainEvents.emit("trip.cancelled", {
+    tripId: updated.id,
+    driverName: user.name,
+    passengerIds: uniquePassengers,
+    trip: {
+      fromCity: updated.fromCity,
+      toCity: updated.toCity,
+      price: updated.price,
+      departureAt: updated.departureAt,
+    },
+  });
 
-      wsManager.sendToUser(pid, {
-        type: "trip:status_changed",
-        payload: { tripId: updated.id, status: "cancelled" },
-      });
-    }),
-  );
+  for (const pid of uniquePassengers) {
+    wsManager.sendToUser(pid, {
+      type: "trip:status_changed",
+      payload: { tripId: updated.id, status: "cancelled" },
+    });
+  }
 
   logBusinessEvent("trip.cancelled", {
     tripId: updated.id,
