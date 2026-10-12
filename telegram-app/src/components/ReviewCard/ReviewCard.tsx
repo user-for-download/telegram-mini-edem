@@ -3,9 +3,13 @@ import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { REVIEW_STATUS, type Review } from "@edem/contracts";
 import type { MyReview } from "@/api/reviews.api";
 import { LazyAvatar } from "@/components/LazyAvatar";
+import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
 import { Card } from "@/ui/Card";
 import { PROSE, SHRINK } from "@/ui/classes";
-import { StatusPill, type StatusTone } from "@/components/StatusPill/StatusPill";
+import {
+  StatusPill,
+  type StatusTone,
+} from "@/components/StatusPill/StatusPill";
 import styles from "./ReviewCard.module.css";
 
 /** Подпись и тон статус-пилюли — только для непубличных отзывов. */
@@ -23,13 +27,27 @@ function reviewStatusBadge(
 }
 
 /** Карточка отзыва (язык ProfileTab примера): автор, звёзды, текст,
- *  маршрут + статус публикации. */
+ *  маршрут + статус публикации.
+ *
+ *  Шапка (аватар + имя автора) — кнопка шторки профиля. Кнопка занимает
+ *  блок head (без звёзд справа), а не оборачивает всю карточку: у отзыва
+ *  нет своего клика, и вложенный интерактив в Card был бы лишним. */
 export function ReviewCard({ review }: { review: Review | MyReview }) {
   const badge = reviewStatusBadge(review.status);
+  const openUserProfile = useOpenUserProfile();
   return (
     <Card className={styles.root}>
       <div className={styles.head}>
-        <div className={styles.author}>
+        <button
+          type="button"
+          className={styles.author}
+          onClick={() =>
+            openUserProfile({
+              id: review.author.id,
+              initial: review.author,
+            })
+          }
+        >
           <LazyAvatar
             size={28}
             src={review.author.avatar}
@@ -42,7 +60,7 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
             </Text>
             <Caption Component="div">{review.date}</Caption>
           </div>
-        </div>
+        </button>
         <div
           className={styles.rating}
           aria-label={`Оценка ${review.rating} из 5`}
@@ -62,11 +80,7 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
             {badge.label}
           </StatusPill>
         ) : (
-          <Text
-            weight="2"
-            Component="span"
-            className={styles.published}
-          >
+          <Text weight="2" Component="span" className={styles.published}>
             Опубликован
           </Text>
         )}

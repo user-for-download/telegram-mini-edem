@@ -19,12 +19,33 @@
   gap: var(--app-space-xs);
 }
 
-/* Автор: аватар + имя/дата, сжимается (было items-center gap-2 min-w-0). */
+/* Автор: аватар + имя/дата, сжимается (было items-center gap-2 min-w-0).
+   Это кнопка шторки профиля автора, поэтому UA-сброс нативной кнопки
+   (иначе Arial 13.33px, серый фон и рамка ломают вид карточки) и
+   видимый фокус. flex:1 — блок должен занять свободное место в .head,
+   иначе звёзды справа прижмутся к аватару. */
 .author {
   display: flex;
+  flex: 1;
   align-items: center;
   gap: var(--app-space-xs);
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.author:focus-visible {
+  outline: 2px solid var(--tgui--link_color);
+  outline-offset: 2px;
+  border-radius: var(--app-radius-sm);
 }
 
 .authorBody {
@@ -77,4 +98,3 @@
   flex-shrink: 0;
   color: var(--app-success);
 }
-
