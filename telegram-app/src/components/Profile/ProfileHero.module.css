@@ -1,0 +1,44 @@
+/* Шапка профиля (ProfileHero) — центрированная витрина: аватар, имя,
+ * телефон, строка «поездок · рейтинг · отзывов» и слот действия.
+ * Отступы и цвета — из токенов, литералов нет (layoutCss.test). */
+
+/* Ряд имён: щит верификации живёт в одной строке с именем, а не под ним. */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.heroName {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  margin-top: var(--app-space-sm);
+  overflow-wrap: anywhere;
+}
+
+/* Значок верификации: синий штрих + заливка фона, не сжимается.
+ * Те же значения, что у .verified в TripDetailsPage — иконка одна. */
+.verified {
+  color: var(--app-info);
+  fill: var(--app-info-bg);
+  flex-shrink: 0;
+}
+
+/* Телефон и строка метрик — приглушённые: это справочные подписи, а не
+ * главный текст экрана. */
+.heroPhone {
+  margin-top: var(--app-space-2xs);
+  color: var(--app-muted);
+}
+
+.heroMeta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-xs);
+  margin-top: var(--app-space-sm);
+  color: var(--app-muted);
+}

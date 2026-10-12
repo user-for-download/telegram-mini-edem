@@ -1,14 +1,11 @@
 import { useRef, useState } from "react";
 import {
-  Avatar,
   Caption,
-  Headline,
   IconContainer,
   VisuallyHidden,
 } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
-import { RatingPill } from "@/components/RatingPill";
-import { plural } from "@/utils/plural";
+import { ProfileHero } from "@/components/Profile/ProfileHero";
 import { MenuRow } from "@/ui/MenuRow";
 import { SwitchRow } from "@/ui/SwitchRow";
 
@@ -158,64 +155,35 @@ export function ProfilePage() {
                 Section без заголовка, роль шапки — .hero. */}
             <Section>
               <SectionBody>
-                <div className={styles.hero}>
-                  <Avatar
-                    size={96}
-                    src={profile.data.avatar}
-                    acronym={(profile.data.name ?? "П")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  />
-                  <Headline weight="2" className={styles.heroName}>
-                    {profile.data.name}
-                  </Headline>
-                  {/* Телефон сервера отдаёт только владельцу — поле
-                      необязательное, без него строка просто не рисуется. */}
-                  {profile.data.phone ? (
-                    <Caption className={styles.heroPhone}>
-                      {profile.data.phone}
-                    </Caption>
-                  ) : null}
-                  {/* Метрики в одну строку: «поездок · рейтинг · отзывов».
-                      Рейтинг идёт пилюлей и без отзывов показывает прочерк
-                      (hasRating), поэтому число рядом обязано быть с
-                      правильным склонением — иначе «0 отзывов» читается
-                      как ошибка. */}
-                  <div className={styles.heroMeta}>
-                    <Caption>{`поездок: ${profile.data.tripsCount}`}</Caption>
-                    <Caption aria-hidden="true">·</Caption>
-                    <RatingPill
-                      value={profile.data.rating}
-                      reviewsCount={profile.data.reviewsCount}
-                    />
-                    <Caption>{`${profile.data.reviewsCount} ${plural(
-                      profile.data.reviewsCount,
-                      "отзыв",
-                      "отзыва",
-                      "отзывов",
-                    )}`}</Caption>
-                  </div>
-                  {/* Не stretched: кнопка правки не основное действие
-                      экрана, по центру она читается как вторичная. */}
-                  <Button
-                    size="s"
-                    variant="gray"
-                    className={styles.heroEdit}
-                    before={<Edit3 size={15} />}
-                    onClick={() => {
-                      haptic.light();
-                      navigate("/profile/edit");
-                    }}
-                  >
-                    Редактировать профиль
-                  </Button>
-                </div>
+                {/* Шапка — общий ProfileHero: тот же блок показывается в
+                    шторке профиля другого человека, там разница только в
+                    пропах (нет телефона и кнопки правки). */}
+                <ProfileHero
+                  user={profile.data}
+                  phone={profile.data.phone}
+                  action={
+                    // Не stretched: кнопка правки не основное действие
+                    // экрана, по центру она читается как вторичная.
+                    <Button
+                      size="s"
+                      variant="gray"
+                      className={styles.heroEdit}
+                      before={<Edit3 size={15} />}
+                      onClick={() => {
+                        haptic.light();
+                        navigate("/profile/edit");
+                      }}
+                    >
+                      Редактировать профиль
+                    </Button>
+                  }
+                />
 
                 {profile.data.about && (
                   <Caption className={HINT}>{profile.data.about}</Caption>
                 )}
                 {/* Плитки «Поездки / Отзывы / Рейтинг» убраны: те же три
-                    числа уже стоят строкой метрик выше, а дубль на одном
+                    числа уже стоят строкой метрик в шапке, а дубль на одном
                     экране читался как «четыре показателя» вместо трёх. */}
               </SectionBody>
             </Section>
