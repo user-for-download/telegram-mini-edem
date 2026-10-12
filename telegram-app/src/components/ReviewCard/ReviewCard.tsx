@@ -47,6 +47,12 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
           onClick={() =>
             openUserProfile({
               id: review.author.id,
+              // Заголовок — роль автора в той поездке. targetRole — роль
+              // того, О КОМ отзыв, а автор — вторая сторона: отзыв о
+              // водителе писал пассажир, и наоборот (reviews/index.ts).
+              // Имя заголовком не ставим — оно уже в hero (дубль «ФИО →
+              // ФИО»).
+              title: review.targetRole === "driver" ? "Пассажир" : "Водитель",
               initial: review.author,
             })
           }

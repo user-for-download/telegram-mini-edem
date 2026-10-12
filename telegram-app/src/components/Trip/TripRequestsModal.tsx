@@ -53,6 +53,8 @@ function PassengerHead({ booking }: { booking: TripBooking }) {
       onClick={() =>
         openUserProfile({
           id: booking.passenger.id,
+          // Заголовок — роль: имя уже в hero (дубль «ФИО → ФИО»).
+          title: "Пассажир",
           initial: booking.passenger,
         })
       }

@@ -83,6 +83,9 @@ export function TripHero({
           onClick={() =>
             openUserProfile({
               id: item.driver.id,
+              // Заголовок — роль, а не имя: имя уже в hero (дубль «ФИО →
+              // ФИО»).
+              title: "Водитель",
               initial: item.driver,
             })
           }

@@ -139,6 +139,32 @@ describe("useOpenUserProfile", () => {
   });
 });
 
+describe("UserProfileSheet: заголовок — роль, а не дубль имени", () => {
+  it("переданный title побеждает имя в заголовке", () => {
+    // Жалоба: заголовок-именем давал «ФИО → ФИО», потому что имя уже
+    // показывает hero ниже. Точки входа передают роль («Водитель» /
+    // «Пассажир») — она и стоит в заголовке, имя остаётся только в hero.
+    renderWithProvider({
+      ...FULL,
+      title: "Водитель",
+    } as UserProfileTarget);
+    clickOpen();
+
+    // Заголовок дублируется для a11y (видимый + скрытый h2), поэтому
+    // сверяем наличие, а не число.
+    expect(screen.getAllByText("Водитель").length).toBeGreaterThan(0);
+    // Имя — ровно один раз (hero), а не дважды (заголовок + hero).
+    expect(screen.getAllByText("Александр Иванов")).toHaveLength(1);
+  });
+
+  it("без title заголовок — имя, как раньше", () => {
+    renderWithProvider();
+    clickOpen();
+
+    expect(screen.getAllByText("Александр Иванов").length).toBeGreaterThan(0);
+  });
+});
+
 describe("UserProfileSheet: содержимое", () => {
   it("показывает имя, рейтинг, «О себе» и автомобиль", () => {
     renderWithProvider();

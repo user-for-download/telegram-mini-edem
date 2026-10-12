@@ -227,6 +227,8 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
               event.stopPropagation();
               openUserProfile({
                 id: booking.passenger.id,
+                // Заголовок — роль: имя уже в hero (дубль «ФИО → ФИО»).
+                title: "Пассажир",
                 initial: booking.passenger,
               });
             }}

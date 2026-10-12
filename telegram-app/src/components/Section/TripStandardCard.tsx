@@ -227,6 +227,10 @@ export function TripStandardCard({
             event.stopPropagation();
             openUserProfile({
               id: personId,
+              // Персона с id здесь — всегда водитель (бронь, лента).
+              // Заголовок — роль: имя уже показывает hero, дубль «ФИО →
+              // ФИО» убран.
+              title: "Водитель",
               initial: {
                 name: person.name,
                 avatar: person.avatar ?? null,

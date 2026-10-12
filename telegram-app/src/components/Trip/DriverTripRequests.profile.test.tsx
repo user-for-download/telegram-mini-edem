@@ -106,6 +106,8 @@ describe("DriverTripRequests: профиль пассажира", () => {
 
     expect(openUserProfile).toHaveBeenCalledTimes(1);
     expect(openUserProfile.mock.calls[0]?.[0]?.id).toBe("p-7");
+    // Заголовок — роль: имя уже показывает hero, дубль «ФИО → ФИО» убран.
+    expect(openUserProfile.mock.calls[0]?.[0]?.title).toBe("Пассажир");
   });
 
   it("открытие профиля НЕ принимает заявку и НЕ всплывает в карточку", () => {

@@ -69,6 +69,16 @@ describe("ReviewCard: профиль автора", () => {
     expect(target?.initial?.tripsCount).toBe(12);
   });
 
+  it("заголовок — роль автора, а не дубль имени", () => {
+    // Отзыв — о водителе (targetRole: driver), значит автор — пассажир.
+    // Заголовок шторки называет роль: имя уже показывает hero ниже,
+    // заголовок-именем давал бы «ФИО → ФИО».
+    renderCard();
+    fireEvent.click(screen.getByText("Анна"));
+
+    expect(openUserProfile.mock.calls[0]?.[0]?.title).toBe("Пассажир");
+  });
+
   it("текст и маршрут отзыва остались на месте", () => {
     renderCard();
     expect(screen.getByText("Всё отлично, поехал бы снова")).toBeTruthy();

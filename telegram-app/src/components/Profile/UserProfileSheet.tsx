@@ -51,7 +51,13 @@ export function UserProfileSheet({
   const shown = user.data ?? target?.initial;
 
   return (
-    <Sheet open={open} onClose={onClose} title={shown?.name ?? "Профиль"}>
+    // Роль, а не имя: имя уже показывает hero ниже, а заголовок-именем
+    // давал дубль «ФИО → ФИО». Роль называет контекст встречи.
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={target?.title ?? shown?.name ?? "Профиль"}
+    >
       {target ? (
         <QueryState
           loading={user.isLoading && !shown}

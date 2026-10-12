@@ -17,6 +17,13 @@ import { UserProfileSheet } from "./UserProfileSheet";
  */
 export interface UserProfileTarget {
   id: string;
+  /**
+   * Заголовок шторки. Роль человека в контексте, откуда открыли:
+   * «Водитель» / «Пассажир». Имя заголовком НЕ ставим — оно уже есть
+   * в hero ниже, получался дубль «ФИО → ФИО». Без title — имя (или
+   * «Профиль», если открыто только по id).
+   */
+  title?: string;
   initial?: {
     name: string;
     avatar?: string | null;
