@@ -8,7 +8,7 @@
 > Source of truth for kit props is the installed
 > `node_modules/@telegram-apps/telegram-ui/dist/**/*.d.ts` (not the docs, not training data).
 
-**Status:** tests **1269** (156 files), backend **721** (79), contracts **314** (25), e2e-parity **17/17**, contrast under
+**Status:** tests **1344** (161 files), backend **721** (79), contracts **314** (25), e2e-parity **17/17**, contrast under
 the numeric guard `e2e/ui-contrast.mjs`. The registry of deviations from the kit is
 `src/ui/README.md`: **read it before changing UI/forms**.
 
@@ -173,6 +173,8 @@ The full registry of deviations — `src/ui/README.md`. In brief:
 - Safe-area (`index.css:21-99`): the aggregators `--tg-safe-area-*` =
   `max(env(safe-area-*), SDK variables, floor)`. `env()` sits next to the SDK variable in
   `max()`, **not** as a `var()` fallback (the SDK always defines the variable, even as zero).
+  Scope of `env()` is **outside Telegram only**: inside the client webview
+  `env(safe-area-inset-top)` is always 0, so a zero client report is the hook's job, not `env()`'s.
 - iOS bug: in fullscreen the client reports `safe_area=0` on top of the rendered chrome.
   `useTelegramChromiumFallback.ts` sets the token-floor `--tg-safe-area-top-min` =
   `--tg-telegram-chromium-height` (88px, calibrated on iPhone 11 / TG 12.9.4) and "pokes" the
@@ -180,6 +182,9 @@ The full registry of deviations — `src/ui/README.md`. In brief:
   in sync in `index.css` and the hook's `DEFAULT_THRESHOLD_PX`.
 - `Tabbar`/`FixedLayout bottom` pad only `env(safe-area-inset-bottom)` (=0 in TG iOS) —
   compensated by the `max(...)` token.
+- Viewport meta (`index.html`): `viewport-fit=cover, interactive-widget=resizes-content`.
+  `cover` is required for `env()`/safe-area; `resizes-content` keeps the bottom of forms
+  above the on-screen keyboard in the Android WebView (iOS ignores the hint).
 
 ## 9. Auth and session
 
@@ -573,3 +578,39 @@ Found by a live runtime probe (Playwright against `:3012` with the dev login) �
 
 Regression tests updated: `rideRequestsList.test.tsx`, `RideRequestHistoryPage.test.tsx` (infinite-query shape).
 Verification: typecheck (both workspaces) clean; telegram-app 1059/1059, backend 721/721; eslint + format:check clean; live route sweep all-routes `ZOD: none`.
+
+## 2026-10-13 — UI review against the official Telegram docs: 4 fixes
+
+Read the UI comments and cross-checked every claim against `core.telegram.org/bots/webapps.md`
+(fetched as markdown over the proxy) and the installed packages (`@telegram-apps/telegram-ui`,
+`@xelene/vaul-with-scroll-fix`, `@tma.js`). The layer is unusually well-grounded — nearly all
+comments survive; 4 items did not.
+
+1. **The keyboard could cover the bottom of forms.** `index.html` had `viewport-fit=cover` but no
+   `interactive-widget`, and there is no `visualViewport`/`hideKeyboard` handling either. Added
+   `interactive-widget=resizes-content` (the Android WebView then shrinks the layout viewport when
+   the keyboard opens; iOS ignores the hint and keeps its own auto-scroll). Doc: `hideKeyboard()`,
+   Bot API 9.1 (`webapps.md`).
+2. **`swapCities` sent the wrong haptic.** It fired `haptic.selection()`, but the doc is explicit —
+   `selectionChanged()`: *"Do not use this feedback when the user makes or confirms a selection;
+   use it only when the selection changes."* A direction swap is a command → `impactOccurred(light)`.
+   The other `selection()` sites (tags, seats, date segments, filters, `Switcher.pick`) are genuine
+   selection changes and stay.
+3. **The safe-area comment contradicted the hook.** `index.css` claimed `max(env(…), SDK(…))` insures
+   against a zero client inset; `useTelegramChromiumFallback` states `env(safe-area-inset-top)` is
+   **always 0** inside the TG webview, so it cannot — the real insurance is the `--tg-safe-area-top-min`
+   floor. The comment was reworded to scope `env()` to outside-Telegram only (§8).
+4. **`Toast.module.css` said the `.snackbar.snackbar` doubling was unnecessary** while the selector
+   (and its pins) kept it. Reworded: the doubling is the project-wide technique (§7), kept and pinned.
+   The selector was **not** stripped — that is exactly the mistake §7 warns about.
+
+Result: `interactive-widget` is the only behavioural change; the rest are comment/haptic accuracy.
+tsc/eslint/format:check/token:check clean; **161 files / 1344 tests** green; `vite build` OK.
+
+Documents cross-checked and confirmed as accurate (no change): `--tg-viewport-height` as `min-height`
+only (never bottom-pinning, per doc), `--tg-viewport-stable-height` deliberately undeclared, the SDK
+binds `--tg-viewport-safe-area-inset-*`/`--tg-viewport-content-safe-area-inset-*` (namespaced, so the
+app's own `--tg-safe-area-inset-*` does not collide), `setHeaderColor(hex)` for fullscreen status-bar
+contrast, `THEME_VAR_NAMES` = exactly the 13 `--tg-theme-*` the kit consumes (the kit does not read
+`section-separator-color`/`bottom-bar-bg-color`, so leaving them to the client is correct), the vaul
+`[vaul-drawer]` reduced-motion override, and the `Snackbar` `role`/`aria-live` on the node itself.
