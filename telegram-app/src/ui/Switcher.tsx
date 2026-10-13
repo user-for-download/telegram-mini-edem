@@ -61,6 +61,10 @@ export function Switcher<T extends string>({
   panelId,
 }: SwitcherProps<T>) {
   const asTabs = semantics === "tabs";
+  // Есть ли value среди пунктов. Если нет (value вне options) — группа обязана
+  // остаться достижимой по Tab: вход даём первому пункту (APG: в roving-группе
+  // tabbable ровно один).
+  const hasValue = options.some((option) => option.value === value);
 
   const pick = (next: T) => {
     if (next === value) return;
@@ -69,7 +73,14 @@ export function Switcher<T extends string>({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const index = options.findIndex((option) => option.value === value);
+    // Пустой список: вести стрелкам некуда, и забирать клавишу (preventDefault)
+    // нельзя — иначе группа молча глотает ввод.
+    if (options.length === 0) return;
+    const found = options.findIndex((option) => option.value === value);
+    // value вне options (found === -1): точкой отсчёта берём первый пункт —
+    // иначе `(index ± 1) % length` даёт NaN, а `next < 0` его НЕ отсекает
+    // (NaN < 0 === false), и стрелка уходила бы в preventDefault впустую.
+    const index = found < 0 ? 0 : found;
     let next = -1;
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
       next = (index + 1) % options.length;
@@ -95,8 +106,11 @@ export function Switcher<T extends string>({
       className={styles.row}
       onKeyDown={onKeyDown}
     >
-      {options.map((option) => {
+      {options.map((option, optionIndex) => {
         const selected = option.value === value;
+        // Ровно один tabbable: выбранный пункт, а при value вне options —
+        // первый (группа не должна выпадать из Tab-порядка целиком).
+        const tabbable = selected || (optionIndex === 0 && !hasValue);
         return (
           <Chip
             key={option.value}
@@ -109,7 +123,7 @@ export function Switcher<T extends string>({
                каждый таб. Вход — на выбранном пункте, где пользователь и стоит.
                Клик по невыбранному схему не ломает: `pick` делает его выбранным,
                и tabIndex становится 0 (фокус после клика и так на нём). */
-            tabIndex={selected ? 0 : -1}
+            tabIndex={tabbable ? 0 : -1}
             variant={selected ? "active" : "quiet"}
             className={selected ? styles.active : styles.item}
             {...(asTabs

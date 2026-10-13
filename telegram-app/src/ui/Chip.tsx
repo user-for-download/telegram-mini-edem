@@ -48,15 +48,25 @@ export function Chip({
   className,
   ...restProps
 }: ChipProps) {
+  // Component/type ВЫНИМАЕМ из restProps, а не читаем на месте. Если оставить
+  // их в объекте и спредить ПОСЛЕ вычисленных значений, явный
+  // `Component={undefined}` (типичный случай `Component={href ? "a" : undefined}`)
+  // перебьёт вычисленный «button» обратно в undefined — и чип с onClick станет
+  // `div`, потеряв клавиатуру. Это ровно тот дефект, ради которого компонент и
+  // существует, поэтому ключи обязаны уехать из объекта до спреда.
+  const {
+    Component: ComponentProp,
+    type: typeProp,
+    ...controlProps
+  } = restProps;
   // Интерактивность выводим из пропов кита: onClick/href делают чип
   // элементом управления, иначе он остаётся текстовой плашкой.
   const interactive =
-    restProps.onClick !== undefined || restProps.href !== undefined;
+    controlProps.onClick !== undefined || controlProps.href !== undefined;
   const component =
-    restProps.Component ?? (interactive ? ("button" as const) : undefined);
+    ComponentProp ?? (interactive ? ("button" as const) : undefined);
   const type =
-    restProps.type ??
-    (component === "button" ? ("button" as const) : undefined);
+    typeProp ?? (component === "button" ? ("button" as const) : undefined);
 
   const merged = [
     // Сброс UA-кнопки: `Component="button"` течёт шрифтом/цветом/appearance —
@@ -75,7 +85,7 @@ export function Chip({
       className={merged || undefined}
       Component={component}
       type={type}
-      {...restProps}
+      {...controlProps}
     />
   );
 }

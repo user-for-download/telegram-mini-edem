@@ -614,3 +614,39 @@ app's own `--tg-safe-area-inset-*` does not collide), `setHeaderColor(hex)` for 
 contrast, `THEME_VAR_NAMES` = exactly the 13 `--tg-theme-*` the kit consumes (the kit does not read
 `section-separator-color`/`bottom-bar-bg-color`, so leaving them to the client is correct), the vaul
 `[vaul-drawer]` reduced-motion override, and the `Snackbar` `role`/`aria-live` on the node itself.
+
+## 2026-10-13 — Audit of the `@ui` facade: 3 latent logic bugs + contract drift
+
+Full read of `src/ui/` (21 components, 8 CSS modules, the contract README, 19 test files),
+cross-checked against the installed kit (`@telegram-apps/telegram-ui` 2.1.13) and every
+consumer. tsc/eslint/tests were green — all three bugs live in branches no test reached
+(verified by rendering before the fix).
+
+1. **`ui/Chip` — the "interactive ⇒ `<button>`" guarantee could be silently defeated.**
+   `{...restProps}` was spread AFTER the computed `Component`/`type`, so an explicitly
+   passed `Component={undefined}` (the pattern `Component={href ? "a" : undefined}`)
+   overwrote the computed `"button"` back to `undefined` → the kit fell back to `div`, and
+   a chip with `onClick` lost keyboard access. `Component`/`type` are now destructured out
+   of `restProps` before the spread. Regression pin in `primitives.test.tsx`.
+2. **`ui/Switcher` — the roving-tabindex group could lose its tabbable / swallow keys.**
+   If `value` was not among `options`, `findIndex` gave `-1`, every item got `tabIndex={-1}`
+   and the group became unreachable by Tab; with an empty `options`, `(index ± 1) % length`
+   gave `NaN`, `NaN < 0` is false, and Arrow keys went to `preventDefault()` as a no-op.
+   Added `hasValue` + first-item fallback and an `options.length === 0` guard. Pins in
+   `Switcher.test.tsx` (SSR) and `switcherKeyboard.test.tsx` (jsdom).
+3. **`ui/Sheet` — the CSS comment claimed `variant="static"` does not take focus, but the
+   component focuses the body for every variant.** `.sheetBodyStatic` was missing from the
+   `:focus`/`:focus-visible` rules → a static sheet would take focus with no outline reset.
+   The rules now cover all three bodies (`static`/`edge` are currently unused, so it was
+   latent). Pin in `sheet.test.tsx`.
+
+Contract drift in `ui/README.md` (the module's spec), all corrected: `Button | gray` was
+listed as an unreachable kit mode while `ui/Button` maps and uses it (`ConfirmSheet`,
+`ProfilePage`); the ESLint ban list omitted `SegmentedControl`; #15 named
+`ui/useTguiPlatform` when the code reads `usePlatformOrBase` (`@/hooks/usePlatform`);
+`Switcher` was described as rendering a `tabpanel` (it only sets `aria-controls`); #23 sat
+between #28/#29 (moved into numeric order) and its `<VisuallyHidden>` had lost its leading
+`<`; rows #33–#37 were fenced off by blank lines, so they did not render as part of the
+registry table.
+
+Result: tsc/eslint/format:check clean; telegram-app **162 files / 1352 tests** green.

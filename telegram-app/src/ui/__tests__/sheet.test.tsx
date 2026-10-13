@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { Sheet } from "../Sheet";
+import uiStyles from "../ui.module.css";
 
 // usePlatform читает внутренний контекст кита; в vitest deep-импорт
 // useAppRootContext даёт вторую копию модуля — мокаем платформу.
@@ -47,5 +48,23 @@ describe("Sheet", () => {
     expect(active?.tagName).toBe("DIV");
     expect(active?.tabIndex).toBe(-1);
     expect(active?.textContent).toContain("Действие");
+  });
+
+  it("variant=static тоже берёт фокус (правило фокуса общее для всех тел)", () => {
+    // `SheetContent` ставит tabIndex=-1 и переносит фокус на тело в ЛЮБОМ
+    // варианте. Значит и CSS-правило фокуса обязано покрывать static — иначе
+    // короткая форма получила бы тело без снятого outline (рассинхрон
+    // комментария и кода).
+    render(
+      <AppRoot>
+        <Sheet open onClose={() => {}} title="Обратная связь" variant="static">
+          <button type="button">Отправить</button>
+        </Sheet>
+      </AppRoot>,
+    );
+    const active = document.activeElement as HTMLElement | null;
+    expect(active?.tabIndex).toBe(-1);
+    expect(active?.className).toContain(uiStyles.sheetBodyStatic);
+    expect(active?.textContent).toContain("Отправить");
   });
 });

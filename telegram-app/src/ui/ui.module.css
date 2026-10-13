@@ -109,14 +109,19 @@
     var(--app-sheet-pad-bottom);
 }
 
-/* Фокус-правила общие для скроллящихся тел (static фокус не берёт). */
+/* Фокус-правила общие для ВСЕХ тел: `SheetContent` ставит `tabIndex=-1` и при
+ * открытии переносит фокус на тело в ЛЮБОМ варианте, включая `static` — это
+ * точка входа для клавиатуры и скринридера. Кольцо — только для клавиатуры
+ * (:focus-visible, канон WCAG 2.4.7): программный фокус мышью/тачем невидим. */
 .sheetBody:focus:not(:focus-visible),
-.sheetBodyEdge:focus:not(:focus-visible) {
+.sheetBodyEdge:focus:not(:focus-visible),
+.sheetBodyStatic:focus:not(:focus-visible) {
   outline: none;
 }
 
 .sheetBody:focus-visible,
-.sheetBodyEdge:focus-visible {
+.sheetBodyEdge:focus-visible,
+.sheetBodyStatic:focus-visible {
   outline: 2px solid var(--app-info);
   outline-offset: -2px;
 }

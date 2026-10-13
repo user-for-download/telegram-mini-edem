@@ -133,3 +133,28 @@ describe("ui/Switcher: вкладки (semantics=tabs)", () => {
     ]);
   });
 });
+
+describe("ui/Switcher: группа не выпадает из Tab-порядка (value вне options)", () => {
+  // APG: в roving-группе ровно один tabbable. Если value нет среди options,
+  // выбранных нет, и без явного fallback ВСЕ пункты получают tabindex="-1" —
+  // группа становится недостижимой с клавиатуры (findIndex даёт -1).
+  const html = render(
+    <Switcher
+      options={OPTIONS}
+      value={"missing" as never}
+      onChange={() => {}}
+      ariaLabel="Дата поездки"
+      idPrefix="edge"
+    />,
+  );
+
+  it("ровно один вход в группу — первый пункт", () => {
+    expect(html.match(/tabindex="0"/g)).toHaveLength(1);
+    expect(tagOf(html, "edge-all")).toContain('tabindex="0"');
+  });
+
+  it("остальные пункты выведены из последовательности", () => {
+    expect(tagOf(html, "edge-today")).toContain('tabindex="-1"');
+    expect(tagOf(html, "edge-tomorrow")).toContain('tabindex="-1"');
+  });
+});

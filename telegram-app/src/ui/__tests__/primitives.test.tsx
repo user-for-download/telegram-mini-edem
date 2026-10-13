@@ -46,6 +46,29 @@ describe("Chip: кликабельный по умолчанию нативна�
     expect(html).toContain('href="#/ride-requests"');
     expect(html).not.toContain("<button");
   });
+
+  it("явный Component={undefined} не гасит авто-кнопку", () => {
+    // Паттерн `Component={href ? "a" : undefined}`: при undefined ключ ЕСТЬ в
+    // restProps. Если спредить restProps ПОСЛЕ вычисленного значения, он
+    // перебьёт «button» обратно в undefined и интерактивный чип станет `div`
+    // без клавиатуры — ровно тот дефект, ради которого компонент и нужен.
+    const html = render(
+      <Chip Component={undefined} onClick={() => {}}>
+        тег
+      </Chip>,
+    );
+    expect(html).toContain("<button");
+    expect(html).toContain('type="button"');
+  });
+
+  it("явный type={undefined} не отменяет type=button", () => {
+    const html = render(
+      <Chip onClick={() => {}} type={undefined}>
+        тег
+      </Chip>,
+    );
+    expect(html).toContain('type="button"');
+  });
 });
 
 describe("Stack: ритм из токенов, gap-модификаторы", () => {
