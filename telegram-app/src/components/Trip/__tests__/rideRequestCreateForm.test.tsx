@@ -41,6 +41,7 @@ vi.mock("@/queries/useAllCities", () => ({
 }));
 
 import { RideRequestCreateForm } from "@/components/Trip/RideRequestCreateForm";
+import uiStyles from "@/ui/ui.module.css";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {
@@ -105,5 +106,29 @@ describe("RideRequestCreateForm: контракт формы", () => {
 
     mockUseCreate.mockReturnValue(mutationState({ error: new Error("boom") }));
     expect(renderForm()).toContain('role="alert"');
+  });
+});
+
+describe("RideRequestCreateForm: тело окна без вложенной поверхности", () => {
+  // Окно «Ищу попутку» лежит прямо на фоне шторки. Раньше тело было
+  // обёрнуто в `Card`, то есть поверхность шторки плюс ещё слой сверху —
+  // соседние окна (жалоба, обращение, правка профиля) так не устроены, и
+  // разница была видна глазом.
+  //
+  // Пин по классу ПОВЕРХНОСТИ ui/Card: `.card` в ui.module.css даёт
+  // radius/фон/тень, а не раскладку, поэтому подмена на любой локальный
+  // класс с тем же именем проверку не обойдёт. Поля формы устроены
+  // самостоятельно (у каждого контрола своя серая подложка,
+  // `ui.module.css .fieldRoot > div > label`), поэтому опора не теряется.
+  it("в разметке нет поверхности Card", () => {
+    const html = renderForm();
+    expect(html).not.toContain(uiStyles.card as string);
+  });
+
+  it("раскладка — колонка ui/Stack, а не локальный дубль", () => {
+    // Локальный `.card` из TripModals.module.css дублировал ui/Stack
+    // (flex-колонка + ритм 12) один в один; здесь его брать нечего.
+    const html = renderForm();
+    expect(html).toContain(uiStyles.stack as string);
   });
 });

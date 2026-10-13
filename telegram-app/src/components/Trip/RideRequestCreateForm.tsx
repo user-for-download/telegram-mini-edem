@@ -2,7 +2,7 @@ import { memo, useRef, useState } from "react";
 import { Text } from "@telegram-apps/telegram-ui";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { Button } from "@/ui/Button";
-import { Card } from "@/ui/Card";
+import { Stack } from "@/ui/Stack";
 import { Notice } from "@/ui/Notice";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useCreateRideRequestMutation } from "@/queries/useRideRequestsQuery";
@@ -17,7 +17,6 @@ import {
   type RideRequestFieldError,
 } from "./rideRequestValidation";
 import type { CreateRideRequestDto } from "@edem/contracts";
-import styles from "./TripModals.module.css";
 
 /** Заглушка хоста без перехода: форма обязана работать и без навигатора. */
 const NOOP_NAVIGATE = () => {};
@@ -126,7 +125,17 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
   };
 
   return (
-    <Card className={styles.card}>
+    // Тело окна лежит прямо на фоне шторки, без Card: карточка внутри
+    // шторки — это вложенная поверхность (поверхность шторки плюс ещё
+    // слой сверху), и соседние окна так не устроены: жалоба, обращение
+    // и правка профиля стоят прямо на фоне.
+    //
+    // Раскладку (колонка, ритм 12) даёт `ui/Stack` — тот же, что на
+    // страницах. Локальный `.card` в TripModals.module.css дублировал
+    // ровно его, но нужен другим потребителям (карточки заявок и
+    // «Заявки пассажиров»), поэтому в CSS остаётся — здесь просто не
+    // используется.
+    <Stack>
       <Text weight="2" Component="span">
         Новый запрос
       </Text>
@@ -154,6 +163,6 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
       >
         Опубликовать запрос
       </Button>
-    </Card>
+    </Stack>
   );
 });
