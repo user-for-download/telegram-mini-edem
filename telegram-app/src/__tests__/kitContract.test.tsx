@@ -5,9 +5,10 @@
 // паддинги) не должно гнить молча.
 //
 // SSR renderToString, паттерн ui/__tests__/button.test.tsx.
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -294,5 +295,112 @@ describe("фасад Card: нативный article + бокс приложен�
   it("Card.Cell и Card.Chip ре-экспортированы (обход кита не нужен)", () => {
     expect(typeof Card.Cell).toBe("function");
     expect(typeof Card.Chip).toBe("function");
+  });
+});
+
+/**
+ * Хеш-классы кита, на которые ссылается CSS проекта.
+ *
+ * Кит не публикует API для этих элементов, и иначе не подступиться: у
+ * пункта таббара, у подложки иконки и у подписи в Info нет ни пропсов, ни
+ * классов-экспортов. Поэтому тут — ссылки на приватные, контент-хешированные
+ * имена. Они ломаются ПРИ BUMP'Е кита, и раньше это было тихо: версия
+ * пинилась, а сами хеши — нет, так что путь «обновил пакет, поправил
+ * константу KIT_VERSION по инструкции» проходил без единого красного теста,
+ * и таббар терял цвета, размер подписи и фон поля поиска.
+ *
+ * Тест двусторонний, поэтому держит обе стороны:
+ *   - каждый заявленный хеш ЖИВ в ките (смена версии его не убила);
+ *   - каждый хеш, встречающийся в CSS проекта, ЗАЯВЛЕН здесь (новый
+ *     хеш без записи — красный тест, а не молчаливая поломка).
+ *
+ * Именно так и погиб бы bump: не отсутствием проверки версии, а тем, что
+ * её обновляют руками, не пересмотрев список ниже.
+ */
+const KIT_HASH_USAGE: ReadonlyArray<{
+  hash: string;
+  where: string;
+  meaning: string;
+  /** Свойство, на которое мы опираемся: проверяется в правиле кита. */
+  reliesOn: string;
+}> = [
+  {
+    hash: "tgui-64cd0db020a9bacf",
+    where: "TabsBar/Tabbar.module.css",
+    meaning: "пункт таббара, база",
+    reliesOn: "flex:1 0 0",
+  },
+  {
+    hash: "tgui-e6658d0b8927f95e",
+    where: "TabsBar/Tabbar.module.css",
+    meaning: "пункт таббара, выбранный",
+    reliesOn: "color:var(--tgui--link_color)",
+  },
+  {
+    hash: "tgui-44d48e11585af170",
+    where: "TabsBar/Tabbar.module.css",
+    meaning: "залитый чип-подложка иконки пункта",
+    reliesOn: "background:var(--tgui--secondary_fill)",
+  },
+  {
+    hash: "tgui-2916d621b0ea5857",
+    where: "TabsBar/Tabbar.module.css",
+    meaning: "подпись пункта (caption1) — ужимаем кегль",
+    reliesOn: "--tgui--caption1--font_size",
+  },
+  {
+    hash: "tgui-4af039094fb946b4",
+    where: "NotificationsPage, ReportsPage",
+    meaning: "подзаголовок внутри Info (время) — ужимаем кегль",
+    reliesOn: "margin:2px 0 0",
+  },
+  {
+    hash: "tgui-8ca550c2fc85eff5",
+    where: "TripActivePage.module.css",
+    meaning: "обёртка поля поиска — снимаем фон и паддинг",
+    reliesOn: "background:var(--tgui--bg_color)",
+  },
+];
+
+describe("хеш-классы кита, на которые ссылается CSS проекта", () => {
+  /** Все хеши из CSS-модулей проекта: `... :global(.tgui-…)`. */
+  function usedHashes(): Set<string> {
+    // Обход через readdirSync, а не `find`: путь строится от файла теста, а
+    // не от расположения пакета — иначе resolve уводит в node_modules.
+    const srcDir = join(dirname(fileURLToPath(import.meta.url)), "..");
+    const files = readdirSync(srcDir, { recursive: true, encoding: "utf8" })
+      .filter((name) => name.endsWith(".css"));
+    const found = new Set<string>();
+    for (const file of files) {
+      const content = readFileSync(join(srcDir, file), "utf8").replace(
+        /\/\*[\s\S]*?\*\//g,
+        "",
+      );
+      // Полный матч — в [0]; деструктуризация `[, hash]` дала бы undefined.
+      for (const match of content.matchAll(/tgui-[a-z0-9]+/g)) {
+        found.add(match[0]);
+      }
+    }
+    return found;
+  }
+
+  it.each(KIT_HASH_USAGE)("$hash ($where): жив в ките", ({ hash, reliesOn }) => {
+    // Хеш есть — но что он теперь делает? Проверяем и свойство, на которое
+    // опирается наше правило: иначе bump оставил бы класс на месте, но с
+    // другой ролью, и наш оверрайд бил бы не туда.
+    expect(kitCss, `хеш ${hash} исчез из кита — он переехал или переименован`)
+      .toContain(`.${hash}`);
+    expect(kitCss).toContain(reliesOn);
+  });
+
+  it("каждый хеш из CSS проекта заявлен выше", () => {
+    // Обратная сторона: новый `:global(.tgui-…)` без строки здесь проходит
+    // молча, и ровно это произошло при прошлых bump'ах.
+    const declared = new Set(KIT_HASH_USAGE.map((entry) => entry.hash));
+    const undeclared = [...usedHashes()].filter((hash) => !declared.has(hash));
+    expect(
+      undeclared,
+      `хеш-классы кита в CSS проекта без записи в KIT_HASH_USAGE: ${undeclared.join(", ")}`,
+    ).toEqual([]);
   });
 });
