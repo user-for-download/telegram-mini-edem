@@ -452,6 +452,11 @@ async function main(): Promise<void> {
       seatsTotal: 3,
       seatsAvailable: 1,
       status: "active",
+      // Опция владельца: завершить сразу по концу рейса (иначе — TTL +24ч).
+      // Бейджем в UI не видна, но приходит в GET /trips/:id и её читает воркер;
+      // это единственная поездка стенда с неДефолтным autoComplete, поэтому без
+      // неё колонка в ответах API всегда была бы `false`.
+      autoComplete: true,
       tags: ["Есть багаж"],
       comment: "Bezz-тест: еду в Череповец, беру попутчиков.",
       createdAt: t1Created,
@@ -499,6 +504,10 @@ async function main(): Promise<void> {
       seatsTotal: 3,
       seatsAvailable: 3,
       status: "active",
+      // Опция владельца: подбор выключен. Единственная поездка пользователя с
+      // этой опцией — иначе пин «Подбор попутчиков выключен» на экране поездки
+      // (TripActivePage) на прод-стенде не увидеть: у остальных дефолт true.
+      matchingEnabled: false,
       tags: ["Тихая поездка"],
       comment: "Bezz-тест: обратная дорога.",
       createdAt: t2Created,
@@ -665,6 +674,23 @@ async function main(): Promise<void> {
       },
     },
   });
+
+  // Опции владельца осмысленны только для active (та же логика, что в dev-сиде):
+  // у завершённых поездок их не читают ни воркер (autoComplete), ни матчинг
+  // (matchingEnabled), поэтому неДефолт на completed был бы ложью фикстуры.
+  // Проверяем из БД, а не дублируя литералы: источник правды — только что
+  // созданные строки.
+  const finishedTrips = await prisma.trip.findMany({
+    where: { id: { in: ALL_TRIPS }, status: { not: "active" } },
+    select: { id: true, autoComplete: true, matchingEnabled: true },
+  });
+  for (const trip of finishedTrips) {
+    if (trip.autoComplete !== false || trip.matchingEnabled !== true) {
+      throw new Error(
+        `[seed-user-trips] ${trip.id}: опции владельца на неактивной поездке`,
+      );
+    }
+  }
 
   // ── Отзывы (опубликованные, в обе стороны) ──
   await prisma.review.createMany({
