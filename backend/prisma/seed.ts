@@ -184,6 +184,18 @@ interface SeedTrip {
   // CANCELLED_BY_USER = "user" (словарь колонки — user | system | admin).
   cancelledAtDaysAgo?: number;
   cancelledByType?: "passenger" | "driver";
+  // Опции владельца из формы создания поездки. Дефолты равны дефолтам
+  // схемы/БД (autoComplete = false, matchingEnabled = true), поэтому поле
+  // задаётся только там, где нужен НЕдефолтный статус:
+  //   autoComplete = true  → воркер гасит поездку сразу по концу рейса
+  //     (иначе — по TTL +24ч после отъезда, src/trips/tripWorker.ts);
+  //   matchingEnabled = false → подбор попутчиков выключен: матчинг
+  //     пропускает поездку (src/rideRequests/matching.ts), а на экране
+  //     водителя появляется пин «Подбор попутчиков выключен»
+  //     (telegram-app .../TripActivePage). Осмысленны только для active —
+  //     у завершённых/отменённых воркер и матчинг их не читают.
+  autoComplete?: boolean;
+  matchingEnabled?: boolean;
   tags: string[];
   comment?: string;
   bookings: SeedBooking[];
@@ -1486,6 +1498,33 @@ const trips: SeedTrip[] = [
       { passengerId: "u-22", seat: 3, status: "declined" },
     ],
   },
+  // Единственная поездка DEV-аккаунта с НЕдефолтными опциями владельца.
+  // Без неё фича «опции поездки» в деве не достижима вообще: все остальные
+  // сид-поездки идут на дефолтах (autoComplete=false, matchingEnabled=true),
+  // а зайти в деве можно только под u-dev (tgId 9800001) — значит, ни пин
+  // «Подбор попутчиков выключен» на экране водителя (TripActivePage), ни
+  // колонка autoComplete в ответе API не встречались бы ни разу.
+  {
+    id: "t-dev-6",
+    driverId: "u-dev",
+    fromCity: "Вологда",
+    fromAddress: "ул. Мира",
+    toCity: "Грязовец",
+    toAddress: "Автостанция",
+    daysFromNow: 4,
+    durationMinutes: 60,
+    distanceKm: 70,
+    price: 300,
+    seatsTotal: 3,
+    status: "active",
+    // Завершить сразу по концу рейса, а не по TTL +24ч.
+    autoComplete: true,
+    // Подбор выключен: пин на экране поездки + матчинг пропускает её.
+    matchingEnabled: false,
+    tags: ["Тихая поездка"],
+    comment: "Выезжаю утром, беру одного попутчика.",
+    bookings: [{ passengerId: "u-17", seat: 1, status: "confirmed" }],
+  },
   // Поездка постороннего водителя под заявку rr-dev-2 (Череповец → Сокол,
   // окно +5д): совпадение уведомляется АВТОРУ заявки, поэтому в инбоксе
   // u-dev нужна именно чужая поездка — свои он исключён сам (userId:
@@ -2302,6 +2341,19 @@ function validateSeedData(): void {
       throw new Error(`Cancelled seed trip ${trip.id} без cancelledAt`);
     }
 
+    // Опции владельца осмысленны только для active: у завершённых и
+    // отменённых поездок ни воркер (autoComplete), ни матчинг
+    // (matchingEnabled) их не читают — НЕдефолт на неактивной поездке был бы
+    // вводящей в заблуждение фикстурой.
+    if (
+      trip.status !== "active" &&
+      (trip.autoComplete !== undefined || trip.matchingEnabled !== undefined)
+    ) {
+      throw new Error(
+        `Trip options on non-active seed trip ${trip.id} (status=${trip.status})`,
+      );
+    }
+
     const activeSeats = new Set<number>();
     const activePassengers = new Set<string>();
     for (const booking of trip.bookings) {
@@ -2760,6 +2812,8 @@ async function main() {
               ).length
             : 0,
         status: t.status,
+        autoComplete: t.autoComplete ?? false,
+        matchingEnabled: t.matchingEnabled ?? true,
         tags: t.tags,
         comment: t.comment,
         cancelledAt:
