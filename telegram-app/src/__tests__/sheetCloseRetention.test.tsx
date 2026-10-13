@@ -22,6 +22,8 @@ import {
 } from "@/components/Profile/UserProfileProvider";
 import { handleModalBack } from "@/utils/modalBack";
 import { ReportDetailsModal } from "@/pages/Reports/ReportDetailsModal";
+import uiStyles from "@/ui/ui.module.css";
+import titleStyles from "@/ui/SheetTitle.module.css";
 
 vi.mock("@/queries/profile", () => ({
   useUserQuery: () => ({
@@ -164,5 +166,59 @@ describe("ReportDetailsModal: контент жив до размонтиров�
     expect(
       screen.queryAllByText("Опасное вождение на трассе").length,
     ).toBeGreaterThan(0);
+  });
+});
+
+describe("ReportDetailsModal: обвязка от ui/Sheet, а не от сырого Modal", () => {
+  // Пока окно было собрано на китовом Modal напрямую, оно теряло три вещи,
+  // которые даёт фасад. Главное из них — ВИДИМЫЙ заголовок: `ModalHeader`
+  // кита рисует текст только при `platform === 'ios'`, поэтому на Android и
+  // десктопе карточка жалобы открывалась вообще без названия.
+  //
+  // Пин по КЛАССУ фасада, а не по роли heading: скрытый h2 (VisuallyHidden
+  // внутри китового Modal) тоже давал роль heading с тем же именем, и
+  // запрос `getByRole("heading", {name})` проходил бы на обоих кодах —
+  // проверка вхолостая. Класс `.title` из SheetTitle.module.css есть только
+  // у видимой копии заголовка на base.
+  it("на base есть видимый заголовок шторки (класс SheetTitle)", () => {
+    render(
+      <AppRoot platform="base">
+        <ReportDetailsModal report={report()} onClose={() => {}} />
+      </AppRoot>,
+    );
+    const title = document.querySelector(`.${titleStyles.title as string}`);
+    expect(title).not.toBeNull();
+    expect(title?.textContent).toBe("Жалоба");
+  });
+
+  it("имя диалога доступно скринридеру (скрытый h2 фасада)", () => {
+    // Скрытое имя нужно независимо от платформы: на iOS его роль играет
+    // Modal.Header, на base — видимый заголовок. Именно скрытый h2, а не
+    // любая роль: он и есть accessible name модалки.
+    render(
+      <AppRoot platform="base">
+        <ReportDetailsModal report={report()} onClose={() => {}} />
+      </AppRoot>,
+    );
+    expect(
+      screen.getAllByRole("heading", { name: "Жалоба", hidden: true }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("фокус при открытии уходит на ТЕЛО шторки, а не на Drawer китa", () => {
+    // Рецепт SheetContent: обёртка тела получает tabIndex={-1} и focus() при
+    // монтировании — точка входа для клавиатуры и скринридера.
+    // Пин по классу тела (`--app-sheet-*` из ui.module.css): на сыром Modal
+    // фокус оставался на самом Drawer.Content кита, который тоже
+    // focusable — проверка «focus не на body» там прошла бы вхолостую.
+    render(
+      <AppRoot platform="base">
+        <ReportDetailsModal report={report()} onClose={() => {}} />
+      </AppRoot>,
+    );
+    const active = document.activeElement as HTMLElement | null;
+    expect(active?.getAttribute("tabindex")).toBe("-1");
+    expect(active?.className ?? "").toContain(uiStyles.sheetBody as string);
+    expect(active?.textContent).toContain("Опасное вождение на трассе");
   });
 });

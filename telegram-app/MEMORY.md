@@ -8,7 +8,7 @@
 > Source of truth for kit props is the installed
 > `node_modules/@telegram-apps/telegram-ui/dist/**/*.d.ts` (not the docs, not training data).
 
-**Status:** tests **1059** (133 files), backend **721** (79), contracts **314** (25), e2e-parity **17/17**, contrast under
+**Status:** tests **1269** (156 files), backend **721** (79), contracts **314** (25), e2e-parity **17/17**, contrast under
 the numeric guard `e2e/ui-contrast.mjs`. The registry of deviations from the kit is
 `src/ui/README.md`: **read it before changing UI/forms**.
 
@@ -337,11 +337,13 @@ under `useRideRequestFeedQuery` — a separate key, not `all`.
 - `src/__tests__/layoutCss.test.ts` — the cascade pin (the tgui layer is beaten by non-layered modules).
 - `AppConfig.test.tsx` — contrast of the theme palettes.
 - The tests `init.mockMacOS.test.ts`, `toSnakeThemeParams.test.ts` — behavior of the macOS mocks.
-- **1044 tests** (131 files). SSR files (`renderToString`) do not
+- **1269 tests** (156 files). SSR files (`renderToString`) do not
   see effects, so everything that lives in an effect is checked by a **DOM file
   with `@vitest-environment jsdom`**: `useScrollRestore.dom`, `useTripActions.tick`,
   `SearchPage.reset`, `tripStandardCard.a11y`, `tripCountersSection`,
-  `fieldLabelTone` (the label tone is a contract, not a render).
+  `fieldLabelTone` (the label tone is a contract, not a render),
+  `sheetCloseRetention`/`targetSizes`/`blockquote`/`targetSizes.tz` (фасадные
+  пины: класс в DOM, а не роль — см. §18).
 - **`vi.mock` requires `vi.hoisted`.** The mock factory is hoisted above the
   variable declaration, and without `vi.hoisted` — `ReferenceError: Cannot access
   'mockX' before initialization`.
@@ -522,6 +524,10 @@ it would give priority to the gitignored `.env` over the production environment)
 | **A contract-shaped response is built by the single serializer and validates itself.** Hand-built `trip`/`booking` objects are forbidden: `GET /bookings/my` and `/bookings/history` assembled the nested `trip` inline and silently dropped the required `autoComplete`/`matchingEnabled`, so the client rejected the whole array with `INVALID_RESPONSE` ("Invalid server response") right after login. All booking/trip responses must go through `serializeTrip`/`serializeBooking` (`serializers/index.ts`) and `safeParse` their own payload (as `/bookings/driver` and `/bookings/trip/:id` do) — then a drift becomes a server 500 with a log, not a silent client-side rejection. Pinned by the runtime route sweep and `backend/tests/integration/telegram-parity.test.ts` | `backend/src/bookings/queries.ts`, `backend/src/serializers/index.ts` |
 
 | **Empty ≠ "off", and demand is INFORMATION, not a driver tool.** Two decisions of 2026-10-09: (1) the demand card is GONE from the trips list, together with the whole invite flow (`POST /ride-requests/:id/invite`, the `driver_invite` notification, `invitedByMe`, the «Invite» button) — the owner dropped the invite step as redundant: the passenger books themself anyway, so the driver gained nothing from asking; (2) what remains is the home feed «Кто ищет попутку» (`GET /ride-requests/feed`), rendered as **static rows** (no button, no chevron, `STATIC_CELL`), because a showcase must not promise a navigation whose next step no longer exists. The driver still sees the `matchingEnabled === false` note next to their own trip (strict `=== false` — unknown ≠ off), which is now the only place the flag surfaces: it explains why their route shows no demand at all. The per-trip demand read (`GET /trips/:id/requests`) and the `ride_request:new` WS hint still exist server-side but have NO client subscriber — parked, not forgotten | `pages/TripActive/TripActivePage.tsx`, `components/Section/RideRequestFeedSection.tsx`, `ui/classes.ts` (`STATIC_CELL`), pin `components/Section/__tests__/rideRequestFeedSection.test.tsx` |
+| **Every floating window goes through `ui/Sheet`, and the visible title is why.** The kit's `ModalHeader` renders its children ONLY when `platform === 'ios'`, so a window assembled on a raw `Modal` opens on Android/desktop with no title at all — plus no focus transfer and ~20 lines of duplicated dialog-name wiring. `ReportDetailsModal` was the last such window (fixed 2026-10-13); the move was not a product decision but collateral of a body rewrite, and the original complaint (the body looked like one solid slab) was fixed separately with `ui/Blockquote`. Pinned by class, not by role: `getByRole('heading')` also finds the hidden `VisuallyHidden` h2 and passes on BOTH versions — see `__tests__/sheetCloseRetention.test.tsx` | `ui/Sheet.tsx`, `pages/Reports/ReportDetailsModal.tsx` |
+| **Content must survive the exit animation (`retained`), and it does survive `Sheet`.** vaul is a Radix Dialog wrapper, and Radix `Presence` keeps the node mounted until `animationend` (`mounted → unmount_suspended → unmounted`, `isPresent` true in the middle) — so zeroing the body together with its prop makes the window animate out EMPTY. Hold the last non-null `target`/`report` in STATE (adjusting state on props change; reading a ref during render is banned by `react-hooks/refs`, which is what a ref-based version tripped). Two consequences: the mechanism works on `Sheet` too (the earlier claim that it would not was wrong), and it is **untestable in jsdom/SSR**, where there is no animation and `animation-name: none` unmounts immediately — verify by pinning the retained state, not the animation | `ReportDetailsModal.tsx`, `components/Profile/UserProfileSheet.tsx`, `ui/Sheet.tsx` |
+| **Free text written by a person goes through `ui/Blockquote`.** Complaint text, the moderation reply, «О себе» in the profile sheet. The wrapper exists for two shared rules: `pre-wrap` + `overflow-wrap` (typed line breaks must not collapse; a long word without spaces must not escape the plate) and the left-bar tone from `--app-*` instead of the kit's always-`link_color` — a «rejected» answer and a «no violations found» answer are different outcomes and the bar shows it. `type="other"` on purpose: the kit's `type="text"` wraps children in its own `Subheadline` and imposes its type size on descendants. Rules live in `ui/`, not in consumers' modules | `ui/Blockquote.tsx`, `ui/ui.module.css` (`.quote`), registry #35 in `ui/README.md` |
+
 ## 19. Where to look next
 
 - `README.md` (root) — product, deployment, env.
