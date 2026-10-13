@@ -15,7 +15,7 @@ import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { haptic } from "@/utils/haptics";
 import { QueryState } from "@/components/QueryState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { Card } from "@/ui/Card";
+import { Stack } from "@/ui/Stack";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import {
   useRemoveVehicleMutation,
@@ -30,7 +30,6 @@ import {
   vehicleServerErrorMessage,
   type VehicleFieldError,
 } from "./vehicleValidation";
-import styles from "./ProfileModals.module.css";
 
 type Vehicle = NonNullable<ReturnType<typeof useVehicleQuery>["vehicle"]>;
 
@@ -116,7 +115,11 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
       onRetry={() => void vehicleQuery.refetch()}
     >
       {vehicleQuery.data && (
-        <Card className={styles.card}>
+        // Тело окна прямо на фоне шторки, без Card: карточка внутри шторки —
+        // вложенная поверхность, которой нет ни в одном другом окне (жалоба,
+        // обращение, правка профиля, «Ищу попутку»). Раскладку даёт ui/Stack —
+        // локальный .card был его копией.
+        <Stack>
           {!vehicle && (
             <Caption Component="p" className={PROSE}>
               Чтобы публиковать поездки, добавьте автомобиль.
@@ -154,7 +157,7 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
               )}
             </>
           )}
-        </Card>
+        </Stack>
       )}
     </QueryState>
   );

@@ -17,7 +17,6 @@ import {
   useProfileNotificationSettingsMutation,
   useProfileQuery,
 } from "@/queries/profile";
-import { Card } from "@/ui/Card";
 import { Sheet } from "@/ui/Sheet";
 import { Stack } from "@/ui/Stack";
 import styles from "./ProfileModals.module.css";
@@ -118,7 +117,11 @@ export function SettingsBody() {
         onRetry={() => void profile.refetch()}
       >
         <Stack className={styles.stackSettings}>
-          <Card className={styles.card}>
+          // Тело окна прямо на фоне шторки, без Card: карточка внутри шторки —
+          // вложенная поверхность, которой нет ни в одном другом окне (жалоба,
+          // обращение, правка профиля, «Ищу попутку»). Раскладку даёт ui/Stack —
+          // локальный .card был его копией.
+          <Stack>
             <div className={ROW_BETWEEN}>
               <IconContainer>
                 {enabled ? <BellRing size={18} /> : <Bell size={18} />}
@@ -158,7 +161,7 @@ export function SettingsBody() {
             >
               Открыть уведомления
             </Button>
-          </Card>
+          </Stack>
         </Stack>
       </QueryState>
     </>

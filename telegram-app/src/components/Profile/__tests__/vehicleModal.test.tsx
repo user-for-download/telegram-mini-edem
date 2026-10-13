@@ -34,6 +34,7 @@ vi.mock("@/queries/vehicle", () => ({
 }));
 
 import { VehicleBody } from "@/components/Profile/VehicleModal";
+import uiStyles from "@/ui/ui.module.css";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {
@@ -110,5 +111,21 @@ describe("VehicleBody", () => {
     const html = render(<VehicleBody onDone={() => {}} />);
     expect(html).toContain("аккаунт заблокирован");
     expect(html).not.toContain("Сохранить автомобиль");
+  });
+});
+
+describe("VehicleBody: тело окна без вложенной поверхности", () => {
+  // Шторка уже является поверхностью — карточка внутри неё даёт второй слой
+  // (radius/фон/тень поверх фона шторки), и разница была видна глазом.
+  // Канон: тело окна прямо на фоне, раскладку даёт ui/Stack. Так устроены
+  // жалоба, обращение, правка профиля, «Настройки» и «Ищу попутку».
+  //
+  // Пин по классу ПОВЕРХНОСТИ ui/Card (`.card` из ui.module.css), а не по
+  // имени локального класса: одноимённый класс из потребительского модуля
+  // проверку обошёл бы молча.
+  it("в разметке нет поверхности Card, раскладка — из ui/Stack", () => {
+    const html = render(<VehicleBody onDone={() => {}} />);
+    expect(html).not.toContain(uiStyles.card as string);
+    expect(html).toContain(uiStyles.stack as string);
   });
 });

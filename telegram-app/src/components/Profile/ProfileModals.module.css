@@ -26,14 +26,6 @@
   gap: var(--app-space-sm);
 }
 
-/* Карточка: раскладка поверх ui/Card (поверхность и паддинг 16 — у Card),
- * колонка с зазором 12px. */
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-space-sm);
-}
-
 /* Ссылка (кит-токен ссылочного цвета). */
 .link {
   color: var(--tgui--link_color);

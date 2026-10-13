@@ -79,6 +79,7 @@ vi.mock("@/queries/vehicle", () => ({
 
 import { CreateTripForm } from "@/pages/CreateTrip/CreateTripPage";
 import { SettingsBody } from "@/components/Profile/SettingsModal";
+import uiStyles from "@/ui/ui.module.css";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function queryState(overrides: Record<string, unknown> = {}) {
@@ -245,5 +246,25 @@ describe("SettingsBody", () => {
     const html = render(<SettingsBody />);
     expect(html).toContain("Failed to save settings");
     expect(html).toContain("Выключить некритичные");
+  });
+});
+
+describe("Тела окон не оборачиваются в Card (вложенная поверхность)", () => {
+  // Шторка УЖЕ является поверхностью. Карточка внутри неё даёт второй слой
+  // (поверхность шторки + ещё слой сверху), и разница была видна глазом.
+  // Канон: тело окна лежит прямо на фоне, раскладку даёт `ui/Stack` — так
+  // устроены жалоба, обращение, подача жалобы, правка профиля и «Ищу
+  // попутку»; «Настройки» и «Автомобиль» были исключениями.
+  //
+  // Пин по классу ПОВЕРХНОСТИ ui/Card (`.card` из ui.module.css — radius,
+  // фон, тень), а не по имени локального класса: одноимённый класс из
+  // потребительского модуля такую проверку обошёл бы молча.
+  it("настройки: в разметке нет поверхности Card", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({ data: { notificationsEnabled: true } }),
+    );
+    const html = render(<SettingsBody />);
+    expect(html).not.toContain(uiStyles.card as string);
+    expect(html).toContain(uiStyles.stack as string);
   });
 });
