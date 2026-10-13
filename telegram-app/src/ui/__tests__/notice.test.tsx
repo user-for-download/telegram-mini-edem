@@ -8,8 +8,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
+import type { Ref } from "react";
 
-import { Notice } from "@/ui/Notice";
+import { Notice, type NoticeBlockProps } from "@/ui/Notice";
 import styles from "../ui.module.css";
 
 const cssText = readFileSync(
@@ -106,5 +107,28 @@ describe("Notice", () => {
     );
     expect(html).toContain(`${styles.notice} extra`);
     expect(html).toContain('id="field-err"');
+  });
+});
+
+describe("Notice: ветка banner/card не вырождена в never", () => {
+  // Компиляционный пин, а не рантайм: `Extract<NoticeProps, { variant: "banner" }>`
+  // находит ни одного члена (объявлен `variant: "banner" | "card"`), даёт
+  // `never`, и деструктуризация `ref` из `never` компилируется МОЛЧА — ошибки
+  // нет, типизации тоже нет. Такую ошибку не ловит ни один рантайм-тест,
+  // поэтому здесь утверждения о типах: если Extract снова сузить, файл
+  // перестанет компилироваться, и упадёт `npm run typecheck`.
+  type IsNever<T> = [T] extends [never] ? true : false;
+
+  // Ветка существует: IsNever === false, поэтому присваивание компилируется.
+  const branchIsPresent: IsNever<NoticeBlockProps> = false;
+  // ref в ветке — не never (иначе проверка выше прошла бы вхолостую).
+  const refIsPresent: IsNever<NoticeBlockProps["ref"]> = false;
+  // И он честно пригоден как ref на <div> — ровно то, что обещает докблок.
+  const refOnDiv: Ref<HTMLDivElement> | undefined = undefined as
+    | NoticeBlockProps["ref"]
+    | undefined;
+
+  it("ветка banner/card — настоящий член юниона, а не never", () => {
+    expect([branchIsPresent, refIsPresent, refOnDiv]).toHaveLength(3);
   });
 });

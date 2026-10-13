@@ -11,6 +11,16 @@
 //     ui/Chip даёт <button> при onClick, иначе div недоступен с клавиатуры.
 //  3) ID. `${idPrefix}-${value}` — стабильные: по ним уезжает фокус после
 //     стрелки и на них ссылается aria-controls.
+//  4) ROVING TABINDEX. В группу входят Tab'ом на ВЫБРАННОМ пункте, остальные
+//     выведены из последовательности (`tabindex="-1"`): иначе заявленная
+//     семантика APG не выполняется и для `tabs`, где Tab обязан
+//     перебрасывать между таб-листами, а не заходить в каждый таб.
+//
+// Про порядок атрибутов: проверки ниже берут ОТКРЫВАЮЩИЙ ТЕГ нужного id, а
+// не подряд идущую подстроку. Прежняя проверка цепляла `id → role → состояние`
+// одной строкой — она и ловила, что атрибуты на ОДНОМ элементе, но хрупко
+// ломалась от любого нового атрибута (добавление законного `tabindex`
+// обрушило её), хотя намерение её было правильным.
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { describe, expect, it } from "vitest";
@@ -25,6 +35,13 @@ const OPTIONS = [
 
 const render = (node: React.ReactNode): string =>
   renderToString(<AppRoot platform="base">{node}</AppRoot>);
+
+/** Открывающий тег элемента с данным id — чтобы атрибуты проверялись на ОДНОМ узле. */
+function tagOf(html: string, id: string): string {
+  const match = new RegExp(`<[a-z]+\\b[^>]*\\bid="${id}"[^>]*>`).exec(html);
+  if (match === null) throw new Error(`элемент с id="${id}" не найден в разметке`);
+  return match[0];
+}
 
 describe("ui/Switcher: фильтр (semantics=radiogroup, по умолчанию)", () => {
   const html = render(
@@ -44,10 +61,23 @@ describe("ui/Switcher: фильтр (semantics=radiogroup, по умолчани
 
   it("пункты — role=radio с aria-checked ровно у выбранного", () => {
     expect(html.match(/role="radio"/g)).toHaveLength(3);
-    // Порядок атрибутов задаёт спред кита, поэтому цепляем связку
-    // id → role → состояние, а не каждый атрибут по отдельности.
-    expect(html).toContain('id="search-date-today" role="radio" aria-checked="true"');
-    expect(html).toContain('id="search-date-all" role="radio" aria-checked="false"');
+    const selected = tagOf(html, "search-date-today");
+    const other = tagOf(html, "search-date-all");
+    expect(selected).toContain('role="radio"');
+    expect(selected).toContain('aria-checked="true"');
+    expect(other).toContain('role="radio"');
+    expect(other).toContain('aria-checked="false"');
+  });
+
+  it("roving tabindex: вход в группу только на выбранном", () => {
+    // Вход Tab'ом — на том пункте, где пользователь уже стоит; остальные
+    // выведены из последовательности, иначе Tab прокликивал бы все N подряд.
+    expect(tagOf(html, "search-date-today")).toContain('tabindex="0"');
+    expect(tagOf(html, "search-date-all")).toContain('tabindex="-1"');
+    expect(tagOf(html, "search-date-tomorrow")).toContain('tabindex="-1"');
+    // Ровно один вход в группу: два пункта с tabindex="0" означали бы, что
+    // Tab заходит внутрь дважды.
+    expect(html.match(/tabindex="0"/g)).toHaveLength(1);
   });
 
   it("aria-controls у фильтра НЕТ — панелей не существует", () => {
@@ -84,8 +114,17 @@ describe("ui/Switcher: вкладки (semantics=tabs)", () => {
 
   it("пункты — role=tab с aria-selected", () => {
     expect(html.match(/role="tab"/g)).toHaveLength(2);
-    expect(html).toContain('id="reviews-tab-new" role="tab" aria-selected="true"');
-    expect(html).toContain('id="reviews-tab-mine" role="tab" aria-selected="false"');
+    const selected = tagOf(html, "reviews-tab-new");
+    const other = tagOf(html, "reviews-tab-mine");
+    expect(selected).toContain('role="tab"');
+    expect(selected).toContain('aria-selected="true"');
+    expect(other).toContain('role="tab"');
+    expect(other).toContain('aria-selected="false"');
+  });
+
+  it("roving tabindex и для вкладок: Tab перебрасывает между листами", () => {
+    expect(tagOf(html, "reviews-tab-new")).toContain('tabindex="0"');
+    expect(tagOf(html, "reviews-tab-mine")).toContain('tabindex="-1"');
   });
 
   it("aria-controls только на выбранном и равен panelId", () => {

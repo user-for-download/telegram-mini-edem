@@ -47,6 +47,21 @@ const ROLE_BY_TONE: Record<NoticeTone, "alert" | "status"> = {
 };
 
 /**
+ * Ветка banner/card — объявлена именем, а не написана внутри каста.
+ *
+ * Имя нужно ради честной типизации: `Extract<NoticeProps, { variant: "banner" }>`
+ * не находит НИ ОДНОГО члена (объявлен `variant: "banner" | "card"`, а `"banner" | "card"`
+ * не присваивается `"banner"`) и даёт `never`. Деструктуризация `ref` из `never`
+ * компилируется молча — ошибки нет, типизации тоже нет, а `never` присваивается
+ * чему угодно, поэтому подсунуть сюда `Ref<HTMLParagraphElement>` не помешает.
+ * Пин на то, что ветка не `never`, — `ui/__tests__/notice.test.tsx`.
+ */
+export type NoticeBlockProps = Extract<
+  NoticeProps,
+  { variant: "banner" | "card" }
+>;
+
+/**
  * Единая плашка «сообщение пользователю»: ошибки полей (text), баннеры
  * успеха/ошибки блока (banner), карточки-подсказки (card). Роль одна,
  * рецептов больше нет — цвета только из --app-* токенов (образец StatusPill);
@@ -67,8 +82,9 @@ export function Notice(props: NoticeProps) {
   const merged = [styles.notice, className].filter(Boolean).join(" ");
   // Ветви явные (без динамического Tag): ref-тип каждой ветви совпадает
   // с реальным DOM-узлом — <p> для text, <div> для banner/card.
+  // Имя ветки и почему Extract нельзя сужать — в `NoticeBlockProps` выше.
   if (variant !== "text") {
-    const { ref } = props as Extract<NoticeProps, { variant: "banner" }>;
+    const { ref } = props as NoticeBlockProps;
     return (
       <div
         ref={ref}

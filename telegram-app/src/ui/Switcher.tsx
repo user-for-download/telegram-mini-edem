@@ -102,6 +102,14 @@ export function Switcher<T extends string>({
             key={option.value}
             id={`${idPrefix}-${option.value}`}
             role={asTabs ? "tab" : "radio"}
+            /* Roving tabindex (APG): в группу входят Tab'ом и выходят сразу,
+               внутри ходят стрелки. Без этого все N чипов шли подряд по Tab —
+               то есть заявленная в докблоке семантика APG не выполнялась: для
+               `tabs` Tab обязан перебрасывать между таб-листами, не заходя в
+               каждый таб. Вход — на выбранном пункте, где пользователь и стоит.
+               Клик по невыбранному схему не ломает: `pick` делает его выбранным,
+               и tabIndex становится 0 (фокус после клика и так на нём). */
+            tabIndex={selected ? 0 : -1}
             variant={selected ? "active" : "quiet"}
             className={selected ? styles.active : styles.item}
             {...(asTabs
