@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { MAX_SEATS } from "@edem/contracts";
 import { Caption, Input, Text } from "@telegram-apps/telegram-ui";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { QueryState } from "@/components/QueryState";
@@ -273,7 +274,7 @@ export const RideRequestsList = memo(function RideRequestsList() {
                           {...field}
                           type="number"
                           min="1"
-                          max="3"
+                          max={MAX_SEATS}
                           value={editSeats}
                           onChange={(event) => setEditSeats(event.target.value)}
                         />

@@ -45,6 +45,11 @@ export function EditProfileModal({
   );
 }
 
+// Фон ОТКРЫТЫЙ, как в SettingsRoute и VehicleRoute: затемнение приезжает
+// из китового Modal и перехватывает указатель, так что профиль под
+// шторкой не кликается и не скроллится. Раньше здесь был
+// `<div aria-hidden hidden>` — он выкидывал фон из дерева доступности и
+// оставлял под шторкой пустоту.
 export function EditProfileRoute() {
   const navigate = useNavigate();
   const close = () => {
@@ -54,9 +59,7 @@ export function EditProfileRoute() {
   };
   return (
     <>
-      <div aria-hidden hidden>
-        <ProfilePage />
-      </div>
+      <ProfilePage />
       <EditProfileModal open onClose={close} />
     </>
   );

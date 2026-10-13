@@ -54,7 +54,12 @@ export function VehicleModal({
 }
 
 /**
- * Роут /vehicle: фон — скрытый «Профиль», поверх — настоящая шторка.
+ * Роут /vehicle: фон — «Профиль» (точка входа), поверх — шторка. Фон
+ * ОТКРЫТЫЙ, как в SettingsRoute: затемнение приезжает из китового Modal
+ * и перехватывает указатель, так что профиль под шторкой не кликается и
+ * не скроллится, а контекст «откуда пришли» сохраняется. Раньше здесь был
+ * `<div aria-hidden hidden>`, но это выкидывало фон из дерева доступности
+ * и оставляло под шторкой пустоту — хуже, чем профиль под затемнением.
  * Контент тестируется через VehicleBody (портал Modal в renderToString
  * не попадает). Закрытие — назад по истории, иначе fallback на /profile.
  */
@@ -67,9 +72,7 @@ export function VehicleRoute() {
   }, [navigate]);
   return (
     <>
-      <div aria-hidden hidden>
-        <ProfilePage />
-      </div>
+      <ProfilePage />
       <VehicleModal open onClose={close} />
     </>
   );
