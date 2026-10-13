@@ -13,7 +13,7 @@ import {
   REPORT_STATUS_LABELS,
   REPORT_TARGET_TYPE_LABELS,
 } from "./reportValidation";
-import { reportStatusTone } from "./reportPreview";
+import { reportResponseLine, reportStatusTone } from "./reportPreview";
 import styles from "./ReportsPage.module.css";
 
 /**
@@ -100,6 +100,14 @@ export function ReportDetailsBody({ report }: { report: Report }) {
       >
         {REPORT_STATUS_LABELS[report.status]}
       </Caption>
+      {/* Когда и как быстро закрыли — сразу под статусом, а не внутри блока
+          ответа: ответ модерации есть не у каждой закрытой жалобы, а время
+          ожидания интересует всегда. Пустая строка, пока жалоба в работе. */}
+      {reportResponseLine(report) ? (
+        <Caption className={styles.detailsResolved}>
+          {reportResponseLine(report)}
+        </Caption>
+      ) : null}
       {/* Текст жалобы — слова автора, поэтому плашка-цитата: она и отделяет
           его от служебных строк, и хранит переносы, набранные человеком. */}
       <Blockquote>{report.description}</Blockquote>

@@ -128,7 +128,26 @@ describe("Тело попапа: без Placeholder, тексты в плашк�
   });
 
   it("статус виден и в попапе, а не только в строке ленты", () => {
-    expect(renderBody(report({ status: "resolved" }))).toContain("Рассмотрена");
+    expect(renderBody(report({ status: "resolved" }))).toContain("Закрыта");
+  });
+
+  it("время ответа у закрытой жалобы: дата и сколько ждали", () => {
+    const html = renderBody(
+      report({
+        status: "resolved",
+        createdAt: "2026-09-10T10:00:00.000Z",
+        resolvedAt: "2026-09-10T16:00:00.000Z",
+      }),
+    );
+    expect(html).toContain("Ответ 10.09.2026 · через 6 ч");
+  });
+
+  it("пока жалоба в работе, строки ответа нет", () => {
+    // resolvedAt при возврате в in_review обнуляется сервером, поэтому
+    // строка не просто приглушена, а отсутствует.
+    expect(
+      renderBody(report({ status: "in_review", resolvedAt: null })),
+    ).not.toContain("Ответ ");
   });
 
   it("переносы строк жалобы сохраняются", () => {

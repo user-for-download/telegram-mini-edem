@@ -145,7 +145,7 @@ describe("Открытая жалоба переживает инвалидац�
     renderPage();
     fireEvent.click(screen.getByTestId(`report-cell-${REPORT_ID}`));
     // Строка получила новое состояние — значит и попап отрендерит его.
-    expect(screen.getAllByText("Рассмотрена").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Закрыта").length).toBeGreaterThan(0);
   });
 });
 
@@ -192,7 +192,7 @@ describe("Строка 3 — статус", () => {
   const cases = [
     { status: "pending", label: "Ожидает рассмотрения", tone: "warning" },
     { status: "in_review", label: "На рассмотрении", tone: "info" },
-    { status: "resolved", label: "Рассмотрена", tone: "success" },
+    { status: "resolved", label: "Закрыта", tone: "success" },
     { status: "rejected", label: "Отклонена", tone: "danger" },
   ] as const;
 
@@ -230,7 +230,7 @@ describe("Строка 3 — статус", () => {
 
     expect(
       screen.getByTestId(`report-cell-${REPORT_ID}`).textContent,
-    ).toContain("Рассмотрена");
+    ).toContain("Закрыта");
   });
 
   it("статус в строке и в попапе говорит одно слово", () => {

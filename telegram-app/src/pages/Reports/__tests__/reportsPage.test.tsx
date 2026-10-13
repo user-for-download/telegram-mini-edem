@@ -128,7 +128,7 @@ describe("ReportsPage: мои жалобы", () => {
 
     expect(html).toContain("Ожидает рассмотрения");
     expect(html).toContain("На рассмотрении");
-    expect(html).toContain("Рассмотрена");
+    expect(html).toContain("Закрыта");
     expect(html).toContain("Отклонена");
     expect(html).toContain("Опасное вождение");
     expect(html).toContain("Спам в чате");
