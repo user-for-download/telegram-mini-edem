@@ -158,7 +158,9 @@ export function CreateTripForm({
   useClosingConfirmation(isDirty);
 
   const swapCities = () => {
-    haptic.selection();
+    // Обмен — команда, а не смена выбора: официальная дока HapticFeedback
+    // предписывает selectionChanged только на «selection changes».
+    haptic.light();
     touch();
     swapFormCities();
   };

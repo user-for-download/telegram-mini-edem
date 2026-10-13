@@ -14,10 +14,12 @@
      системный env() для браузера вне Telegram.
      ВАЖНО: env() участвует в max() РЯДОМ с SDK-переменной, а не как
      fallback var(): bindCssVars определяет --tg-viewport-* всегда (даже
-     значением 0), поэтому fallback env() никогда не сработал бы, а на
-     части iOS-клиентов во фуллскрине клиент шлёт safe_area 0 при
-     отрисованном под статус-баром вебвью — max(env, SDK) страхует
-     нулевые ответы клиента системной врезкой (viewport-fit=cover). */
+     значением 0), поэтому fallback env() никогда не сработал бы.
+     env() страхует только ВНЕ Telegram (обычный браузер, viewport-fit:
+     cover); внутри Mini App-вебвью Telegram env(safe-area-inset-top)
+     всегда 0, поэтому нулевые/заниженные ответы iOS-клиента во
+     фуллскрине закрывает НЕ env, а floor хука
+     useTelegramChromiumFallback (--tg-safe-area-top-min, см. ниже). */
   --tg-safe-area-inset-top: max(
     var(--tg-viewport-safe-area-inset-top, 0px),
     env(safe-area-inset-top, 0px)
