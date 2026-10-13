@@ -1,4 +1,6 @@
-// Дизайн-токены telegram-app: запрет on-scale литералов в модулях.
+// Дизайн-токены telegram-app: два независимых запрета.
+//
+// 1) On-scale литералы отступов в модулях.
 //
 // Канон (telegram-app/src/ui/README.md, «Правило для нового компонента», п.2):
 // «литералов цветов и паддингов в модулях не бывает». Значения шкалы
@@ -8,6 +10,18 @@
 // Скоуп: telegram-app/src/**/*.module.css, КРОМЕ src/ui/** (фасад сам владеет
 // токенами). Off-scale (2/3/5/6/10/14/20/30px), отрицательные margin,
 // calc()/min()/max()/clamp()/env() и строки-комментарии — не нарушения.
+//
+// 2) Ссылки на НЕОБЪЯВЛЕННЫЕ токены (добавлено 2026-10-13).
+//
+// Проверка 1 молчала про цвета, и класс дефектов проходил ревью незамеченным:
+// `--app-radius-card` (опечатка вместо --app-card-radius),
+// `--tgui-destructive-text-color` (single-dash), `--app-color-danger`.
+// Каждый такой токен молча уезжал в var()-фолбэк — то есть висял ЛИТЕРАЛ
+// вне темы: красный #d14343 в тёмной палитре не тот, серый #999 в обеих.
+//
+// Теперь каждый `var(--x)` должен быть объявлен в ките, в CSS проекта либо
+// принадлежать списку SDK-runtime префиксов (их SDK заводит в рантайме и
+// CSS их не содержит — в этом весь их смысл).
 //
 // Без новых зависимостей (по образцу scripts/format-check.mjs).
 import { readdir, readFile } from "node:fs/promises";
@@ -46,7 +60,7 @@ function stripCssComments(content) {
   return content.replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
-async function collectModules(directory) {
+async function collectCss(directory, { moduleOnly }) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
@@ -54,21 +68,103 @@ async function collectModules(directory) {
     const absolutePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
-      files.push(...(await collectModules(absolutePath)));
-    } else if (entry.name.endsWith(".module.css")) {
+      files.push(...(await collectCss(absolutePath, { moduleOnly })));
+    } else if (entry.name.endsWith(".css")) {
+      // Проверка 1 (шкала отступов) — только *.module.css и без src/ui/**.
+      // Проверка 2 (необъявленные токены) — ВСЕ .css включая src/ui/**
+      // и index.css: висящий токен был именно в ui.module.css, и исключение
+      // фасада его бы пропустило.
+      if (moduleOnly && !entry.name.endsWith(".module.css")) continue;
       const relativePath = path
         .relative(root, absolutePath)
         .split(path.sep)
         .join("/");
-      if (relativePath.includes(SKIP_PATH_SEGMENT)) continue;
+      if (moduleOnly && relativePath.includes(SKIP_PATH_SEGMENT)) continue;
       files.push({ absolutePath, relativePath });
     }
   }
   return files;
 }
 
+function collectModules(directory) {
+  return collectCss(directory, { moduleOnly: true });
+}
+
 const errors = [];
 
+/* ── Проверка 2: ссылки на необъявленные токены ───────────────────────────
+   Собираем: (а) что объявляет кит, (б) что объявляет CSS проекта,
+   (в) какие префиксы заводит SDK в рантайме. */
+
+const KIT_STYLES =
+  "node_modules/@telegram-apps/telegram-ui/dist/styles.css";
+
+/** Префиксы, которые SDK объявляет в рантайме (tapps/`--tg-*`). */
+const SDK_RUNTIME_PREFIXES = [
+  /^--tg-theme-/,
+  /^--tg-safe-area/,
+  /^--tg-viewport/,
+  /^--tg-content/,
+  /^--tg-telegram/,
+  /^--tgui--(?:safe_area|viewport)/,
+];
+
+const CUSTOM_PROPERTY = /(--[A-Za-z0-9_-]+)\s*:/g;
+const VAR_REFERENCE = /var\(\s*(--[A-Za-z0-9_-]+)/g;
+
+async function collectAllCss(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    if (entry.isSymbolicLink()) continue;
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue;
+      files.push(...(await collectAllCss(absolutePath)));
+    } else if (entry.name.endsWith(".css")) {
+      files.push(absolutePath);
+    }
+  }
+  return files;
+}
+
+/** Объявленные где-либо в проекте токены (кит + весь src, включая index.css). */
+async function collectDeclaredTokens() {
+  const declared = new Set();
+  const sources = [path.join(root, KIT_STYLES), ...(await collectAllCss(path.join(root, TARGET_DIR)))];
+  for (const file of sources) {
+    const content = await readFile(file, "utf8");
+    for (const [, name] of stripCssComments(content).matchAll(CUSTOM_PROPERTY)) {
+      declared.add(name);
+    }
+  }
+  return declared;
+}
+
+const declaredTokens = await collectDeclaredTokens();
+
+// Проверка 2 — по ВСЕМ .css (src/ui/** и index.css включительно).
+for (const { absolutePath, relativePath } of await collectCss(
+  path.join(root, TARGET_DIR),
+  { moduleOnly: false },
+)) {
+  const stripped = stripCssComments(await readFile(absolutePath, "utf8"));
+  stripped.split("\n").forEach((line, index) => {
+    // `var(--x)` может стоять в любой части значения (в т.ч. внутри
+    // color-mix/calc), а не только в шкале отступов — поэтому построчно.
+    for (const [, name] of line.matchAll(VAR_REFERENCE)) {
+      if (declaredTokens.has(name)) continue;
+      if (SDK_RUNTIME_PREFIXES.some((pattern) => pattern.test(name))) continue;
+      errors.push(
+        `${relativePath}:${index + 1}: необъявленный токен ${name} ` +
+          `(нет ни в ките, ни в CSS проекта, ни среди SDK-runtime) — ` +
+          `значение молча уедет в var()-фолбэк; проверьте написание`,
+      );
+    }
+  });
+}
+
+// Проверка 1 — только модули вне фасада (см. SKIP_PATH_SEGMENT).
 for (const { absolutePath, relativePath } of await collectModules(
   path.join(root, TARGET_DIR),
 )) {
