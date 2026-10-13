@@ -393,3 +393,39 @@
 .staticCell:hover {
   background: transparent;
 }
+
+/* Плашка «чужие слова» (ui/Blockquote): свободный текст, написанный
+ * человеком — жалоба, ответ модерации, «О себе».
+ *
+ * Кит уже даёт фон, левую полосу и радиус; здесь только то, что обязано быть
+ * у ЛЮБОГО такого текста:
+ *   - `pre-wrap` — переносы, набранные человеком, не склеиваются;
+ *   - `overflow-wrap` — длинное слово без пробела (URL, имя файла) не
+ *     вылезает за плашку.
+ * Оба свойства — про форму текста, а не про вёрстку конкретного экрана,
+ * поэтому и живут здесь, а не в модулях потребителей (ui/README, правило 5).
+ *
+ * Полоса слева — по смыслу, а не всегда синяя (кит: всегда link_color):
+ * ответ модерации «отклонена» и «нарушений не найдено» — разный исход,
+ * и полоса это показывает. Токены те же, что у Notice, инверсия
+ * светлая/тёмная — в index.css. */
+.quote {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.quote[data-tone="info"] {
+  border-left-color: var(--app-info);
+}
+
+.quote[data-tone="success"] {
+  border-left-color: var(--app-success);
+}
+
+.quote[data-tone="danger"] {
+  border-left-color: var(--app-danger);
+}
+
+.quote[data-tone="warning"] {
+  border-left-color: var(--app-warning);
+}

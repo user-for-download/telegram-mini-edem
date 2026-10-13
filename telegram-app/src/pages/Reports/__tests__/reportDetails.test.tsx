@@ -12,6 +12,7 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 import type { Report } from "@edem/contracts";
 
 import { ReportDetailsBody } from "@/pages/Reports/ReportDetailsModal";
+import uiStyles from "@/ui/ui.module.css";
 
 function report(overrides: Partial<Report> = {}): Report {
   return {
@@ -83,26 +84,56 @@ describe("ReportDetailsBody: содержимое попапа", () => {
   });
 });
 
-describe("Тело попапа: Placeholder без картинки", () => {
-  // Жалоба — короткий текст со статусом, а не иллюстрация: картинка в
-  // Placeholder читалась бы как «данных нет». Раньше здесь была своя вёрстка
-  // (шапка + пилюля + Notice), которая выглядела тяжелее самой сути.
-  it("не рисует img — слот картинки Placeholder пустой", () => {
+describe("Тело попапа: без Placeholder, тексты в плашках", () => {
+  // Раньше тело было `Placeholder` — компонентом ПУСТОГО состояния: он
+  // центрирует содержимое и набирает заголовок крупным кеглем, из-за чего
+  // попап читался как «данных нет» и весь шёл сплошняком. Теперь обычная
+  // колонка, а свободные тексты (жалоба, ответ модерации) стоят в плашках
+  // `ui/Blockquote`: фон, полоса слева, сохранённые переносы.
+  it("не рисует Placeholder — это компонент пустого состояния", () => {
+    // Китовая обёртка Placeholder (tgui-f23c0e195677169c в styles.css).
+    expect(renderBody()).not.toContain("tgui-f23c0e195677169c");
+  });
+
+  it("не рисует img — жалоба это текст, а не иллюстрация", () => {
     expect(renderBody()).not.toContain("<img");
   });
 
-  it("категория и тип уехали в заголовок Placeholder", () => {
+  it("категория и тип видны", () => {
     const html = renderBody(report({ category: "spam", targetType: "user" }));
     expect(html).toContain("Спам · Пользователь");
   });
 
-  it("статус виден и в попапе, а не только в пилюле-заглушке", () => {
+  it("текст жалобы лежит в плашке-цитате", () => {
+    // Пин именно факта плашки: без неё текст снова станет обычным абзацем
+    // рядом со служебными строками (тот самый «сплошняк»).
+    const html = renderBody(report({ description: "Опасное вождение" }));
+    expect(html).toContain(uiStyles.quote as string);
+  });
+
+  it("ответ модерации — тоже плашка, со своим тоном", () => {
+    const html = renderBody(
+      report({ status: "rejected", resolutionNote: "Нарушений не найдено." }),
+    );
+    // Плашки две: жалоба и ответ; у ответа тон warning (исход «отклонена»).
+    expect(html.split(uiStyles.quote as string).length - 1).toBe(2);
+    expect(html).toContain('data-tone="warning"');
+  });
+
+  it("у ответа модерации тон соответствует исходу жалобы", () => {
+    const html = renderBody(
+      report({ status: "resolved", resolutionNote: "Аккаунт заблокирован." }),
+    );
+    expect(html).toContain('data-tone="success"');
+  });
+
+  it("статус виден и в попапе, а не только в строке ленты", () => {
     expect(renderBody(report({ status: "resolved" }))).toContain("Рассмотрена");
   });
 
   it("переносы строк жалобы сохраняются", () => {
     // Описание — свободный текст пользователя; без pre-wrap переносы
-    // склеились бы в кашу.
+    // склеились бы в кашу (правило живёт в ui/Blockquote).
     expect(
       renderBody(report({ description: "строка 1\nстрока 2" })),
     ).toContain("строка 1\nстрока 2");

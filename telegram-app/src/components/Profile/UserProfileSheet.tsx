@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Sheet } from "@/ui/Sheet";
 import { QueryState } from "@/components/QueryState";
 import { Stack } from "@/ui/Stack";
+import { Blockquote } from "@/ui/Blockquote";
 import { useUserQuery } from "@/queries/profile";
 import { useModalBack } from "@/utils/modalBack";
 import { ProfileHero } from "./ProfileHero";
@@ -87,10 +88,13 @@ export function UserProfileSheet({
           {shown ? (
             <Stack>
               <ProfileHero user={shown} />
+              {/* «О себе» — свободный текст человека, поэтому плашка-цитата
+                  (ui/Blockquote): она отделяет слова автора от шапки профиля,
+                  а её правило переносов общее для всех таких мест. */}
               {shown.about ? (
                 <div className={styles.about}>
                   <Caption className={styles.aboutLabel}>О себе</Caption>
-                  <Text>{shown.about}</Text>
+                  <Blockquote>{shown.about}</Blockquote>
                 </div>
               ) : null}
               {shown.car ? (
