@@ -60,7 +60,6 @@ export const CRITICAL_NOTIFICATION_TYPES: ReadonlySet<string> = new Set([
   "trip_status_changed",
 ]);
 
-
 /** Роль получателя для серверного фильтра `?role=` и ролевых архивов. */
 export const notificationRoleSchema = z.enum(["driver", "passenger"]);
 

@@ -2,8 +2,10 @@ import { z } from "zod";
 import { userSchema } from "./user.schema.js";
 import { tripSchema, MAX_SEATS } from "./trip.schema.js";
 import { cursorPaginationSchema } from "./common.schema.js";
+import { BOOKING_STATUS } from "./status.const.js";
 
-export const bookingStatusSchema = z.enum(["pending", "confirmed", "declined", "cancelled"]);
+// Значения — из единого источника `status.const.ts` (см. trip.schema.ts).
+export const bookingStatusSchema = z.enum(Object.values(BOOKING_STATUS));
 export type BookingStatus = z.infer<typeof bookingStatusSchema>;
 
 /**

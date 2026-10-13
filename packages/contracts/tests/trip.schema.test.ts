@@ -47,9 +47,10 @@ describe("tripSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("should reject trip with seatsAvailable > seatsTotal", () => {
+  it("does NOT reject seatsAvailable > seatsTotal (no cross-field check)", () => {
     const result = tripSchema.safeParse({ ...validTrip, seatsAvailable: 3, seatsTotal: 2 });
-    // Zod не проверяет cross-field по умолчанию, это ок
+    // Zod не проверяет cross-field по умолчанию, это ок — имя теста
+    // фиксирует именно отсутствие проверки, а не «отклонение».
     expect(result.success).toBe(true);
   });
 

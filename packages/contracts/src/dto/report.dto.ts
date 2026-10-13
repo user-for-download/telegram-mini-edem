@@ -21,7 +21,10 @@ export const adminReportsQuerySchema = z.object({
 export type AdminReportsQuery = z.infer<typeof adminReportsQuerySchema>;
 
 export const updateReportStatusDtoSchema = z.object({
-  status: z.enum(["in_review", "resolved", "rejected"]),
+  // Допустимые переходы выводятся из единственного источника REPORT_STATUSES
+  // (исключаем только начальный "pending"): новое значение в справочнике не
+  // пройдёт мимо, а опечатка не скомпилируется (см. rideRequestStatusUpdateSchema).
+  status: reportStatusSchema.extract(["in_review", "resolved", "rejected"]),
   resolutionNote: z.string().trim().max(REPORT_DESCRIPTION_MAX_LENGTH).optional(),
 }).strict();
 export type UpdateReportStatusDto = z.infer<typeof updateReportStatusDtoSchema>;

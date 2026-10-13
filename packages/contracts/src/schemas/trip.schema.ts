@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { userSchema } from "./user.schema.js";
+import { BOOKING_STATUS, TRIP_STATUS } from "./status.const.js";
 
 /**
  * Единый источник правды для лимита мест в легковом автомобиле.
@@ -24,11 +25,15 @@ export const tripTagSchema = z.enum([
 
 export type TripTag = z.infer<typeof tripTagSchema>;
 
-export const tripStatusSchema = z.enum(["active", "cancelled", "completed"]);
+// Значения берутся из `status.const.ts`, а не переписываются литералами:
+// иначе константы и wire-схема разъезжаются молча (см. REVIEW_STATUS в
+// review.schema.ts — тот же приём). Локальная копия booking-статуса нужна,
+// чтобы не тянуть booking.schema.ts (циклический импорт trip ↔ booking).
+export const tripStatusSchema = z.enum(Object.values(TRIP_STATUS));
 
 export type TripStatus = z.infer<typeof tripStatusSchema>;
 
-const localBookingStatusSchema = z.enum(["pending", "confirmed", "declined", "cancelled"]);
+const localBookingStatusSchema = z.enum(Object.values(BOOKING_STATUS));
 
 export const myBookingSchema = z.object({
   id: z.string(),

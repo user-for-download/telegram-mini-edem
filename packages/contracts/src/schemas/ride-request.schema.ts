@@ -10,13 +10,7 @@ export const RIDE_REQUEST_STATUS = {
   CANCELLED: "cancelled",
 } as const;
 
-export const rideRequestStatusSchema = z.enum([
-  "active",
-  "paused",
-  "fulfilled",
-  "expired",
-  "cancelled",
-]);
+export const rideRequestStatusSchema = z.enum(Object.values(RIDE_REQUEST_STATUS));
 export type RideRequestStatus = z.infer<typeof rideRequestStatusSchema>;
 
 export const rideRequestSchema = z.object({
