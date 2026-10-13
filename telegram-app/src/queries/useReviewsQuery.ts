@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { reviewsApi } from "@/api/reviews.api";
+import { BOOKING_KEYS, TRIP_KEYS } from "./keys";
 import { USER_KEYS } from "./profile";
 import type { CreateReviewDto } from "@edem/contracts";
 
@@ -60,8 +61,8 @@ export function useCreateReviewMutation() {
         queryClient.invalidateQueries({
           queryKey: USER_KEYS.detail(variables.targetUserId),
         }),
-        queryClient.invalidateQueries({ queryKey: ["trips"] }),
-        queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+        queryClient.invalidateQueries({ queryKey: TRIP_KEYS.all }),
+        queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.all }),
       ]),
   });
 }

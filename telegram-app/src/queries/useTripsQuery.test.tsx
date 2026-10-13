@@ -26,11 +26,8 @@ vi.mock("@/api/trips.api", () => ({
 import { act, useEffect, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  TRIP_KEYS,
-  useCancelTripMutation,
-  useCompleteTripMutation,
-} from "./useTripsQuery";
+import { useCancelTripMutation, useCompleteTripMutation } from "./useTripsQuery";
+import { TRIP_KEYS } from "./keys";
 
 let queryClient: QueryClient;
 let invalidateSpy: ReturnType<typeof vi.spyOn>;

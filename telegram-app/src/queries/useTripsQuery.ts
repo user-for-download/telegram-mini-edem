@@ -11,16 +11,7 @@ import {
 } from "@/api/trips.api";
 import type { CreateTripDto } from "@edem/contracts";
 import { REVIEW_KEYS } from "./useReviewsQuery";
-
-export const TRIP_KEYS = {
-  all: ["trips"] as const,
-  lists: () => [...TRIP_KEYS.all, "list"] as const,
-  list: (filters?: SearchTripsFilters) =>
-    [...TRIP_KEYS.lists(), filters] as const,
-  my: () => [...TRIP_KEYS.all, "my"] as const,
-  details: () => [...TRIP_KEYS.all, "detail"] as const,
-  detail: (id: string) => [...TRIP_KEYS.details(), id] as const,
-};
+import { BOOKING_KEYS, TRIP_KEYS } from "./keys";
 
 export function useInfiniteTripsQuery(filters?: SearchTripsFilters) {
   return useInfiniteQuery({
@@ -75,9 +66,7 @@ function useInvalidateTripsAndBookings() {
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: TRIP_KEYS.all }),
-      // Сырой ключ вместо BOOKING_KEYS.all: useBookingsQuery импортирует
-      // TRIP_KEYS отсюда, импорт в обратную сторону дал бы цикл.
-      queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+      queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.all }),
     ]);
 }
 

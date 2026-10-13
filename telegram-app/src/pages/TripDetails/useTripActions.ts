@@ -5,7 +5,7 @@ import type { Trip } from "@edem/contracts";
 import { ApiError } from "@/api/client";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { shareOutcomeFeedback, shareTrip } from "@/helpers/tripShare";
-import { TRIP_KEYS } from "@/queries/useTripsQuery";
+import { TRIP_KEYS } from "@/queries/keys";
 import { useCreateBookingMutation } from "@/queries/useBookingsQuery";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatArrivalTime } from "@/utils/date";

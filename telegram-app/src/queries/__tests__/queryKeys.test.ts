@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   BOOKING_KEYS,
@@ -10,6 +13,33 @@ import {
   TRIP_KEYS,
   USER_KEYS,
 } from "@/queries";
+
+/**
+ * Инвалидация кэша — только по фабрике ключей, никогда литералом.
+ *
+ * Раньше три места писали `queryKey: ["bookings"]` / `["trips"]`: цикл
+ * модулей не давал импортировать чужую фабрику. Ключи вынесены в ./keys,
+ * цикл разорван по построению (там нет ни одного импорта хуков).
+ *
+ * Почему пин на текст исходника, а не на поведение: литерал и константа
+ * дают ОДИНАКОВОЕ значение — `["bookings"] === BOOKING_KEYS.all`, поэтому
+ * рантайм-тест был бы зелёным и на литерале, и на константе. Смена
+ * префикса в фабрике тихо оставила бы литералы инвалидировать пустоту: ни
+ * ошибка компиляции, ни падение теста. Единственный способ поймать это —
+ * запретить литерал в исходнике.
+ */
+describe("инвалидация кэша не использует сырые ключи", () => {
+  const queriesDir = join(dirname(fileURLToPath(import.meta.url)), "..");
+  const modules = readdirSync(queriesDir, { recursive: true, encoding: "utf8" })
+    .filter((name) => name.endsWith(".ts") && !name.includes("__tests__"));
+
+  it.each(modules)("%s: queryKey без строкового литерала", (name) => {
+    const source = readFileSync(join(queriesDir, name), "utf8");
+    // Ловим `queryKey: ["…"]` — массив-литерал. Фабрики дают вызов
+    // (BOOKING_KEYS.all, TRIP_KEYS.detail(id)) и под шаблон не подпадают.
+    expect(source).not.toMatch(/queryKey:\s*\[\s*["']/);
+  });
+});
 
 describe("Telegram query key factories", () => {
   it("keeps resource prefixes stable for broad mutation invalidation", () => {

@@ -6,18 +6,10 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { bookingsApi } from "@/api/bookings.api";
-import { TRIP_KEYS } from "./useTripsQuery";
+import { BOOKING_KEYS, TRIP_KEYS } from "./keys";
 import { RIDE_REQUEST_KEYS } from "./useRideRequestsQuery";
 import type { CreateBookingDto, DriverBookingAction } from "@edem/contracts";
 
-export const BOOKING_KEYS = {
-  all: ["bookings"] as const,
-  my: () => [...BOOKING_KEYS.all, "my"] as const,
-  history: () => [...BOOKING_KEYS.all, "history"] as const,
-  trip: (tripId: string) =>
-    [...BOOKING_KEYS.all, "trip", tripId] as const,
-  driver: () => [...BOOKING_KEYS.all, "driver"] as const,
-};
 
 export function useMyBookingsQuery(options?: { enabled?: boolean }) {
   return useQuery({

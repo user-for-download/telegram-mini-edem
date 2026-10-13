@@ -100,8 +100,7 @@ import {
 import { TelegramRealtimeListener } from "@/providers/TelegramRealtimeListener";
 import { ApiError } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
-import { TRIP_KEYS } from "@/queries/useTripsQuery";
-import { BOOKING_KEYS } from "@/queries/useBookingsQuery";
+import { BOOKING_KEYS, TRIP_KEYS } from "@/queries/keys";
 import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
 import { REVIEW_KEYS } from "@/queries/useReviewsQuery";
 
