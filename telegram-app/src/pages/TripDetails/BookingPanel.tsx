@@ -5,6 +5,7 @@ import { Field } from "@/ui/Field";
 import { Notice } from "@/ui/Notice";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
+import { MIN_TARGET } from "@/ui/classes";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import {
@@ -86,6 +87,7 @@ export function BookingPanel({
               description="Заявка будет отменена, а место снова станет доступно."
               pending={cancelBooking.isPending}
               destructive
+              className={MIN_TARGET}
               onConfirm={() =>
                 cancelBooking.mutate(item.myBooking!.id, {
                   onSuccess: () =>

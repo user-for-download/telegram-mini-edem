@@ -47,7 +47,7 @@
 .open.open:focus-visible {
   outline: 2px solid var(--tgui--link_color);
   outline-offset: 2px;
-  border-radius: var(--app-radius-card, 16px);
+  border-radius: var(--app-card-radius);
 }
 
 /* Шапка: дата слева — статус в центре — цена справа, всё по центру. */
@@ -221,7 +221,7 @@
 .personButton.personButton:focus-visible {
   outline: 2px solid var(--tgui--link_color);
   outline-offset: -2px;
-  border-radius: var(--app-radius-card, 16px);
+  border-radius: var(--app-card-radius);
 }
 
 /* Слот действий: кнопки под персоной, с верхней hairline. */

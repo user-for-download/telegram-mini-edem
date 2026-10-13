@@ -38,7 +38,7 @@
    * и в Телеграме она открывается штатным переходом, а не релокацией. */
   display: inline-block;
   text-decoration: none;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: var(--tg-theme-button-color, #3ba3ec);
   color: var(--tg-theme-button-text-color, #fff);
 }

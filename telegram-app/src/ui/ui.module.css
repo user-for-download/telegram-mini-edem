@@ -282,9 +282,16 @@
 }
 
 /* Сбой догрузки: role=alert, поэтому текст должен быть контрастным,
-   а не «призрачный» серый secondary-текст скинета. */
+   а не «призрачный» серый secondary-текст скинета.
+   Тон — `--app-danger`: он объявлен в .app-theme для обеих тем и уже
+   посчитан под худший фон (светлая 78%+чёрный, тёмная 75%+белый).
+   Раньше здесь стоял `--tgui-destructive-text-color` (опечатка в имени,
+   single-dash) → `--app-color-danger` (не объявлен) → #d14343 ЛИТЕРАЛОМ,
+   то есть красный фиксированный мимо темы: в тёмной палитре тот же
+   тон светлее. Китовый `--tgui--destructive_text_color` напрямую НЕ берём —
+   он не проходит 4.5 на тонированных плашках (см. .app-theme, реестр #20). */
 .fetchMoreError {
-  color: var(--tgui-destructive-text-color, var(--app-color-danger, #d14343));
+  color: var(--app-danger);
   text-align: center;
 }
 

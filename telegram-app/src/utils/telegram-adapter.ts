@@ -42,9 +42,9 @@ export function getRawInitData(): string | undefined {
  * в табе). Best-effort, SSR-safe: ошибки игнорируем, сессия уже очищена
  * вызывающим. Вызывается из markAccountDeleted и clearSession стора.
  *
- * Ключ проверен по исходникам @tma.js: toolkit `setStorageValue` пишет
- * `sessionStorage["n" + key]`, bridge `launchParams` — итог `nlaunchParams`
- * (старая линейка @telegram-apps писала `tapps/launchParams`). Чистим оба,
+ * Ключ проверен по исходникам @tma.js 3.0.23: toolkit `setStorageValue`
+ * пишет `sessionStorage["tapps/" + key]`, итог — `tapps/launchParams`
+ * (легаси-ключ старых версий — `nlaunchParams`). Чистим оба,
  * чтобы не пережить logout ни на новом, ни на закэшированном клиенте.
  */
 export function purgeLaunchParamsCache(): void {
@@ -137,6 +137,26 @@ export function buildTelegramChatUrl(username: string | undefined): string | nul
 }
 
 /**
+ * Доступен ли нативный confirm (popup клиента). Пара к nativeConfirm: тот
+ * возвращает false и при отказе пользователя, и при отсутствии popup —
+ * различить их можно только этой пробой. Вызывающий без popup обязан
+ * показать видимый исход (тост), а не молчать: иначе тап по «принять» /
+ * «отклонить» уходит в тишину на старых клиентах.
+ *
+ * - мок (dev-браузер): true — nativeConfirm там сразу true без диалога;
+ * - popup доступен: true;
+ * - иначе false. Исключений нет: ошибка SDK — тоже false.
+ */
+export function isNativeConfirmAvailable(): boolean {
+  try {
+    if (isTelegramMockEnv()) return true;
+    return popup.show.isAvailable();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Нативный confirm через popup клиента для мест, где триггер — не
  * текстовый Button (иконки −/+, IconButton): ConfirmPopup туда не встаёт.
  * Лимиты popup: title ≤64, message ≤256, текст кнопки ≤64.
@@ -144,8 +164,9 @@ export function buildTelegramChatUrl(username: string | undefined): string | nul
  * - мок (dev-браузер): true сразу — браузер dev-среда, без подтверждений;
  * - popup доступен: системный алерт, true только по кнопке confirm
  *   (закрытие без выбора — false);
- * - иначе false: клиент без popup (Bot API < 6.2) — вызывающий решает сам
- *   (как правило, ничего не делать: таких клиентов почти не осталось).
+ * - иначе false: клиент без popup (Bot API < 6.2) — вызывающий проверяет
+ *   это ЗАРАНЕЕ через isNativeConfirmAvailable() и показывает запасной
+ *   исход (здесь уже не различить «отказ» и «спросить нечем»).
  * Исключений нет: ошибка SDK — тоже false.
  */
 export async function nativeConfirm(options: {

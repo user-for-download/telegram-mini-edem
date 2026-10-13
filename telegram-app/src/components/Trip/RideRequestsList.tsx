@@ -23,7 +23,7 @@ import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { isRideRequestExpired } from "./rideRequestValidation";
 import { mergeUniqueById } from "@/helpers/mergeUniqueById";
 import { haptic } from "@/utils/haptics";
-import { formatMoscowDateTime, toLocalDateTimeInputValue } from "@/utils/date";
+import { formatMoscowDateTime, fromMoscowDateTimeInput, toLocalDateTimeInputValue } from "@/utils/date";
 import { plural } from "@/utils/plural";
 import {
   updateRideRequestDtoSchema,
@@ -117,23 +117,32 @@ export const RideRequestsList = memo(function RideRequestsList() {
   const startEdit = (request: RideRequest) => {
     setEditingId(request.id);
     setEditError(null);
-    // datetime-local ждёт локальное время: общий хелпер date.ts, не
-    // локальная копия форматирования (московское смещение уезжало на 3 часа).
-    setEditEarliest(toDateTimeLocal(request.earliestAt));
-    setEditLatest(toDateTimeLocal(request.latestAt));
-    setEditExpires(request.expiresAt ? toDateTimeLocal(request.expiresAt) : "");
+    // datetime-local ждёт стенное время ПО МОСКВЕ (общий хелпер date.ts,
+    // пара к fromMoscowDateTimeInput в submitEdit): локальная копия
+    // форматирования через геттеры даты давала зону устройства, и начало
+    // окна уезжало на часы у клиента вне МСК. Битый ISO — "" (хелпер
+    // возвращает пустую строку для Invalid Date).
+    setEditEarliest(toLocalDateTimeInputValue(new Date(request.earliestAt)));
+    setEditLatest(toLocalDateTimeInputValue(new Date(request.latestAt)));
+    setEditExpires(
+      request.expiresAt
+        ? toLocalDateTimeInputValue(new Date(request.expiresAt))
+        : "",
+    );
     setEditSeats(String(request.seats));
   };
 
   const submitEdit = (requestId: string) => {
     setEditError(null);
-    const earliestDate = new Date(editEarliest);
-    const latestDate = new Date(editLatest);
-    const expiresDate = new Date(editExpires);
+    // Строки полей — стенное время ПО МОСКВЕ (пара к хелперу в startEdit):
+    // `new Date(value)` читал бы их в зоне устройства и сдвигал окно.
+    const earliestDate = fromMoscowDateTimeInput(editEarliest);
+    const latestDate = fromMoscowDateTimeInput(editLatest);
+    const expiresDate = fromMoscowDateTimeInput(editExpires);
     if (
-      !Number.isFinite(earliestDate.getTime()) ||
-      !Number.isFinite(latestDate.getTime()) ||
-      !Number.isFinite(expiresDate.getTime()) ||
+      earliestDate === null ||
+      latestDate === null ||
+      expiresDate === null ||
       earliestDate >= latestDate ||
       expiresDate <= new Date()
     ) {
@@ -382,13 +391,3 @@ export const RideRequestsList = memo(function RideRequestsList() {
     </>
   );
 });
-
-/**
- * Дата ISO → значение для `<input type="datetime-local">`.
- * Мусорный вход даёт пустую строку (поле покажет пустое, а не «Invalid Date»).
- */
-function toDateTimeLocal(iso: string): string {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return "";
-  return toLocalDateTimeInputValue(date);
-}

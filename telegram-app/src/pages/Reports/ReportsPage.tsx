@@ -150,7 +150,7 @@ export function ReportsPage() {
         {/* NavHeader помечен aria-hidden («авторитетные h1 живут на
             страницах»), а секции фасад отдаёт как h2 — имя экрана даёт
             скрытый h1. */}
-        <VisuallyHidden Component="h1">Мои обращения</VisuallyHidden>
+        <VisuallyHidden Component="h1">Жалобы</VisuallyHidden>
         <Section header="Мои жалобы">
           <SectionBody>
             <QueryState

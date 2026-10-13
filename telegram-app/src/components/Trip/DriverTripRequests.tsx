@@ -7,13 +7,15 @@ import {
 import { Button } from "@/ui/Button";
 import { Cell } from "@/ui/Cell";
 import { IconButton } from "@/ui/IconButton";
+import { MIN_TARGET } from "@/ui/classes";
 import { Notice } from "@/ui/Notice";
 
 import { Armchair, Check, X } from "lucide-react";
 import { haptic } from "@/utils/haptics";
-import { nativeConfirm } from "@/utils/telegram-adapter";
+import { isNativeConfirmAvailable, nativeConfirm } from "@/utils/telegram-adapter";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
+import { formatRating } from "@/helpers/rating";
 import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
 import {
   useDriverRequestsQuery,
@@ -54,11 +56,23 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
 
   // Подтверждение — нативный popup клиента (в dev-браузере действие
   // выполняется сразу). Отклонить — destructive (красная кнопка).
+  // Клиент без popup: nativeConfirm вернул бы false — неотличимо от
+  // отказа, и тап уходил бы в молчаливый no-op. Поэтому доступность
+  // проверяем заранее и показываем видимый исход (тост), а действие
+  // без подтверждения не выполняем.
   const askAndAct = async (
     booking: Booking,
     status: "confirmed" | "declined",
   ) => {
     haptic.light();
+    if (!isNativeConfirmAvailable()) {
+      haptic.error();
+      toast.show({
+        text: "Не удалось запросить подтверждение — обновите Telegram",
+        assertive: true,
+      });
+      return;
+    }
     const confirmed = await nativeConfirm({
       title:
         status === "confirmed" ? "Подтвердить пассажира?" : "Отклонить заявку?",
@@ -168,11 +182,15 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
               src={booking.passenger.avatar}
               acronym={booking.passenger.name.slice(0, 2).toUpperCase()}
             >
-              {booking.passenger.rating != null && (
-                <Avatar.Badge mode="white" type="number">
-                  {booking.passenger.rating.toFixed(1)}
-                </Avatar.Badge>
-              )}
+              {/* Без отзывов — прочерк «—», а не мнимое 5.0 нового
+                  пассажира: контракт отдаёт rating обязательным числом
+                  (app.md §5, formatRating). */}
+              <Avatar.Badge mode="white" type="number">
+                {formatRating(
+                  booking.passenger.rating,
+                  booking.passenger.reviewsCount,
+                )}
+              </Avatar.Badge>
             </Avatar>
           }
           subtitle={
@@ -190,7 +208,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
                 size="s"
                 aria-label={`Отклонить заявку ${booking.passenger.name}`}
                 disabled={actingId === booking.id}
-                className={styles.declineIcon}
+                className={`${styles.declineIcon} ${MIN_TARGET}`}
                 onClick={(event) => {
                   event.stopPropagation();
                   void askAndAct(booking, "declined");
@@ -203,6 +221,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
                 size="s"
                 aria-label={`Принять заявку ${booking.passenger.name}`}
                 disabled={actingId === booking.id}
+                className={MIN_TARGET}
                 onClick={(event) => {
                   event.stopPropagation();
                   void askAndAct(booking, "confirmed");

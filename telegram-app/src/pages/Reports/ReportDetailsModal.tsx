@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import {
   Caption,
   Modal,
@@ -47,6 +47,18 @@ export function ReportDetailsModal({
   onClose: () => void;
 }) {
   const titleId = useId();
+  // Последний report живёт до размонтирования: при закрытии report
+  // становится null, а Modal ещё играет анимацию — тело, зануленное
+  // вместе с report, мигнуло бы пустотой. Удержание даёт попапу
+  // закрыться поверх прежнего содержимого.
+  //
+  // СОСТОЯНИЕ, а не ref: чтение ref во время рендера запрещено правилом
+  // react-hooks/refs (такой вариант ловил линт). Обновление состояния на
+  // рендере разрешено React для собственного состояния компонента при
+  // изменении props; сравнение по идентичности исключает цикл рендеров.
+  const [retained, setRetained] = useState(report);
+  if (report !== null && report !== retained) setRetained(report);
+  const visible = report ?? retained;
   return (
     <Modal
       open={report !== null}
@@ -64,7 +76,7 @@ export function ReportDetailsModal({
         Жалоба
       </VisuallyHidden>
       <OfflineBanner />
-      {report === null ? null : <ReportDetailsBody report={report} />}
+      {visible === null ? null : <ReportDetailsBody report={visible} />}
     </Modal>
   );
 }

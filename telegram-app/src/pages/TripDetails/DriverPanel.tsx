@@ -2,6 +2,7 @@ import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { Notice } from "@/ui/Notice";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
+import { MIN_TARGET } from "@/ui/classes";
 import { EditTripForm } from "@/components/Trip/EditTripForm";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { useTripBookingsQuery } from "@/queries/useBookingsQuery";
@@ -107,6 +108,7 @@ export function DriverPanel({
             disabled={
               !canCompleteTrip || completeTrip.isPending || cancelTrip.isPending
             }
+            className={MIN_TARGET}
             onConfirm={() => completeTrip.mutate(tripId)}
           />
           {!canCompleteTrip && (
@@ -124,6 +126,7 @@ export function DriverPanel({
               // поездку, оно не должно проходить, пока PATCH в полёте.
               disabled={cancelTrip.isPending || completeTrip.isPending}
               destructive
+              className={MIN_TARGET}
               onConfirm={() => cancelTrip.mutate(tripId)}
             />
           )}

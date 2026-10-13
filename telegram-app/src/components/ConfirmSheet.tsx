@@ -3,6 +3,7 @@ import { Text } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { Sheet } from "@/ui/Sheet";
 import { Stack } from "@/ui/Stack";
+import { useModalBack } from "@/utils/modalBack";
 import styles from "./ConfirmPopup.module.css";
 
 /**
@@ -19,8 +20,9 @@ import styles from "./ConfirmPopup.module.css";
  * показать диалог нечем. Этот Sheet закрывает и её — «Удалить профиль» на
  * macOS больше не удаляет аккаунт одним тапом.
  *
- * Хост-managed (`open`/`onClose`): кит ведёт себя по `open`, а BackButton
- * перехватывает `handleModalBack` вызывающего экрана.
+ * Хост-managed (`open`/`onClose`): кит ведёт себя по `open`, а нативная
+ * кнопка «Назад» закрывает шторку через `useModalBack(onClose, open)` —
+ * без этой подписки Back ушёл бы со страницы вместе с экраном под шторкой.
  *
  * Портал шторки уводит клики из карточки-соседа, поэтому `stopPropagation`
  * нужен только на триггере.
@@ -44,6 +46,9 @@ export function ConfirmSheet({
   destructive?: boolean;
   onConfirm: () => void;
 }) {
+  // Нативная кнопка «Назад» закрывает шторку, а не уводит с экрана:
+  // без этой подписки Back ушёл бы по истории вместе со страницей.
+  useModalBack(onClose, open);
   return (
     <Sheet open={open} onClose={onClose} title={confirmLabel}>
       <Stack>

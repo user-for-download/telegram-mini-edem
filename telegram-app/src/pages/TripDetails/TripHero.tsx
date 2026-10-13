@@ -7,6 +7,7 @@ import { GROW, ROW_BETWEEN, TRUNCATE, BTN_ROW_WRAP } from "@/ui/classes";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
+import { formatRating } from "@/helpers/rating";
 import { formatDuration, relativeMoscowDay } from "@/utils/date";
 import { plural } from "@/utils/plural";
 import { terminalTripStatusLabel } from "@/utils/tripStatus";
@@ -106,7 +107,12 @@ export function TripHero({
               </Text>
               <Caption Component="div" className={styles.ratingRow}>
                 <Star size={12} className={styles.star} />
-                <span>{item.driver.rating.toFixed(1)}</span>
+                {/* Без отзывов — прочерк «—», а не мнимое 5.0 нового
+                    водителя: контракт отдаёт rating обязательным числом
+                    (app.md §5, formatRating). Счётчик ниже — всегда. */}
+                <span>
+                  {formatRating(item.driver.rating, item.driver.reviewsCount)}
+                </span>
                 <span>
                   ({item.driver.reviewsCount}{" "}
                   {plural(

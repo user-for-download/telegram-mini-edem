@@ -95,8 +95,9 @@ if (import.meta.env.DEV) {
     });
 
     // Мок не рисует нативные диалоги, но isAvailable() под ним true.
-    // Браузер — среда разработки: UI-код (ConfirmPopup) смотрит этот
-    // флаг и выполняет действие сразу, без подтверждения.
+    // ConfirmPopup проверяет isTelegramMockEnv() раньше popup.show и
+    // открывает ConfirmSheet (как при недоступном popup): действие
+    // выполняется только после явного подтверждения в шторке.
     markTelegramMockEnv();
 
     console.info(

@@ -9,7 +9,7 @@
  * неслойное бьёт слойное без !important и без удвоения селектора.
  * ::after — блик-нажатие кита: наследуем радиус, иначе квадратные углы. */
 .accept {
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   min-height: 60px;
   /* stretched кита = flex-grow:1: во flex-колонке листа кнопка тянется
    * по вертикали — запрещаем, ширина 100% от stretched остаётся. */

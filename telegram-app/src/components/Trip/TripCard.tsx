@@ -8,6 +8,7 @@ import {
 import { TripStandardCard } from "@/components/Section/TripStandardCard";
 import { DriverTripRequests } from "@/components/Trip/DriverTripRequests";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
+import { MIN_TARGET } from "@/ui/classes";
 import { shareTrip } from "@/helpers/tripShare";
 import { haptic } from "@/utils/haptics";
 import type { PassengerBooking, Trip } from "@edem/contracts";
@@ -151,6 +152,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
                   pending={cancelPending}
                   destructive
                   mode="outline"
+                  className={MIN_TARGET}
                   onConfirm={() => onCancel(booking.id)}
                 />
               </div>
@@ -214,6 +216,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
                 pending={cancelPending}
                 destructive
                 mode="outline"
+                className={MIN_TARGET}
                 onConfirm={() => onCancel(trip.id)}
               />
             </div>

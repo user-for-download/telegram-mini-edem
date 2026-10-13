@@ -10,6 +10,7 @@ import { Car, Hash, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, isAccountDeletedError } from "@/api/client";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
+import { MIN_TARGET } from "@/ui/classes";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { haptic } from "@/utils/haptics";
 import { QueryState } from "@/components/QueryState";
@@ -138,6 +139,7 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
                 description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано."
                 pending={remove.isPending}
                 destructive
+                className={MIN_TARGET}
                 onConfirm={() =>
                   remove.mutate(undefined, {
                     onSuccess: () => haptic.success(),

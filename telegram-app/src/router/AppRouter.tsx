@@ -65,7 +65,7 @@ const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
   [(p) => p.startsWith("/profile/ride-requests"), "История запросов"],
   [(p) => p.startsWith("/profile/edit"), "Редактирование профиля"],
   [(p) => p.startsWith("/profile/support"), "Поддержка"],
-  [(p) => p.startsWith("/profile/reports"), "Мои обращения"],
+  [(p) => p.startsWith("/profile/reports"), "Жалобы"],
   [(p) => p.startsWith("/reviews"), "Отзывы"],
   [(p) => p.startsWith("/profile"), "Профиль"],
 ];
@@ -101,8 +101,13 @@ export function Shell() {
   }, [navigate, location.pathname]);
 
   useEffect(() => {
-    backButton.onClick(goBack);
-    return () => backButton.offClick(goBack);
+    // Hardening вне Telegram: прямые onClick/offClick бросают исключение,
+    // если метод недоступен, — подписываемся через ifAvailable (тот же
+    // приём, что settingsButton в useSettingsButton).
+    backButton.onClick.ifAvailable(goBack);
+    return () => {
+      backButton.offClick.ifAvailable(goBack);
+    };
   }, [goBack]);
 
   useEffect(() => {

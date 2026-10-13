@@ -4,7 +4,16 @@
   gap: 3px;
   padding: 2px var(--app-space-xs);
   border-radius: var(--app-radius-pill);
-  background: var(--tgui--secondary_bg_color, rgba(127, 127, 127, 0.12));
+  /* Фон плашки — китовский `--tgui--secondary_bg_color` (НЕ смешиваем: при
+   наличии токена плашка остаётся сплошной, как и была). Меняется только
+   ФОЛБЭК: вместо серого литерала rgba(127,127,127,.12), который не
+   принадлежит ни одной теме Telegram, берём тот же токен клиента
+   (`--tg-theme-secondary-bg-color`) из светлой палитры — как и остальные
+   фолбэки проекта (см. .tmp/tasks/css-normalize/fallback-audit.md). */
+  background: var(
+    --tgui--secondary_bg_color,
+    var(--tg-theme-secondary-bg-color, #efeff4)
+  );
   color: var(--tgui--text_color, inherit);
   font-size: 14px;
   font-weight: 600;

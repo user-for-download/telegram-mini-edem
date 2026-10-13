@@ -31,7 +31,7 @@ import { SectionBody } from "@/ui/SectionBody";
 import { Section } from "@/ui/Section";
 import { Stack } from "@/ui/Stack";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { HINT } from "@/ui/classes";
+import { HINT, MIN_TARGET } from "@/ui/classes";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { isAccountDeletedError, ApiError } from "@/api/client";
 import {
@@ -363,6 +363,7 @@ export function ProfilePage() {
                   disabled={remove.isPending}
                   mode="plain"
                   destructive
+                  className={MIN_TARGET}
                   onConfirm={() => remove.mutate()}
                 />
               </Section>

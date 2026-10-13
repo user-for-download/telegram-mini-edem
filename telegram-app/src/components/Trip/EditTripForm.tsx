@@ -6,6 +6,7 @@ import { Notice } from "@/ui/Notice";
 import { BTN_ROW, BTN_ROW_WRAP, HINT, INFO, SUCCESS } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { schemaErrorMessage } from "@/helpers/createTripForm";
+import { fromMoscowDateTimeInput, toLocalDateTimeInputValue } from "@/utils/date";
 import { Button } from "@/ui/Button";
 
 import { Calendar, Clock, MapPin, RussianRuble, Users } from "lucide-react";
@@ -19,14 +20,6 @@ import { TRIP_TAGS } from "@/consts/tags";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { useUpdateTripMutation } from "@/queries/useTripsQuery";
 import styles from "./EditTripForm.module.css";
-
-function toDateTimeLocal(iso: string | undefined): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return "";
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 /**
  * Inline-редактирование поездки водителем.
@@ -49,7 +42,14 @@ export function EditTripForm({
   );
   const [fromAddress, setFromAddress] = useState(trip.fromAddress ?? "");
   const [toAddress, setToAddress] = useState(trip.toAddress ?? "");
-  const [departure, setDeparture] = useState(toDateTimeLocal(trip.departureAt));
+  // Начало — стенное время ПО МОСКВЕ (общий хелпер date.ts, пара к
+  // fromMoscowDateTimeInput в submit): геттеры даты дали бы зону устройства,
+  // и на клиенте вне МСК правка стартовала бы со сдвинутого времени.
+  // Битый/пустой ISO — пустая строка (хелпер возвращает "" для Invalid Date).
+  const initialDeparture = trip.departureAt
+    ? toLocalDateTimeInputValue(new Date(trip.departureAt))
+    : "";
+  const [departure, setDeparture] = useState(initialDeparture);
   const [durationHours, setDurationHours] = useState(initialDurationHours);
   const [distanceKm, setDistanceKm] = useState(String(trip.distanceKm));
   const [price, setPrice] = useState(String(trip.price));
@@ -72,7 +72,7 @@ export function EditTripForm({
   useClosingConfirmation(
     fromAddress !== (trip.fromAddress ?? "") ||
       toAddress !== (trip.toAddress ?? "") ||
-      departure !== toDateTimeLocal(trip.departureAt) ||
+      departure !== initialDeparture ||
       durationHours !== initialDurationHours ||
       distanceKm !== String(trip.distanceKm) ||
       price !== String(trip.price) ||
@@ -89,8 +89,10 @@ export function EditTripForm({
 
   const submit = () => {
     setFieldError(null);
-    const departureAt = new Date(departure);
-    if (!Number.isFinite(departureAt.getTime()) || departureAt <= new Date()) {
+    // Строка поля — стенное время ПО МОСКВЕ (пара к хелперу выше):
+    // `new Date(value)` читал бы её в зоне устройства и сдвигал отправление.
+    const departureAt = fromMoscowDateTimeInput(departure);
+    if (departureAt === null || departureAt <= new Date()) {
       setFieldError({
         field: "edit-departure",
         error: "Укажите будущие дату и время отправления",

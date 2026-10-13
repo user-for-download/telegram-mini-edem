@@ -92,16 +92,27 @@ describe("formatArrivalTime", () => {
 });
 
 describe("toLocalDateTimeInputValue", () => {
-  it("formats local wall time for datetime-local (not UTC)", () => {
-    expect(toLocalDateTimeInputValue(new Date(2026, 8, 10, 15, 4, 0))).toBe(
+  it("formats Moscow wall time for datetime-local (not UTC, not device zone)", () => {
+    // 12:04Z = 15:04 МСК. Момент абсолютный, поэтому утверждение честно в
+    // любом TZ устройства (геттеры даты дали бы зону устройства, а
+    // toISOString — UTC).
+    expect(toLocalDateTimeInputValue(new Date("2026-09-10T12:04:00.000Z"))).toBe(
       "2026-09-10T15:04",
     );
   });
 
-  it("round-trips through datetime-local parsing", () => {
-    const original = new Date(2026, 8, 10, 15, 4, 0);
-    const parsed = new Date(toLocalDateTimeInputValue(original));
-    expect(parsed.getTime()).toBe(original.getTime());
+  it("round-trips with fromMoscowDateTimeInput to the same instant", () => {
+    // Дефолт и разбор — пара через одну зону: что положили в поле, то и
+    // прочитали, в любом TZ устройства.
+    const original = new Date("2026-09-10T12:04:00.000Z");
+    const roundTripped = fromMoscowDateTimeInput(
+      toLocalDateTimeInputValue(original),
+    );
+    expect(roundTripped?.getTime()).toBe(original.getTime());
+  });
+
+  it("returns an empty string for an invalid date", () => {
+    expect(toLocalDateTimeInputValue(new Date("не дата"))).toBe("");
   });
 });
 

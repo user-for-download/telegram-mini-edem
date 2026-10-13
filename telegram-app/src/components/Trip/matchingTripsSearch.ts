@@ -51,10 +51,18 @@ export function buildMatchingTripsQuery(
   draft: RouteWindowDraft,
 ): SearchTripsFilters | null {
   if (!draft.fromCityId || !draft.toCityId) return null;
-  const earliest = new Date(draft.earliest);
-  const latest = new Date(draft.latest);
-  if (!Number.isFinite(earliest.getTime())) return null;
-  if (!Number.isFinite(latest.getTime())) return null;
+  // Именно fromMoscowDateTimeInput, а не `new Date(...)`: значения полей —
+  // стенное время ПО МОСКВЕ (их так кладёт toLocalDateTimeInputValue), а
+  // `new Date("…T18:00")` разбирает их в зоне устройства. Смещение — знаковое
+  // и зависит от пояса и времени суток: в UTC-4 вечернее окно уезжает на
+  // СЛЕДУЮЩИЙ московский день, в восточных поясах раннее — на предыдущий.
+  // `moscowDayKey` ниже тогда возвращал не тот календарный день: проверка
+  // спрашивала чужое окно и молчала о поездке, которая едет. Тот же разбор —
+  // в isMatchCandidate.
+  const earliest = fromMoscowDateTimeInput(draft.earliest);
+  const latest = fromMoscowDateTimeInput(draft.latest);
+  if (earliest === null) return null;
+  if (latest === null) return null;
   return {
     fromCityId: draft.fromCityId,
     toCityId: draft.toCityId,

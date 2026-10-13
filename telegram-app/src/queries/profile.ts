@@ -50,11 +50,15 @@ export function useProfileQuery(options?: {
  * enabled по Boolean(id): пустой id — это не запрос, а шторка, которая
  * ещё не открыта (или закрылась на другом человеке).
  */
-export function useUserQuery(id: string, options?: { enabled?: boolean }) {
+export function useUserQuery(
+  id: string,
+  options?: { enabled?: boolean; staleTime?: number },
+) {
   return useQuery({
     queryKey: USER_KEYS.detail(id),
     queryFn: ({ signal }) => profileApi.getUser(id, signal),
     enabled: (options?.enabled ?? true) && Boolean(id),
+    staleTime: options?.staleTime,
   });
 }
 

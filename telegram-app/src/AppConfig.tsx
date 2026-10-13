@@ -146,8 +146,11 @@ const DARK_PALETTE: Record<(typeof THEME_VAR_NAMES)[number], string> = {
 function applyThemeOverride(override: ThemeOverride): void {
   const root = document.documentElement;
   if (!override) {
-    // Возврат к теме клиента: bindCssVars одноразовый, поэтому
+    // Возврат к теме клиента: привязка bindCssVars живая (переменные
+    // обновляются автоматически по theme_changed), но ручной оверрайд выше
+    // перезаписал инлайн-значения канонической палитрой, поэтому
     // восстанавливаем значения вручную из текущего состояния SDK.
+    // Дальнейшие theme_changed снова подхватит живая привязка.
     const state = themeParams.state() as
       Record<string, string | undefined> | undefined;
     for (const name of THEME_VAR_NAMES) {

@@ -29,6 +29,7 @@ vi.mock("@/components/Profile/UserProfileProvider", () => ({
 const confirmBooking = vi.fn();
 vi.mock("@/utils/telegram-adapter", () => ({
   nativeConfirm: () => Promise.resolve(true),
+  isNativeConfirmAvailable: () => true,
   isTelegramMockEnv: () => false,
 }));
 

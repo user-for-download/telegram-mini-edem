@@ -27,13 +27,45 @@ export function toIsoDate(date: Date): string {
 }
 
 /**
- * Локальное время для <input type="datetime-local"> ("YYYY-MM-DDTHH:mm").
- * toISOString() здесь нельзя: он даёт UTC, а поле ждёт локальное —
- * в Москве дефолт уезжал на 3 часа назад.
+ * Московское стенное время для <input type="datetime-local"> ("YYYY-MM-DDTHH:mm").
+ *
+ * Пара к `fromMoscowDateTimeInput`: дефолт и разбор идут через одну зону
+ * (Europe/Moscow), иначе ввод «08:00» означает разное в создании и в правке.
+ * `toISOString()` и геттеры даты (`getHours()` и т.п.) здесь нельзя: первый
+ * даёт UTC, вторые — зону устройства, и на клиенте вне МСК дефолт уезжал на
+ * часы от того, что человек потом видит в ленте.
+ *
+ * Имя историческое («Local» — стенное время, которое видит пользователь);
+ * зона — Москва, см. `MOSCOW_TZ`. Инвариант: пара держит round-trip
+ * `fromMoscowDateTimeInput(toLocalDateTimeInputValue(date))` в любом TZ
+ * устройства — проверяется tz-тестом (на московской машине расхождение
+ * невидимо, поэтому обычный тест здесь ничего не ловит).
+ *
+ * Невалидная дата — пустая строка: поле покажет пустое, а не «Invalid Date».
  */
 export function toLocalDateTimeInputValue(date: Date): string {
-  const pad = (value: number): string => String(value).padStart(2, "0");
-  return `${toIsoDate(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  if (!Number.isFinite(date.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: MOSCOW_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const read = (type: string): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  // `noUncheckedIndexedAccess` здесь не при чём — formatToParts всегда
+  // отдаёт строки, но пустая часть (неизвестный type) дала бы "undefined"
+  // в строке: фолбэк "" + проверка ниже вместо молчаливого мусора.
+  const year = read("year");
+  const month = read("month").padStart(2, "0");
+  const day = read("day").padStart(2, "0");
+  const hour = read("hour").padStart(2, "0");
+  const minute = read("minute").padStart(2, "0");
+  if (!year || !month || !day) return "";
+  return `${year}-${month}-${day}T${hour}:${minute}`;
 }
 
 function startOfDay(date: Date): Date {
@@ -239,8 +271,7 @@ function moscowOffsetMs(instant: Date): number {
 /**
  * «YYYY-MM-DDTHH:mm» из `<input type="datetime-local">` → момент времени.
  *
- * Обратная сторона `toLocalDateTimeInputValue` и главная причина, по которой
- * дефолт и разбор не должны совпадать: поле отдаёт СТРОКУ без зоны, и
+ * Пара к `toLocalDateTimeInputValue`: поле отдаёт СТРОКУ без зоны, и
  * `new Date(value)` читает её в зоне УСТРОЙСТВА. Всё остальное приложение
  * показывает по Москве, поэтому ввод «20.10 08:00» должен означать 08:00
  * ПО МОСКВЕ — иначе водитель из Дубая публикует поездку на час раньше той,

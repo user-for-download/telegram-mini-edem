@@ -26,7 +26,7 @@
   /* Отрицательные отступы — осознанный приём (token-lint их пропускает),
      вертикальный 8px — токен шкалы, как требует гейт. */
   margin: -16px var(--app-space-xs) -16px 0;
-  z-index: 1;
+  z-index: var(--app-z-local);
   background: var(--tgui--section_bg_color);
   box-shadow: var(--app-card-shadow);
 }

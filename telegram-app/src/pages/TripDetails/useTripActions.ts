@@ -4,7 +4,7 @@ import { hapticFeedback } from "@tma.js/sdk-react";
 import type { Trip } from "@edem/contracts";
 import { ApiError } from "@/api/client";
 import { useToast } from "@/components/Toast/ToastProvider";
-import { shareTrip } from "@/helpers/tripShare";
+import { shareOutcomeFeedback, shareTrip } from "@/helpers/tripShare";
 import { TRIP_KEYS } from "@/queries/useTripsQuery";
 import { useCreateBookingMutation } from "@/queries/useBookingsQuery";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -104,17 +104,14 @@ export function useTripActions(item: Trip | undefined) {
   const handleShare = (tripId: string) => {
     setShareStatus(null);
     void shareTrip(tripId).then((result) => {
-      if (result === "shared")
-        setShareStatus("Ссылка отправлена — поделитесь поездкой с попутчиками");
-      else if (result === "copied")
-        setShareStatus(
-          "Ссылка скопирована — поделитесь поездкой с попутчиками",
-        );
-      else
-        setShareStatus(
-          "Не удалось поделиться — скопируйте адрес страницы вручную",
-        );
-      hapticFeedback.notificationOccurred.ifAvailable("success");
+      // Хаптика/текст строго по исходу: отмена — нейтральный текст без
+      // отдачи, неуспех — error-хаптика (раньше всё, кроме отмены, давало
+      // один «успех», а отмена молчала).
+      const feedback = shareOutcomeFeedback(result);
+      setShareStatus(feedback.text);
+      if (feedback.haptic !== null) {
+        hapticFeedback.notificationOccurred.ifAvailable(feedback.haptic);
+      }
     });
   };
 

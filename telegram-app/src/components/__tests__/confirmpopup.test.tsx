@@ -19,6 +19,7 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
+import { handleModalBack } from "@/utils/modalBack";
 import {
   isTelegramMockEnv,
   markTelegramMockEnv,
@@ -126,6 +127,36 @@ describe("ConfirmPopup", () => {
       });
 
       expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    describe("нативный Back при открытой шторке", () => {
+      it("закрытая шторка не перехватывает Back", async () => {
+        await mount();
+        // Back должен увести по истории, а не закрывать несуществующее окно.
+        expect(handleModalBack()).toBe(false);
+      });
+
+      it("открытая шторка перехватывает Back и закрывается без действия", async () => {
+        const onConfirm = vi.fn();
+        await mount(onConfirm);
+        await clickTrigger(root, container);
+        expect(document.body.textContent).toContain(
+          "Поездка станет недоступна.",
+        );
+
+        // Без useModalBack внутри ConfirmSheet Back ушёл бы со страницы
+        // вместо закрытия шторки. Обработка внутри act: onClose снимает
+        // подписку в cleanup эффекта, и без act ре-рендер не прошёл бы —
+        // проверяли бы React-тайминг, а не поведение шторки.
+        let intercepted = false;
+        await act(async () => {
+          intercepted = handleModalBack();
+        });
+        expect(intercepted).toBe(true);
+        // Шторка закрылась, действие НЕ выполнено, Back свободен экрану.
+        expect(onConfirm).not.toHaveBeenCalled();
+        expect(handleModalBack()).toBe(false);
+      });
     });
   });
 

@@ -18,6 +18,7 @@ vi.mock("@tma.js/sdk-react", () => ({
 
 import { popup } from "@tma.js/sdk-react";
 import {
+  isNativeConfirmAvailable,
   isTelegramMockEnv,
   markTelegramMockEnv,
   nativeConfirm,
@@ -82,5 +83,34 @@ describe("nativeConfirm", () => {
 
     mockedShow.mockRejectedValueOnce(new Error("bridge down"));
     await expect(nativeConfirm(OPTS)).resolves.toBe(false);
+  });
+});
+
+describe("isNativeConfirmAvailable", () => {
+  it("мок-окружение (dev-браузер): true, popup не трогаем", () => {
+    markTelegramMockEnv();
+
+    expect(isNativeConfirmAvailable()).toBe(true);
+    expect(mockedIsAvailable).not.toHaveBeenCalled();
+  });
+
+  it("popup доступен → true", () => {
+    mockedIsAvailable.mockReturnValue(true);
+
+    expect(isNativeConfirmAvailable()).toBe(true);
+  });
+
+  it("popup недоступен (старый клиент) → false", () => {
+    mockedIsAvailable.mockReturnValue(false);
+
+    expect(isNativeConfirmAvailable()).toBe(false);
+  });
+
+  it("ошибка SDK → false (fail-closed)", () => {
+    mockedIsAvailable.mockImplementation(() => {
+      throw new Error("bridge down");
+    });
+
+    expect(isNativeConfirmAvailable()).toBe(false);
   });
 });

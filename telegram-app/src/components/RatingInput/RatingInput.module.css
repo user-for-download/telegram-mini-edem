@@ -29,10 +29,16 @@
   cursor: pointer;
 }
 
+/* Неактивная звезда — вторичный тон приложения. Именно `--app-muted`:
+   он объявлен для обеих тем и посчитан под худшую плашку (светлая 91%+чёрный
+   = 4.51, тёмная 84%+белый = 4.53). Китовый `--tgui--secondary_text_color`
+   в проекте не существует, а фолбэк #999 был серым ЛИТЕРАЛОМ вне темы;
+   `--tgui--hint_color` — тоже сырой кит, ниже AA на тонированных плашках
+   (та же причина, по которой placeholder переведён на --app-muted). */
 .icon {
   width: 44px;
   height: 44px;
-  color: var(--tgui--secondary_text_color, #999);
+  color: var(--app-muted);
   pointer-events: none;
 }
 

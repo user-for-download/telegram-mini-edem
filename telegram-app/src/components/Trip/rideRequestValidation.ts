@@ -9,6 +9,7 @@ import {
   type CreateRideRequestDto,
 } from "@edem/contracts";
 import type { DirectoryCity } from "@/helpers/createTripForm";
+import { fromMoscowDateTimeInput } from "@/utils/date";
 
 /**
  * Черновик формы: строковые значения полей (datetime-local, id городов).
@@ -77,8 +78,19 @@ export function buildRideRequestDraft(
       },
     };
   }
-  const earliestDate = new Date(draft.earliest);
-  const latestDate = new Date(draft.latest);
+  // Строки datetime-local — стенное время ПО МОСКВЕ (пара к
+  // toLocalDateTimeInputValue в форме): `new Date(value)` читал бы их в зоне
+  // устройства, и окно уезжало бы на часы у клиента вне МСК. null после
+  // validateRideRequestWindow выше недостижим, но тип честно ведёт к
+  // «выберите интервал», а не к исключению toISOString на Invalid Date.
+  const earliestDate = fromMoscowDateTimeInput(draft.earliest);
+  const latestDate = fromMoscowDateTimeInput(draft.latest);
+  if (earliestDate === null || latestDate === null) {
+    return {
+      ok: false,
+      error: { field: null, message: "Выберите временной интервал" },
+    };
+  }
   const parsed = createRideRequestDtoSchema.safeParse({
     fromCityId: fromCity.id,
     toCityId: toCity.id,
@@ -102,17 +114,19 @@ export function buildRideRequestDraft(
   };
 }
 
-/** Окно отправления корректно (обе даты валидны, «не позже» строго после «не раньше»). */
+/** Окно отправления корректно (обе даты валидны, «не позже» строго после «не раньше»).
+ *
+ * Разбор — ПО МОСКВЕ (`fromMoscowDateTimeInput`, пара к хелперу, которым
+ * форма кладёт значения в поля): `new Date(value)` читал бы стенное время в
+ * зоне устройства, и сравнение шло бы по сдвинутым моментам.
+ */
 export function validateRideRequestWindow(
   earliest: string,
   latest: string,
 ): string | null {
-  const earliestDate = new Date(earliest);
-  const latestDate = new Date(latest);
-  if (
-    !Number.isFinite(earliestDate.getTime()) ||
-    !Number.isFinite(latestDate.getTime())
-  ) {
+  const earliestDate = fromMoscowDateTimeInput(earliest);
+  const latestDate = fromMoscowDateTimeInput(latest);
+  if (earliestDate === null || latestDate === null) {
     return "Выберите временной интервал";
   }
   if (earliestDate >= latestDate) {
