@@ -19,13 +19,10 @@ export const CARD_PAD = styles.cardDefault;
 
 /* ── Текст (ui/text): одна роль — одно правило ────────────────────────
  * Расслабленный абзац, подпись-подсказка, центрирование. Заменяют
- * копии .prose/.proseText/.hint/.iconHint (см. ui/text.module.css). */
+ * копии .prose/.hint/.iconHint (см. ui/text.module.css). */
 
 /** Расслабленный абзац (line-height 1.625). */
 export const PROSE = textStyles.prose;
-
-/** Тот же абзац основным цветом текста. */
-export const PROSE_TEXT = textStyles.proseText;
 
 /** Приглушённая подпись/иконка (цвет подсказки). */
 export const HINT = textStyles.hint;

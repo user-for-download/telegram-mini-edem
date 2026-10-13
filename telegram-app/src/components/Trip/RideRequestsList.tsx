@@ -385,7 +385,6 @@ export const RideRequestsList = memo(function RideRequestsList() {
             fetchNextPage={() => void requests.fetchNextPage()}
             error={requests.isFetchNextPageError ? requests.error : null}
             sentinelRef={sentinelRef}
-            placeholderLabel="Загрузка ещё запросов"
           />
         </Stack>
       </QueryState>

@@ -14,12 +14,6 @@
   line-height: 1.625;
 }
 
-/* Тот же абзац основным цветом текста. */
-.proseText {
-  color: var(--tgui--text_color);
-  line-height: 1.625;
-}
-
 /* Приглушённая подпись/иконка (цвет подсказки, без интерлиньяжа). */
 .hint {
   color: var(--app-muted);

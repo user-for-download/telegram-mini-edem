@@ -179,15 +179,6 @@ export function relativeMoscowDay(
   return year === moscowDayKey(now).slice(0, 4) ? label : `${label} ${year}`;
 }
 
-/** «Сегодня, 08:30». */
-export function dayTimeLabel(
-  dateIso: string,
-  time: string,
-  now?: Date,
-): string {
-  return `${dayLabel(dateIso, now)}, ${time}`;
-}
-
 /** Минуты → «1 ч 30 мин» / «45 мин». */
 export function formatDuration(minutes: number): string {
   if (!Number.isFinite(minutes) || minutes <= 0) return "";

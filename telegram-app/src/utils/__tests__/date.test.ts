@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, dayTimeLabel, formatArrivalTime, formatDuration, formatMoscowDateTime, fromMoscowDateTimeInput, relativeMoscowDay, moscowDayKey, moscowDayLabel, moscowTimeLabel, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
+import { dayLabel, formatArrivalTime, formatDuration, formatMoscowDateTime, fromMoscowDateTimeInput, relativeMoscowDay, moscowDayKey, moscowDayLabel, moscowTimeLabel, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
 
 const NOW = new Date(2026, 8, 10, 15, 0, 0); // четверг 2026-09-10
 
@@ -30,12 +30,6 @@ describe("dayLabel", () => {
     const localNoon = new Date(2026, 8, 10, 12, 0, 0);
     expect(dayLabel(toIsoDate(localNoon), localNoon)).toBe("Сегодня");
     expect(dayLabel("2026-09-11", localNoon)).toBe("Завтра");
-  });
-});
-
-describe("dayTimeLabel", () => {
-  it("combines day label and time", () => {
-    expect(dayTimeLabel("2026-09-10", "08:30", NOW)).toBe("Сегодня, 08:30");
   });
 });
 

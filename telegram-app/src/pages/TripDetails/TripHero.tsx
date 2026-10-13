@@ -16,10 +16,6 @@ import { Phone, Send, ShieldCheck, Star } from "lucide-react";
 import type { Trip } from "@edem/contracts";
 import styles from "./TripDetailsPage.module.css";
 
-function formatDurationLocal(minutes: number): string {
-  return formatDuration(minutes);
-}
-
 interface TripHeroProps {
   item: Trip;
   shareStatus: string | null;
@@ -54,7 +50,7 @@ export function TripHero({
           <span>{relativeMoscowDay(item.departureAt)}</span>
           <span>
             {terminalTripStatusLabel(item.status) ??
-              `В пути ~ ${formatDurationLocal(item.durationMinutes)}`}{" "}
+              `В пути ~ ${formatDuration(item.durationMinutes)}`}{" "}
             · {item.distanceKm} км
           </span>
         </Caption>
