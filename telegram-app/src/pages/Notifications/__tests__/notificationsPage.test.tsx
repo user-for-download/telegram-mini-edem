@@ -139,6 +139,14 @@ describe("notificationRoute (контракт parity)", () => {
     expect(notificationRoute("something_future")).toBeNull();
     expect(notificationRoute("")).toBeNull();
   });
+
+  it("ключи Object.prototype не подставляются вместо маршрута", () => {
+    // Регресс на прямую индексацию: NOTIFICATION_ROUTES["toString"] дал бы
+    // унаследованную функцию — не строку, и такая утекла бы в navigate/рендер.
+    for (const key of ["toString", "constructor", "__proto__", "valueOf"]) {
+      expect(notificationRoute(key)).toBeNull();
+    }
+  });
 });
 
 describe("notificationTarget: deepLink важнее fallback-карты", () => {
@@ -188,6 +196,10 @@ describe("formatNotifTime / notificationAcronym", () => {
     expect(notificationActionLabel(null)).toBeNull();
     expect(notificationActionLabel(undefined)).toBeNull();
     expect(notificationActionLabel("something_future")).toBeNull();
+    // Унаследованные ключи Object.prototype — не действия.
+    for (const key of ["toString", "constructor", "__proto__", "valueOf"]) {
+      expect(notificationActionLabel(key)).toBeNull();
+    }
   });
 
   it("formatNotificationWho: «фио • действие» одной строкой", () => {

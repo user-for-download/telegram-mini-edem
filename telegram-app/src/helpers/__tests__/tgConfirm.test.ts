@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // telegram-app/src/helpers/__tests__/tgConfirm.test.ts
 // Цепочка подтверждения из трёх уровней: диалог клиента → window.confirm →
-// «спросить не удалось» = true. Последний уровень проверен отдельно на
+// «спросить не удалось» = false. Последний уровень проверен отдельно на
 // поведении jsdom (window.confirm не реализован), потому что трактовка
 // undefined как «отказ» тихо ломала бы создание заявки.
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -72,6 +72,46 @@ describe("tgConfirm: уровень 1 — диалог клиента", () => {
 
     // Assert
     expect(result).toBe(true);
+  });
+
+  it("ждёт ответ из колбэка клиента (реальный Telegram)", async () => {
+    // Arrange: поверхность настоящего клиента — второй параметр-колбэк
+    // (`showConfirm(message, cb)` + popupClosed), ответ приходит в него, а не
+    // возвратом метода. `vi.fn` такой длины не даёт, поэтому функция нативная.
+    const showConfirm = (
+      _message: string,
+      callback?: (ok: boolean) => void,
+    ) => {
+      callback?.(true);
+    };
+    vi.stubGlobal("Telegram", { WebApp: { showConfirm } });
+    const confirm = stubBrowserConfirm(() => false);
+
+    // Act
+    const result = await tgConfirm(MESSAGE);
+
+    // Assert
+    expect(result).toBe(true);
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("колбэк с отказом не спрашивает браузер", async () => {
+    // Arrange
+    const showConfirm = (
+      _message: string,
+      callback?: (ok: boolean) => void,
+    ) => {
+      callback?.(false);
+    };
+    vi.stubGlobal("Telegram", { WebApp: { showConfirm } });
+    const confirm = stubBrowserConfirm(() => true);
+
+    // Act
+    const result = await tgConfirm(MESSAGE);
+
+    // Assert
+    expect(result).toBe(false);
+    expect(confirm).not.toHaveBeenCalled();
   });
 
   it("передаёт текст сообщения в метод клиента", async () => {

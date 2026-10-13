@@ -59,8 +59,27 @@ const NOTIFICATION_ROUTES: Readonly<Record<string, string>> = {
   feedback_replied: "/profile/support",
 };
 
+/**
+ * Значение словаря ТОЛЬКО по собственному ключу.
+ *
+ * `type`/`action` приходят из ответа сервера. Прямая индексация объектного
+ * литерала опасна: `["toString"]`, `["constructor"]`, `["__proto__"]`
+ * разрешаются в унаследованные члены Object.prototype — это не строки, и
+ * такое значение роняет рендер («Functions are not valid as a React child»).
+ * Типы этого не ловят — проверяем и собственность ключа, и тип значения
+ * (тот же приём, что в bookingErrors.codeMessage).
+ */
+function ownString(
+  dict: Readonly<Record<string, string>>,
+  key: string,
+): string | null {
+  if (!Object.hasOwn(dict, key)) return null;
+  const value: unknown = Reflect.get(dict, key);
+  return typeof value === "string" ? value : null;
+}
+
 export function notificationRoute(type: string): string | null {
-  return NOTIFICATION_ROUTES[type] ?? null;
+  return ownString(NOTIFICATION_ROUTES, type);
 }
 
 /**
@@ -98,7 +117,7 @@ export function notificationActionLabel(
   action: string | null | undefined,
 ): string | null {
   if (!action) return null;
-  return NOTIFICATION_ACTION_LABELS[action] ?? null;
+  return ownString(NOTIFICATION_ACTION_LABELS, action);
 }
 
 /**

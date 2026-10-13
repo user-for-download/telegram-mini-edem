@@ -28,7 +28,10 @@ export function TripDetailsModal({
 }
 
 /**
- * Роут /trips/:tripId: фон — скрытый «Поиск», поверх — настоящая шторка.
+ * Роут /trips/:tripId: фон — «Поиск» ОТКРЫТЫМ (как в EditProfileRoute и
+ * VehicleRoute), поверх — настоящая шторка; затемнение и перехват указателя
+ * даёт китовый Modal. Раньше здесь был `<div aria-hidden hidden>` — он
+ * выкидывал фон из дерева доступности и оставлял под шторкой пустоту.
  * Контент тестируется через TripDetailsPage (портал Modal в renderToString
  * не попадает). Закрытие — назад по истории, иначе fallback на /trips.
  */
@@ -41,9 +44,7 @@ export function TripDetailsRoute() {
   };
   return (
     <>
-      <div aria-hidden hidden>
-        <SearchPage />
-      </div>
+      <SearchPage />
       <TripDetailsModal open onClose={close} />
     </>
   );
