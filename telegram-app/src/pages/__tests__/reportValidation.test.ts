@@ -30,7 +30,7 @@ describe("report guards (рантайм вместо cast из DOM)", () => {
     expect(Object.keys(REPORT_TARGET_TYPE_LABELS)).toHaveLength(3);
     expect(REPORT_STATUS_LABELS.pending).toBe("Ожидает рассмотрения");
     expect(REPORT_STATUS_LABELS.in_review).toBe("На рассмотрении");
-    expect(REPORT_STATUS_LABELS.resolved).toBe("Рассмотрена");
+    expect(REPORT_STATUS_LABELS.resolved).toBe("Закрыта");
     expect(REPORT_STATUS_LABELS.rejected).toBe("Отклонена");
   });
 });
