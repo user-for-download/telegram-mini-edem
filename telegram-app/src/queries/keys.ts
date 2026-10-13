@@ -9,15 +9,12 @@
 // другом: ни ошибки компиляции, ни падения теста.
 //
 // Здесь только константы ключей: модуль не импортирует НИ ОДНОГО хука
-// запроса, поэтому цикл невозможен по построению. Тип фильтра поиска
-// берётся type-only из api-слоя — тот про запросы не знает.
-import type { SearchTripsFilters } from "@/api/trips.api";
+// запроса, поэтому цикл невозможен по построению. Ключи, которые нужны чужим
+// модулям (трип/бронь/заявки/отзывы), живут здесь, а не в своих хук-модулях.
 
 export const TRIP_KEYS = {
   all: ["trips"] as const,
   lists: () => [...TRIP_KEYS.all, "list"] as const,
-  list: (filters?: SearchTripsFilters) =>
-    [...TRIP_KEYS.lists(), filters] as const,
   my: () => [...TRIP_KEYS.all, "my"] as const,
   details: () => [...TRIP_KEYS.all, "detail"] as const,
   detail: (id: string) => [...TRIP_KEYS.details(), id] as const,
@@ -29,4 +26,17 @@ export const BOOKING_KEYS = {
   history: () => [...BOOKING_KEYS.all, "history"] as const,
   trip: (tripId: string) => [...BOOKING_KEYS.all, "trip", tripId] as const,
   driver: () => [...BOOKING_KEYS.all, "driver"] as const,
+};
+
+export const RIDE_REQUEST_KEYS = {
+  all: ["ride-requests"] as const,
+};
+
+export const REVIEW_KEYS = {
+  all: ["reviews"] as const,
+  user: (userId: string) => [...REVIEW_KEYS.all, "user", userId] as const,
+  userPaginated: (userId: string, limit: number) =>
+    [...REVIEW_KEYS.user(userId), "paginated", limit] as const,
+  my: () => [...REVIEW_KEYS.all, "my"] as const,
+  availableTrips: () => [...REVIEW_KEYS.all, "available-trips"] as const,
 };

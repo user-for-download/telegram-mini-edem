@@ -12,10 +12,7 @@ import type {
   CreateRideRequestDto,
   UpdateRideRequestDto,
 } from "@edem/contracts";
-
-export const RIDE_REQUEST_KEYS = {
-  all: ["ride-requests"] as const,
-};
+import { RIDE_REQUEST_KEYS } from "./keys";
 
 /**
  * Лента заявок попутчиков для главной: чужие активные, ближайшее окно сверху.

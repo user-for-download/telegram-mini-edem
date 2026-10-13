@@ -82,7 +82,6 @@ export function classifyTerminalCloseReason(
 
 interface WsContextValue {
   isConnected: boolean;
-  lastMessage: WsServerEvent | null;
   /**
    * Счётчик успешных переподключений (auth:ok после предыдущего разрыва).
    * Слушатель делает resync-инвалидацию при его изменении.
@@ -140,7 +139,6 @@ export function useWsEvent<T extends WsServerEvent["type"]>(
 
 export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState<WsServerEvent | null>(null);
   const [resyncSeq, setResyncSeq] = useState(0);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -280,9 +278,8 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
         }
         return;
       }
-      setLastMessage(parsed);
       // Прямая доставка подписчикам: не зависит от рендера, поэтому серия
-      // кадров не теряет события (в отличие от единственного слота выше).
+      // кадров не теряет события.
       const listeners = eventListenersRef.current.get(parsed.type);
       if (listeners) {
         const payload =
@@ -392,8 +389,8 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
     ws.onerror = () => {
       // Намеренно тихо: деталей у браузера нет (только сам факт ошибки),
       // сразу следом придёт onclose с кодом — причину восстанавливаем по
-      // нему. Во фронте нет sink'а для логов (Sentry не заведён, console.*
-      // в src не используем по конвенции), breadcrumb слать некуда.
+      // нему. Логировать сам факт некуда: Sentry не заведён, а console не
+      // добавил бы ни кода, ни контекста к последующему onclose.
     };
   }, []);
 
@@ -557,8 +554,8 @@ export const WsProvider: FC<PropsWithChildren> = ({ children }) => {
   }, [authenticated, accessToken, status, connect, teardownSocket]);
 
   const value = useMemo(
-    () => ({ isConnected, lastMessage, resyncSeq, subscribeEvent }),
-    [isConnected, lastMessage, resyncSeq, subscribeEvent],
+    () => ({ isConnected, resyncSeq, subscribeEvent }),
+    [isConnected, resyncSeq, subscribeEvent],
   );
 
   return <WsContext.Provider value={value}>{children}</WsContext.Provider>;

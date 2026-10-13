@@ -6,10 +6,13 @@ import { Snackbar } from "@telegram-apps/telegram-ui";
 import toastStyles from "@/components/Toast/Toast.module.css";
 import { buildWsEventKey, markSeenEvent } from "@/api/ws";
 import { useWs, useWsEvent } from "@/providers/WebSocketProvider";
-import { BOOKING_KEYS, TRIP_KEYS } from "@/queries/keys";
+import {
+  BOOKING_KEYS,
+  REVIEW_KEYS,
+  RIDE_REQUEST_KEYS,
+  TRIP_KEYS,
+} from "@/queries/keys";
 import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
-import { REVIEW_KEYS } from "@/queries/useReviewsQuery";
-import { RIDE_REQUEST_KEYS } from "@/queries/useRideRequestsQuery";
 
 
 interface RealtimeNotice {

@@ -5,20 +5,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { reviewsApi } from "@/api/reviews.api";
-import { BOOKING_KEYS, TRIP_KEYS } from "./keys";
+import { BOOKING_KEYS, REVIEW_KEYS, TRIP_KEYS } from "./keys";
 import { USER_KEYS } from "./profile";
 import type { CreateReviewDto } from "@edem/contracts";
-
-export const REVIEW_KEYS = {
-  all: ["reviews"] as const,
-  user: (userId: string) =>
-    [...REVIEW_KEYS.all, "user", userId] as const,
-  userPaginated: (userId: string, limit: number) =>
-    [...REVIEW_KEYS.user(userId), "paginated", limit] as const,
-  my: () => [...REVIEW_KEYS.all, "my"] as const,
-  availableTrips: () =>
-    [...REVIEW_KEYS.all, "available-trips"] as const,
-};
 
 export function useMyReviewsQuery(options?: { enabled?: boolean }) {
   return useQuery({

@@ -6,8 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { bookingsApi } from "@/api/bookings.api";
-import { BOOKING_KEYS, TRIP_KEYS } from "./keys";
-import { RIDE_REQUEST_KEYS } from "./useRideRequestsQuery";
+import { BOOKING_KEYS, RIDE_REQUEST_KEYS, TRIP_KEYS } from "./keys";
 import type { CreateBookingDto, DriverBookingAction } from "@edem/contracts";
 
 

@@ -100,9 +100,8 @@ import {
 import { TelegramRealtimeListener } from "@/providers/TelegramRealtimeListener";
 import { ApiError } from "@/api/client";
 import { useAuthStore } from "@/store/useAuthStore";
-import { BOOKING_KEYS, TRIP_KEYS } from "@/queries/keys";
+import { BOOKING_KEYS, REVIEW_KEYS, TRIP_KEYS } from "@/queries/keys";
 import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
-import { REVIEW_KEYS } from "@/queries/useReviewsQuery";
 
 /** Управляемый дубль WebSocket: handshake, события и close — по команде. */
 class FakeWebSocket {
@@ -169,7 +168,7 @@ async function flushMicrotasks(rounds = 10): Promise<void> {
   }
 }
 
-let probeState = { isConnected: false, resyncSeq: 0, lastType: null as string | null };
+let probeState = { isConnected: false, resyncSeq: 0 };
 
 function Probe() {
   const value = useWs();
@@ -180,7 +179,6 @@ function Probe() {
     probeState = {
       isConnected: value.isConnected,
       resyncSeq: value.resyncSeq,
-      lastType: value.lastMessage?.type ?? null,
     };
   });
   return null;
@@ -218,7 +216,7 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     vi.mocked(retrieveRawInitData).mockReturnValue("auth_date=1&hash=dev");
     mockIsRefreshing.mockReturnValue(false);
     mockTryRefresh.mockResolvedValue("success");
-    probeState = { isConnected: false, resyncSeq: 0, lastType: null };
+    probeState = { isConnected: false, resyncSeq: 0 };
     useAuthStore.setState({
       status: "idle",
       user: null,
@@ -331,7 +329,9 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
       ws.serverMessage({ type: "unknown-future", payload: {} });
       ws.serverMessage({ type: "booking:new" });
     });
-    expect(probeState.lastType).toBeNull();
+    // Мусор (не-JSON, неизвестный тип, неполный кадр) отсекает схема ДО
+    // доставки: соединение живо, ни один слушатель не сработал.
+    expect(probeState.isConnected).toBe(true);
     expect(invalidateSpy).not.toHaveBeenCalled();
   });
 

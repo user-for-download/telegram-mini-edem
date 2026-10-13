@@ -10,8 +10,7 @@ import {
   type UpdateTripDto,
 } from "@/api/trips.api";
 import type { CreateTripDto } from "@edem/contracts";
-import { REVIEW_KEYS } from "./useReviewsQuery";
-import { BOOKING_KEYS, TRIP_KEYS } from "./keys";
+import { BOOKING_KEYS, REVIEW_KEYS, TRIP_KEYS } from "./keys";
 
 export function useInfiniteTripsQuery(filters?: SearchTripsFilters) {
   return useInfiniteQuery({

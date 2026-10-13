@@ -67,15 +67,6 @@ describe("Telegram query key factories", () => {
     ]);
   });
 
-  it("includes filters in trip-list cache identity", () => {
-    const filters = { fromCity: "Москва", page: 2 };
-    expect(TRIP_KEYS.list(filters)).toEqual([
-      "trips",
-      "list",
-      filters,
-    ]);
-  });
-
   it("covers support/reports/notifications inbox identity (tg-migration-09)", () => {
     expect(SUPPORT_KEYS.mine()).toEqual(["feedback", "mine"]);
     expect(REPORT_KEYS.mine()).toEqual(["reports", "mine"]);

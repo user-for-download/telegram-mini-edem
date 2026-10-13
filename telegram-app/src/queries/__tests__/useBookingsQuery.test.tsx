@@ -33,8 +33,7 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { useCreateBookingMutation } from "@/queries/useBookingsQuery";
-import { BOOKING_KEYS, TRIP_KEYS } from "@/queries/keys";
-import { RIDE_REQUEST_KEYS } from "@/queries/useRideRequestsQuery";
+import { BOOKING_KEYS, RIDE_REQUEST_KEYS, TRIP_KEYS } from "@/queries/keys";
 
 const CREATED = { id: "b-1", tripId: "t-1", seat: 1, status: "pending" };
 
