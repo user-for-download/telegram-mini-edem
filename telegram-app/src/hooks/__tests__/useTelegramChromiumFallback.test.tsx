@@ -26,7 +26,12 @@ const { mockRequest } = vi.hoisted(() => ({
 /** Состояние «клиента», читаемое моком SDK (меняется тестом напрямую). */
 let mockPlatform: string;
 let mockFullscreen: boolean;
-let mockSafeInsets: { top: number; bottom: number; left: number; right: number };
+let mockSafeInsets: {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};
 let mockContentInsets: {
   top: number;
   bottom: number;
@@ -89,17 +94,17 @@ describe("useTelegramChromiumFallback", () => {
   it("iOS-фуллскрин с нулевыми врезками: ставит floor и пинает клиента через request()", () => {
     renderHost();
 
-    expect(
-      document.documentElement.style.getPropertyValue(OVERRIDE)
-    ).toBe("var(--tg-telegram-chromium-height)");
+    expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe(
+      "var(--tg-telegram-chromium-height)",
+    );
     expect(mockRequest).toHaveBeenCalledTimes(2);
     expect(mockRequest).toHaveBeenCalledWith(
       "web_app_request_safe_area",
-      "safe_area_changed"
+      "safe_area_changed",
     );
     expect(mockRequest).toHaveBeenCalledWith(
       "web_app_request_content_safe_area",
-      "content_safe_area_changed"
+      "content_safe_area_changed",
     );
   });
 
@@ -117,17 +122,17 @@ describe("useTelegramChromiumFallback", () => {
     mockContentInsets = { top: 0, bottom: 34, left: 10, right: 10 };
     renderHost();
 
-    expect(
-      document.documentElement.style.getPropertyValue(OVERRIDE)
-    ).toBe("var(--tg-telegram-chromium-height)");
+    expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe(
+      "var(--tg-telegram-chromium-height)",
+    );
     expect(mockRequest).toHaveBeenCalledTimes(2);
   });
 
   it("врезка пришла позже: floor снимается, повторных пингов нет", () => {
     renderHost();
-    expect(
-      document.documentElement.style.getPropertyValue(OVERRIDE)
-    ).toBe("var(--tg-telegram-chromium-height)");
+    expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe(
+      "var(--tg-telegram-chromium-height)",
+    );
 
     // Ответ клиента на пинок: сигналы обновились → хук снял floor.
     mockContentInsets = { top: 96, bottom: 0, left: 0, right: 0 };
@@ -152,5 +157,40 @@ describe("useTelegramChromiumFallback", () => {
 
     expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe("");
     expect(mockRequest).not.toHaveBeenCalled();
+  });
+
+  // Регресс шторма запросов: клиент, шлющий safe_area_changed с меняющимися
+  // значениями НИЖЕ порога, перезапускал эффект на каждое событие, а тот
+  // слал по два request() каждый раз. Пинок теперь один за период «данных
+  // нет», а floor продолжает обновляться.
+  it("поток значений ниже порога: пинок один, а не на каждое событие", () => {
+    renderHost();
+    expect(mockRequest).toHaveBeenCalledTimes(2);
+
+    mockSafeInsets = { top: 1, bottom: 0, left: 0, right: 0 };
+    renderHost();
+    mockSafeInsets = { top: 2, bottom: 0, left: 0, right: 0 };
+    renderHost();
+
+    // Врезки так и не дотянули до порога — floor стоит.
+    expect(document.documentElement.style.getPropertyValue(OVERRIDE)).toBe(
+      "var(--tg-telegram-chromium-height)",
+    );
+    expect(mockRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it("после очистки условия гард сброшен: следующий вход снова пинкует", () => {
+    renderHost();
+    expect(mockRequest).toHaveBeenCalledTimes(2);
+
+    // Врезка пришла: условие очистилось, гард обнулился.
+    mockContentInsets = { top: 96, bottom: 0, left: 0, right: 0 };
+    renderHost();
+    expect(mockRequest).toHaveBeenCalledTimes(2);
+
+    // Клиент снова отдал нули — эффект входит в «данных нет» заново.
+    mockContentInsets = { top: 0, bottom: 0, left: 0, right: 0 };
+    renderHost();
+    expect(mockRequest).toHaveBeenCalledTimes(4);
   });
 });

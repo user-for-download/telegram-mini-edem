@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   request,
   useLaunchParams,
@@ -18,18 +18,18 @@ import {
  * Вдобавок после fullscreen_changed врезка может применяться с задержкой
  * до секунд (#704): даже честный клиент временами отдаёт 0.
  *
-  * Решение: пока активен фуллскрин на iOS-клиенте и клиентская врезка
-  * (max(safeAreaInsets.top, contentSafeAreaInsets.top) — сигналы, т.е.
-  * только данные клиента, без нашего же оверрайда) ниже порога хрома Telegram
+ * Решение: пока активен фуллскрин на iOS-клиенте и клиентская врезка
+ * (max(safeAreaInsets.top, contentSafeAreaInsets.top) — сигналы, т.е.
+ * только данные клиента, без нашего же оверрайда) ниже порога хрома Telegram
  * (--tg-telegram-chromium-height из index.css, по умолчанию 88px),
  * выставляем на documentElement токен --tg-safe-area-top-min — третье
  * слагаемое max() в --tg-safe-area-top (index.css). Отдельный токен, а не
  * перезапись SDK-переменной: клиент шлёт viewport-события и в момент
  * фуллскрина, и переписал бы наш оверрайд обратно в 0.
  *
-  * Параллельно пинаем клиента request('web_app_request_safe_area',
-  * 'safe_area_changed') / request('web_app_request_content_safe_area', ...):
-  * если врезка просто задержалась (#704), ответ обновит сигналы, условие
+ * Параллельно пинаем клиента request('web_app_request_safe_area',
+ * 'safe_area_changed') / request('web_app_request_content_safe_area', ...):
+ * если врезка просто задержалась (#704), ответ обновит сигналы, условие
  * «ниже порога» развалится и компенсация снимется сама, без мигания
  * (пол downwards: floor → честное значение ≥ порога).
  *
@@ -98,6 +98,14 @@ export function useTelegramChromiumFallback(): void {
   const safeArea = useSignal(viewport.safeAreaInsets);
   const contentSafeArea = useSignal(viewport.contentSafeAreaInsets);
   const isIos = useIosClient();
+  // Пинок клиента — не на каждый прогон эффекта, а один раз за период
+  // «данных нет / порог не достигнут». Без гарда поток событий
+  // safe_area_changed с меняющимися значениями ниже порога перезапускал бы
+  // эффект на каждое событие и слал по два request() каждый раз — на
+  // неактивном клиенте это шторм запросов. Гард сбрасывается, когда условие
+  // очищается (не fullscreen / не iOS / порог взят), то есть следующий
+  // вход в «нет данных» снова пинкует.
+  const nudgedRef = useRef(false);
   const safeTop = safeArea?.top ?? 0;
   const contentTop = contentSafeArea?.top ?? 0;
 
@@ -108,6 +116,7 @@ export function useTelegramChromiumFallback(): void {
     };
 
     if (!isFullscreen || !isIos) {
+      nudgedRef.current = false;
       cleanup();
       return cleanup;
     }
@@ -115,6 +124,7 @@ export function useTelegramChromiumFallback(): void {
     const threshold = readThresholdPx();
     // Только данные клиента (сигналы): наш оверрайд в замере не участвует.
     if (Math.max(safeTop, contentTop) >= threshold) {
+      nudgedRef.current = false;
       cleanup();
       return cleanup;
     }
@@ -123,7 +133,10 @@ export function useTelegramChromiumFallback(): void {
     rootStyle.setProperty(OVERRIDE_TOKEN, `var(${THRESHOLD_VAR})`);
     // Пинок клиента: врезка могла задержаться после fullscreen_changed
     // (#704). Ответы обновят сигналы → повторный прогон снимет floor.
-    nudgeClient();
+    if (!nudgedRef.current) {
+      nudgedRef.current = true;
+      nudgeClient();
+    }
     return cleanup;
   }, [isFullscreen, isIos, safeTop, contentTop]);
 }

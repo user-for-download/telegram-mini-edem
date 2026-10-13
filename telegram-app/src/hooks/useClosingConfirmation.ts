@@ -42,3 +42,15 @@ export function resetClosingConfirmation(): void {
   dirtyForms = 0;
   closingBehavior.disableConfirmation.ifAvailable();
 }
+
+// HMR пересоздаёт модуль: `dirtyForms` обнулится, а cleanup-функции у уже
+// смонтированных форм навсегда замыкнутся на СТАРЫЙ экземпляр счётчика —
+// их вычеты уйдут мимо нового. Счётчик тогда либо залипает на «форма
+// грязная» (новый модуль считает 0 форм, а подтверждение включено), либо
+// уходит в минус. Сбрасываем при выбросе модуля — это ровно тот случай,
+// ради которого и живёт resetClosingConfirmation().
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    resetClosingConfirmation();
+  });
+}

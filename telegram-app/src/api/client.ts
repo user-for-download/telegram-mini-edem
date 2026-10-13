@@ -357,7 +357,14 @@ export class ApiClient {
     // Сливаем через Headers: принимает plain-объект, массив пар и сам
     // Headers (спред `...headers` у Headers-объекта давал бы `{}` —
     // заголовки вызывающего молча терялись).
-    const headers = new Headers({ "Content-Type": "application/json" });
+    const headers = new Headers();
+    // Content-Type ставим только когда тело ЕСТЬ: у GET/DELETE без тела он
+    // семантически неверен — описывать нечего. Заголовок вызывающего
+    // перекрывает его следующим шагом, поэтому явный Content-Type в options
+    // продолжает работать как раньше.
+    if (options.body !== undefined && options.body !== null) {
+      headers.set("Content-Type", "application/json");
+    }
     new Headers(options.headers).forEach((value, key) => {
       headers.set(key, value);
     });
