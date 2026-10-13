@@ -109,17 +109,63 @@ docker compose exec -T backend npx tsx prisma/seed.ts   # сбрасывает �
 ```
 > У контейнера своя БД — сервис `db`. Хостовый dev-бэкенд (`npm run dev:backend` на :3011, которым кормится приложение на :3012) ходит в другую, `db-dev` на :5433. Данные, засеянные в контейнере, в приложении на :3012 не появятся — и наоборот.
 
-Сид вокруг конкретного пользователя (не трогает чужие данные, в отличие от полного `db:seed`).
-Скрипт **только для прода**: гард в начале файла роняет запуск без `NODE_ENV=production`,
-чтобы случайный прогон не вытер данные dev-стенда (там другой пользователь и другой набор).
-```bash
-# прод-контейнер: NODE_ENV=production уже задан в образе
-docker compose exec -T -e SEED_USER_ID=<uuid> backend npx tsx prisma/seed-user-trips.ts
-```
-Требуется справочник городов, иначе падает «город «Вологда» отсутствует»:
-```bash
-docker compose exec -T backend npx tsx prisma/seed-cities.ts
-```
+#### Прод-сид вокруг конкретного пользователя
+
+Не трогает чужие данные, в отличие от полного `db:seed`. Скрипт **только для прода**: гард в начале
+файла роняет запуск без `NODE_ENV=production`, чтобы случайный прогон не затирал dev-стенд (там
+другой пользователь и другой набор). Прогон на боевой БД **необратимо пишет данные** вокруг реального
+юзера, поэтому идём по шагам.
+
+0. **Собрать новый образ.** Скрипты сида (`backend/prisma/*.ts`) запекаются в образ backend
+   (`Dockerfile`: `COPY … backend/prisma ./prisma`), поэтому без `git pull` + пересборки контейнер
+   выполнит **старую** версию сида:
+   ```bash
+   git pull --ff-only
+   sh scripts/prod-rebuild.sh
+   ```
+1. **Найти `SEED_USER_ID`** и посмотреть, что сид затронет у юзера. Важно: `car.upsert` создаст
+   `Lada Vesta`, если у него нет машины, а `refreshRating` перезапишет `rating`/`reviewsCount`.
+   ```bash
+   docker compose exec -T db psql -U edem -d edem -c \
+     "SELECT id, name, \"telegramUserId\", rating, \"reviewsCount\" FROM \"User\" WHERE \"deletedAt\" IS NULL ORDER BY \"createdAt\";"
+   docker compose exec -T db psql -U edem -d edem -c \
+     "SELECT * FROM \"Car\" WHERE \"userId\"='<uuid>'; SELECT count(*) AS cities FROM \"City\";"
+   ```
+2. **Бэкап** перед записью:
+   ```bash
+   docker compose exec -T db pg_dump -U edem -d edem -Fc > ~/edem-prod-$(date +%F-%H%M).dump
+   ```
+3. **Справочник городов** (идемпотентно, безопасно для прод; иначе «город «Вологда» отсутствует»):
+   ```bash
+   docker compose exec -T backend npx tsx prisma/seed-cities.ts
+   ```
+4. **Прогон** (`NODE_ENV=production` уже задан в образе, нужен только `SEED_USER_ID`):
+   ```bash
+   docker compose exec -T -e SEED_USER_ID=<uuid> backend npx tsx prisma/seed-user-trips.ts
+   ```
+   Идемпотентен: чистит и создаёт только свои id (`tp-*`/`t-bezz-*`), чужие данные не трогает.
+   Ожидаемый финал — `[seed-user-trips] ok: 6 поездок (3 свои + 3 чужие), …`.
+5. **Проверка** (заодно опции поездки: `t-bezz-1` → `autoComplete=t`, `t-bezz-2` → `matchingEnabled=f`):
+   ```bash
+   docker compose exec -T db psql -U edem -d edem -c \
+     "SELECT id, status, \"autoComplete\", \"matchingEnabled\" FROM \"Trip\" WHERE id LIKE 't-bezz-%' OR id LIKE 't-tp-%' ORDER BY id;"
+   ```
+6. **Откат** (если прогон не нужен) — удалить свои id сида в FK-порядке:
+   ```sql
+   BEGIN;
+   DELETE FROM "Notification" WHERE "userId"='<uuid>' AND title LIKE '%Bezz-тест%';
+   DELETE FROM "Review"       WHERE id IN ('r-tp-1','r-tp-2','r-tp-3','r-tp-4');
+   DELETE FROM "RideRequest"  WHERE id IN ('rr-tp-1','rr-tp-2','rr-tp-3','rr-tp-4','rr-tp-5');
+   DELETE FROM "Booking"      WHERE "tripId" IN ('t-bezz-1','t-bezz-2','t-bezz-past-1','t-tp-1','t-tp-2','t-tp-past-1');
+   DELETE FROM "Trip"         WHERE id IN ('t-bezz-1','t-bezz-2','t-bezz-past-1','t-tp-1','t-tp-2','t-tp-past-1');
+   DELETE FROM "Car"          WHERE "userId" IN ('u-tp-d1','u-tp-d2','u-tp-p1','u-tp-p2');
+   DELETE FROM "User"         WHERE id IN ('u-tp-d1','u-tp-d2','u-tp-p1','u-tp-p2');
+   -- и, если авто юзеру создал сид (в пре-флайте его не было):
+   -- DELETE FROM "Car" WHERE "userId"='<uuid>' AND model='Lada Vesta';
+   COMMIT;
+   ```
+   Не восстановить автоматически: `rating`/`reviewsCount` юзера (`refreshRating` пересчитывает их по
+   опубликованным отзывам) и созданную сидом машину — поэтому шаг 1 смотрит машину до прогона.
 
 Для прод-пересборки используйте `scripts/prod-rebuild.sh`: инкрементальный Docker-кэш, ожидание `/health/ready` опросом (а не `sleep`), и любая красная проверка валит скрипт (`exit 1`) с диагностикой.
 ```bash
