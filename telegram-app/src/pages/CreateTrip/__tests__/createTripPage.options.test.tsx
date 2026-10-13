@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
+import { TRIP_TAGS } from "@/consts/tags";
 
 // Telegram-клиента в тесте нет: хаптика и подтверждение закрытия обязаны быть
 // no-op (в проде они уже обёрнуты в ifAvailable).
@@ -28,13 +29,17 @@ vi.mock("@tma.js/sdk-react", () => ({
   },
 }));
 
-const { mockUseCities, mockUseVehicle, mockMutate } = vi.hoisted(() => ({
-  mockUseCities: vi.fn(),
-  mockUseVehicle: vi.fn(),
-  // Мутация отдельным моком: useCreateTripMutation — хук, он зовётся на каждом
-  // рендере, и его calls.calls измеряли бы рендеры, а не отправку.
-  mockMutate: vi.fn(),
-}));
+const { mockUseCities, mockUseVehicle, mockMutate, mutationError } =
+  vi.hoisted(() => ({
+    mockUseCities: vi.fn(),
+    mockUseVehicle: vi.fn(),
+    // Мутация отдельным моком: useCreateTripMutation — хук, он зовётся на каждом
+    // рендере, и его calls.calls измеряли бы рендеры, а не отправку.
+    mockMutate: vi.fn(),
+    // Ошибка мутации: изменяемая ячейка, чтобы тест скролла подсунул серверную
+    // ошибку в тот же мок, не пересобирая модуль.
+    mutationError: { current: null as unknown },
+  }));
 
 vi.mock("@/queries/useAllCities", () => ({
   useAllCitiesQuery: mockUseCities,
@@ -48,7 +53,7 @@ vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
     useCreateTripMutation: () => ({
       mutate: mockMutate,
       isPending: false,
-      error: null,
+      error: mutationError.current,
     }),
   };
 });
@@ -122,6 +127,7 @@ function submittedDto(): Record<string, unknown> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mutationError.current = null;
   mockUseCities.mockReturnValue({
     data: CITIES,
     isLoading: false,
@@ -268,5 +274,63 @@ describe("CreateTripForm: переключение опций", () => {
       autoComplete: false,
       matchingEnabled: true,
     });
+  });
+});
+
+describe("CreateTripForm: лимит условий поездки", () => {
+  const SIX = TRIP_TAGS.slice(0, 6);
+  const SEVENTH = TRIP_TAGS[6] as string;
+
+  function chipButton(tag: string): HTMLButtonElement {
+    const button = screen.getByText(tag).closest("button");
+    expect(button, `чип «${tag}» должен быть кнопкой`).toBeTruthy();
+    return button as HTMLButtonElement;
+  }
+
+  it("на шести выбранных невыбранные чипы блокируются, снять выбранный можно", () => {
+    // Регресс: раньше седьмой тап молча дропался (`slice(0, 6)`) — условие
+    // визуально «не нажалось» без объяснения. Теперь UI-гейт виден.
+    renderForm();
+    for (const tag of SIX) {
+      fireEvent.click(chipButton(tag));
+    }
+
+    // Выбранные остаются активными: снять условие должно быть можно.
+    for (const tag of SIX) {
+      expect(chipButton(tag).disabled, `выбранный «${tag}» остаётся активным`).toBe(
+        false,
+      );
+    }
+    // Невыбранный седьмой — недоступен.
+    expect(chipButton(SEVENTH).disabled).toBe(true);
+  });
+});
+
+describe("CreateTripForm: скролл к ошибке", () => {
+  it("серверная ошибка скроллит к блоку ошибки, а не в пустоту", () => {
+    // Регресс: раньше скролл звался синхронно из onError, когда узла серверной
+    // ошибки в DOM ещё не было, — scrollIntoView бил по null, и ошибка
+    // появлялась вне видимой области. Теперь скроллит эффект по появлению
+    // create.error.
+    //
+    // jsdom не реализует scrollIntoView (как и window.scrollTo): подменяем на
+    // время теста и возвращаем как было, иначе TypeError из useEffect уронит
+    // рендер.
+    const original = Element.prototype.scrollIntoView;
+    const spy = vi.fn();
+    Element.prototype.scrollIntoView =
+      spy as unknown as Element["scrollIntoView"];
+    try {
+      mutationError.current = new Error("boom");
+
+      renderForm();
+
+      expect(spy).toHaveBeenCalled();
+      // Скроллили именно к блоку с текстом ошибки, а не к случайному узлу.
+      const target = spy.mock.instances[0] as unknown as HTMLElement;
+      expect(target.textContent).toContain("boom");
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
   });
 });

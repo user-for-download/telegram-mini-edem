@@ -12,6 +12,7 @@ export const DATE_SEGMENTS: ReadonlyArray<{ value: DateSegment; label: string }>
   { value: "all", label: "Все даты" },
   { value: "today", label: "Сегодня" },
   { value: "tomorrow", label: "Завтра" },
+  { value: "weekend", label: "Выходные" },
 ];
 
 /**

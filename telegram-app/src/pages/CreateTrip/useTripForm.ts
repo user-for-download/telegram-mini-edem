@@ -1,5 +1,6 @@
 import { useMemo, useReducer, useState } from "react";
 import type { TripTag } from "@edem/contracts";
+import { MAX_TRIP_TAGS } from "@/consts/tags";
 import type { CreateTripDraft } from "@/helpers/createTripForm";
 import { toLocalDateTimeInputValue } from "@/utils/date";
 
@@ -92,12 +93,18 @@ export function tripFormReducer(
         toAddress: state.fromAddress,
       };
     case "toggleTag":
-      return {
-        ...state,
-        tags: state.tags.includes(action.tag)
-          ? state.tags.filter((item) => item !== action.tag)
-          : [...state.tags, action.tag].slice(0, 6),
-      };
+      if (state.tags.includes(action.tag)) {
+        return {
+          ...state,
+          tags: state.tags.filter((item) => item !== action.tag),
+        };
+      }
+      // Лимит 6 (createTripDtoSchema): седьмой тег не добавляем. UI уже
+      // блокирует невыбранные чипы на пределе, поэтому это только страховка —
+      // молча дропнуть выбранный тег (`slice(0, 6)`) означало бы потерять
+      // последнее нажатие пользователя без следа.
+      if (state.tags.length >= MAX_TRIP_TAGS) return state;
+      return { ...state, tags: [...state.tags, action.tag] };
   }
 }
 
@@ -179,5 +186,3 @@ export function useTripForm() {
     toggleTag: (tag: TripTag) => dispatch({ type: "toggleTag", tag }),
   };
 }
-
-export type TripForm = ReturnType<typeof useTripForm>;

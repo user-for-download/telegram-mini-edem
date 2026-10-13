@@ -31,7 +31,7 @@ import { CitySelectField } from "@/components/CitySelect/CitySelectField";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
-import { TRIP_TAGS } from "@/consts/tags";
+import { MAX_TRIP_TAGS, TRIP_TAGS } from "@/consts/tags";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
 import { useModalBack } from "@/utils/modalBack";
@@ -129,8 +129,8 @@ export function CreateTripForm({
   const [validationError, setValidationError] = useState<string | null>(null);
   /** id невалидного поля для status="error" и скролла (валидатор отдаёт field). */
   const [errorField, setErrorField] = useState<string | null>(null);
-  /** Якорь блока ошибок: fallback скролла, когда field нет (общая ошибка). */
-  const errorRef = useRef<HTMLParagraphElement | null>(null);
+  /** Якорь блока ошибок: fallback скролла, когда field нет (общая/серверная ошибка). */
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   /** Правка гасит ошибку: текст больше не актуален, подсветка снимается. */
   const touch = () => {
@@ -144,6 +144,13 @@ export function CreateTripForm({
   /** id поля → status="error" только для этого поля. */
   const statusFor = (id: string): "error" | undefined =>
     errorField === id ? "error" : undefined;
+
+  /** id общего (не полевого) блока ошибки — общий notice или серверная ошибка. */
+  const showGeneralError = Boolean(validationError && !errorField);
+  const hasErrorBlock = showGeneralError || Boolean(create.error);
+
+  /** На пределе условий невыбранные чипы блокируем (лимит createTripDtoSchema). */
+  const atTagLimit = tags.length >= MAX_TRIP_TAGS;
 
   // Несохранённый черновик — Telegram спросит подтверждение закрытия.
   // isDirty сравнивает форму с начальными значениями (см. useTripForm):
@@ -180,16 +187,20 @@ export function CreateTripForm({
     setField("matchingEnabled", next);
   };
 
-  /** Скролл к невалидному полю, иначе — к блоку общей ошибки. */
-  const scrollToError = (field: string | null) => {
-    if (field) {
-      document
-        .getElementById(field)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    } else {
-      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  };
+  /**
+   * Скролл к ошибке — эффектом ПОСЛЕ коммита, а не в обработчике сабмита:
+   * у общей ошибки (validationError без field) и у серверной ошибки
+   * (create.error) узел появляется только в следующем рендере, поэтому
+   * scrollIntoView в тот же такт бил по null — серверная ошибка не
+   * показывала пользователю, что форма не уехала.
+   */
+  useEffect(() => {
+    if (!validationError && !create.error) return;
+    const target = errorField
+      ? document.getElementById(errorField)
+      : errorRef.current;
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [validationError, errorField, create.error]);
 
   const submit = () => {
     setValidationError(null);
@@ -198,7 +209,6 @@ export function CreateTripForm({
     if (!validation.ok) {
       setValidationError(validation.error);
       setErrorField(validation.field);
-      scrollToError(validation.field);
       return;
     }
     create.mutate(validation.data, {
@@ -210,9 +220,7 @@ export function CreateTripForm({
         });
         onCreated(trip.id);
       },
-      onError: () => {
-        scrollToError(null);
-      },
+      // Скролл к ошибке — эффект выше, по появлению create.error.
     });
   };
 
@@ -520,7 +528,10 @@ export function CreateTripForm({
         </SectionBody>
       </Section>
 
-      <Section header="Условия поездки">
+      <Section
+        header="Условия поездки"
+        footer={`Не больше ${MAX_TRIP_TAGS} условий`}
+      >
         <SectionBody>
           <div
             className={BTN_ROW_WRAP}
@@ -537,6 +548,9 @@ export function CreateTripForm({
                   type="button"
                   variant={checked ? "active" : "quiet"}
                   aria-pressed={checked}
+                  // На пределе оставляем активными только выбранные теги: снять
+                  // условие можно, добавить седьмое — нет.
+                  disabled={!checked && atTagLimit}
                   onClick={() => toggleTag(tag)}
                 >
                   {tag}
@@ -603,12 +617,20 @@ export function CreateTripForm({
         </SectionBody>
       </Section>
 
-      {validationError && !errorField && (
-        <Notice tone="danger" variant="text" ref={errorRef}>
-          {validationError}
-        </Notice>
+      {/* Якорь обеих ошибок: общая (validationError без field) и серверная
+          (create.error) — эффект выше скроллит сюда. Блок рендерится только
+          при ошибке: постоянный пустой div добавил бы лишний интервал ритма
+          между секцией и кнопкой. */}
+      {hasErrorBlock && (
+        <div ref={errorRef}>
+          {showGeneralError && (
+            <Notice tone="danger" variant="text">
+              {validationError}
+            </Notice>
+          )}
+          <MutationError error={create.error} />
+        </div>
       )}
-      <MutationError error={create.error} />
       <Button
         variant="primary"
         size="l"

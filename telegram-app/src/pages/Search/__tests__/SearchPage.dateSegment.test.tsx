@@ -125,6 +125,21 @@ describe("SearchPage: сегмент даты применяется сразу"
     expect(lastFilters()).toBeUndefined();
   });
 
+  it("«Выходные» — доступная пилюля и фильтрует сразу", () => {
+    renderPage();
+
+    // Регресс: сегмент `weekend` был реализован в dateSegmentToRange и
+    // принимался из URL, но в списке DATE_SEGMENTS его не было — выбрать
+    // выходные из UI было нельзя.
+    fireEvent.click(screen.getByRole("radio", { name: "Выходные" }));
+
+    const filters = lastFilters();
+    // Точные границы (сб–вс по Москве) покрыты searchFilters.test.ts;
+    // здесь важно, что пилюля есть и применяется без кнопки «Найти».
+    expect(filters?.dateFrom).toBeDefined();
+    expect(filters?.dateTo).toBeDefined();
+  });
+
   it("пилюля применяет и названные города: результат соответствует видимой форме", () => {
     renderPage();
     fireEvent.change(screen.getByLabelText("Откуда"), {
