@@ -441,7 +441,8 @@ await shot(page, "notification-read");
     });
     if (!replyRes.ok) throw new Error(`reply: HTTP ${replyRes.status}`);
     await page.reload({ waitUntil: "commit" });
-    // Карточка свернута: раскрываем по теме, внутри — «Ответ поддержки».
+    // Строка списка — как строка жалобы: тап открывает попап деталей, внутри
+    // которого «Ответ поддержки» и текст ответа.
     await page.getByRole("button", { name: /Нет уведомления/ }).click();
     await page.getByText("Ответ поддержки").first().waitFor({ timeout: 30000 });
     await page.getByText(ADMIN_REPLY).first().waitFor({ timeout: 15000 });

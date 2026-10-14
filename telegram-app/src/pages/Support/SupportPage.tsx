@@ -1,28 +1,32 @@
-import { useState } from "react";
-import { VisuallyHidden } from "@telegram-apps/telegram-ui";
-import { Accordion, Caption, Text } from "@telegram-apps/telegram-ui";
+import { memo, useState } from "react";
+import { Accordion, Caption, Info, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Section } from "@/ui/Section";
 import { AS_BUTTON } from "@/ui/classes";
 import { PROSE } from "@/ui/classes";
+import { Cell } from "@/ui/Cell";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { Button } from "@/ui/Button";
 
-import { PlusCircle } from "lucide-react";
+import { ChevronRight, PlusCircle } from "lucide-react";
 import { type UserFeedbackDto } from "@edem/contracts";
-import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { QueryState } from "@/components/QueryState";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { AppealForm } from "@/components/AppealForm";
 import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
-import { Stack } from "@/ui/Stack";
 import { ApiError } from "@/api/client";
 import { moscowNumericDate } from "@/utils/date";
 import { useMyFeedbacksQuery } from "@/queries/useSupportQuery";
 import { useModalBack } from "@/utils/modalBack";
 import { haptic } from "@/utils/haptics";
 import { FeedbackModal } from "./FeedbackModal";
+import { FeedbackDetailsModal } from "./FeedbackDetailsModal";
+import {
+  feedbackCellAriaLabel,
+  feedbackPreviewSubtitle,
+  feedbackStatus,
+} from "./feedbackPreview";
 import styles from "./SupportPage.module.css";
 
 /**
@@ -66,59 +70,74 @@ export const SUPPORT_FAQ: ReadonlyArray<{
   },
 ];
 
-function FeedbackCard({
+/**
+ * Строка обращения — как строка жалобы и уведомления: короткий `Cell`
+ * (тема / начало текста / статус) с датой и шевроном в правой колонке.
+ *
+ * Полный текст обращения и ответ поддержки раздавали ленту, поэтому уехали в
+ * попап (`FeedbackDetailsModal`). Статус виден и в списке — по нему понятно,
+ * на что уже ответили, без раскрытия каждой строки.
+ *
+ * Строка всегда интерактивна (тап открывает попап), поэтому нативная кнопка
+ * `Component="button"` — свой `onKeyDown` не нужен, Enter/Space сработают сами.
+ */
+const FeedbackCell = memo(function FeedbackCell({
   feedback,
-  opened,
-  onToggle,
+  onOpen,
 }: {
   feedback: UserFeedbackDto;
-  opened: boolean;
-  onToggle: () => void;
+  onOpen: (id: string) => void;
 }) {
+  const status = feedbackStatus(feedback);
   return (
-    <Accordion expanded={opened} onChange={onToggle}>
-      <Accordion.Summary Component="button" className={AS_BUTTON}>
-        {feedback.subject}
-        {feedback.reply && <StatusPill tone="info">Есть ответ</StatusPill>}
-      </Accordion.Summary>
-      <Accordion.Content>
-        <div className={styles.cardBody}>
-          <Caption Component="span">
-            {moscowNumericDate(feedback.createdAt)}
-          </Caption>
-          <Text Component="p" className={PROSE}>
-            {feedback.text}
-          </Text>
-          {feedback.reply ? (
-            <>
-              <Text weight="2" Component="span" className={styles.replyTitle}>
-                Ответ поддержки
-              </Text>
-              <Text Component="p" className={PROSE}>
-                {feedback.reply}
-              </Text>
-            </>
-          ) : (
-            <Caption Component="span">
-              Поддержка ещё не ответила. Мы свяжемся с вами здесь — список
-              обновится автоматически.
-            </Caption>
-          )}
-        </div>
-      </Accordion.Content>
-    </Accordion>
+    <Cell
+      Component="button"
+      type="button"
+      className={styles.cell}
+      subtitle={feedbackPreviewSubtitle(feedback)}
+      /* Строка 3 — статус: та же трёхстрочная раскладка, что у жалоб и
+         уведомлений. Текстом, а не пилюлей: в правой колонке уже дата, и
+         второй «остров» тянул бы строку в две части. Смысл всегда продублирован
+         словами, цвет — только подсказка (a11y: color + text). */
+      description={
+        <span
+          data-testid={`feedback-status-${feedback.id}`}
+          data-tone={status.tone}
+          className={styles.status}
+        >
+          {status.label}
+        </span>
+      }
+      after={
+        <Info
+          type="text"
+          className={styles.info}
+          subtitle={moscowNumericDate(feedback.createdAt)}
+        >
+          <ChevronRight size={16} className={styles.chevron} aria-hidden />
+        </Info>
+      }
+      aria-label={feedbackCellAriaLabel(feedback)}
+      data-testid={`feedback-cell-${feedback.id}`}
+      onClick={() => {
+        haptic.light();
+        onOpen(feedback.id);
+      }}
+    >
+      {feedback.subject}
+    </Cell>
   );
-}
+});
 
 /**
  * Поддержка Telegram-приложения — единственный экран поддержки (пункт меню
  * профиля ведёт сюда; раньше он открывал шторку с дублем формы, которая сама
  * вела на эту страницу):
  * - реальный FAQ (первым: чаще всего вопрос решается справкой);
- * - форма обращения (POST /feedback, лимиты 100/2000 из контракта) с
- *   подтверждением тостом — общий язык приложения, как при публикации
- *   поездки;
- * - «Мои обращения» со статусом ответа (GET /feedback).
+ * - «Мои обращения» строками `Cell` (как жалобы и уведомления): тема, начало
+ *   текста, статус и дата; полный текст и ответ поддержки — в попапе по тапу;
+ * - форма обращения (POST /feedback, лимиты 100/2000 из контракта) — из окна
+ *   `FeedbackModal`, с подтверждением тостом — общий язык приложения.
  *
  * Жалобы на пользователя — НЕ здесь: у них отдельная страница
  * /profile/reports (один путь вместо двух).
@@ -131,13 +150,20 @@ function FeedbackCard({
  */
 export function SupportPage() {
   const [openedFaqId, setOpenedFaqId] = useState<string | null>(null);
-  const [openedFeedbackId, setOpenedFeedbackId] = useState<string | null>(null);
+  // Открытое обращение держим по id, а не самим объектом: после инвалидации
+  // кэша (пришёл ответ) попап должен перерисоваться по новым данным.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   // Форма обращения — во всплывающем окне (FeedbackModal): нажал
   // «Создать обращение» под списком, Back закрывает через useModalBack.
   const [createOpen, setCreateOpen] = useState(false);
   useModalBack(() => setCreateOpen(false), createOpen);
+  // Подписка на Back для попапа идёт ПОСЛЕ формы: стек LIFO, и при открытых
+  // обоих окнах верхним должен закрываться попап — последний, кто подписался.
+  useModalBack(() => setSelectedId(null), selectedId !== null);
 
   const myFeedbacks = useMyFeedbacksQuery();
+  const selected =
+    myFeedbacks.data?.find((feedback) => feedback.id === selectedId) ?? null;
 
   // Бан mid-session: requireUser отвечает 403 — терминальный экран плюс
   // рабочая форма обжалования (публичный appeal с initData, без токена).
@@ -174,27 +200,33 @@ export function SupportPage() {
         <VisuallyHidden Component="h1">Поддержка</VisuallyHidden>
         <Section header="Частые вопросы">
           <SectionBody>
-            {SUPPORT_FAQ.map((item) => {
-              const isOpen = openedFaqId === item.id;
-              return (
-                <Accordion
-                  key={item.id}
-                  expanded={isOpen}
-                  onChange={(expanded) =>
-                    setOpenedFaqId(expanded ? item.id : null)
-                  }
-                >
-                  <Accordion.Summary Component="button" className={AS_BUTTON}>
-                    {item.question}
-                  </Accordion.Summary>
-                  <Accordion.Content>
-                    <Caption Component="p" className={PROSE}>
-                      {item.answer}
-                    </Caption>
-                  </Accordion.Content>
-                </Accordion>
-              );
-            })}
+            {/* Список без зазора: кит рисует разделитель между соседними
+                строками, а Accordion не даёт своей DOM-обёртки — без общего
+                контейнера ритм секции расставлял бы Summary и Content врозь и
+                вопросы «плавали» по одному. */}
+            <div className={styles.list}>
+              {SUPPORT_FAQ.map((item) => {
+                const isOpen = openedFaqId === item.id;
+                return (
+                  <Accordion
+                    key={item.id}
+                    expanded={isOpen}
+                    onChange={(expanded) =>
+                      setOpenedFaqId(expanded ? item.id : null)
+                    }
+                  >
+                    <Accordion.Summary Component="button" className={AS_BUTTON}>
+                      {item.question}
+                    </Accordion.Summary>
+                    <Accordion.Content>
+                      <Caption Component="p" className={PROSE}>
+                        {item.answer}
+                      </Caption>
+                    </Accordion.Content>
+                  </Accordion>
+                );
+              })}
+            </div>
           </SectionBody>
         </Section>
 
@@ -213,20 +245,15 @@ export function SupportPage() {
                   description={EMPTY_STATES.supportEmpty.description}
                 />
               ) : (
-                <Stack>
+                <div className={styles.list}>
                   {myFeedbacks.data.map((feedback) => (
-                    <FeedbackCard
+                    <FeedbackCell
                       key={feedback.id}
                       feedback={feedback}
-                      opened={openedFeedbackId === feedback.id}
-                      onToggle={() =>
-                        setOpenedFeedbackId(
-                          openedFeedbackId === feedback.id ? null : feedback.id,
-                        )
-                      }
+                      onOpen={setSelectedId}
                     />
                   ))}
-                </Stack>
+                </div>
               )}
             </QueryState>
             {/* Написать новое обращение — из окна: сама страница отвечает за
@@ -245,8 +272,11 @@ export function SupportPage() {
             </Button>
           </SectionBody>
         </Section>
-
       </Page>
+      <FeedbackDetailsModal
+        feedback={selected}
+        onClose={() => setSelectedId(null)}
+      />
       <FeedbackModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </>
   );

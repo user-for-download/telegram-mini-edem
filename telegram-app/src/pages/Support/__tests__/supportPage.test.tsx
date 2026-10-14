@@ -126,6 +126,21 @@ describe("SupportPage: мои обращения", () => {
     expect(html).toContain("Есть ответ");
     expect(html).toContain("Второй вопрос");
   });
+
+  it("обращение — строка-кнопка: тап открывает попап деталей", () => {
+    // Полный текст и ответ уехали в попап, а строка стала интерактивной
+    // (как строка жалобы). Кнопка нативная — Enter/Space работают сами.
+    setMocks({
+      data: [feedback({ id: "f-1", text: "Коротко о проблеме" })],
+    });
+
+    const html = renderPage();
+
+    expect(html).toContain('data-testid="feedback-cell-f-1"');
+    expect(html).toContain("<button");
+    expect(html).toContain("Коротко о проблеме");
+    expect(html).toContain("09.09.2026");
+  });
 });
 
 describe("SupportPage: структура экрана", () => {
