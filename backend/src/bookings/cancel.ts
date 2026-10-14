@@ -50,8 +50,8 @@ cancelRouter.patch("/:id/cancel", cancelBookingLimiter, async (c) => {
 
         if (booking.status !== "pending" && booking.status !== "confirmed") {
           throw new BookingError(
-            "Booking is already cancelled",
-            400,
+            "Only pending or confirmed bookings can be cancelled",
+            409,
             ERROR_CODES.CONFLICT,
           );
         }

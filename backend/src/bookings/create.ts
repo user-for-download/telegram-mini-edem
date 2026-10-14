@@ -214,7 +214,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
         await tx.trip.update({
           where: { id: tripId },
           data: {
-            seatsAvailable: trip.seatsAvailable - 1,
+            seatsAvailable: { decrement: 1 },
           },
         });
 

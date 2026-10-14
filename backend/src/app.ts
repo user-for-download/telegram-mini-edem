@@ -27,6 +27,7 @@ import { createWsHandler } from "./ws/index.js";
 
 import { env } from "./env.js";
 import { db } from "./db.js";
+import { Prisma } from "./generated/prisma/client.js";
 import { logger } from "./logger.js";
 import { Sentry } from "./sentry.js";
 import { ERROR_CODES } from "./errors.js";
@@ -46,7 +47,21 @@ export const app = new Hono();
 // раз, флаг идемпотентности в register — вторая страховка.
 registerNotificationSubscribers();
 
-const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
+/**
+ * Кап размера одного WS-фрейма.
+ *
+ * `ws` по умолчанию принимает кадры до 100 MiB, а `onMessage`
+ * (ws/index.ts) делает `JSON.parse(String(evt.data))` над всем фреймом —
+ * анонимный флуд гигантскими кадрами давал бы CPU/память-amplification
+ * ещё до проверки схемы. Клиентские WS-сообщения — auth-токен и ping/pong
+ * (десятки байт), 64 KB с большим запасом. `wss.options.maxPayload`
+ * читается per-connection (ws v8, completeUpgrade), поэтому установка
+ * здесь применяется ко всем новым соединениям.
+ */
+const WS_MAX_PAYLOAD_BYTES = 64 * 1024;
+
+const { injectWebSocket, upgradeWebSocket, wss } = createNodeWebSocket({ app });
+wss.options.maxPayload = WS_MAX_PAYLOAD_BYTES;
 export { injectWebSocket };
 
 const allowedOrigins = env.CORS_ORIGINS.split(",")
@@ -317,11 +332,48 @@ if (env.isProduction) {
 }
 
 /**
+ * Единый JSON-404 для несуществующих маршрутов.
+ *
+ * В production SPA-блок ловит всё, сюда доходят только `c.notFound()` из
+ * кода (например /metrics без токена); вне production любой неизвестный
+ * маршрут идёт прямиком сюда. Раньше был дефолтный текст Hono
+ * «404 Not Found», а контракт API обещает `{code, message}` — теперь
+ * API-пути получают JSON, остальные — короткий текст.
+ */
+app.notFound((c) => {
+  if (c.req.path === "/api" || c.req.path.startsWith("/api/")) {
+    return c.json({ code: ERROR_CODES.NOT_FOUND, message: "Not found" }, 404);
+  }
+  return c.text("Not found", 404);
+});
+
+/**
  * Глобальная обработка ошибок. Вынесена в экспортируемую функцию,
  * чтобы путь server-error можно было прогнать тестом (публичный
  * эндпоинт kind "server" отклоняет — и это правильно).
  */
 export function handleUnhandledError(error: Error, c: Context) {
+  // Известные Prisma-ошибки, доехавшие сюда необработанными (гонки
+  // check-then-act: запись по строке, удалённой параллельно). Контракт
+  // требует мапить их без 500 и без алертов: P2025 → 404, P2034 → 409
+  // с retryable:true (тот же код, что у локальных catch'ей, — это
+  // страховка на пути, где локальный маппинг забыли).
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2025") {
+      return c.json({ code: ERROR_CODES.NOT_FOUND, message: "Not found" }, 404);
+    }
+    if (error.code === "P2034") {
+      return c.json(
+        {
+          code: ERROR_CODES.CONFLICT,
+          message: "Concurrent update conflict, please retry",
+          retryable: true,
+        },
+        409,
+      );
+    }
+  }
+
   logger.error(
     {
       err: error,

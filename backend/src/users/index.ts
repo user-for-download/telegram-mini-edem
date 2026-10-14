@@ -201,6 +201,12 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
           name: "Удалённый пользователь",
           avatar: DEFAULT_AVATAR_URL,
           about: null,
+          // Обезличивание: телефон (PII) и согласие на бот-рассылку
+          // снимаются вместе с аккаунтом. delivery-политика читает
+          // tgChatJoinedAt в момент отправки — оставленный timestamp
+          // означал бы, что согласие не отозвано.
+          phone: null,
+          tgChatJoinedAt: null,
           rating: 5,
           reviewsCount: 0,
           tripsCount: 0,

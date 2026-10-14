@@ -43,7 +43,7 @@ Owner: backend. Expiry: re-review if dev-bypass ever leaves non-production.
 | — | Admin guard | `backend/src/admin/guard.ts:24-46` | — | Closed by default (empty `ADMIN_TOKEN` → 403 incl. login); cookie JWT verified (type/sub/exp) else 401 |
 | — | Review transitions | `backend/src/reviews/index.ts` + `backend/src/admin/index.ts:1089-1109` | — | Atomic `pending → published` claim (`updateMany` count=0 → 409); participant must hold confirmed booking; duplicates → 409 via unique index incl. NULL-trip semantics |
 | — | Booking/trip guards | integration suites | — | Seat race → 409 `SEAT_TAKEN` (exactly-once), stranger confirm → 403, expired → 400/409; covered by `telegram-parity.test.ts` + `telegram-trips-bookings.test.ts` |
-| — | Deletion obligations | `profile-deletion.test.ts` | — | Active trip/booking → 409 `ACCOUNT_HAS_ACTIVE_OBLIGATIONS`; tombstone blocks re-login (403) |
+| — | Deletion obligations | `profile-deletion.test.ts` | — | Deleting the account `DELETE /users/me` cascades (completes own trips, cancels own bookings); removing the car `DELETE /users/me/car` blocks with 409 `ACCOUNT_HAS_ACTIVE_OBLIGATIONS` on active trips; tombstone blocks re-login (403) |
 
 ## 4. Error handling & disclosure — PASS (one fix by this task's suite)
 

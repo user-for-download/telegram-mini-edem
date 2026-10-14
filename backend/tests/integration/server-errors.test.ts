@@ -9,7 +9,7 @@
 // с бросающим роутом: 500 → server-error с именем и маршрутом,
 // без текста исключения.
 import { Hono } from "hono";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.hoisted(() => {
   process.env.ERROR_ALERT_CHAT_ID = "-100999";
@@ -26,11 +26,62 @@ vi.mock("../../src/services/telegramSend.js", () => ({
 }));
 
 const { app, handleUnhandledError } = await import("../../src/app.js");
+const { Prisma } = await import("../../src/generated/prisma/client.js");
+
+/** Инстанс с нужным prototype, чтобы сработал `instanceof` в onError. */
+const prismaError = (code: string): Error =>
+  Object.assign(Object.create(Prisma.PrismaClientKnownRequestError.prototype), {
+    code,
+    message: `Prisma ${code}`,
+  }) as Error;
 
 describe("server errors wiring", () => {
-  it("404 → без алертов", async () => {
+  beforeEach(() => {
+    sendTelegramMessage.mockClear();
+  });
+
+  it("404 → JSON-форма контракта и без алертов", async () => {
     const res = await app.request("/api/v1/no-such-route");
     expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({
+      code: "NOT_FOUND",
+      message: "Not found",
+    });
+    await Promise.resolve();
+    expect(sendTelegramMessage).not.toHaveBeenCalled();
+  });
+
+  it("P2025 → 404 без алертов", async () => {
+    const probe = new Hono();
+    probe.onError(handleUnhandledError);
+    probe.get("/gone", () => {
+      throw prismaError("P2025");
+    });
+
+    const res = await probe.request("/gone");
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({
+      code: "NOT_FOUND",
+      message: "Not found",
+    });
+    await Promise.resolve();
+    expect(sendTelegramMessage).not.toHaveBeenCalled();
+  });
+
+  it("P2034 → 409 retryable без алертов", async () => {
+    const probe = new Hono();
+    probe.onError(handleUnhandledError);
+    probe.get("/conflict", () => {
+      throw prismaError("P2034");
+    });
+
+    const res = await probe.request("/conflict");
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      code: "CONFLICT",
+      message: "Concurrent update conflict, please retry",
+      retryable: true,
+    });
     await Promise.resolve();
     expect(sendTelegramMessage).not.toHaveBeenCalled();
   });

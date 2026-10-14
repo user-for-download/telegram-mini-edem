@@ -143,17 +143,29 @@ reportsRouter.post("/", mutationLimiter, reportLimiter, async (c) => {
       { isolationLevel: "Serializable" },
     );
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      (error.code === "P2002" || error.code === "P2034")
-    ) {
-      return c.json(
-        {
-          code: ERROR_CODES.CONFLICT,
-          message: "A report for this target already exists",
-        },
-        409,
-      );
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return c.json(
+          {
+            code: ERROR_CODES.CONFLICT,
+            message: "A report for this target already exists",
+          },
+          409,
+        );
+      }
+      // P2034 — транзиентный serialization-конфликт, а НЕ «вечный дубликат»:
+      // жалоба не создана, повтор безопасен. Если отдать её как «уже
+      // существует», клиент не станет ретраить и потеряет первую жалобу.
+      if (error.code === "P2034") {
+        return c.json(
+          {
+            code: ERROR_CODES.CONFLICT,
+            message: "Concurrent update conflict, please retry",
+            retryable: true,
+          },
+          409,
+        );
+      }
     }
     throw error;
   }

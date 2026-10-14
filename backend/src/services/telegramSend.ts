@@ -192,13 +192,13 @@ export async function sendTelegramMessage(
     const outcome = mapStatusToOutcome(status, body);
     if (!outcome.ok && outcome.kind !== "rate_limited") {
       logger.debug(
-        { status, kind: outcome.kind, chatId: input.chatId },
+        { status, kind: outcome.kind },
         "tg_send_outcome",
       );
     }
     return outcome;
   } catch (error) {
-    logger.debug({ err: error, chatId: input.chatId }, "tg_send_transport_error");
+    logger.debug({ err: error }, "tg_send_transport_error");
     return { ok: false, kind: "transient" };
   }
 }

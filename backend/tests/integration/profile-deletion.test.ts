@@ -11,7 +11,7 @@ describe("DELETE /api/v1/users/me", () => {
   beforeEach(async () => {
     const suffix = Date.now() + Math.floor(Math.random() * 1000);
     const [user, driver] = await Promise.all([
-      db.user.create({ data: { name: `Delete user ${suffix}`, telegramUserId: BigInt(6100000 + (suffix % 100000)), avatar: "", about: "about" } }),
+      db.user.create({ data: { name: `Delete user ${suffix}`, telegramUserId: BigInt(6100000 + (suffix % 100000)), avatar: "", about: "about", phone: "+79991112233", tgChatJoinedAt: new Date() } }),
       db.user.create({ data: { name: `Delete driver ${suffix}`, telegramUserId: BigInt(6200000 + (suffix % 100000)), avatar: "" } }),
     ]);
     userId = user.id;
@@ -36,6 +36,8 @@ describe("DELETE /api/v1/users/me", () => {
     expect(deleted?.deletedAt).not.toBeNull();
     expect(deleted?.telegramUserId).not.toBeNull();
     expect(deleted?.name).toBe("Удалённый пользователь");
+    expect(deleted?.phone).toBeNull();
+    expect(deleted?.tgChatJoinedAt).toBeNull();
     expect(deleted?.car).toBeNull();
     const after = await app.request("/api/v1/users/me", { headers: { Authorization: `Bearer ${devMockAccessToken(userId)}` } });
     expect(after.status).toBe(403);

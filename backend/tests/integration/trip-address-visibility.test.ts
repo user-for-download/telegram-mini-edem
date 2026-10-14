@@ -134,6 +134,23 @@ describe("GET /trips/:id — address visibility", () => {
     expect(body.toAddress).toBeUndefined();
   });
 
+  it("passenger with expired (un-swept) pending booking gets no addresses", async () => {
+    const passenger = await createUser("ExpiredPassenger");
+    await db.booking.create({
+      data: {
+        tripId,
+        passengerId: passenger.id,
+        seat: 3,
+        status: "pending",
+        // Просрочена, но воркер её ещё не вымел: права участника не даёт.
+        expiresAt: new Date(Date.now() - 60_000),
+      },
+    });
+    const body = await getTripDetails(passenger.id);
+    expect(body.fromAddress).toBeUndefined();
+    expect(body.toAddress).toBeUndefined();
+  });
+
   it("public trips list never exposes addresses", async () => {
     const res = await app.request("/api/v1/trips?limit=50");
     expect(res.status).toBe(200);

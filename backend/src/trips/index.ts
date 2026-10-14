@@ -23,6 +23,7 @@ import {
 } from "../middleware/rateLimit.js";
 import { getSanitizedBody } from "../middleware/sanitize.js";
 import { ERROR_CODES } from "../errors.js";
+import { activeBookingWhere } from "../bookings/shared.js";
 import { logBusinessEvent } from "../logger/business.js";
 import {
   notifyUser,
@@ -500,9 +501,10 @@ tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
   const activeBookings = await db.booking.findMany({
     where: {
       tripId: trip.id,
-      status: {
-        in: ["pending", "confirmed"],
-      },
+      // Просроченный, но ещё не выметенный pending не должен выглядеть
+      // как занятое место: тот же expiry-aware предикат, что в pre-check'ах
+      // создания/подтверждения брони (F15).
+      ...activeBookingWhere(),
     },
     select: {
       seat: true,
@@ -521,7 +523,10 @@ tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
       where: {
         tripId: trip.id,
         passengerId: currentUser.id,
-        status: { in: ["pending", "confirmed"] },
+        // Expiry-aware: истёкший pending не даёт прав участника (иначе
+        // пассажир видел бы точные адреса по мёртвой заявке до часа,
+        // пока её не выметёт воркер).
+        ...activeBookingWhere(),
       },
       select: {
         id: true,
@@ -535,7 +540,7 @@ tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
   }
 
   // Точные адреса встречи видят только участники поездки:
-  // водитель и пользователи с активной бронью (pending/confirmed).
+  // водитель и пользователи с неистёкшей активной бронью (pending/confirmed).
   // Остальным адреса не отдаются вовсе (приватность места встречи).
   const canSeePrivateDetails =
     currentUser?.id === trip.driverId || myBooking !== null;
