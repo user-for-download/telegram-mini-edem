@@ -130,7 +130,7 @@ refresh-токены отзываются) и в `/auth/refresh`; сервис �
 ### PATCH /api/v1/admin/users/:id/telegram-stop
 
 Мгновенный стоп Bot API-рассылки конкретному пользователю (SLA на жалобы
-о спаме — см. `docs/product/bot-api-approval-package.md` §6а). Сбрасывает
+о спаме — 24 часа; см. `docs/adr/telegram-notification-delivery.md`). Сбрасывает
 согласие `User.tgChatJoinedAt = null` **и** переводит все живые задачи
 outbox (`NotificationDelivery` в статусе `pending`/`processing`) в
 `skipped` с `error: "admin_stopped"` — в одной транзакции. Следующий тик

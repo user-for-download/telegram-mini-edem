@@ -381,7 +381,7 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 
 ## 🚀 Деплой (Production)
 
-Архитектура: **всё на одном сервере** — бэкенд отдаёт API + статику (telegram-app/dist) + WebSocket. Внешний HTTPS-терминатор (Traefik/nginx) проксирует на backend:3000, а PostgreSQL наружу не публикуется. Детали — в [`docs/deployment/telegram-production-config.md`](docs/deployment/telegram-production-config.md).
+Архитектура: **всё на одном сервере** — бэкенд отдаёт API + статику (telegram-app/dist) + WebSocket. Внешний HTTPS-терминатор (Traefik/nginx) проксирует на backend:3000, а PostgreSQL наружу не публикуется. Детали (переменные, прокси, миграции) — в `docker-compose.yml` и `.env.example`.
 
 Адрес публикации порта настраивается через `BACKEND_BIND_ADDR` в корневом `.env`:
 
@@ -447,7 +447,7 @@ Paginated endpoints проверяют ответы shared Zod-схемами и
    ```
    Или через Docker: `docker compose up -d --build` (backend на :3000, админ-панель webapp на :3014, миграции применяются при старте). Для повторного деплоя — `sh scripts/prod-rebuild.sh` (см. «Запуск в Docker»).
 
-Полный чеклист релиза — в [`docs/deployment/telegram-staging-checklist.md`](docs/deployment/telegram-staging-checklist.md).
+Порядок выката: миграция и бэкенд — до клиента (обратный порядок ломает экраны с поездками); откат — в обратном порядке.
 
 ### Переменные окружения (production)
 
@@ -487,4 +487,4 @@ Paginated endpoints проверяют ответы shared Zod-схемами и
 
 ## Архив миграции
 
-Самостоятельное Telegram-приложение «Едем» (попутчики). Исторические записи миграции удалены из дерева — смотри git; аудит безопасности: `docs/security/telegram-migration-audit.md`.
+Самостоятельное Telegram-приложение «Едем» (попутчики). Исторические записи миграции (аудит безопасности, отчёты и чеклисты выката) удалены из дерева — смотри git.

@@ -1,6 +1,6 @@
 // backend/src/bot/index.ts
 //
-// Webhook Telegram-бота (bot-api-approval-package §4.2): единственная
+// Webhook Telegram-бота: единственная
 // точка входа апдейтов бота. Секрет в path (POST /bot/webhook/:secret)
 // сравнивается timing-safe; без него Telegram-апдейты не принимаются.
 //

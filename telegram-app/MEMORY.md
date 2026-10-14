@@ -536,8 +536,7 @@ it would give priority to the gitignored `.env` over the production environment)
 ## 19. Where to look next
 
 - `README.md` (root) — product, deployment, env.
-- The former `docs/migration/*` and deployment reports were removed from the tree — see git.
-- `docs/deployment/telegram-staging-checklist.md` — the live production checklist.
+- The former `docs/migration/*`, deployment reports and release checklists were removed from the tree — see git.
 - `docs/adr/telegram-notification-delivery.md` — notification delivery (inbox + WS + Bot API).
 - `e2e/telegram-parity.mjs`, `e2e/telegram-realtime.mjs` — scenarios.
 - `packages/contracts/src/index.ts` — Zod schemas/DTOs shared with the backend.

@@ -79,8 +79,7 @@ export type TelegramPolicyDecision =
   | { deliver: false; reason: TelegramSkipReason };
 
 /**
- * Чистая функция: полная политика фоновой TG-доставки
- * (bot-api-approval-package §2):
+ * Чистая функция: полная политика фоновой TG-доставки:
  * - kill-switch выключен → channel_disabled (ничего не доставляем);
  * - чата с ботом нет → no_chat (тихо, независимо от критичности —
  *   бот не может написать первым без /start);

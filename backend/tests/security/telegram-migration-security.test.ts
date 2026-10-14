@@ -16,8 +16,7 @@ const { app } = await import("../../src/app.js");
 const { db } = await import("../../src/db.js");
 
 /**
- * Границы безопасности Telegram-миграции (tg-migration-18, доказательства
- * к docs/security/telegram-migration-audit.md):
+ * Границы безопасности Telegram-миграции (tg-migration-18):
  * - поддельная/битая initData отвергается 401, а не 500;
  * - удалённый/забаненный не получает токены;
  * - admin-API без cookie закрыт 401;

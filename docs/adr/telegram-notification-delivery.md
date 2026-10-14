@@ -40,8 +40,7 @@ Telegram mapping:
 
 ## Bot API option — approved (2026-09-14)
 
-**Originally blocked; approved by Product on 2026-09-14** with the decisions
-recorded in [`../product/bot-api-approval-package.md`](../product/bot-api-approval-package.md) §6а:
+**Originally blocked; approved by Product on 2026-09-14.** Decisions:
 
 - Event allowlist (9 events) and message copy — approved as drafted.
 - Consent: bot never messages first; `/start` (webhook) records consent,
@@ -82,7 +81,7 @@ Engineering constraints for the enabled channel:
 |---|---|---|
 | In-app records, preferences, WebSocket and resync | Backend + Telegram client | Engineering; parity acceptance |
 | Event copy, critical/optional classification and Bot API approval | Product | Approved 2026-09-14 |
-| Privacy/consent and data minimization | Product + Security/Privacy | Approved with package (§3) |
+| Privacy/consent and data minimization | Product + Security/Privacy | Approved 2026-09-14 |
 | Bot token, webhook or polling runtime, secret rotation and alerting | Platform/Backend on-call | Runbook: kill-switch + admin stop shipped |
 | Deep-link routes and start-parameter handling | Telegram client + Backend | Required for every delivered event |
 

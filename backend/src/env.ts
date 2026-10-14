@@ -228,7 +228,7 @@ export const env = {
   ),
 
   /**
-   * Секрет Telegram-бота для webhook (bot-api-approval-package §4.2):
+   * Секрет Telegram-бота для webhook:
    * случайная строка в path POST /bot/webhook/:secret. Выдаётся вместе
    * с токеном бота, ротация — перевыпуском URL вебхука. В production
    * обязателен, в dev эфемерный (secretEnv).
