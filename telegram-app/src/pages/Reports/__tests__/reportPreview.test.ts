@@ -9,7 +9,7 @@ import {
   reportCellAriaLabel,
   reportPreviewSubtitle,
   reportPreviewTitle,
-  reportResponseLine,
+  reportResponseMeta,
   reportStatusTone,
 } from "@/pages/Reports/reportPreview";
 import type { Report } from "@edem/contracts";
@@ -106,74 +106,75 @@ describe("reportCellAriaLabel", () => {
   });
 });
 
-describe("reportResponseLine: когда и как быстро закрыли", () => {
+describe("reportResponseMeta: когда и как быстро закрыли", () => {
   // Разница считается между двумя ISO-строки (когда подали → когда ответили),
   // а не «сейчас минус ответ»: закрытая месяц назад жалоба показала бы
   // «прошло 30 дней», что человеку ничего не сообщает — его волнует, сколько
   // он ЖДАЛ. Дата ответа — по Москве, как все даты жалобы (app.md, §4).
+  // Подпись «Ответ модерации» ставит попап; здесь — только мета.
   it("дата ответа по Москве и интервал ожидания", () => {
     // 10:00Z = 13:00 МСК, ответ 16:00Z = 19:00 МСК → 6 ч.
     expect(
-      reportResponseLine(
+      reportResponseMeta(
         report({
           createdAt: "2026-09-10T10:00:00.000Z",
           resolvedAt: "2026-09-10T16:00:00.000Z",
         }),
       ),
-    ).toBe("Ответ 10.09.2026 · через 6 ч");
+    ).toBe("10.09.2026 · через 6 ч");
   });
 
   it("минуты без целого часа", () => {
     expect(
-      reportResponseLine(
+      reportResponseMeta(
         report({
           createdAt: "2026-09-10T10:00:00.000Z",
           resolvedAt: "2026-09-10T10:45:00.000Z",
         }),
       ),
-    ).toBe("Ответ 10.09.2026 · через 45 мин");
+    ).toBe("10.09.2026 · через 45 мин");
   });
 
   it("ответ в другой день — интервал считается, дата берётся ответа", () => {
     expect(
-      reportResponseLine(
+      reportResponseMeta(
         report({
           createdAt: "2026-09-10T10:00:00.000Z",
           resolvedAt: "2026-09-11T11:30:00.000Z",
         }),
       ),
-    ).toBe("Ответ 11.09.2026 · через 1 день 1 ч 30 мин");
+    ).toBe("11.09.2026 · через 1 день 1 ч 30 мин");
   });
 
   it("сутки отдельной частью: «25 ч» читалось бы как ошибка", () => {
     // Жалобу действительно ждут дни, и «через 25 ч 30 мин» этому не
     // соответствует — часы без суток выглядят как сбой счётчика.
     expect(
-      reportResponseLine(
+      reportResponseMeta(
         report({
           createdAt: "2026-09-10T10:00:00.000Z",
           resolvedAt: "2026-09-13T12:00:00.000Z",
         }),
       ),
-    ).toBe("Ответ 13.09.2026 · через 3 дня 2 ч");
+    ).toBe("13.09.2026 · через 3 дня 2 ч");
   });
 
   it("ровно сутки — «1 день», без хвоста в часах", () => {
     expect(
-      reportResponseLine(
+      reportResponseMeta(
         report({
           createdAt: "2026-09-10T10:00:00.000Z",
           resolvedAt: "2026-09-11T10:00:00.000Z",
         }),
       ),
-    ).toBe("Ответ 11.09.2026 · через 1 день");
+    ).toBe("11.09.2026 · через 1 день");
   });
 
   it("у жалобы в работе строки нет", () => {
     // pending/in_review: resolvedAt обнулён сервером при возврате в работу.
-    expect(reportResponseLine(report())).toBe("");
+    expect(reportResponseMeta(report())).toBe("");
     expect(
-      reportResponseLine(report({ status: "in_review", resolvedAt: null })),
+      reportResponseMeta(report({ status: "in_review", resolvedAt: null })),
     ).toBe("");
   });
 
@@ -181,26 +182,26 @@ describe("reportResponseLine: когда и как быстро закрыли",
     // resolvedAt ставится для обоих терминальных статусов
     // (backend/src/reports/index.ts), значит строка обязана быть и здесь.
     expect(
-      reportResponseLine(
+      reportResponseMeta(
         report({
           status: "rejected",
           createdAt: "2026-09-10T10:00:00.000Z",
           resolvedAt: "2026-09-10T12:00:00.000Z",
         }),
       ),
-    ).toBe("Ответ 10.09.2026 · через 2 ч");
+    ).toBe("10.09.2026 · через 2 ч");
   });
 
   it("мусор на входе даёт пустую строку, а не «через -3 ч»", () => {
     // Непонятная подпись хуже отсутствия: знак «минус» читается как баг.
     expect(
-      reportResponseLine(
+      reportResponseMeta(
         report({
           createdAt: "2026-09-10T10:00:00.000Z",
           resolvedAt: "2026-09-10T07:00:00.000Z",
         }),
       ),
     ).toBe("");
-    expect(reportResponseLine(report({ resolvedAt: "мусор" }))).toBe("");
+    expect(reportResponseMeta(report({ resolvedAt: "мусор" }))).toBe("");
   });
 });

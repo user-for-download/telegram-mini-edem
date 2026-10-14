@@ -3,17 +3,18 @@ import { Caption, Subheadline } from "@telegram-apps/telegram-ui";
 import type { Report } from "@edem/contracts";
 
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { Sheet } from "@/ui/Sheet";
 import { Stack } from "@/ui/Stack";
 import { Blockquote } from "@/ui/Blockquote";
 import { moscowNumericDate } from "@/utils/date";
 
+import { REPORT_STATUS_LABELS } from "./reportValidation";
 import {
-  REPORT_CATEGORY_LABELS,
-  REPORT_STATUS_LABELS,
-  REPORT_TARGET_TYPE_LABELS,
-} from "./reportValidation";
-import { reportResponseLine, reportStatusTone } from "./reportPreview";
+  reportPreviewTitle,
+  reportResponseMeta,
+  reportStatusTone,
+} from "./reportPreview";
 import styles from "./ReportsPage.module.css";
 
 /**
@@ -75,53 +76,58 @@ export function ReportDetailsModal({
  * это портал, в renderToString он не попадает (приём взят у
  * `TripRequestsBody`).
  *
- * Раньше тело было `Placeholder` — компонентом ПУСТОГО состояния: он
- * центрирует содержимое и набирает заголовок крупным кеглем. Для карточки с
- * жалобой это читалось как «данных нет», и весь попап выходил сплошняком —
- * четыре блока одного веса без границ. Теперь это обычная колонка: что
- * (категория · тип) → когда → чем кончилось → САМА ЖАЛОБА → ответ модерации,
- * причём два свободных текста стоят в плашках `ui/Blockquote` — с полосой,
- * фоном и переносами строк.
+ * Раскладка — сверху вниз по смыслу: ЧТО за жалоба (категория · тип, тем же
+ * форматтером, что строка ленты) и её состояние пилюлей → когда подана →
+ * САМА ЖАЛОБА в плашке → ответ модерации вместе со временем ожидания.
+ *
+ * Раньше тело было `Placeholder` (компонент ПУСТОГО состояния), и служебные
+ * строки шли четырьмя равновесными подряд: статус терялся среди даты, а
+ * «Ответ 10.09.2026 · через 3 ч» стоял ВЫШЕ текста жалобы — читатель узнавал,
+ * когда пришёл ответ, прежде чем прочитать, на что жалуются. Теперь два
+ * уровня: шапка (предмет + статус-пилюля, дата справкой) и содержимое, а факт
+ * ответа приклеен к его тексту, а не висит отдельной строкой.
  */
 export function ReportDetailsBody({ report }: { report: Report }) {
+  const response = reportResponseMeta(report);
+  const note = report.resolutionNote;
   return (
-    <Stack className={styles.details}>
-      <Subheadline weight="2">
-        {`${REPORT_CATEGORY_LABELS[report.category]} · ${REPORT_TARGET_TYPE_LABELS[report.targetType]}`}
-      </Subheadline>
+    <Stack>
+      {/* Предмет жалобы и её состояние одной строкой: статус — главный
+          признак, ради которого открывают попап, и он читается одинаково со
+          списком заявок и карточками (StatusPill). */}
+      <div className={styles.detailsHead}>
+        <Subheadline weight="2" className={styles.detailsSubject}>
+          {reportPreviewTitle(report)}
+        </Subheadline>
+        <StatusPill tone={reportStatusTone(report.status)}>
+          {REPORT_STATUS_LABELS[report.status]}
+        </StatusPill>
+      </div>
       <Caption className={styles.detailsDate}>
-        {moscowNumericDate(report.createdAt)}
+        {`Подана ${moscowNumericDate(report.createdAt)}`}
       </Caption>
-      {/* Статус тем же тоном, что строка в ленте: «рассмотрена» читается
-          одинаково в обоих местах. */}
-      <Caption
-        data-tone={reportStatusTone(report.status)}
-        className={styles.detailsStatus}
-      >
-        {REPORT_STATUS_LABELS[report.status]}
-      </Caption>
-      {/* Когда и как быстро закрыли — сразу под статусом, а не внутри блока
-          ответа: ответ модерации есть не у каждой закрытой жалобы, а время
-          ожидания интересует всегда. Пустая строка, пока жалоба в работе. */}
-      {reportResponseLine(report) ? (
-        <Caption className={styles.detailsResolved}>
-          {reportResponseLine(report)}
-        </Caption>
-      ) : null}
       {/* Текст жалобы — слова автора, поэтому плашка-цитата: она и отделяет
           его от служебных строк, и хранит переносы, набранные человеком. */}
       <Blockquote>{report.description}</Blockquote>
-      {/* Ответ модерации — тоже чужие слова, отдельная плашка со своим тоном:
-          «отклонена» и «нарушений не найдено» — разный исход, и полоса слева
-          это показывает. */}
-      {report.resolutionNote ? (
+      {/* Ответ модерации — у закрытых жалоб. Ключ — мета времени ИЛИ текст:
+          бэкенд ставит `resolvedAt` и заметку вместе, но в контракте они
+          независимы, и заметка без даты не должна пропадать. Подпись несёт и
+          время ожидания, и стоит там же, где сам ответ: «когда ответили» без
+          ответа отдельно не читается. */}
+      {response || note ? (
         <>
-          <Caption className={styles.detailsLabel}>Ответ модерации</Caption>
-          <Blockquote
-            tone={report.status === "resolved" ? "success" : "warning"}
-          >
-            {report.resolutionNote}
-          </Blockquote>
+          <Caption className={styles.detailsLabel}>
+            {response ? `Ответ модерации · ${response}` : "Ответ модерации"}
+          </Caption>
+          {/* Текст может отсутствовать (модератор закрыл без заметки) — тогда
+              строка времени остаётся одна, без пустой плашки. */}
+          {note ? (
+            <Blockquote
+              tone={report.status === "resolved" ? "success" : "warning"}
+            >
+              {note}
+            </Blockquote>
+          ) : null}
         </>
       ) : null}
     </Stack>

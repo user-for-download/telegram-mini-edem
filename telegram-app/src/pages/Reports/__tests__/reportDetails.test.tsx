@@ -13,6 +13,8 @@ import type { Report } from "@edem/contracts";
 
 import { ReportDetailsBody } from "@/pages/Reports/ReportDetailsModal";
 import uiStyles from "@/ui/ui.module.css";
+import pageStyles from "@/pages/Reports/ReportsPage.module.css";
+import pillStyles from "@/components/StatusPill/StatusPill.module.css";
 
 function report(overrides: Partial<Report> = {}): Report {
   return {
@@ -131,6 +133,16 @@ describe("Тело попапа: без Placeholder, тексты в плашк�
     expect(renderBody(report({ status: "resolved" }))).toContain("Закрыта");
   });
 
+  it("статус — пилюлей в одной шапке с предметом жалобы", () => {
+    // Раньше статус был ещё одной серой строкой среди даты и времени ответа:
+    // главный признак, ради которого открывают попап, терялся. Теперь он
+    // StatusPill в шапке рядом с «категория · тип».
+    const html = renderBody(report({ status: "in_review" }));
+    expect(html).toContain(pageStyles.detailsHead as string);
+    expect(html).toContain(pillStyles.pill as string);
+    expect(html).toContain('data-tone="info"');
+  });
+
   it("время ответа у закрытой жалобы: дата и сколько ждали", () => {
     const html = renderBody(
       report({
@@ -139,7 +151,7 @@ describe("Тело попапа: без Placeholder, тексты в плашк�
         resolvedAt: "2026-09-10T16:00:00.000Z",
       }),
     );
-    expect(html).toContain("Ответ 10.09.2026 · через 6 ч");
+    expect(html).toContain("Ответ модерации · 10.09.2026 · через 6 ч");
   });
 
   it("пока жалоба в работе, строки ответа нет", () => {

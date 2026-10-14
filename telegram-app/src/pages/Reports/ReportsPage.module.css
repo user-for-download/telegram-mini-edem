@@ -66,12 +66,19 @@
   color: var(--app-danger);
 }
 
-/* Тело попапа: Placeholder центрирует header/description, поэтому вложенный
- * стек выравниваем по левому краю и растягиваем на ширину — иначе узкая
- * колонка текста внутри крупного блока читается как обрывок. */
-.details {
-  align-items: flex-start;
-  text-align: left;
+/* Шапка попапа: предмет жалобы слева, статус-пилюля справа. */
+.detailsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+}
+
+/* Длинное «Недостоверная информация · Пользователь» переносится, а не
+ * выдавливает пилюлю за край: min-width:0 разрешает flex-элементу сжаться
+ * ниже своего содержимого. */
+.detailsSubject {
+  min-width: 0;
 }
 
 /* Дата подачи — приглушённая, это справка, а не главный смысл. */
@@ -79,42 +86,9 @@
   color: var(--app-muted);
 }
 
-.detailsText {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-/* Подпись блока внутри попапа жалобы («Ответ модерации»): приглушённая,
- * как и дата, — это справка о том, чьи это слова, а не сам текст. */
+/* Подпись блока ответа («Ответ модерации · 10.09.2026 · через 3 ч»):
+ * приглушённая, как и дата, — это справка о том, чьи это слова и когда они
+ * пришли, а не сам текст ответа. */
 .detailsLabel {
   color: var(--app-muted);
-}
-
-/* Время ответа («Ответ 10.09.2026 · через 3 ч») — тот же приглушённый тон,
- * что и дата подачи: справочная строка, не статус. Тон статуса остаётся
- * только у самого статуса, чтобы два «острова» цвета не спорили. */
-.detailsResolved {
-  color: var(--app-muted);
-}
-
-/* Статус в попапе — тот же тон, что строка в ленте. Пилюли здесь нет:
- * Placeholder работает крупными блоками, пилюля выглядела бы вставкой. */
-.detailsStatus {
-  color: var(--app-muted);
-}
-
-.detailsStatus[data-tone="warning"] {
-  color: var(--app-warning);
-}
-
-.detailsStatus[data-tone="info"] {
-  color: var(--app-info);
-}
-
-.detailsStatus[data-tone="success"] {
-  color: var(--app-success);
-}
-
-.detailsStatus[data-tone="danger"] {
-  color: var(--app-danger);
 }

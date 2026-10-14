@@ -38,21 +38,26 @@ export function reportStatusTone(status: Report["status"]): ReportStatusTone {
 }
 
 /**
- * Когда и как быстро закрыли жалобу: «Ответ 10.09.2026 · через 3 ч».
+ * Когда и как быстро закрыли жалобу: «10.09.2026 · через 3 ч».
+ *
+ * Возвращает МЕТУ ответа — дату и время ожидания, без подписи «Ответ
+ * модерации»: подпись ставит попап (`ReportDetailsModal`), поэтому слово
+ * «Ответ» живёт в одном месте. Иначе строка начиналась бы с «Ответ
+ * модерации · Ответ 10.09.2026 · …» — двойным «ответом».
  *
  * Только для терминальных статусов: `resolvedAt` бэкенд ставит для
  * `resolved` и `rejected` и обнуляет при возврате в `in_review`
  * (backend/src/reports/index.ts), поэтому поле само служит признаком
  * закрытия — проверять статус здесь не нужно, достаточно `resolvedAt`.
  *
- * Разница берётся между двумя ISO-строки, а не между «сейчас и ответом»:
+ * Разница берётся между двумя ISO-строками, а не между «сейчас и ответом»:
  * жалоба могла закрыться месяц назад, и «прошло 30 дней» ничего не
  * сообщает пользователю — его волнует, сколько он ЖДАЛ.
  *
  * Мусор на входе (`null`, неразобранная дата, отрицательная разница) даёт
  * пустую строку, а не «через -3 ч»: непонятная подпись хуже отсутствия.
  */
-export function reportResponseLine(report: Report): string {
+export function reportResponseMeta(report: Report): string {
   const resolvedAt = report.resolvedAt;
   if (resolvedAt === null) return "";
   const resolved = Date.parse(resolvedAt);
@@ -63,7 +68,7 @@ export function reportResponseLine(report: Report): string {
   const waited = formatWaited(minutes);
   const date = moscowNumericDate(resolvedAt);
   if (date === "") return "";
-  return waited ? `Ответ ${date} · через ${waited}` : `Ответ ${date}`;
+  return waited ? `${date} · через ${waited}` : date;
 }
 
 /**
