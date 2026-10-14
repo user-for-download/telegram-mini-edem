@@ -5,6 +5,7 @@ import type { CreateReportDto } from "@edem/contracts";
 export const REPORT_KEYS = {
   all: ["reports"] as const,
   mine: () => [...REPORT_KEYS.all, "mine"] as const,
+  targets: () => [...REPORT_KEYS.all, "targets"] as const,
 };
 
 /**
@@ -18,6 +19,21 @@ export function useMyReportsQuery(options?: { enabled?: boolean }) {
     queryFn: ({ signal }) => reportsApi.listMine(signal),
     enabled: options?.enabled ?? true,
     staleTime: 30_000,
+  });
+}
+
+/**
+ * Объекты, на которые можно жаловаться — для выбора в форме.
+ *
+ * `staleTime` длиннее, чем у списка жалоб: набор меняется вместе с бронями,
+ * а не мгновенно, и перезапрашивать его при каждом открытии окна незачем.
+ */
+export function useReportTargetsQuery(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: REPORT_KEYS.targets(),
+    queryFn: ({ signal }) => reportsApi.listTargets(signal),
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60_000,
   });
 }
 

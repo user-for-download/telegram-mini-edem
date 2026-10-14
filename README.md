@@ -313,6 +313,7 @@ LOG_LEVEL=debug
 | DELETE | `/api/v1/ride-requests/:id` | Отменить пассивный запрос |
 | POST | `/api/v1/reports` | Создать жалобу на связанного пользователя, поездку или бронь (лимит: 1 жалоба навсегда на связку автор+объект — повтор → `409`) |
 | GET | `/api/v1/reports` | Мои жалобы |
+| GET | `/api/v1/reports/targets` | Объекты, доступные для жалобы (поездки, брони, люди с общей бронью) — список для формы подачи |
 | DELETE | `/api/v1/users/me` | Soft-delete и анонимизация профиля; активные обязательства блокируют операцию |
 | POST | `/api/v1/admin/auth/login` | Вход админ-панели по `ADMIN_TOKEN` (5 req/5 мин, `ADMIN_LOGIN_RATE_*`); ставит httpOnly cookie `edem_admin_jwt` |
 | GET | `/api/v1/admin/auth/session` | Состояние админ-сессии (всегда 200; httpOnly cookie недоступен JS) |

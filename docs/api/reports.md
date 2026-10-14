@@ -4,6 +4,7 @@
 
 - `POST /api/v1/reports` creates a report with `targetType` (`user`, `trip` or `booking`), `targetId`, `category` and `description`.
 - `GET /api/v1/reports` returns only reports created by the authenticated user.
+- `GET /api/v1/reports/targets` returns the objects the authenticated user may report on: trips they booked as a passenger, bookings where they are the passenger or the driver, and the counterpart people in those bookings. It reads the 50 most recent bookings and deduplicates. Each entry carries the raw fields the UI needs for a label (`fromCity`/`toCity`/`departureAt` for trips and bookings, `name` for people); dates are formatted client-side. The list follows the same rules as `canReport`, so every listed target is accepted by `POST`.
 
 Categories are `safety`, `fraud`, `harassment`, `spam`, `inaccurate_info` and `other`.
 

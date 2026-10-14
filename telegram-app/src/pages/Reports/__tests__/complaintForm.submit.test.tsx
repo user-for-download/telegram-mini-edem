@@ -1,26 +1,29 @@
 // @vitest-environment jsdom
-// Форма жалобы: хинт о повторной жалобе и отправка.
+// Форма жалобы: выбор объекта, хинт о повторной жалобе и отправка.
 //
-// Хинт зависит от введённого id (hasExistingReport возвращает false на пустом
-// поле), поэтому SSR здесь бессилен — нужен ввод. Заодно проверяем, что
+// Хинт зависит от выбранного объекта (hasExistingReport возвращает false без
+// выбора), поэтому SSR здесь бессилен — нужен выбор. Заодно проверяем, что
 // успех уходит тостом и окно закрывается через onSubmitted: inline-Notice уехал
 // бы вместе с окном.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
-import type { Report } from "@edem/contracts";
+import type { Report, ReportTargets } from "@edem/contracts";
 
 // Мутация отдельным моком: useCreateReportMutation — хук, он зовётся на
 // каждом рендере, и его счётчик.calls измерял бы рендеры, а не отправку.
-const { mockMutate, mockToastShow } = vi.hoisted(() => ({
+const { mockMutate, mockUseTargets, mockToastShow } = vi.hoisted(() => ({
   mockMutate: vi.fn(),
+  mockUseTargets: vi.fn(),
   mockToastShow: vi.fn(),
 }));
 
 vi.mock("@/queries/useReportQuery", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/queries/useReportQuery")>();
+  const original =
+    await importOriginal<typeof import("@/queries/useReportQuery")>();
   return {
     ...original,
+    useReportTargetsQuery: mockUseTargets,
     useCreateReportMutation: () => ({
       mutate: mockMutate,
       isPending: false,
@@ -37,17 +40,30 @@ vi.mock("@/components/Toast/ToastProvider", async (importOriginal) => {
 
 import { ComplaintForm } from "@/pages/Reports/ComplaintForm";
 
-const EXISTING_ID = "11111111-1111-4111-8111-111111111111";
+const TRIP_ID = "11111111-1111-4111-8111-111111111111";
+const USER_ID = "22222222-2222-4222-8222-222222222222";
+
+const TARGETS: ReportTargets = [
+  {
+    targetType: "trip",
+    id: TRIP_ID,
+    fromCity: "Москва",
+    toCity: "Тула",
+    departureAt: "2026-10-12T09:00:00.000Z",
+  },
+  { targetType: "user", id: USER_ID, name: "Иван Петров" },
+];
 
 function report(overrides: Partial<Report> = {}): Report {
   return {
     id: "r-1",
     targetType: "trip",
-    targetId: EXISTING_ID,
+    targetId: TRIP_ID,
     category: "safety",
     description: "Опасная поездка",
     status: "in_review",
     resolutionNote: null,
+    resolvedAt: null,
     createdAt: "2026-09-09T10:00:00.000Z",
     updatedAt: "2026-09-09T10:00:00.000Z",
     ...overrides,
@@ -62,9 +78,9 @@ function renderForm(reports: Report[] = [], onSubmitted?: () => void) {
   );
 }
 
-function fill(targetId: string, description = "Грубое вождение") {
-  fireEvent.change(screen.getByLabelText("Идентификатор объекта"), {
-    target: { value: targetId },
+function fill(targetKey: string, description = "Грубое вождение") {
+  fireEvent.change(screen.getByLabelText("На что жалуетесь"), {
+    target: { value: targetKey },
   });
   fireEvent.change(screen.getByLabelText("Описание"), {
     target: { value: description },
@@ -72,6 +88,13 @@ function fill(targetId: string, description = "Грубое вождение") {
 }
 
 beforeEach(() => {
+  mockUseTargets.mockReturnValue({
+    data: TARGETS,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  });
   // Мутация сразу зовёт onSuccess — как успешный ответ сервера.
   mockMutate.mockImplementation(
     (_data: unknown, options?: { onSuccess?: () => void }) =>
@@ -84,30 +107,33 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("ComplaintForm: ввод и отправка", () => {
-  it("хинт о повторной жалобе появляется по id, под который уже жаловались", () => {
+describe("ComplaintForm: выбор объекта и отправка", () => {
+  it("хинт о повторной жалобе появляется по выбранному объекту", () => {
     renderForm([report()]);
 
-    fill(EXISTING_ID);
+    fill(`trip:${TRIP_ID}`);
 
     expect(screen.getByText(/Вы уже отправляли жалобу/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Жалоба уже отправлена" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Жалоба уже отправлена" }),
+    ).toBeTruthy();
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
-  it("чужой id — жалоба отправляется: тело, тост и закрытие окна", () => {
+  it("тип и id берутся из выбранной опции — рассинхрон невозможен", () => {
     const onSubmitted = vi.fn();
-    renderForm([report()], onSubmitted);
+    renderForm([], onSubmitted);
 
-    fill("22222222-2222-4222-8222-222222222222", "Опоздал и был груб");
+    // Выбираем человека: тело обязано уйти с targetType "user" и его id.
+    fill(`user:${USER_ID}`);
     fireEvent.click(screen.getByRole("button", { name: "Отправить жалобу" }));
 
     const mutate = mockMutate.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(mutate).toMatchObject({
-      targetType: "trip",
-      targetId: "22222222-2222-4222-8222-222222222222",
+      targetType: "user",
+      targetId: USER_ID,
       category: "safety",
-      description: "Опоздал и был груб",
+      description: "Грубое вождение",
     });
     expect(mockToastShow).toHaveBeenCalledWith(
       expect.objectContaining({ text: "Жалоба отправлена" }),
@@ -115,63 +141,30 @@ describe("ComplaintForm: ввод и отправка", () => {
     expect(onSubmitted).toHaveBeenCalled();
   });
 
-  it("без id жалоба не уходит", () => {
+  it("без выбранного объекта жалоба не уходит", () => {
     renderForm();
 
     fireEvent.change(screen.getByLabelText("Описание"), {
-      target: { value: "Без идентификатора" },
+      target: { value: "Без объекта" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Отправить жалобу" }));
 
     expect(mockMutate).not.toHaveBeenCalled();
     expect(mockToastShow).not.toHaveBeenCalled();
   });
-});
 
-/**
- * Регресс L6: id цели жил своей жизнью при смене типа.
- *
- * Пользователь вставлял uuid поездки, переключал «Тип объекта» на
- * «Пользователь» и отправлял. Уходил trip-uuid с `targetType: "user"`,
- * бэк отвечал 403 (`canReport` для чужого/несуществующего объекта), а
- * `reportErrorMessage` показывал объяснение ПРО ПОЕЗДКУ — про объект
- * другого типа, которого в форме даже не было.
- */
-describe("ComplaintForm: смена типа объекта сбрасывает id", () => {
-  it("не отправляет id от предыдущего типа", () => {
+  it("пустое описание: кнопка погашена, отправки нет", () => {
     renderForm();
 
-    fill("22222222-2222-4222-8222-222222222222");
-    // Меняем тип: id поездки больше невалиден для пользователя.
-    fireEvent.change(screen.getByLabelText("Что случилось"), {
-      target: { value: "user" },
+    fireEvent.change(screen.getByLabelText("На что жалуетесь"), {
+      target: { value: `trip:${TRIP_ID}` },
     });
 
-    expect(
-      (screen.getByLabelText("Идентификатор объекта") as HTMLInputElement).value,
-    ).toBe("");
+    const button = screen.getByRole("button", {
+      name: "Отправить жалобу",
+    }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.click(button);
     expect(mockMutate).not.toHaveBeenCalled();
-  });
-
-  it("id нового типа используется как введённый", () => {
-    renderForm();
-
-    fireEvent.change(screen.getByLabelText("Что случилось"), {
-      target: { value: "user" },
-    });
-    fireEvent.change(
-      screen.getByLabelText("Идентификатор объекта"),
-      { target: { value: "33333333-3333-4333-8333-333333333333" } },
-    );
-    fireEvent.change(screen.getByLabelText("Описание"), {
-      target: { value: "Спам в чате" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Отправить жалобу" }));
-
-    const mutate = mockMutate.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(mutate).toMatchObject({
-      targetType: "user",
-      targetId: "33333333-3333-4333-8333-333333333333",
-    });
   });
 });

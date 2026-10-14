@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createReportDtoSchema, updateReportStatusDtoSchema } from "../index.js";
+import {
+  createReportDtoSchema,
+  reportTargetSchema,
+  reportTargetsSchema,
+  updateReportStatusDtoSchema,
+} from "../index.js";
 
 const valid = {
   targetType: "trip",
@@ -24,5 +29,21 @@ describe("Report contracts", () => {
   it("allows only moderation transitions", () => {
     expect(updateReportStatusDtoSchema.safeParse({ status: "pending" }).success).toBe(false);
     expect(updateReportStatusDtoSchema.safeParse({ status: "resolved", resolutionNote: "Готово" }).success).toBe(true);
+  });
+});
+
+describe("Report targets contract", () => {
+  const trip = { targetType: "trip", id: "t-1", fromCity: "Москва", toCity: "Тула", departureAt: "2026-10-12T09:00:00.000Z" };
+
+  it("принимает поездку, бронь и человека", () => {
+    const targets = [trip, { ...trip, targetType: "booking", id: "b-1" }, { targetType: "user", id: "u-1", name: "Иван" }];
+    expect(reportTargetsSchema.safeParse(targets).success).toBe(true);
+  });
+
+  it("отвергает неизвестный тип, пустые поля и битую дату", () => {
+    expect(reportTargetSchema.safeParse({ targetType: "car", id: "x" }).success).toBe(false);
+    expect(reportTargetSchema.safeParse({ ...trip, id: "" }).success).toBe(false);
+    expect(reportTargetSchema.safeParse({ ...trip, departureAt: "вчера" }).success).toBe(false);
+    expect(reportTargetSchema.safeParse({ targetType: "user", id: "u-1", name: "" }).success).toBe(false);
   });
 });

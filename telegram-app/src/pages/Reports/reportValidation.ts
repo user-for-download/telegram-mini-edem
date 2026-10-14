@@ -36,57 +36,37 @@ export const REPORT_STATUS_LABELS: Record<Report["status"], string> = {
 };
 
 /**
- * Рантайм-гварды вместо cast: select возвращает произвольную строку из DOM
- * (паттерн ReportModal). Неизвестное значение игнорируется.
+ * Рантайм-гвард вместо cast: select категории возвращает произвольную строку
+ * из DOM (паттерн ReportModal). Неизвестное значение игнорируется.
+ *
+ * Гварда для типа объекта здесь больше нет: тип не выбирается вручную — он
+ * приходит вместе с объектом из GET /reports/targets (см. reportTarget.ts).
  */
 export function isReportCategory(value: string): value is ReportCategory {
   return (REPORT_CATEGORIES as readonly string[]).includes(value);
 }
 
-export function isReportTargetType(value: string): value is ReportTargetType {
-  return (REPORT_TARGET_TYPES as readonly string[]).includes(value);
+/**
+ * Ошибка формы жалобы с привязкой к полю.
+ */
+export interface ReportFieldError {
+  /** id поля формы (`report-description`). */
+  field: string;
+  message: string;
 }
 
 /**
  * Чистая валидация формы жалобы (DOM-free, unit-тест без jsdom).
  * Лимит описания — REPORT_DESCRIPTION_MAX_LENGTH (2000) из @edem/contracts,
  * тот же лимит enforced backend через createReportDtoSchema.
- */
-/**
- * Ошибка формы жалобы с привязкой к полю.
  *
- * Длина идентификатора — единственная достижимая ошибка здесь: у поля нет
- * `maxLength`, а `canSubmit` блокирует только по непустоте, так что
- * длинный ввод реально доходит до submit. Остальные проверки срабатывают
- * там, где кнопка уже disabled: пустые поля (canSubmit) и превышение
- * лимита описания (`maxLength` на Textarea).
+ * Проверяется только описание: объект жалобы выбирается из списка
+ * GET /reports/targets, поэтому пустой или битый id в форму не попадает —
+ * `canSubmit` держит кнопку погашенной, пока объект не выбран.
  */
-export interface ReportFieldError {
-  /** id поля формы (`report-target-id` / `report-description`). */
-  field: string;
-  message: string;
-}
-
 export function validateReportForm(
-  targetId: string,
   description: string,
 ): ReportFieldError | null {
-  const trimmedId = targetId.trim();
-  if (trimmedId.length === 0) {
-    return {
-      field: "report-target-id",
-      message: "Укажите идентификатор объекта жалобы",
-    };
-  }
-  // Fail-fast до серверного 400: реальные ID — UUID (36 символов), cap
-  // с запасом режет вставку мусора. Формат (charset) — авторитет бэкенда,
-  // здесь не дублируем, чтобы не отказывать валидным будущим форматам.
-  if (trimmedId.length > 100) {
-    return {
-      field: "report-target-id",
-      message: "Идентификатор слишком длинный",
-    };
-  }
   const trimmed = description.trim();
   if (trimmed.length === 0) {
     return { field: "report-description", message: "Опишите проблему" };

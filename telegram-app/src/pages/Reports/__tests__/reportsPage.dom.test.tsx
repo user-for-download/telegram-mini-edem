@@ -14,6 +14,13 @@ const { mockUseMine } = vi.hoisted(() => ({ mockUseMine: vi.fn() }));
 
 vi.mock("@/queries/useReportQuery", () => ({
   useMyReportsQuery: mockUseMine,
+  useReportTargetsQuery: () => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
   useCreateReportMutation: () => ({
     mutate: vi.fn(),
     isPending: false,

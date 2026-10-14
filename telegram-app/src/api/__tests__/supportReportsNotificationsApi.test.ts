@@ -25,6 +25,7 @@ import {
   notificationSchema,
   notificationsPageSchema,
   reportSchema,
+  reportTargetsSchema,
 } from "@edem/contracts";
 
 const requestMock = vi.mocked(apiClient.request);
@@ -262,6 +263,28 @@ describe("reportsApi (Telegram)", () => {
       { signal },
       expect.anything(),
     );
+  });
+
+  it("listTargets идёт на GET /reports/targets со схемой цели", async () => {
+    const signal = new AbortController().signal;
+    requestMock.mockResolvedValue([
+      {
+        targetType: "trip",
+        id: "t-1",
+        fromCity: "Москва",
+        toCity: "Тула",
+        departureAt: "2026-10-12T09:00:00.000Z",
+      },
+    ]);
+
+    const targets = await reportsApi.listTargets(signal);
+
+    expect(requestMock).toHaveBeenCalledWith(
+      "/reports/targets",
+      { signal },
+      reportTargetsSchema,
+    );
+    expect(targets[0]?.targetType).toBe("trip");
   });
 
   it("duplicate (409 CONFLICT) пробрасывается вызывающему", async () => {

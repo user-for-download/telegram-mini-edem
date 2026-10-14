@@ -4,8 +4,12 @@ import {
   createReportDtoSchema,
   adminReportsQuerySchema,
   updateReportStatusDtoSchema,
+  reportTargetsSchema,
+  type ReportTarget,
 } from "@edem/contracts";
 import { db } from "../db.js";
+import { logger } from "../logger.js";
+import { reportServerError } from "../client-errors/index.js";
 import { requireUser, type AuthEnv } from "../auth/middleware.js";
 import { getSanitizedBody, sanitizeValue } from "../middleware/sanitize.js";
 import {
@@ -95,6 +99,80 @@ reportsRouter.get("/", reportReadLimiter, async (c) => {
     take: 50,
   });
   return c.json(items.map(serializeReport));
+});
+
+/**
+ * Кандидаты для формы жалобы — то, на что пользователь ВПРАВЕ жаловаться.
+ *
+ * Правила — те же, что у `canReport`: поездка, где я пассажир с бронью;
+ * бронь, где я пассажир или водитель; человек, с которым есть общая бронь
+ * (водитель ↔ пассажир). Поэтому «выбрал из списка» и «сервер принял»
+ * совпадают, и UUID вводить руками не нужно.
+ *
+ * Берём 50 последних броней (как и список жалоб): жалоба — про недавнее, а
+ * необозримый список старых поездок только мешает выбору. Записи
+ * дедуплицируются: одна поездка/человек может встретиться в нескольких
+ * бронях.
+ */
+reportsRouter.get("/targets", reportReadLimiter, async (c) => {
+  const userId = c.get("user").id;
+  const bookings = await db.booking.findMany({
+    where: {
+      OR: [{ passengerId: userId }, { trip: { driverId: userId } }],
+    },
+    include: {
+      trip: {
+        select: {
+          id: true,
+          fromCity: true,
+          toCity: true,
+          departureAt: true,
+          driver: { select: { id: true, name: true } },
+        },
+      },
+      passenger: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  const targets: ReportTarget[] = [];
+  const seen = new Set<string>();
+  const push = (target: ReportTarget) => {
+    const key = `${target.targetType}:${target.id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    targets.push(target);
+  };
+
+  for (const booking of bookings) {
+    const route = {
+      fromCity: booking.trip.fromCity,
+      toCity: booking.trip.toCity,
+      departureAt: booking.trip.departureAt.toISOString(),
+    };
+    // На поездку жалуются только пассажиры (canReport), поэтому водителю её
+    // не предлагаем — иначе выбор упирался бы в 403 при отправке.
+    if (booking.passengerId === userId) {
+      push({ targetType: "trip", id: booking.trip.id, ...route });
+    }
+    push({ targetType: "booking", id: booking.id, ...route });
+    // Человек — «другая сторона» брони: пассажиру водитель, водителю пассажир.
+    const other =
+      booking.passengerId === userId ? booking.trip.driver : booking.passenger;
+    push({ targetType: "user", id: other.id, name: other.name });
+  }
+
+  const parsed = reportTargetsSchema.safeParse(targets);
+  if (!parsed.success) {
+    logger.error(
+      { issues: parsed.error.issues },
+      "report_targets_response_validation_failed",
+    );
+    reportServerError(parsed.error, c.req.method, c.req.path);
+    return c.json({ message: "Internal response validation failed" }, 500);
+  }
+  return c.json(parsed.data);
 });
 
 reportsRouter.post("/", mutationLimiter, reportLimiter, async (c) => {

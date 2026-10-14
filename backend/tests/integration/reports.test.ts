@@ -97,4 +97,34 @@ describe("Reports API", () => {
     expect([a.status, b.status].sort()).toEqual([201, 409]);
     expect(await db.report.count({ where: { reporterId: driverId, targetType: "booking", targetId: bookingId } })).toBe(1);
   });
+
+  it("lists reportable targets: passenger gets trip, booking and driver", async () => {
+    const response = await app.request("/api/v1/reports/targets", { headers: headers(passengerId) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([
+      { targetType: "trip", id: tripId, fromCity: "Москва", toCity: "Тула", departureAt: "2030-01-01T10:00:00.000Z" },
+      { targetType: "booking", id: bookingId, fromCity: "Москва", toCity: "Тула", departureAt: "2030-01-01T10:00:00.000Z" },
+      { targetType: "user", id: driverId, name: expect.any(String) },
+    ]);
+  });
+
+  it("driver gets booking and passenger, but not their own trip", async () => {
+    const response = await app.request("/api/v1/reports/targets", { headers: headers(driverId) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([
+      { targetType: "booking", id: bookingId, fromCity: "Москва", toCity: "Тула", departureAt: "2030-01-01T10:00:00.000Z" },
+      { targetType: "user", id: passengerId, name: expect.any(String) },
+    ]);
+  });
+
+  it("unrelated user gets an empty target list", async () => {
+    const unrelated = await db.user.create({ data: { name: "No bookings", telegramUserId: ++tgSeq, avatar: "" } });
+    try {
+      const response = await app.request("/api/v1/reports/targets", { headers: headers(unrelated.id) });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual([]);
+    } finally {
+      await db.user.delete({ where: { id: unrelated.id } });
+    }
+  });
 });

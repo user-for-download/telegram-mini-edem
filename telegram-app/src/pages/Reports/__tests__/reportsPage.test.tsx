@@ -79,7 +79,7 @@ describe("ReportsPage: форма — во всплывающем окне", () 
     const html = renderPage();
 
     expect(html).not.toContain("Сообщите о проблеме");
-    expect(html).not.toContain('id="report-target-id"');
+    expect(html).not.toContain('id="report-target"');
     expect(html).not.toContain('id="report-description"');
   });
 
