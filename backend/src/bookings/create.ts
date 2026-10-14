@@ -2,10 +2,7 @@ import { Hono } from "hono";
 import { Prisma } from "../generated/prisma/client.js";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
-import {
-  createBookingDtoSchema,
-  ACTIVE_BOOKING_STATUSES,
-} from "@edem/contracts";
+import { createBookingDtoSchema } from "@edem/contracts";
 import { db } from "../db.js";
 import type { AuthEnv } from "../auth/middleware.js";
 import { logger } from "../logger.js";
@@ -55,7 +52,16 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
   try {
     const result: CreateResult = await db.$transaction(
       async (tx) => {
-        await releaseExpiredBookings(tx, new Date());
+        const now = new Date();
+        await releaseExpiredBookings(tx, now);
+        // Адресный добор по этой поездке: глобальный sweep выше берёт лишь
+        // top-20 старейших просрочек, поэтому просроченный pending именно
+        // этой поездки мог остаться и держать partial-unique-индекс
+        // (status IN 'pending','confirmed'), хотя activeBookingWhere() его
+        // уже не считает активным — тогда INSERT падал бы P2002 «на мёртвой
+        // строке» (ложный 409 SEAT_TAKEN чужому пассажиру или возврат
+        // просроченной брони как 200).
+        await releaseExpiredBookings(tx, now, { tripId, limit: 100 });
         const trip = await tx.trip.findUnique({
           where: { id: tripId },
         });
@@ -143,11 +149,9 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
           );
         }
 
-        // Слот занят, только если на нём висит активная бронь.
-        // declined/cancelled слот освобождают и повторной подаче не мешают —
-        // предикат обязан совпадать с partial-индексом active_seat_booking
-        // (F15), поэтому используем общий ACTIVE_BOOKING_STATUSES, а не
-        // захардкоженные литералы.
+        // Слот занят, только если на нём висит активная (не истёкшая) бронь.
+        // declined/cancelled, как и просроченный pending, слот освобождают —
+        // поэтому предикат — общий expiry-aware activeBookingWhere().
         const seatConflict = await tx.booking.findFirst({
           where: {
             tripId,
@@ -343,15 +347,16 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
       // Случай 1: конфликт на active_seat_booking (tripId, seat).
       // Либо наш retry (гонка двух одинаковых запросов — оба прошли
       // pre-check, один вставил), либо место занял другой пассажир.
-      // Предикат — тот же ACTIVE_BOOKING_STATUSES, что в pre-check'ах и
-      // partial-индексе (F15): ищем только активную бронь.
+      // Предикат expiry-aware (как в pre-check'ах): просроченный pending
+      // не отдаём клиенту как «активную бронь» — такое падение индекса
+      // означает реальный конфликт, а не наш retry.
       if (constraintName === "active_seat_booking") {
         const existingBooking = await db.booking.findFirst({
           where: {
             tripId,
             seat,
             passengerId: passenger.id,
-            status: { in: [...ACTIVE_BOOKING_STATUSES] },
+            ...activeBookingWhere(),
           },
           include: {
             trip: { include: { driver: { include: { car: true } } } },

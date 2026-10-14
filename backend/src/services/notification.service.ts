@@ -157,11 +157,23 @@ export async function pruneOldNotifications(
         updatedAt: { lt: outboxCutoff },
       },
     }),
+    // inbox: Notification → NotificationDelivery имеет onDelete: Cascade,
+    // поэтому нельзя удалять inbox-запись, пока по ней есть живая
+    // (pending/processing) доставка — иначе каскад утащит задачу из outbox
+    // вопреки инварианту «pending/processing НЕ трогаются никогда».
     db.notification.deleteMany({
-      where: { isRead: true, createdAt: { lt: readCutoff } },
+      where: {
+        isRead: true,
+        createdAt: { lt: readCutoff },
+        deliveries: { none: { status: { in: ["pending", "processing"] } } },
+      },
     }),
     db.notification.deleteMany({
-      where: { isRead: false, createdAt: { lt: unreadCutoff } },
+      where: {
+        isRead: false,
+        createdAt: { lt: unreadCutoff },
+        deliveries: { none: { status: { in: ["pending", "processing"] } } },
+      },
     }),
   ]);
 

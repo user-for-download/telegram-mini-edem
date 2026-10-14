@@ -67,15 +67,29 @@ export function activeBookingWhere(
 // просрочек делает воркер tripWorker раз в час (см. expirePendingBookings).
 export const IN_TX_EXPIRY_SWEEP_LIMIT = 20;
 
+/**
+ * Освобождает просроченные pending-брони (status → declined, место → +1).
+ *
+ * Без `tripId` — глобальный ограниченный добор (top-N старейших) для
+ * общей гигиены. С `tripId` — адресный добор ровно по одной поездке:
+ * нужен при создании брони, потому что глобальный top-N может не захватить
+ * просроченный pending именно этой поездки, а он держит partial-unique-индекс
+ * `status IN ('pending','confirmed')` и даёт ложный P2002.
+ */
 export async function releaseExpiredBookings(
   tx: Prisma.TransactionClient,
   now: Date,
+  opts: { tripId?: string; limit?: number } = {},
 ): Promise<void> {
   const expired = await tx.booking.findMany({
-    where: { status: "pending", expiresAt: { lte: now } },
+    where: {
+      status: "pending",
+      expiresAt: { lte: now },
+      ...(opts.tripId ? { tripId: opts.tripId } : {}),
+    },
     select: { id: true, tripId: true },
     orderBy: [{ expiresAt: "asc" }, { id: "asc" }],
-    take: IN_TX_EXPIRY_SWEEP_LIMIT,
+    take: opts.limit ?? IN_TX_EXPIRY_SWEEP_LIMIT,
   });
 
   for (const booking of expired) {

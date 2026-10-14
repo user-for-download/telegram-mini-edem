@@ -236,6 +236,21 @@ export const env = {
   TELEGRAM_WEBHOOK_SECRET: secretEnv("TELEGRAM_WEBHOOK_SECRET"),
 
   /**
+   * Лимит вебхука бота по IP. Легитимные апдейты приходят с серверов
+   * Telegram (свой IP, редкие вызовы); лимит отбивает флуд неверными
+   * секретами (лог-флуд и брутфорс пути). Щедрый дефолт, чтобы не
+   * троттлить ретраи Telegram.
+   */
+  BOT_WEBHOOK_RATE_WINDOW_MS: positiveIntEnv(
+    "BOT_WEBHOOK_RATE_WINDOW_MS",
+    60 * 1000,
+  ),
+  BOT_WEBHOOK_RATE_MAX: positiveIntEnv(
+    "BOT_WEBHOOK_RATE_MAX",
+    devRateMax(120),
+  ),
+
+  /**
    * Интервал опроса outbox-таблицы NotificationDelivery диспетчером
    * (в миллисекундах). Дефолт 15 секунд — консервативный поллинг
    * outbox-таблицы.

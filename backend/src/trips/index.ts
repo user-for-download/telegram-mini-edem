@@ -43,6 +43,7 @@ import {
   type TimeRange,
 } from "../utils/overlap.js";
 import { moscowDateBoundary } from "../utils/moscowTime.js";
+import { escapeLike } from "../utils/like.js";
 
 type TripWithDriver = Prisma.TripGetPayload<{
   include: { driver: { include: { car: true } } };
@@ -50,6 +51,8 @@ type TripWithDriver = Prisma.TripGetPayload<{
 
 const MAX_SEARCH_LENGTH = 100;
 const MAX_PAGE = 10_000;
+// Потолок цены поездки — совпадает с createTripDtoSchema (price.max(100000)).
+const MAX_FILTER_PRICE = 100_000;
 
 async function getActiveBookingSeatsByTripIds(
   tripIds: string[],
@@ -228,20 +231,21 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
   };
 
   if (q) {
+    const like = escapeLike(q);
     where.OR = [
-      { fromCity: { contains: q, mode: "insensitive" } },
-      { toCity: { contains: q, mode: "insensitive" } },
-      { fromAddress: { contains: q, mode: "insensitive" } },
-      { toAddress: { contains: q, mode: "insensitive" } },
+      { fromCity: { contains: like, mode: "insensitive" } },
+      { toCity: { contains: like, mode: "insensitive" } },
+      { fromAddress: { contains: like, mode: "insensitive" } },
+      { toAddress: { contains: like, mode: "insensitive" } },
     ];
   }
 
   if (fromCity) {
-    where.fromCity = { contains: fromCity, mode: "insensitive" };
+    where.fromCity = { contains: escapeLike(fromCity), mode: "insensitive" };
   }
 
   if (toCity) {
-    where.toCity = { contains: toCity, mode: "insensitive" };
+    where.toCity = { contains: escapeLike(toCity), mode: "insensitive" };
   }
 
   // Фильтр по id города справочника — точная выборка, дополнение к подстрочному
@@ -264,22 +268,26 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
 
   if (dateFrom) {
     const parsedDate = moscowDateBoundary(dateFrom);
-    if (parsedDate) {
-      where.departureAt = {
-        ...(where.departureAt as object),
-        gte: parsedDate,
-      };
+    if (!parsedDate) {
+      // Невалидная дата — это ошибка ввода, а не «без фильтра»: молчаливое
+      // игнорирование отдавало бы все поездки вместо ожидаемого подмножества.
+      return c.json({ message: "Invalid dateFrom" }, 400);
     }
+    where.departureAt = {
+      ...(where.departureAt as object),
+      gte: parsedDate,
+    };
   }
 
   if (dateTo) {
     const parsedDateTo = moscowDateBoundary(dateTo, true);
-    if (parsedDateTo) {
-      where.departureAt = {
-        ...(where.departureAt as object),
-        lte: parsedDateTo,
-      };
+    if (!parsedDateTo) {
+      return c.json({ message: "Invalid dateTo" }, 400);
     }
+    where.departureAt = {
+      ...(where.departureAt as object),
+      lte: parsedDateTo,
+    };
   }
 
   if (tagsParam) {
@@ -293,11 +301,15 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
   }
 
   if (maxPrice) {
+    // Контракт (tripFiltersDtoSchema) требует positive int с верхней границей
+    // цены поездки: строку разбираем строго, иначе parseInt("100abc") → 100
+    // молча принимал бы мусор.
+    if (!/^\d+$/.test(maxPrice)) {
+      return c.json({ message: "Invalid maxPrice" }, 400);
+    }
     const parsedMaxPrice = Number.parseInt(maxPrice, 10);
 
-    // Контракт (tripFiltersDtoSchema) требует positive int: ноль и
-    // отрицательные значения — невалидный фильтр, а не «пустая выдача».
-    if (Number.isNaN(parsedMaxPrice) || parsedMaxPrice < 1) {
+    if (parsedMaxPrice < 1 || parsedMaxPrice > MAX_FILTER_PRICE) {
       return c.json({ message: "Invalid maxPrice" }, 400);
     }
 

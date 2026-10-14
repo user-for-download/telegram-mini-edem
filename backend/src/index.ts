@@ -46,9 +46,11 @@ startNotificationDispatcher();
 const SHUTDOWN_TIMEOUT_MS = 20_000;
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Shutdown signal received");
-  stopTripWorker();
+  // Ждём завершения текущих циклов воркеров перед закрытием БД:
+  // иначе db.$disconnect() оборвёт их посреди запроса.
+  await stopTripWorker();
   stopWsReaper();
-  stopNotificationDispatcher();
+  await stopNotificationDispatcher();
   wsManager.closeAll(1001, "Server shutting down");
   server.close(async () => {
     logger.info("HTTP server closed");

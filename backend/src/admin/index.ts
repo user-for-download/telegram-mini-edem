@@ -52,6 +52,7 @@ import {
 import { wsManager } from "../ws/manager.js";
 import { tokensEqual } from "../utils/timingSafeEqual.js";
 import { getUniqueConstraintName } from "../utils/prisma-errors.js";
+import { escapeLike } from "../utils/like.js";
 import { recomputeUserRating } from "../reviews/rating.js";
 import {
   notifyUser,
@@ -193,7 +194,7 @@ adminRouter.get("/auth/session", adminReadLimiter, async (c) => {
  * POST /auth/logout — очистка cookie. Идемпотентно: без cookie тоже ок.
  * JWT stateless — серверного отзыва нет, доступ прекращается удалением cookie.
  */
-adminRouter.post("/auth/logout", async (c) => {
+adminRouter.post("/auth/logout", mutationLimiter, async (c) => {
   deleteCookie(c, ADMIN_COOKIE_NAME, { path: "/" });
   return c.json({ ok: true });
 });
@@ -272,7 +273,7 @@ adminRouter.get("/users", adminReadLimiter, async (c) => {
 
   const query = parseResult.data;
   const where: Prisma.UserWhereInput = query.q
-    ? { name: { contains: query.q, mode: "insensitive" } }
+    ? { name: { contains: escapeLike(query.q), mode: "insensitive" } }
     : {};
 
   const [users, total] = await Promise.all([
@@ -473,7 +474,10 @@ adminRouter.post("/feedback/:id/reply", mutationLimiter, async (c) => {
     );
   }
 
-  const existing = await db.feedback.findUnique({ where: { id } });
+  const existing = await db.feedback.findUnique({
+    where: { id },
+    select: { id: true, reply: true },
+  });
   if (!existing) {
     return c.json(
       { code: ERROR_CODES.NOT_FOUND, message: "Feedback not found" },
@@ -491,9 +495,25 @@ adminRouter.post("/feedback/:id/reply", mutationLimiter, async (c) => {
   }
 
   const now = new Date();
-  const updated = await db.feedback.update({
-    where: { id },
+  // Атомарный claim (reply всё ещё NULL): гонка двух POST не должна
+  // перезаписывать первый ответ и слать дубль-уведомление. Проверка выше —
+  // только для внятного сообщения об ошибке.
+  const claimed = await db.feedback.updateMany({
+    where: { id, reply: null },
     data: { reply: parseResult.data.reply, repliedAt: now },
+  });
+  if (claimed.count === 0) {
+    return c.json(
+      {
+        code: ERROR_CODES.VALIDATION_FAILED,
+        message: "Reply already exists; use PUT to update",
+      },
+      400,
+    );
+  }
+
+  const updated = await db.feedback.findUniqueOrThrow({
+    where: { id },
     include: { user: true },
   });
 
@@ -715,14 +735,19 @@ adminRouter.patch("/users/:id/telegram-stop", mutationLimiter, async (c) => {
 
   const hadConsent = user.tgChatJoinedAt != null;
 
-  await db.user.update({
-    where: { id },
-    data: { tgChatJoinedAt: null },
-  });
+  // Сброс согласия и отмена живых доставок — атомарно: иначе падение
+  // между записями оставило бы согласие отозванным, но задачи в outbox
+  // живыми (или наоборот).
+  const cancelled = await db.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id },
+      data: { tgChatJoinedAt: null },
+    });
 
-  const cancelled = await db.notificationDelivery.updateMany({
-    where: { userId: id, status: { in: ["pending", "processing"] } },
-    data: { status: "skipped", error: "admin_stopped" },
+    return tx.notificationDelivery.updateMany({
+      where: { userId: id, status: { in: ["pending", "processing"] } },
+      data: { status: "skipped", error: "admin_stopped" },
+    });
   });
 
   logger.info(
@@ -1130,10 +1155,17 @@ adminRouter.delete("/reviews/:id", mutationLimiter, async (c) => {
     );
   }
 
-  await db.$transaction(async (tx) => {
-    await tx.review.delete({ where: { id } });
-    await recomputeUserRating(tx, review.targetUserId);
-  });
+  await db.$transaction(
+    async (tx) => {
+      await tx.review.delete({ where: { id } });
+      await recomputeUserRating(tx, review.targetUserId);
+    },
+    // recomputeUserRating — read-modify-write по User (rating/reviewsCount).
+    // Serializable исключает lost update при параллельной модерации того же
+    // получателя (approve/reject уже Serializable); конфликт → P2034 → 409
+    // retryable через глобальный onError.
+    { isolationLevel: "Serializable" },
+  );
 
   return c.json({ ok: true, id });
 });
@@ -1394,7 +1426,7 @@ adminRouter.get("/cities", adminReadLimiter, async (c) => {
   const { q, page, pageSize } = parsed.data;
 
   const where = q
-    ? { name: { contains: q, mode: "insensitive" as const } }
+    ? { name: { contains: escapeLike(q), mode: "insensitive" as const } }
     : {};
 
   const [total, items] = await Promise.all([

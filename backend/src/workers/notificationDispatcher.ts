@@ -481,10 +481,15 @@ export function startNotificationDispatcher(): void {
   );
 }
 
-export function stopNotificationDispatcher(): void {
+export async function stopNotificationDispatcher(): Promise<void> {
   if (workerInterval) {
     clearInterval(workerInterval);
     workerInterval = null;
     logger.info("Notification outbox dispatcher stopped");
+  }
+  // Дожидаемся текущего цикла, чтобы shutdown не оборвал активную
+  // доставку/работу с БД посреди транзакции.
+  if (workerRun) {
+    await workerRun;
   }
 }

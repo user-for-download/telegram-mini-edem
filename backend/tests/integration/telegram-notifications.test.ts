@@ -406,6 +406,44 @@ describe("pruneOldNotifications — retention", () => {
     expect(await inboxExists(unreadOutside)).toBe(false);
   });
 
+  it("inbox: старую запись с живой (pending) доставкой не удаляем — каскад не уносит outbox", async () => {
+    const userId = await seedTelegramUser({});
+    const now = Date.now();
+    const unreadMs = env.TG_NOTIFICATION_INBOX_UNREAD_RETENTION_MS;
+
+    // Старый unread-inbox с незавершённой доставкой: удалять его нельзя —
+    // onDelete: Cascade утащил бы pending-задачу из outbox вопреки
+    // инварианту «pending/processing не трогаются никогда».
+    const parentOldWithPending = await seedInbox(userId, {
+      isRead: false,
+      createdAt: new Date(now - unreadMs - HOUR_MS),
+    });
+    const pendingId = await seedOutbox(
+      parentOldWithPending,
+      userId,
+      "pending",
+      new Date(now - HOUR_MS),
+    );
+
+    // Контроль: старая unread-запись с терминальной доставкой удаляется.
+    const parentOldWithFailed = await seedInbox(userId, {
+      isRead: false,
+      createdAt: new Date(now - unreadMs - HOUR_MS),
+    });
+    await seedOutbox(
+      parentOldWithFailed,
+      userId,
+      "failed",
+      new Date(now - env.TG_NOTIFICATION_OUTBOX_RETENTION_MS - HOUR_MS),
+    );
+
+    await pruneOldNotifications();
+
+    expect(await inboxExists(parentOldWithPending)).toBe(true);
+    expect(await deliveryExists(pendingId)).toBe(true);
+    expect(await inboxExists(parentOldWithFailed)).toBe(false);
+  });
+
   it("повторный прогон идемпотентен (второй раз удаляет 0)", async () => {
     const userId = await seedTelegramUser({});
     const parentId = await seedInbox(userId, {

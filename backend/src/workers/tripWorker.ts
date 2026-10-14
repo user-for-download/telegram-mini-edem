@@ -465,10 +465,15 @@ export function startTripWorker() {
   logger.info("Trip auto-completion worker started");
 }
 
-export function stopTripWorker() {
+export async function stopTripWorker(): Promise<void> {
   if (workerInterval) {
     clearInterval(workerInterval);
     workerInterval = null;
     logger.info("Trip auto-completion worker stopped");
+  }
+  // Дожидаемся текущего цикла: shutdown иначе может закрыть БД
+  // ($disconnect) прямо посреди запросов воркера.
+  if (workerRun) {
+    await workerRun;
   }
 }

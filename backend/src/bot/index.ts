@@ -23,6 +23,7 @@ import { env } from "../env.js";
 import { logger } from "../logger.js";
 import { reportServerError } from "../client-errors/index.js";
 import { tokensEqual } from "../utils/timingSafeEqual.js";
+import { botWebhookLimiter } from "../middleware/rateLimit.js";
 
 export const botRouter = new Hono();
 
@@ -61,7 +62,7 @@ function parseBotCommand(text?: string): string | null {
   return command || null;
 }
 
-botRouter.post("/webhook/:secret", async (c) => {
+botRouter.post("/webhook/:secret", botWebhookLimiter, async (c) => {
   const provided = c.req.param("secret");
   if (!provided || !tokensEqual(provided, env.TELEGRAM_WEBHOOK_SECRET)) {
     // 404 вместо 401: не раскрываем существование endpoint-брутфорсу.

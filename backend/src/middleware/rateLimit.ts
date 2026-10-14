@@ -140,6 +140,17 @@ export const mutationLimiter = createRateLimiter({
 });
 
 /**
+ * Лимитер вебхука Telegram-бота по IP: отбивает флуд неверными секретами
+ * (лог-флуд + брутфорс пути). Легитимные апдейты приходят с серверов
+ * Telegram, поэтому щедрый дефолт не мешает ретраям.
+ */
+export const botWebhookLimiter = createRateLimiter({
+  windowMs: env.BOT_WEBHOOK_RATE_WINDOW_MS,
+  max: env.BOT_WEBHOOK_RATE_MAX,
+  keyPrefix: "bot-webhook",
+});
+
+/**
  * User-based rate limiter: ключ — userId, а не IP.
  *
  * Лимитирует «дорогие» действия по аккаунту (создание поездок, броней,

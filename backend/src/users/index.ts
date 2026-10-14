@@ -21,12 +21,14 @@ import {
   tripSnapshotOf,
 } from "../services/notification.service.js";
 
-const updateProfileSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
-  about: z.string().max(500).nullable().optional(),
-  // Телефон (F1): E.164-ish после нормализации; "" → null (очистка).
-  phone: z.string().max(25).nullable().optional(),
-});
+const updateProfileSchema = z
+  .object({
+    name: z.string().min(2).max(100).optional(),
+    about: z.string().max(500).nullable().optional(),
+    // Телефон (F1): E.164-ish после нормализации; "" → null (очистка).
+    phone: z.string().max(25).nullable().optional(),
+  })
+  .strict();
 
 /**
  * Нормализация телефона: пробелы/дефисы/скобки-out, "" → null.
@@ -44,17 +46,21 @@ function normalizePhone(
   return /^\+?\d{7,15}$/.test(digits) ? digits : false;
 }
 
-const carFormSchema = z.object({
-  model: z.string().min(1).max(50),
-  color: z.string().min(1).max(30),
-  // Номер — опционален (примета для узнавания машины, не госномер строго).
-  // Пустая строка нормализуется в null в upsertCar, чтобы не хранить "".
-  plate: z.string().max(15).optional(),
-});
+const carFormSchema = z
+  .object({
+    model: z.string().min(1).max(50),
+    color: z.string().min(1).max(30),
+    // Номер — опционален (примета для узнавания машины, не госномер строго).
+    // Пустая строка нормализуется в null в upsertCar, чтобы не хранить "".
+    plate: z.string().max(15).optional(),
+  })
+  .strict();
 
-const updateNotificationSettingsSchema = z.object({
-  notificationsEnabled: z.boolean().optional(),
-});
+const updateNotificationSettingsSchema = z
+  .object({
+    notificationsEnabled: z.boolean().optional(),
+  })
+  .strict();
 
 export const usersRouter = new Hono<AuthEnv>();
 
