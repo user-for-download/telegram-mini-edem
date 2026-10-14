@@ -35,6 +35,7 @@ webapp/dist/
 packages/*/dist/
 dist/
 build/
+*.tsbuildinfo
 
 # --- E2E артефакты (скриншоты могут содержать PII тестовых юзеров) ---
 e2e/shots/

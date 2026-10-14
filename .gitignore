@@ -6,6 +6,7 @@ dist/
 # `prisma generate` (npm run db:generate) и компилируется tsc в dist.
 backend/src/generated/
 coverage/
+*.tsbuildinfo
 .DS_Store
 *.log
 # Runtime audit journals (migration runs, tg-migration-23): durable output

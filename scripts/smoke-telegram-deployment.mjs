@@ -1,4 +1,4 @@
-// scripts/smoke-telegram-deployment.mjs — smoke Telegram-staging (tg-migration-20).
+// scripts/smoke-telegram-deployment.mjs — smoke Telegram-staging.
 // Проверяет production-like стенд: health, готовность БД, Host-роутинг TG-ассетов,
 // форму auth-ошибок, WS upgrade + auth-timeout.
 //
