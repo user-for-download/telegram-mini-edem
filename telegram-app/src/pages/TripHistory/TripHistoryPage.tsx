@@ -41,24 +41,42 @@ function tripTime(trip: {
 }
 
 /**
- * Текст статуса строки истории (только текст, без пилюли — раскладка
- * Cell не меняется, смысл не зависит от цвета).
- * Пассажир — по historyCategory бэкенда; водитель — по статусу поездки.
+ * Тон терминального статуса: завершена — success, отменена — danger,
+ * архив («В архиве») — без тона (приглушённый текст).
  */
-function historyStatusLabel(item: HistoryItem): string {
+type HistoryStatusTone = "success" | "danger" | null;
+
+function terminalTone(status: Trip["status"] | undefined): HistoryStatusTone {
+  if (status === "completed") return "success";
+  if (status === "cancelled") return "danger";
+  return null;
+}
+
+/**
+ * Статус строки истории: текст (единственный источник — `terminalTripStatusLabel`)
+ * и тон для подкраски. Пассажир — по historyCategory бэкенда; водитель — по
+ * статусу поездки. Смысл всегда в словах: цвет — подсказка (a11y: color + text).
+ */
+function historyStatus(item: HistoryItem): {
+  label: string;
+  tone: HistoryStatusTone;
+} {
   if (item.kind === "driving") {
-    return terminalTripStatusLabel(item.trip.status) ?? "В архиве";
+    return {
+      label: terminalTripStatusLabel(item.trip.status) ?? "В архиве",
+      tone: terminalTone(item.trip.status),
+    };
   }
   const category = item.booking.historyCategory;
-  if (category === "completed") return "Завершена";
-  if (category === "cancelled") return "Отменена";
+  if (category === "completed") return { label: "Завершена", tone: "success" };
   if (
+    category === "cancelled" ||
     item.booking.status === "cancelled" ||
     item.booking.status === "declined"
   ) {
-    return "Отменена";
+    return { label: "Отменена", tone: "danger" };
   }
-  return "В архиве";
+  return { label: "В архиве", tone: null };
 }
 
 /**
@@ -131,7 +149,7 @@ export function TripHistoryPage() {
               // иначе серый бейдж с ценой.
               const needReview =
                 item.kind === "booking" && item.booking.canReview === true;
-              const status = historyStatusLabel(item);
+              const status = historyStatus(item);
               return (
                 <Cell
                   key={item.key}
@@ -146,7 +164,20 @@ export function TripHistoryPage() {
                       )}
                     </IconContainer>
                   }
-                  subtitle={`${relativeMoscowDay(trip.departureAt)}, ${trip.time} · ${status}`}
+                  subtitle={`${relativeMoscowDay(trip.departureAt)}, ${trip.time}`}
+                  /* Строка 3 — статус тоном: та же трёхстрочная раскладка, что у
+                     уведомлений и жалоб. Раньше статус был приклеен к дате
+                     (`subtitle`) и обрезался в «Отме…»/«Заверш…» — ключевое
+                     слово не читалось. */
+                  description={
+                    <span
+                      className={styles.status}
+                      data-tone={status.tone ?? undefined}
+                      data-testid={`history-status-${item.key}`}
+                    >
+                      {status.label}
+                    </span>
+                  }
                   after={
                     needReview ? (
                       <Badge type="number" mode="critical">
@@ -166,8 +197,8 @@ export function TripHistoryPage() {
                   }
                   aria-label={
                     needReview
-                      ? `Поездка ${trip.fromCity} — ${trip.toCity}, ${status}, оставьте отзыв`
-                      : `Поездка ${trip.fromCity} — ${trip.toCity}, ${status}`
+                      ? `Поездка ${trip.fromCity} — ${trip.toCity}, ${status.label}, оставьте отзыв`
+                      : `Поездка ${trip.fromCity} — ${trip.toCity}, ${status.label}`
                   }
                 >
                   {trip.fromCity} → {trip.toCity}

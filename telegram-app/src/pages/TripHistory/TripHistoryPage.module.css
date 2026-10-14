@@ -2,9 +2,29 @@
  * Боковых отступов у ленты нет — рельс (бока 16) держит корень экрана
  * (ui/Page); вертикаль внутри ленты — узкий gap 4px (строки Cell
  * разделяются дивайдерами кита, крупные гэпы не нужны). */
-/* Цена в after строки: серый текст как бейдж (Badge принимает только number). */
+
+/* Цена в after строки: серый текст как бейдж (Badge принимает только number).
+ * `nowrap` обязателен: без него «500 ₽» переносится по пробелу и цена едет в
+ * две строки («500» / «₽»), растягивая строку. */
 .price {
   font-size: 15px;
   font-weight: 600;
+  white-space: nowrap;
   color: var(--app-muted, inherit);
+}
+
+/* Строка 3 — статус: тон из тех же --app-* токенов, что у StatusPill, но
+ * текстом. Цвет здесь — подсказка, смысл всегда в словах (a11y: color + text).
+ * Правила совпадают с ReportsPage.module.css/NotificationsPage — статус во всех
+ * лентах читается одинаково. */
+.status {
+  color: var(--app-muted);
+}
+
+.status[data-tone="success"] {
+  color: var(--app-success);
+}
+
+.status[data-tone="danger"] {
+  color: var(--app-danger);
 }

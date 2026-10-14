@@ -120,6 +120,13 @@ describe("TripHistoryPage: строки истории", () => {
     // Статус текстом: completed → «Завершена», cancelled → «Отменена».
     expect(html).toContain("Завершена");
     expect(html).toContain("Отменена");
+    // Строка 3 — статус тоном: завершена success, отменена danger.
+    expect(html).toContain('data-tone="success"');
+    expect(html).toContain('data-tone="danger"');
+    // Статус живёт в отдельной строке (description), а не в subtitle с датой:
+    // в subtitle его обрезало в «Заверш…».
+    expect(html).toContain('data-testid="history-status-b-h-1"');
+    expect(html).toContain('data-testid="history-status-b-h-2"');
   });
 
   it("архив водителя merged в историю простыми строками", () => {
