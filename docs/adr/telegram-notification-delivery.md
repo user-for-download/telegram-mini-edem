@@ -65,6 +65,11 @@ Engineering constraints for the enabled channel:
   `skipped`/`no_token` without any external call.
 - Rate limits: optional ≤5/hour per user, critical ≤1 per 5 min per type;
   retries with 1m/5m/15m backoff, max 3 attempts.
+- Retention: `pruneOldNotifications` (run from the hourly trip worker)
+  deletes only terminal outbox deliveries and old inbox records; `pending`/
+  `processing` are never touched, and an inbox record with a live delivery
+  is never deleted (the `Notification → NotificationDelivery` cascade would
+  otherwise remove a task from the outbox).
 - Telegram 403 (bot blocked) → skip as `bot_blocked` and clear
   `tgChatJoinedAt` (consent is effectively revoked).
 - No Bot API background message outside this outbox path; the previous

@@ -148,6 +148,14 @@ npm run db:migrate:deploy --workspace=backend
 Инцидент 2026-10-08 вызван именно этим: колонки добавили `db push`-ом, а
 запись в леджере не появилась.
 
+**Гард destructive push (2026-10-14).** `npm run db:push:force` и
+`db:test:push` перед `prisma db push --accept-data-loss` прогоняют
+`backend/prisma/db-push-guard.ts`: при `NODE_ENV=production` запуск падает,
+пока явно не задан `ALLOW_PRODUCTION_DB_PUSH=true`. Обычный `db:push` (без
+`--accept-data-loss`) гарда не имеет, но остаётся инструментом только для
+чистых БД без `_prisma_migrations` — на стенде с миграциями используйте
+`db:migrate:deploy` (§ выше).
+
 ## 6. Known non-goals (заблокировано отдельно)
 
 - Bot API фоновая рассылка (ADR, Product-аппрув) — на стейдже не включать.

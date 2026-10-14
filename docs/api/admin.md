@@ -57,6 +57,8 @@ JWT в httpOnly cookie. Пользовательские роли не испо�
 
 Очистка cookie (`Set-Cookie: edem_admin_jwt=; Max-Age=0`). Идемпотентен.
 Ответ: `{ "ok": true }`. JWT stateless — серверного отзыва нет.
+Лимитируется общим `mutationLimiter` (как остальные мутации), чтобы
+logout не стал каналом флуда.
 
 ## Защищённые endpoint'ы
 
@@ -125,6 +127,34 @@ refresh-токены отзываются) и в `/auth/refresh`; сервис �
 `ONBOARDING_VERSION` и показывает слайды при несовпадении. Ответ —
 обновлённый user DTO.
 
+### PATCH /api/v1/admin/users/:id/telegram-stop
+
+Мгновенный стоп Bot API-рассылки конкретному пользователю (SLA на жалобы
+о спаме — см. `docs/product/bot-api-approval-package.md` §6а). Сбрасывает
+согласие `User.tgChatJoinedAt = null` **и** переводит все живые задачи
+outbox (`NotificationDelivery` в статусе `pending`/`processing`) в
+`skipped` с `error: "admin_stopped"` — в одной транзакции. Следующий тик
+диспетчера видит чат=null и пропускает остальное, поэтому стоп мгновенный
+без кэша. Идемпотентен: повторный стоп при пустом согласии — `200`.
+
+Тело не требуется. Ответ:
+
+```json
+{ "success": true, "hadConsent": true, "cancelledDeliveries": 3 }
+```
+
+| Код | Ответ | Описание |
+|-----|-------|----------|
+| 200 | `{ success, hadConsent, cancelledDeliveries }` | Успех (в т.ч. повторный вызов) |
+| 404 | `NOT_FOUND` | Пользователь не найден |
+
+### GET /api/v1/admin/telegram/metrics
+
+JSON-агрегат outbox-доставок для админ-панели: `channelEnabled`
+(kill-switch), `total`, `pending`, `processing`, `delivered`, `failed` и
+`skipped` в разбивке по причинам. Те же цифры, что в `/metrics`
+(Prometheus), но структурированные; только счётчики, без PII.
+
 ### GET /api/v1/admin/trips
 
 | Параметр | Тип | Описание |
@@ -180,10 +210,12 @@ createdAt, authorId, authorName, targetUserId, targetUserName`.
 ### DELETE /api/v1/admin/reviews/:id
 
 Hard delete отзыва из любого статуса (внешних ссылок на Review нет,
-каскад не нужен). В той же транзакции пересчитываются `rating` и
-`reviewsCount` целевого пользователя по оставшимся **опубликованным**
-отзывам (общий helper `recomputeUserRating`) — удалённый отзыв перестаёт
-влиять на рейтинг. Ответ: `{ "ok": true, "id": "<id>" }`.
+каскад не нужен). Выполняется в Serializable-транзакции: в той же
+транзакции пересчитываются `rating` и `reviewsCount` целевого пользователя
+по оставшимся **опубликованным** отзывам (общий helper
+`recomputeUserRating`) — удалённый отзыв перестаёт влиять на рейтинг.
+Concurrent-конфликт сериализации (`P2034`) → `409` с retry. Ответ:
+`{ "ok": true, "id": "<id>" }`.
 
 ### PATCH /api/v1/admin/reviews/:id/approve
 
@@ -237,6 +269,11 @@ reply (string|null), repliedAt (ISO|null), createdAt, userId, userName`.
 Первичный ответ админа на обращение. Создаёт in-app уведомление
 `feedback_replied` пользователю (deep-link в «Мои обращения») и ставит
 `repliedAt = now` (аудит первичного ответа).
+
+Первичный ответ фиксируется атомарным claim'ом
+(`updateMany ... WHERE reply IS NULL`): при гонке двух ответов выигрывает
+ровно один, второй получает `400` и не перезатирает первый (уведомление
+создаётся только победителем).
 
 Тело: `{ "reply": string }` (trim, 1–2000).
 

@@ -83,3 +83,42 @@ Owner: backend. Expiry: re-review if dev-bypass ever leaves non-production.
 2. pino `redact` hardening (accepted risk, owner backend).
 3. Pre-existing `user-rate-limit.test.ts` failure (fails on clean tree) — separate bug, not migration-caused.
 4. Consider `Retry-After` on 429 (E2E + client backoff ergonomics).
+
+## Addendum 2026-10-14 — post-review hardening
+
+Follow-up review passes touched the same areas (error handling, input
+validation, rate limiting, destructive ops). No new critical/high findings.
+
+- **Unified JSON 404** for `/api/*` (`app.notFound` + SPA fallback): API
+  paths never receive `index.html`. Prisma errors that escape a local
+  `catch` are mapped centrally in `app.onError` (`P2025 → 404`,
+  `P2034 → 409 { retryable: true }`) instead of a 500.
+- **LIKE-metacharacter escaping** (`backend/src/utils/like.ts`): every
+  user-supplied search value (`trips` `q`/`fromCity`/`toCity`, city
+  directory, admin user search) escapes `\`, `%`, `_`. Previously `q=%`
+  matched every row and the filter silently returned everything.
+- **Strict write schemas** (`.strict()`): user profile/car/notification
+  settings and admin bodies (ban reason, city name, feedback reply) reject
+  unknown fields with `400` instead of ignoring them.
+- **WebSocket frame cap**: `wss.options.maxPayload = 64 KiB` (the `ws`
+  default is 100 MiB) against anonymous JSON floods.
+- **Bot webhook** (`POST /bot/webhook/:secret`): timing-safe secret compare
+  (bad secret → `404`, endpoint existence not disclosed) plus a per-IP
+  limiter (`BOT_WEBHOOK_RATE_*`).
+- **Destructive `db push` guard** (`backend/prisma/db-push-guard.ts`):
+  `db:push:force` / `db:test:push` refuse to run in `NODE_ENV=production`
+  unless `ALLOW_PRODUCTION_DB_PUSH=true`.
+- **Booking expiry**: an expired `pending` is declined with seat return
+  atomically inside the create transaction (global sweep + targeted
+  per-trip sweep, limit 100), so a new passenger on the same seat no longer
+  gets a false `409 SEAT_TAKEN` from a dead row.
+- **Shutdown & retention**: trip/notification workers finish their in-flight
+  cycle before `db.$disconnect`; the notification prune never deletes a
+  notification that still has a live (`pending`/`processing`) delivery.
+
+```bash
+# verification at addendum time
+npm test --workspace=backend      # 728 passed
+npm test --workspace=packages/contracts  # 286 passed
+npm run typecheck && npm run lint:eslint && npm run format:check
+```

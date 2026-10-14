@@ -38,7 +38,7 @@
 ## 4. Техплан (инженерия, оценка ~1–2 дня)
 
 1. Миграция: `User.tgChatJoinedAt DateTime?` (чат есть), опционально `User.telegramNotificationsEnabled Boolean default true` — сплит флага только здесь, не раньше.
-2. Webhook `POST /bot/webhook` (секрет в path, `TELEGRAM_WEBHOOK_SECRET`) на `/start`/`/stop` → проставление/сброс `tgChatJoinedAt`. Валидация апдейтов по секрету.
+2. Webhook `POST /bot/webhook/:secret` (секрет в path, `TELEGRAM_WEBHOOK_SECRET`) на `/start`/`/stop` → проставление/сброс `tgChatJoinedAt`. Валидация апдейтов по секрету (timing-safe сравнение; неверный секрет → `404`, не раскрываем существование эндпоинта). Лимит по IP (`BOT_WEBHOOK_RATE_WINDOW_MS`/`BOT_WEBHOOK_RATE_MAX`, дефолт 120/мин) отбивает флуд неверными секретами, не троттля ретраи Telegram.
 3. Воркер `notificationDispatcher`: outbox-таблица (`NotificationDelivery`: notificationId, channel, status, attempts) — createNotification пишет inbox как сейчас + кладёт задачу; воркер забирает, проверяет флаг/согласие/дедуп, шлёт `sendMessage`, ретраи с бэкоффом (3 попытки), пер-user rate limit (≤5/час, критичные вне лимита — но ≤1/5мин на тип).
 4. `shouldDeliverTelegram(type, tgEnabled, chatJoined)` — расширение существующей чистой функции (тесты уже есть — дополнить).
 5. Kill-switch: существующий `TELEGRAM_DELIVERY_ENABLED=false` гасит всё мгновенно; плюс per-user opt-out.
