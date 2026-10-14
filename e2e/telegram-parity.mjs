@@ -3,7 +3,7 @@
 // свой JWT через тот же dev-bypass) бронирует → водитель подтверждает в UI →
 // уведомления, завершение, отзыв, поддержка, настройки, удаление.
 //
-// Детерминизм (skill playwright-e2e, зеркально full-cycle.mjs):
+// Детерминизм (skill playwright-e2e):
 // - уникальные данные на запуск (PRICE/RUN_ID/тексты) — повторы не конфликтуют;
 // - cleanup в finally (pass и fail), неудача чистки валит прогон;
 // - pageerror/unhandledrejection валят прогон;
@@ -106,7 +106,7 @@ try {
   page.on("dialog", (dialog) => void dialog.accept());
 
   // Холодный старт: свежий vite компилируется десятки секунд — один
-  // незасчитанный прогрев с длинным ожиданием (паттерн full-cycle.mjs).
+  // незасчитанный прогрев с длинным ожиданием.
   await page.goto(`${TG_URL}/`, { waitUntil: "commit" });
   await page
     .getByText(/Найти поездку|Добро пожаловать/)

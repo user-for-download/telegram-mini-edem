@@ -1,5 +1,5 @@
 // e2e/telegram-fixtures.mjs
-// Общие фикстуры Telegram-parity E2E (tg-migration-17): harness прогона
+// Общие фикстуры Telegram-parity E2E: harness прогона
 // (record/runStep, pageerror+rejections валят прогон), env-оверрайды,
 // dev-auth через реальный /auth/telegram (dev-bypass hash=dev-hash,
 // без allowlist-хаков), API-обёртка, docker-psql time-travel и чистка.
@@ -167,7 +167,7 @@ export async function api(path, { method = "GET", token, body } = {}) {
   return parsed;
 }
 
-/** Time-travel / проверки через dev-БД (как full-cycle.mjs). */
+/** Time-travel / проверки через dev-БД. */
 export function psql(query) {
   // execFileSync без shell: двойные кавычки quoted camelCase-таблиц
   // ("Trip", "City") доходят до psql как есть. Через execSync+shell

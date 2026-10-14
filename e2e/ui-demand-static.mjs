@@ -8,7 +8,7 @@
 // вместо исходников CSS).
 import { chromium } from "playwright";
 
-const TG_BASE = process.env.TG_BASE_URL || "http://127.0.0.1:3012";
+const TG_BASE = process.env.E2E_TG_URL || "http://localhost:3012";
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 390, height: 844 } });

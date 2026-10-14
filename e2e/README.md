@@ -1,6 +1,6 @@
 # E2E Tests
 
-Telegram Mini App parity E2E (tg-migration-17): Playwright + Chromium journey plus realtime check.
+Telegram Mini App parity E2E: Playwright + Chromium journeys, plus realtime and UI-guard checks.
 
 Отдельно `ui-cascade.mjs` — не journey, а проверка каскада: берёт
 `getComputedStyle` карточки и док таббара и сверяет с «Реестром отклонений»
@@ -34,6 +34,12 @@ CSS, а не результат: правило может быть коррек
 прошло бы как «одинаковое». Вне охвата остаются hero-экраны, шторки и
 терминальные экраны: у них другой низ и своя геометрия по устройству.
 
+`ui-demand-static.mjs` — пинит витрину спроса («Кто ищет попутку»): строка —
+информация, а не ссылка. В браузере проверяет то, чего не видит jsdom: курсор
+не `pointer`, на наведении нет подложки, клик никуда не ведёт. Закрывает
+китовую ложную аффорданс `Cell` (всегда тянет `Tappable`) через
+`STATIC_CELL` из `@/ui/classes`; реестр отклонений — `ui/README.md` #33.
+
 ## Prerequisites
 
 - Telegram frontend on `E2E_TG_URL` (default `http://localhost:3012`,
@@ -61,6 +67,9 @@ node e2e/ui-contrast.mjs
 
 # Ритм: рёбра экранов (padding корня Page по токенам, бока, низ до дока)
 node e2e/ui-rhythm.mjs
+
+# Витрина спроса: строка не выглядит кликабельной (курсор/подложка/клик)
+node e2e/ui-demand-static.mjs
 ```
 
 Контрастный скрипт печатает подробные замеры с `E2E_CONTRAST_VERBOSE=1`.
@@ -130,5 +139,5 @@ raise `TG_AUTH_RATE_MAX` on the dev backend.
 
 ## Artifacts
 
-- Screenshots: `e2e/shots-tg/`
+- Screenshots: `e2e/shots-tg/` (parity), `e2e/shots-realtime/` (realtime)
 - Results: `e2e/results-tg.json`

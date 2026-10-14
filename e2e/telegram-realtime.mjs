@@ -1,4 +1,4 @@
-// Telegram realtime E2E (Playwright + Chromium, tg-migration-14, ws.v1)
+// Telegram realtime E2E (Playwright + Chromium, ws.v1)
 // Проверяет TG WebSocket-клиент через перехват на уровне страницы
 // (page.routeWebSocket): детерминированный fake-сервер, живой backend-WS
 // не нужен. HTTP-bootstrap настоящий (dev-bypass hash=dev-hash).

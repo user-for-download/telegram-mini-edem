@@ -38,8 +38,9 @@ build/
 *.tsbuildinfo
 
 # --- E2E артефакты (скриншоты могут содержать PII тестовых юзеров) ---
-e2e/shots/
-e2e/results.json
+e2e/shots-tg/
+e2e/shots-realtime/
+e2e/results-tg.json
 
 # --- Локальные скрипты/раннеры ---
 run_workflow.sh
