@@ -35,18 +35,6 @@ export function useFeedbackDetailQuery(id: string | null) {
 }
 
 /**
- * Хелпер: инвалидировать все ключи списка обращений (page/pageSize).
- * Используется после создания/редактирования ответа, чтобы строка сразу
- * показала обновлённое состояние.
- */
-export function useInvalidateFeedbackList() {
-  const qc = useQueryClient();
-  return () => {
-    void qc.invalidateQueries({ queryKey: ["admin", "feedback"] });
-  };
-}
-
-/**
  * POST /admin/feedback/:id/reply. После успеха — инвалидируем список И
  * точечно обновляем детальный кэш (если он уже был открыт).
  */

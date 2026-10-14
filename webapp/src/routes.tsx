@@ -136,9 +136,9 @@ function NotFound() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <div>
-        <h1 className="text-lg font-semibold">Page not found</h1>
+        <h1 className="text-lg font-semibold">Страница не найдена</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          The requested page does not exist.
+          Запрошенная страница не существует.
         </p>
       </div>
     </div>

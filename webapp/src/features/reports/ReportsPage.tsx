@@ -4,6 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime } from "@/lib/format";
 import { useReportsQuery, useUpdateReportStatusMutation } from "./queries";
+import {
+  REPORT_CATEGORY_LABELS,
+  REPORT_STATUS_LABELS,
+  REPORT_TARGET_TYPE_LABELS,
+} from "./labels";
 import type { UpdateReportStatusDto } from "@edem/contracts";
 
 type ReportStatusFilter = "pending" | "in_review" | "resolved" | "rejected";
@@ -121,11 +126,15 @@ export function ReportsPage() {
         {query.data?.items.map((report) => (
           <article key={report.id} className="grid gap-3 rounded-lg border p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline">{report.status}</Badge>
-              <Badge variant="secondary">{report.category}</Badge>
+              <Badge variant="outline">
+                {REPORT_STATUS_LABELS[report.status]}
+              </Badge>
+              <Badge variant="secondary">
+                {REPORT_CATEGORY_LABELS[report.category]}
+              </Badge>
               <span className="text-sm text-muted-foreground">
-                {report.targetType} · {report.reporterName} ·{" "}
-                {formatDateTime(report.createdAt)}
+                {REPORT_TARGET_TYPE_LABELS[report.targetType]} ·{" "}
+                {report.reporterName} · {formatDateTime(report.createdAt)}
               </span>
             </div>
             <p className="whitespace-pre-wrap text-sm">{report.description}</p>

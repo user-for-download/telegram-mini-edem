@@ -180,6 +180,11 @@ function BookingRow({ booking }: { booking: AdminBookingDto }) {
   const [pendingStatus, setPendingStatus] = useState<BookingStatus | null>(
     null,
   );
+  // Guarded lookup: `booking.status` is a plain string in the DTO, so an
+  // unchecked cast could render `undefined` for an unexpected value.
+  const currentLabel = isBookingStatus(booking.status)
+    ? STATUS_LABELS[booking.status]
+    : booking.status;
 
   const handleSelectChange = (value: string) => {
     if (!isBookingStatus(value)) return;
@@ -234,8 +239,8 @@ function BookingRow({ booking }: { booking: AdminBookingDto }) {
             <DialogHeader>
               <DialogTitle>Сменить статус брони?</DialogTitle>
               <DialogDescription>
-                Бронь {booking.id} ({booking.passengerName}):{" "}
-                {STATUS_LABELS[booking.status as BookingStatus]}
+                Бронь {booking.tripRoute} ({booking.passengerName}):{" "}
+                {currentLabel}
                 {pendingStatus !== null && (
                   <> → {STATUS_LABELS[pendingStatus]}</>
                 )}

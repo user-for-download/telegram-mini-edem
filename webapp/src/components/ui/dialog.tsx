@@ -73,7 +73,7 @@ function DialogContent({
               size="icon-sm"
             >
               <X className="size-4" strokeWidth={2} />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">Закрыть</span>
             </Button>
           </DialogPrimitive.Close>
         )}

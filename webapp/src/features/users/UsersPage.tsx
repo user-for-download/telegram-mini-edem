@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -369,7 +370,7 @@ function BanReasonField({
   return (
     <div className="grid gap-2">
       <Label htmlFor="ban-reason">Причина</Label>
-      <textarea
+      <Textarea
         id="ban-reason"
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -382,9 +383,6 @@ function BanReasonField({
         aria-invalid={showError}
         aria-describedby="ban-reason-hint"
         placeholder="Нарушение правил сервиса"
-        className={cn(
-          "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 rounded-md border bg-transparent px-2.5 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50"
-        )}
       />
       <div
         id="ban-reason-hint"

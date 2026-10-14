@@ -15,16 +15,18 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { adminLogout } from "@/features/auth";
 
+// Подписи навигации — по-русски, как и заголовки страниц (audit: смешанные
+// EN/RU-подписи в русской панели). aria-label ниже = та же подпись.
 const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/users", label: "Users", icon: Users },
-  { to: "/trips", label: "Trips", icon: Route },
-  { to: "/bookings", label: "Bookings", icon: CalendarCheck },
-  { to: "/reviews", label: "Reviews", icon: MessageSquare },
-  { to: "/feedback", label: "Feedback", icon: LifeBuoy },
+  { to: "/dashboard", label: "Дашборд", icon: LayoutDashboard },
+  { to: "/users", label: "Пользователи", icon: Users },
+  { to: "/trips", label: "Поездки", icon: Route },
+  { to: "/bookings", label: "Брони", icon: CalendarCheck },
+  { to: "/reviews", label: "Отзывы", icon: MessageSquare },
+  { to: "/feedback", label: "Обратная связь", icon: LifeBuoy },
   { to: "/reports", label: "Жалобы", icon: Flag },
   { to: "/cities", label: "Города", icon: MapPin },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/settings", label: "Настройки", icon: Settings },
 ] as const;
 
 const navLinkClasses =
