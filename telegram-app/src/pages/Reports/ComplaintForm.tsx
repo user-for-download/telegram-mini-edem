@@ -193,7 +193,7 @@ export function ComplaintForm({
       {noTargets && (
         <Notice tone="info" variant="text">
           Нет объектов, на которые можно пожаловаться: жалоба доступна
-          участникам поездки.
+          участникам поездки в течение 7 дней после её окончания.
         </Notice>
       )}
       <Field label="Причина" id="report-category">

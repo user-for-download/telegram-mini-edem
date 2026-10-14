@@ -18,6 +18,7 @@ describe("Reports API", () => {
   let passengerId: string;
   let tripId: string;
   let bookingId: string;
+  let departureAt: Date;
 
   beforeEach(async () => {
     const users = await Promise.all([
@@ -25,7 +26,10 @@ describe("Reports API", () => {
       db.user.create({ data: { name: `Report passenger ${tgSeq + 1n}`, telegramUserId: ++tgSeq, avatar: "" } }),
     ]);
     [driverId, passengerId] = users.map((user) => user.id);
-    const trip = await db.trip.create({ data: { driverId, fromCity: "Москва", fromAddress: "Адрес 1", toCity: "Тула", toAddress: "Адрес 2", departureAt: new Date("2030-01-01T10:00:00Z"), durationMinutes: 120, distanceKm: 180, price: 700, seatsTotal: 3, seatsAvailable: 2, tags: [] } });
+    // Поездка в окне жалобы: началась 2 часа назад, длилась 2 часа —
+    // значит закончилась 1 час назад, до верхней границы (7 дней) далеко.
+    departureAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const trip = await db.trip.create({ data: { driverId, fromCity: "Москва", fromAddress: "Адрес 1", toCity: "Тула", toAddress: "Адрес 2", departureAt, durationMinutes: 120, distanceKm: 180, price: 700, seatsTotal: 3, seatsAvailable: 2, tags: [] } });
     tripId = trip.id;
     const booking = await db.booking.create({ data: { tripId, passengerId, seat: 1, status: "confirmed" } });
     bookingId = booking.id;
@@ -102,8 +106,8 @@ describe("Reports API", () => {
     const response = await app.request("/api/v1/reports/targets", { headers: headers(passengerId) });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual([
-      { targetType: "trip", id: tripId, fromCity: "Москва", toCity: "Тула", departureAt: "2030-01-01T10:00:00.000Z" },
-      { targetType: "booking", id: bookingId, fromCity: "Москва", toCity: "Тула", departureAt: "2030-01-01T10:00:00.000Z" },
+      { targetType: "trip", id: tripId, fromCity: "Москва", toCity: "Тула", departureAt: departureAt.toISOString() },
+      { targetType: "booking", id: bookingId, fromCity: "Москва", toCity: "Тула", departureAt: departureAt.toISOString() },
       { targetType: "user", id: driverId, name: expect.any(String) },
     ]);
   });
@@ -112,7 +116,7 @@ describe("Reports API", () => {
     const response = await app.request("/api/v1/reports/targets", { headers: headers(driverId) });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual([
-      { targetType: "booking", id: bookingId, fromCity: "Москва", toCity: "Тула", departureAt: "2030-01-01T10:00:00.000Z" },
+      { targetType: "booking", id: bookingId, fromCity: "Москва", toCity: "Тула", departureAt: departureAt.toISOString() },
       { targetType: "user", id: passengerId, name: expect.any(String) },
     ]);
   });
@@ -125,6 +129,47 @@ describe("Reports API", () => {
       expect(await response.json()).toEqual([]);
     } finally {
       await db.user.delete({ where: { id: unrelated.id } });
+    }
+  });
+
+  const createTripWithBooking = async (departureAt: Date) => {
+    const trip = await db.trip.create({ data: { driverId, fromCity: "Москва", fromAddress: "Адрес 1", toCity: "Тула", toAddress: "Адрес 2", departureAt, durationMinutes: 120, distanceKm: 180, price: 700, seatsTotal: 3, seatsAvailable: 2, tags: [] } });
+    const booking = await db.booking.create({ data: { tripId: trip.id, passengerId, seat: 1, status: "confirmed" } });
+    return { tripId: trip.id, bookingId: booking.id };
+  };
+
+  it("rejects a report on a trip that has not started yet", async () => {
+    const future = await createTripWithBooking(new Date(Date.now() + 60 * 60 * 1000));
+    try {
+      const response = await app.request("/api/v1/reports", { method: "POST", headers: headers(passengerId), body: JSON.stringify({ targetType: "trip", targetId: future.tripId, category: "safety", description: "Ещё не ехали" }) });
+      expect(response.status).toBe(403);
+    } finally {
+      await db.booking.deleteMany({ where: { id: future.bookingId } });
+      await db.trip.deleteMany({ where: { id: future.tripId } });
+    }
+  });
+
+  it("rejects a report after the 7-day window", async () => {
+    const old = await createTripWithBooking(new Date(Date.now() - 8 * 24 * 60 * 60 * 1000));
+    try {
+      const response = await app.request("/api/v1/reports", { method: "POST", headers: headers(passengerId), body: JSON.stringify({ targetType: "trip", targetId: old.tripId, category: "safety", description: "Слишком поздно" }) });
+      expect(response.status).toBe(403);
+    } finally {
+      await db.booking.deleteMany({ where: { id: old.bookingId } });
+      await db.trip.deleteMany({ where: { id: old.tripId } });
+    }
+  });
+
+  it("omits out-of-window trips from the target list", async () => {
+    const future = await createTripWithBooking(new Date(Date.now() + 60 * 60 * 1000));
+    const old = await createTripWithBooking(new Date(Date.now() - 8 * 24 * 60 * 60 * 1000));
+    try {
+      const response = await app.request("/api/v1/reports/targets", { headers: headers(passengerId) });
+      expect(response.status).toBe(200);
+      expect(((await response.json()) as Array<{ id: string }>).map((target) => target.id)).toEqual([tripId, bookingId, driverId]);
+    } finally {
+      await db.booking.deleteMany({ where: { id: { in: [future.bookingId, old.bookingId] } } });
+      await db.trip.deleteMany({ where: { id: { in: [future.tripId, old.tripId] } } });
     }
   });
 });

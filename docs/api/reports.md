@@ -4,11 +4,11 @@
 
 - `POST /api/v1/reports` creates a report with `targetType` (`user`, `trip` or `booking`), `targetId`, `category` and `description`.
 - `GET /api/v1/reports` returns only reports created by the authenticated user.
-- `GET /api/v1/reports/targets` returns the objects the authenticated user may report on: trips they booked as a passenger, bookings where they are the passenger or the driver, and the counterpart people in those bookings. It reads the 50 most recent bookings and deduplicates. Each entry carries the raw fields the UI needs for a label (`fromCity`/`toCity`/`departureAt` for trips and bookings, `name` for people); dates are formatted client-side. The list follows the same rules as `canReport`, so every listed target is accepted by `POST`.
+- `GET /api/v1/reports/targets` returns the objects the authenticated user may report on: trips they booked as a passenger, bookings where they are the passenger or the driver, and the counterpart people in those bookings. It reads the 50 most recent bookings and deduplicates. Each entry carries the raw fields the UI needs for a label (`fromCity`/`toCity`/`departureAt` for trips and bookings, `name` for people); dates are formatted client-side. The list follows the same rules as `canReport` (including the reporting window), so every listed target is accepted by `POST`.
 
 Categories are `safety`, `fraud`, `harassment`, `spam`, `inaccurate_info` and `other`.
 
-Reports require a relevant driver/passenger relationship. Self-reports and unrelated targets are rejected. Limit is **one report forever per reporter+target**: any repeat (any category, even after resolve/reject) returns `409 CONFLICT`. Mutations are sanitized and rate-limited.
+Reports require a relevant driver/passenger relationship **and a trip inside the reporting window**: the trip must have started and at most **7 days** may have passed since it ended (`departureAt + durationMinutes`). Not-yet-started and older trips are rejected with `403`, and `GET /reports/targets` omits them. Self-reports and unrelated targets are rejected. Limit is **one report forever per reporter+target**: any repeat (any category, even after resolve/reject) returns `409 CONFLICT`. Mutations are sanitized and rate-limited.
 
 ## Admin endpoints
 

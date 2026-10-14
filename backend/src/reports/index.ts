@@ -43,48 +43,101 @@ const includeRelations = { reporter: true, adminActor: true } as const;
 export const reportsRouter = new Hono<AuthEnv>();
 reportsRouter.use("*", requireUser);
 
+/**
+ * Окно жалобы: с начала поездки и до 7 дней после её окончания.
+ *
+ * Нижняя граница не даёт жаловаться на ещё не состоявшуюся поездку: связь
+ * с бронью — ещё не повод, инцидента не было. Верхняя граница отсекает
+ * «раскопки» старых поездок через прямой API: UI и так показывает только
+ * 50 последних броней, но `POST /reports` можно вызвать и мимо него.
+ */
+const REPORT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+/**
+ * Максимальная длительность рейса (`contracts`: `durationMinutes <= 7 дней`).
+ * Нужна только как запас для предфильтра `departureAt` в БД: идущий длинный
+ * рейс не должен отрезаться раньше, чем его точное окончание посчитано в JS.
+ */
+const MAX_TRIP_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+function withinReportWindow(
+  departureAt: Date,
+  durationMinutes: number,
+  now: Date,
+): boolean {
+  if (departureAt.getTime() > now.getTime()) return false;
+  const endsAt = departureAt.getTime() + durationMinutes * 60_000;
+  return now.getTime() - endsAt <= REPORT_WINDOW_MS;
+}
+
 async function canReport(
   userId: string,
   targetType: string,
   targetId: string,
 ): Promise<boolean> {
+  const now = new Date();
+  // Предфильтр по БД (окно + максимальная длительность рейса): точное
+  // условие «конец + 7 дней» домеряется в памяти по `durationMinutes`.
+  const recentDeparture = {
+    departureAt: {
+      lte: now,
+      gte: new Date(now.getTime() - REPORT_WINDOW_MS - MAX_TRIP_DURATION_MS),
+    },
+  };
   if (targetType === "user") {
     if (targetId === userId) return false;
-    const relationship = await db.booking.findFirst({
+    const relationships = await db.booking.findMany({
       where: {
         OR: [
           { passengerId: userId, trip: { driverId: targetId } },
           { passengerId: targetId, trip: { driverId: userId } },
         ],
+        trip: recentDeparture,
       },
-      select: { id: true },
+      select: {
+        trip: { select: { departureAt: true, durationMinutes: true } },
+      },
     });
-    return Boolean(relationship);
+    return relationships.some((relationship) =>
+      withinReportWindow(
+        relationship.trip.departureAt,
+        relationship.trip.durationMinutes,
+        now,
+      ),
+    );
   }
   if (targetType === "trip") {
     // На свою поездку жаловаться нельзя: водитель исключён намеренно
     // (self-report, как и user→user на себя). Право — только у пассажиров
-    // с бронью (любой статус — проверка связи, не активности).
-    return Boolean(
-      await db.trip.findFirst({
-        where: {
-          id: targetId,
-          bookings: { some: { passengerId: userId } },
-        },
-        select: { id: true },
-      }),
-    );
+    // с бронью (любой статус — проверка связи, не активности), да ещё и
+    // внутри окна поездки.
+    const trip = await db.trip.findFirst({
+      where: {
+        id: targetId,
+        bookings: { some: { passengerId: userId } },
+      },
+      select: { departureAt: true, durationMinutes: true },
+    });
+    return trip
+      ? withinReportWindow(trip.departureAt, trip.durationMinutes, now)
+      : false;
   }
   if (targetType === "booking") {
-    return Boolean(
-      await db.booking.findFirst({
-        where: {
-          id: targetId,
-          OR: [{ passengerId: userId }, { trip: { driverId: userId } }],
-        },
-        select: { id: true },
-      }),
-    );
+    const booking = await db.booking.findFirst({
+      where: {
+        id: targetId,
+        OR: [{ passengerId: userId }, { trip: { driverId: userId } }],
+      },
+      select: {
+        trip: { select: { departureAt: true, durationMinutes: true } },
+      },
+    });
+    return booking
+      ? withinReportWindow(
+          booking.trip.departureAt,
+          booking.trip.durationMinutes,
+          now,
+        )
+      : false;
   }
   return false;
 }
@@ -106,8 +159,9 @@ reportsRouter.get("/", reportReadLimiter, async (c) => {
  *
  * Правила — те же, что у `canReport`: поездка, где я пассажир с бронью;
  * бронь, где я пассажир или водитель; человек, с которым есть общая бронь
- * (водитель ↔ пассажир). Поэтому «выбрал из списка» и «сервер принял»
- * совпадают, и UUID вводить руками не нужно.
+ * (водитель ↔ пассажир). Все они должны попадать в окно жалобы (с начала
+ * поездки до 7 дней после её окончания). Поэтому «выбрал из списка» и
+ * «сервер принял» совпадают, и UUID вводить руками не нужно.
  *
  * Берём 50 последних броней (как и список жалоб): жалоба — про недавнее, а
  * необозримый список старых поездок только мешает выбору. Записи
@@ -116,9 +170,17 @@ reportsRouter.get("/", reportReadLimiter, async (c) => {
  */
 reportsRouter.get("/targets", reportReadLimiter, async (c) => {
   const userId = c.get("user").id;
+  const now = new Date();
   const bookings = await db.booking.findMany({
     where: {
       OR: [{ passengerId: userId }, { trip: { driverId: userId } }],
+      // Предфильтр окна; точная граница («конец + 7 дней») — ниже.
+      trip: {
+        departureAt: {
+          lte: now,
+          gte: new Date(now.getTime() - REPORT_WINDOW_MS - MAX_TRIP_DURATION_MS),
+        },
+      },
     },
     include: {
       trip: {
@@ -127,6 +189,7 @@ reportsRouter.get("/targets", reportReadLimiter, async (c) => {
           fromCity: true,
           toCity: true,
           departureAt: true,
+          durationMinutes: true,
           driver: { select: { id: true, name: true } },
         },
       },
@@ -146,6 +209,14 @@ reportsRouter.get("/targets", reportReadLimiter, async (c) => {
   };
 
   for (const booking of bookings) {
+    if (
+      !withinReportWindow(
+        booking.trip.departureAt,
+        booking.trip.durationMinutes,
+        now,
+      )
+    )
+      continue;
     const route = {
       fromCity: booking.trip.fromCity,
       toCity: booking.trip.toCity,
