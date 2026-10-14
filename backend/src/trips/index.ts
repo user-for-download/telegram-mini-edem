@@ -7,6 +7,7 @@ import {
   createTripDtoSchema,
   updateTripDtoSchema,
   ACTIVE_BOOKING_STATUSES,
+  MAX_TRIP_PRICE,
 } from "@edem/contracts";
 import { db } from "../db.js";
 import { env } from "../env.js";
@@ -51,8 +52,10 @@ type TripWithDriver = Prisma.TripGetPayload<{
 
 const MAX_SEARCH_LENGTH = 100;
 const MAX_PAGE = 10_000;
-// Потолок цены поездки — совпадает с createTripDtoSchema (price.max(100000)).
-const MAX_FILTER_PRICE = 100_000;
+// Потолок цены поездки — единый источник в контрактах (createTripDtoSchema,
+// tripFiltersDtoSchema): здесь только переиспользуем, чтобы фильтр не разошёлся
+// с записью.
+const MAX_FILTER_PRICE = MAX_TRIP_PRICE;
 
 async function getActiveBookingSeatsByTripIds(
   tripIds: string[],
@@ -510,13 +513,16 @@ tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
     );
   }
 
-  const activeBookings = await db.booking.findMany({
+  // bookedSeats — занятые места на карте поездки. Считаем по СТАТУСУ
+  // (pending/confirmed), как `seatsAvailable` и список GET /trips: просроченный,
+  // но ещё не выметенный pending продолжает удерживать место в учёте (его
+  // декремент откатывает release), поэтому expiry-aware счётчик ЗДЕСЬ дал бы
+  // ответ, противоречащий `seatsAvailable` (свободно 2, а на карте 3 места).
+  // Права участника (адреса/телефон) по-прежнему решает expiry-aware myBooking.
+  const bookedSeatRows = await db.booking.findMany({
     where: {
       tripId: trip.id,
-      // Просроченный, но ещё не выметенный pending не должен выглядеть
-      // как занятое место: тот же expiry-aware предикат, что в pre-check'ах
-      // создания/подтверждения брони (F15).
-      ...activeBookingWhere(),
+      status: { in: [...ACTIVE_BOOKING_STATUSES] },
     },
     select: {
       seat: true,
@@ -563,7 +569,7 @@ tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
 
   return c.json(
     serializeTrip(trip, {
-      bookedSeats: activeBookings.map((booking) => booking.seat),
+      bookedSeats: bookedSeatRows.map((booking) => booking.seat),
       myBooking,
       includePlate: false,
       includePrivateDetails: canSeePrivateDetails,
@@ -909,17 +915,17 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
         }
 
         if (dto.seatsTotal !== undefined) {
+          // Учёт мест — DB-level: `seatsAvailable` поддерживается парными
+          // событиями (create: −1; release/cancel: +1) и всегда равен
+          // `seatsTotal − <строк pending/confirmed>`. Поэтому и пересчёт при
+          // правке seatsTotal обязан считать по СТАТУСУ, без expiry-фильтра:
+          // просроченный pending ещё держит декремент (его откатывает
+          // release при следующей брони/свипе), и «логический» счётчик здесь
+          // раздувал бы `seatsAvailable` и противоречил `bookedSeats`/границам.
           const activeBookingsForSeats = await tx.booking.findMany({
             where: {
               tripId: trip.id,
               status: { in: [...ACTIVE_BOOKING_STATUSES] },
-              OR: [
-                { status: "confirmed" },
-                {
-                  status: "pending",
-                  OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-                },
-              ],
             },
             select: { seat: true },
           });

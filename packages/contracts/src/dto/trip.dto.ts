@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { tripTagSchema, tripSchema, MAX_SEATS } from "../schemas/trip.schema.js";
+import { tripTagSchema, tripSchema, MAX_SEATS, MAX_TRIP_PRICE } from "../schemas/trip.schema.js";
 
 /**
  * Базовый объект без refine.
@@ -32,7 +32,7 @@ export const baseTripSchema = z.object({
   // on both ends). seatsTotal намеренно НЕ трогаем (MAX_SEATS=3, F1).
   durationMinutes: z.number().int().positive().max(7 * 24 * 60),
   distanceKm: z.number().positive().max(20000),
-  price: z.number().int().positive().max(100000),
+  price: z.number().int().positive().max(MAX_TRIP_PRICE),
   seatsTotal: z.number().int().min(1).max(MAX_SEATS),
   tags: z.array(tripTagSchema).max(6),
   comment: z.string().max(500).optional(),
@@ -76,20 +76,29 @@ export type CreateTripDto = z.infer<typeof createTripDtoSchema>;
 
 export const tripFiltersDtoSchema = z.object({
   // Полнотекстовый поиск по городам/адресам (backend: trips GET /).
+  // max(100) = backend MAX_SEARCH_LENGTH: длиннее backend отвергает (400).
   q: z.string().max(100).optional(),
   // Подстрочный фильтр по имени — остаётся для случая «город ещё не выбран».
-  fromCity: z.string().optional(),
-  toCity: z.string().optional(),
+  fromCity: z.string().max(100).optional(),
+  toCity: z.string().max(100).optional(),
   // Точный фильтр по справочнику (решение владельца 2026-10-03). Выбор города
   // на всех поверхностях отдаёт id, поэтому поиск фильтрует по нему: имя
   // неоднозначно («Москва» входит в «Москва-…», такие города остаются в
   // справочнике от старых прогонов e2e). При обоих параметрах приоритет у id.
   fromCityId: z.string().uuid().optional(),
   toCityId: z.string().uuid().optional(),
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
+  // Границы московских суток в формате YYYY-MM-DD — ровно то, что принимает
+  // backend (moscowDateBoundary: иначе 400, а не «молча игнорируем»).
+  dateFrom: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  dateTo: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   tags: z.array(tripTagSchema).optional(),
-  maxPrice: z.number().int().positive().optional(),
+  maxPrice: z.number().int().positive().max(MAX_TRIP_PRICE).optional(),
   page: z.number().int().min(1).optional(),
   limit: z.number().int().min(1).max(50).optional(),
 });
