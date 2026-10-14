@@ -22,7 +22,7 @@
 │   ├── src/
 │   │   ├── api/                 # HTTP-клиент (таймауты, Zod-валидация ответов) + API-запросы
 │   │   ├── components/          # Компоненты интерфейса (+ ErrorBoundary, Onboarding, OfflineBanner)
-│   │   ├── ui/                  # ФАСАД над telegram-ui: вид и a11y в одном месте (16 компонентов)
+│   │   ├── ui/                  # ФАСАД над telegram-ui: вид и a11y в одном месте
 │   │   ├── hooks/               # Кастомные React-хуки
 │   │   ├── pages/               # Страницы (поиск, поездки, брони, профиль, отзывы, поддержка)
 │   │   ├── providers/           # WebSocket-провайдер
@@ -36,31 +36,40 @@
 ├── backend/                     # Backend: Hono + Prisma ORM + PostgreSQL
 │   ├── prisma/
 │   │   ├── schema.prisma        # Модели: User, RefreshToken, Notification, Car, Trip, City, RideRequest, Booking, Review, Report, Feedback
-│   │   ├── migrations/          # Prisma-миграции: squashed init (полный слепок схемы + CHECK/partial-индексы raw SQL), далее инкрементальные (добавление nullable-колонок и индексов)
+│   │   ├── migrations/          # Prisma-миграции: squashed init (полный слепок схемы + CHECK/partial-индексы raw SQL), далее инкрементальные
 │   │   └── seed.ts              # Наполнение тестовыми данными (TG-пользователи, поездки, заявки, жалобы)
 │   ├── src/
-│   │   ├── auth/                # Telegram-авторизация (подпись initData HMAC+TTL), JWT + refresh-токены (ротация, хэш в БД), admin JWT
-│   │   ├── admin/               # Админ-API /api/v1/admin (login/session/logout, guard по httpOnly cookie, модерация)
-│   │   ├── middleware/          # Rate limiting (вкл. лимит вебхука бота), sanitize (DOMPurify), requireUser
+│   │   ├── auth/                # Telegram-авторизация (подпись initData HMAC+TTL), JWT + refresh-токены, admin JWT
+│   │   ├── admin/               # Админ-API /api/v1/admin (login/session/logout, guard по httpOnly cookie, модерация, telegram-метрики)
+│   │   ├── middleware/          # Rate limiting (вкл. лимит вебхука бота), sanitize (DOMPurify)
 │   │   ├── bot/                 # Webhook Telegram-бота (POST /bot/webhook/:secret; /start,/stop → согласие tgChatJoinedAt)
 │   │   ├── trips/               # Поездки (+ пагинация, статусы, авто-завершение)
 │   │   ├── bookings/            # Бронирования (Serializable, P2002/P2034 → 409)
 │   │   ├── reviews/             # Отзывы (Serializable, P2034 → retry → 503)
+│   │   ├── rideRequests/        # Пассивные запросы «Ищу попутку» (лента спроса, матчинг с водителем)
+│   │   ├── cities/              # Справочник точек (публичный suggest, админ-CRUD)
 │   │   ├── notifications/       # Уведомления (курсорная пагинация, unreadCount)
+│   │   ├── feedback/            # Обращения в поддержку + публичные апелляции
+│   │   ├── reports/             # Жалобы пользователей + админ-разбор статусов
+│   │   ├── client-errors/       # Приём клиентских ошибок (sendBeacon), дедуп/троттлинг
 │   │   ├── users/               # Профили, авто, настройки уведомлений
-│   │   ├── ws/                  # WebSocket (auth, рассылка событий)
-│   │   ├── workers/             # Фон: авто-завершение поездок, outbox-диспетчер TG-доставки, retention-чистка уведомлений (shutdown дожидается цикла)
+│   │   ├── ws/                  # WebSocket (auth, рассылка событий, reaper)
+│   │   ├── workers/             # Фон: авто-завершение поездок, outbox-диспетчер TG-доставки, retention-чистка уведомлений
+│   │   ├── events/              # Типизированные доменные события → подписчик уведомлений
+│   │   ├── services/            # Бизнес-сервисы (TG-доставка/отправка, wsManager, клиентские ошибки, метрики)
 │   │   ├── serializers/         # Сериализация ответов
-│   │   ├── services/            # Бизнес-сервисы (TG-доставка уведомлений, wsManager с reaper-очисткой)
-│   │   ├── utils/               # Sentry-хелперы (initSentry с PII-стриппингом, captureWarning/Exception), timingSafeEqual, escapeLike (LIKE-джокеры)
+│   │   ├── utils/               # moscowTime, overlap, escapeLike, timingSafeEqual, Prisma-ошибки, Sentry-хелперы
 │   │   ├── app.ts               # Hono-приложение (роуты /api/v1, security-заголовки, Telegram-only static)
-│   │   └── index.ts             # Серверный entry point (initSentry, graceful shutdown)
+│   │   ├── index.ts             # Серверный entry point (initSentry, graceful shutdown)
+│   │   ├── db.ts                # pg driver-адаптер Prisma (DATABASE_URL)
+│   │   ├── env.ts               # Валидация и дефолты переменных окружения
+│   │   └── constants / errors / logger / metrics / sentry   # Общие хелперы и инфраструктура
 │   ├── .env                     # Переменные окружения (dev)
 │   └── .env.test                # Переменные окружения для тестов (отдельная БД edem_test)
 │
 ├── webapp/                      # Админ-панель: React 19 + Vite 8 + Tailwind 4 + shadcn/ui + TanStack Router/Query
 │   └── src/
-│       ├── features/            # Секции: auth (страница входа), dashboard, users, trips, bookings, reviews, settings
+│       ├── features/            # Секции: auth (вход), dashboard, users, trips, bookings, reviews, feedback, reports, cities, settings
 │       ├── layouts/             # AdminLayout (сайдбар, кнопка «Выйти»)
 │       ├── lib/                 # api-client (same-origin /api, 401 → редирект на /login)
 │       └── routes.tsx           # TanStack Router: публичный /login + защищённые админ-роуты (проверка сессии)
@@ -70,10 +79,12 @@
 ├── packages/
 │   └── contracts/               # Общий пакет Zod-схем, DTO и WS-контрактов
 │       ├── src/
-│       │   ├── schemas/         # Zod-схемы сущностей (trip, user, booking, review, ws, admin)
-│       │   └── dto/             # Схемы входных/выходных DTO (вкл. paginatedTripsResponseSchema, admin DTO)
-│       └── tests/               # Юнит-тесты контрактов (Vitest)
+│       │   ├── schemas/         # Zod-схемы сущностей (trip, user, booking, review, report, city, ws, admin, …)
+│       │   ├── dto/             # Схемы входных/выходных DTO (вкл. paginated*-ответы, admin DTO)
+│       │   └── __tests__/       # Юнит-тесты контрактов (Vitest)
 │
+├── scripts/                     # prod-rebuild.sh, smoke, bundle/format/token-check
+├── docs/                        # API-справочник (docs/api), ADR (docs/adr), деплой (docs/deployment)
 └── package.json                 # Корневой package.json (npm workspaces)
 ```
 
@@ -100,7 +111,7 @@ Dev-сервер webapp проксирует `/api` на бэкенд (`:3011`),
 
 ### Запуск в Docker (бэкенд в контейнере)
 ```bash
-docker compose up -d --build   # сборка и запуск db + backend (:3000)
+docker compose up -d --build   # сборка и запуск db + backend (:3000) + webapp (админ-панель :3014)
 docker compose -f docker-compose.local.yml up -d # локальный PostgreSQL (:5433)
 docker compose stop backend    # остановить контейнер бэкенда (оставить БД)
 ```
@@ -190,7 +201,7 @@ npm run db:migrate        # Создать миграцию (dev) + пересо
 npm run db:migrate:deploy # Применить миграции к БД
 npm run db:push           # prisma db push (только чистые БД без _prisma_migrations)
 npm run db:push:force     # destructive push (--accept-data-loss) под prod-гардом
-npm run db:test:push      # то же для edem_test (guard + .env.test)
+npm run db:test:push --workspace=backend  # то же для edem_test (guard + .env.test)
 npm run db:seed           # Заполнить БД тестовыми данными (идемпотентно; dev/test only)
 npm run db:seed:cities    # Только справочник городов (идемпотентно; безопасен для prod)
 npm run db:seed:user      # Данные вокруг одного юзера: SEED_USER_ID=<id> npm run db:seed:user
@@ -210,13 +221,14 @@ npm run db:seed --workspace=backend
 ### Проверки и тесты
 ```bash
 npm run typecheck        # tsc --noEmit во всех воркспейсах
-npm run test             # Юнит-тесты (Vitest): contracts + backend + telegram-app
-npm run lint             # typecheck всех воркспейсов
+npm run test             # Юнит-тесты (Vitest): contracts + backend + telegram-app + webapp
+npm run lint             # алиас typecheck (typecheck всех воркспейсов)
 npm run lint:eslint      # ESLint всего репо (TS + react-hooks + jsx-a11y)
 npm run lint:eslint:backend  # только backend (аналогично :tg-app, :webapp, :contracts)
 npm run format:check     # базовая проверка текстовых файлов и JSON без перезаписи
+npm run bundle:check     # gzip-бюджет бандлов (telegram-app + webapp)
 npm run build            # contracts → backend → telegram-app → webapp
-node e2e/telegram-parity.mjs  # E2E parity (нужны backend :3011, TG-front :3012, dev-БД)
+node e2e/telegram-parity.mjs  # E2E parity (см. e2e/README.md; нужны backend :3011, TG-front :3012, dev-БД)
 ```
 
 Тесты backend запускаются на отдельной БД `edem_test` (см. `backend/.env.test`), поэтому рабочая БД не затрагивается. При локальном Compose создайте её через `docker exec edem-db-dev psql -U edem -c "CREATE DATABASE edem_test;"`, затем выполните `npm run db:test:push --workspace=backend`. GitHub Actions поднимает PostgreSQL 16 с готовой `edem_test` автоматически и выполняет те же lint, format, build и test-проверки на Node 22.
@@ -376,7 +388,7 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 - **Админ-панель**: React 19, Vite 8, Tailwind CSS 4, shadcn/ui, TanStack Router + Query, lucide-react, sonner
 - **Backend**: Hono, Node.js 22, Prisma ORM, PostgreSQL, jose (JWT), Zod, pino, @sentry/node, isomorphic-dompurify
 - **Монорепозиторий**: npm workspaces, TypeScript, Vitest, ESLint (конфиг `eslint.config.mjs`)
-- **E2E**: Playwright + Chromium (`e2e/telegram-parity.mjs`)
+- **E2E**: Playwright + Chromium — parity/realtime journeys + UI-гварды (каскад, контраст, рёбра): `e2e/`, см. `e2e/README.md`
 - **CI**: GitHub Actions (checkout/setup-node v5, Node 22, PostgreSQL 16 как сервис)
 
 ## 🚀 Деплой (Production)
@@ -400,23 +412,6 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 - Детали поездки и заявки водителя имеют отдельные loading/error/retry состояния; при отсутствии сети приложение явно предупреждает, что сохранённые данные могут быть устаревшими.
 - Даты поездок и date-only фильтры нормализуются через фиксированный `Europe/Moscow`; формы сохраняют только несекретные черновики и очищают их после успешной отправки.
 - Rate limiting и WebSocket fan-out хранят состояние в памяти процесса и не подходят для нескольких backend-инстансов без Redis/pub-sub или ограничения deployment до одного инстанса.
-
-### Аудит состояния
-
-Полный аудит Telegram-миграции выполнен в задачах 18 (безопасность, без critical/high) и 21 (rehearsal). Проверено:
-
-```bash
-npm run typecheck    # все workspace: успешно
-npm run test         # все workspace: успешно
-npm run lint         # typecheck всех воркспейсов: успешно
-npm run lint:eslint  # ESLint (TS + react-hooks + jsx-a11y): 0 ошибок
-npm run format:check # успешно
-npm run bundle:check # gzip-бюджет: успешно
-npm run build        # contracts → backend → telegram-app → webapp: успешно
-docker compose build # образ на node:22-alpine собирается
-```
-
-Paginated endpoints проверяют ответы shared Zod-схемами и возвращают controlled `500` при contract drift; интеграционные fixture используют общий лимит мест.
 
 ### Требования Telegram Mini Apps
 
@@ -482,9 +477,3 @@ Paginated endpoints проверяют ответы shared Zod-схемами и
 3. Внешний reverse proxy: домен админки (например, `admin.<your-domain>`) → `:3014`, проксировать **весь** трафик, включая `/api`.
 
 `Secure`-флаг cookie определяется по `X-Forwarded-Proto` (nginx пробраскивает его от вышестоящего прокси, иначе — по схеме соединения): по HTTPS cookie ставится с `Secure`, по HTTP — без него, логин работает в обоих случаях. В dev ту же роль выполняет Vite-прокси (`webapp/vite.config.ts`, порт 3013).
-
----
-
-## Архив миграции
-
-Самостоятельное Telegram-приложение «Едем» (попутчики). Исторические записи миграции (аудит безопасности, отчёты и чеклисты выката) удалены из дерева — смотри git.
