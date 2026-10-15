@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../../src/app.js";
 import { db } from "../../src/db.js";
-import { devMockAccessToken } from "../dev-mock-auth.js";
+import { devMockAccessToken, registerDevTelegramUser } from "../dev-mock-auth.js";
 
 describe("DELETE /api/v1/users/me", () => {
   let userId: string;
@@ -111,6 +111,8 @@ describe("DELETE /api/v1/users/me", () => {
       headers: { Authorization: `Bearer ${devMockAccessToken(userId)}` },
     });
     expect(deletion.status).toBe(200);
+    // Bypass fail-closed (F6): id обязан быть в allowlist.
+    registerDevTelegramUser(telegramUserId);
     const initData = new URLSearchParams([
       ["user", JSON.stringify({ id: Number(telegramUserId), first_name: "Del" })],
       ["auth_date", String(Math.floor(Date.now() / 1000))],

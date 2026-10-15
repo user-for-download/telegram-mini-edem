@@ -303,7 +303,20 @@ reviewsRouter.get("/available-trips", requireUser, reviewsReadLimiter, async (c)
 
   const availableTrips = Array.from(availableTripsMap.values());
 
-  return c.json(availableTrips.map((trip) => serializeTrip(trip)));
+  // Каждая поездка в списке — поездка самого пользователя: либо он её
+  // вёл (driverTrips), либо ехал подтверждённым пассажиром
+  // (passengerBookings ищет только status: "confirmed"). То есть зритель —
+  // участник по правилу GET /trips/:id, и приватные поля отдаём явно:
+  // дефолт serializeTrip fail-closed, а список — это ещё и список
+  // «своих» поездок, а не публичная витрина (F1).
+  return c.json(
+    availableTrips.map((trip) =>
+      serializeTrip(trip, {
+        includePrivateDetails: true,
+        includePlate: true,
+      }),
+    ),
+  );
 });
 
 /**

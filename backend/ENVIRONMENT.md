@@ -39,6 +39,8 @@ admin UI issues requests in batches (dashboard + lists + pagination).
 | `NOTIFICATION_READ_RATE_WINDOW_MS` / `NOTIFICATION_READ_RATE_MAX` | `PATCH /api/v1/notifications/:id/read`, `PATCH /api/v1/notifications/read-all` | 24 hours / 100 requests |
 | `REVIEWS_READ_RATE_WINDOW_MS` / `REVIEWS_READ_RATE_MAX` | `GET /api/v1/reviews/my`, `GET /api/v1/reviews/available-trips` | 24 hours / 100 requests |
 | `FEEDBACK_READ_RATE_WINDOW_MS` / `FEEDBACK_READ_RATE_MAX` | `GET /api/v1/feedback` | 24 hours / 100 requests |
+| `BOOKINGS_READ_RATE_WINDOW_MS` / `BOOKINGS_READ_RATE_MAX` | `GET /api/v1/bookings/my`, `/history`, `/driver`, `/trip/:tripId` | 1 minute / 200 requests |
+| `FEEDBACK_CREATE_RATE_WINDOW_MS` / `FEEDBACK_CREATE_RATE_MAX` | `POST /api/v1/feedback` | 1 hour / 10 requests |
 | `ADMIN_READ_RATE_WINDOW_MS` / `ADMIN_READ_RATE_MAX` | all `GET` under `/api/v1/admin` | 1 minute / 300 requests |
 
 ## Admin panel

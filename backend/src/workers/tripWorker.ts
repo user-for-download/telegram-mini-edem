@@ -71,7 +71,15 @@ export async function processExpiredTrips() {
   let lastId: string | null = null;
 
   try {
-    await expirePendingBookings(new Date());
+    // Сброс просроченных pending-броней — такой же отдельный шаг цикла с
+    // собственным guard'ом, как prune ниже: сбой одной брони не должен
+    // отменять ни чистку уведомлений, ни автозавершение opt-in поездок,
+    // ни проход по TTL-просрочке до конца часового тика.
+    try {
+      await expirePendingBookings(new Date());
+    } catch (err) {
+      logger.error({ err }, "trip_worker_expire_bookings_failed");
+    }
     // Retention-чистка уведомлений — часть часового цикла, отдельного
     // воркера нет. Изолированный try/catch: сбой prune не должен
     // останавливать автозавершение поездок. Счётчики логирует сам хелпер.
@@ -137,46 +145,95 @@ export async function processExpiredTrips() {
   }
 }
 
+/**
+ * Prisma-код ошибки для лога: у известных ошибок он есть в `code`
+ * (важнейший здесь — P2034, конфликт сериализации), у всего прочего
+ * кода нет. Нужен, чтобы по логу отличить гонку записи от падения БД.
+ */
+function prismaErrorCode(err: unknown): string | undefined {
+  return err instanceof Prisma.PrismaClientKnownRequestError ? err.code : undefined;
+}
+
 async function expirePendingBookings(now: Date): Promise<void> {
+  // Брони, не обработанные в этом проходе, исключаются из следующих пачек:
+  // строка остаётся pending и просроченной, поэтому без фильтра снова
+  // попала бы в выборку — и застрявшая на ошибке бронь зациклила бы sweep
+  // (пачка всегда полная, условие выхода не наступает). В следующем
+  // часовом тике она обработается как обычно.
+  const failedBookingIds: string[] = [];
+
   // Полный часовой sweep: дренируем все просроченные pending пачками.
   // orderBy детерминирует порядок выборки между итерациями; вышедшие из
   // выборки (declined) строки повторно не читаются — цикл завершается,
   // когда пачка неполная.
   while (true) {
     const expired = await db.booking.findMany({
-      where: { status: "pending", expiresAt: { lte: now } },
+      where: {
+        status: "pending",
+        expiresAt: { lte: now },
+        ...(failedBookingIds.length > 0
+          ? { id: { notIn: failedBookingIds } }
+          : {}),
+      },
       select: { id: true, tripId: true, passengerId: true },
       orderBy: [{ expiresAt: "asc" }, { id: "asc" }],
       take: TRIP_WORKER_BATCH_SIZE,
     });
     if (expired.length === 0) break;
     for (const booking of expired) {
-      await db.$transaction(
-        async (tx) => {
-          const claimed = await tx.booking.updateMany({
-            where: {
-              id: booking.id,
-              status: "pending",
-              expiresAt: { lte: now },
-            },
-            data: {
-              status: "declined",
-              cancelledAt: now,
-              cancelledByType: "system",
-              cancellationReason: "Booking request expired",
-            },
-          });
-          if (claimed.count === 1) {
-            await tx.trip.updateMany({
-              where: { id: booking.tripId, status: "active" },
-              data: { seatsAvailable: { increment: 1 } },
+      // Изоляция по элементу — как у processExpiredTrip: единственный
+      // P2034 write-конфликт по этой брони не должен прерывать sweep
+      // остальных и уходить во внешний catch, отменяя весь цикл.
+      try {
+        await db.$transaction(
+          async (tx) => {
+            const claimed = await tx.booking.updateMany({
+              where: {
+                id: booking.id,
+                status: "pending",
+                expiresAt: { lte: now },
+              },
+              data: {
+                status: "declined",
+                cancelledAt: now,
+                cancelledByType: "system",
+                cancellationReason: "Booking request expired",
+              },
             });
-          }
-        },
-        { isolationLevel: "Serializable" },
-      );
+            if (claimed.count === 1) {
+              await tx.trip.updateMany({
+                where: { id: booking.tripId, status: "active" },
+                data: { seatsAvailable: { increment: 1 } },
+              });
+            }
+          },
+          { isolationLevel: "Serializable" },
+        );
+      } catch (err) {
+        // Не глотаем молча: id брони и Prisma-код в логе, иначе сбой
+        // неотличим от штатного declined. Сама бронь не тронута —
+        // транзакция откатилась, место не освобождено, пассажир ждёт
+        // следующего тика.
+        failedBookingIds.push(booking.id);
+        logger.error(
+          {
+            err,
+            bookingId: booking.id,
+            tripId: booking.tripId,
+            code: prismaErrorCode(err),
+          },
+          "trip_worker_expire_booking_failed",
+        );
+      }
     }
     if (expired.length < TRIP_WORKER_BATCH_SIZE) break;
+  }
+
+  if (failedBookingIds.length > 0) {
+    logger.error(
+      { failed: failedBookingIds.length },
+      "trip_worker_expire_bookings_partial",
+    );
   }
 }
 

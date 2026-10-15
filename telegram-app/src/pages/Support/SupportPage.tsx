@@ -166,10 +166,12 @@ export function SupportPage() {
     myFeedbacks.data?.find((feedback) => feedback.id === selectedId) ?? null;
 
   // Бан mid-session: requireUser отвечает 403 — терминальный экран плюс
-  // рабочая форма обжалования (публичный appeal с initData, без токена).
-  // AccountStatePage — тот же канон, что на экране бана (AuthGate) и в
-  // жалобах (ReportsPage): раньше здесь был самодельный EmptyState, и
-  // терминальные экраны выглядели в приложении по-разному.
+  // рабочая форма обжалования (публичный appeal с initData). Токен в
+  // apiClient при этом ещё валиден (бан не логаут, а emitBanned живёт только
+  // в performRefresh), поэтому канал апелляции задан в хуке формы явно, а не
+  // выведен из токена. AccountStatePage — тот же канон, что на экране бана
+  // (AuthGate) и в жалобах (ReportsPage): раньше здесь был самодельный
+  // EmptyState, и терминальные экраны выглядели в приложении по-разному.
   if (
     myFeedbacks.error instanceof ApiError &&
     myFeedbacks.error.status === 403

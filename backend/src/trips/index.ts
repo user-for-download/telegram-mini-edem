@@ -475,6 +475,11 @@ tripsRouter.get("/my", requireUser, async (c) => {
         pendingRequestsCount: pendingCountMap.get(trip.id) ?? 0,
         confirmedBookingsCount: confirmedCountMap.get(trip.id) ?? 0,
         passengers: passengersMap.get(trip.id) ?? [],
+        // Свои поездки (where driverId = user.id): водитель видит и
+        // точные адреса, и госномер своей машины. Опции обязательны
+        // явно — дефолт serializeTrip fail-closed (F1).
+        includePrivateDetails: true,
+        includePlate: true,
       }),
     ),
     pagination: {
@@ -773,6 +778,10 @@ tripsRouter.post(
       serializeTrip(created, {
         bookedSeats: [],
         pendingRequestsCount: 0,
+        // Ответ водителю его же новой поездки: адреса встречи и госномер
+        // его машины (fail-closed дефолт требует явного opt-in, F1).
+        includePrivateDetails: true,
+        includePlate: true,
       }),
       201,
     );
@@ -1036,7 +1045,16 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
     );
   }
 
-  return c.json(serializeTrip(updated));
+  // Ответ водителю его же поездки (роут доступен только владельцу,
+  // trip.driverId !== user.id → 403 выше). Приватные поля отдаём явно:
+  // дефолт serializeTrip fail-closed, а молча убрать адреса из ответа
+  // на собственное редактирование — регрессия для клиента (F1).
+  return c.json(
+    serializeTrip(updated, {
+      includePrivateDetails: true,
+      includePlate: true,
+    }),
+  );
 });
 
 /**
@@ -1209,6 +1227,11 @@ tripsRouter.patch("/:id/cancel", requireUser, cancelTripLimiter, async (c) => {
     serializeTrip(updated, {
       bookedSeats: [],
       pendingRequestsCount: 0,
+      // Отмена — тоже ответ водителю его же поездки (владелец проверен
+      // в транзакции). Адреса и госномер возвращаем явно: дефолт
+      // serializeTrip fail-closed (F1).
+      includePrivateDetails: true,
+      includePlate: true,
     }),
   );
 });
@@ -1447,6 +1470,11 @@ tripsRouter.patch(
       serializeTrip(updated, {
         bookedSeats: [],
         pendingRequestsCount: 0,
+        // Ответ водителю его же поездки (владелец проверен в транзакции):
+        // адреса и госномер возвращаем явно, дефолт serializeTrip
+        // fail-closed (F1).
+        includePrivateDetails: true,
+        includePlate: true,
       }),
     );
   },

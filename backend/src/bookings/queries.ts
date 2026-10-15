@@ -10,11 +10,13 @@ import type { AuthEnv } from "../auth/middleware.js";
 import { logger } from "../logger.js";
 import { reportServerError } from "../client-errors/index.js";
 import {
+  isTripParticipant,
   serializeBooking,
   serializeTrip,
   serializeUser,
 } from "../serializers/index.js";
 import { ERROR_CODES } from "../errors.js";
+import { bookingsReadLimiter } from "../middleware/rateLimit.js";
 import {
   DEFAULT_BOOKINGS_LIMIT,
   MAX_BOOKINGS_LIMIT,
@@ -33,7 +35,7 @@ export const queriesRouter = new Hono<AuthEnv>();
  * - trip.departureAt: ISO-дата для сортировки;
  * - trip.status: статус поездки.
  */
-queriesRouter.get("/my", async (c) => {
+queriesRouter.get("/my", bookingsReadLimiter, async (c) => {
   const user = c.get("user");
 
   const bookings = await db.booking.findMany({
@@ -90,6 +92,10 @@ queriesRouter.get("/my", async (c) => {
 
     const hasReview = reviewedTripIds.has(b.tripId);
 
+    // Права участника решаются ОДИН раз на строку — см. комментарий у
+    // `trip` в возвращаемом объекте.
+    const seesTripPrivateDetails = isTripParticipant(b, user.id, now);
+
     const canReview =
       b.status === "confirmed" &&
       b.trip.status !== "cancelled" &&
@@ -115,7 +121,17 @@ queriesRouter.get("/my", async (c) => {
       // ручная сборка trip-объекта уже один раз разошлась с контрактом
       // (пропали обязательные autoComplete/matchingEnabled), и клиент
       // отбрасывал ответ целиком. Единый источник исключает дрейф.
-      trip: serializeTrip(b.trip),
+      //
+      // Приватные поля (точные адреса встречи, госномер) решает
+      // `isTripParticipant` — то же правило, что и в GET /trips/:id:
+      // водитель или неистёкшая активная (pending/confirmed) бронь.
+      // Список смешивает и активные, и отклонённые брони, поэтому решать
+      // по статусу строки списка нельзя: отклонённому пассажиру адрес,
+      // где его ждали, показывать нельзя (F1).
+      trip: serializeTrip(b.trip, {
+        includePrivateDetails: seesTripPrivateDetails,
+        includePlate: seesTripPrivateDetails,
+      }),
     };
   });
 
@@ -140,7 +156,7 @@ queriesRouter.get("/my", async (c) => {
  * - поездка завершена/отменена;
  * - бронь была отклонена.
  */
-queriesRouter.get("/history", async (c) => {
+queriesRouter.get("/history", bookingsReadLimiter, async (c) => {
   const user = c.get("user");
   const now = new Date();
   const history = await db.booking.findMany({
@@ -205,6 +221,10 @@ queriesRouter.get("/history", async (c) => {
 
     const hasReview = reviewedTripIds.has(b.tripId);
 
+    // Права участника решаются ОДИН раз на строку — см. комментарий у
+    // `trip` в возвращаемом объекте.
+    const seesTripPrivateDetails = isTripParticipant(b, user.id, now);
+
     const canReview =
       b.status === "confirmed" &&
       b.trip.status !== "cancelled" &&
@@ -237,7 +257,16 @@ queriesRouter.get("/history", async (c) => {
 
       // Единый сериализатор (см. комментарий в /my) — иначе ответ снова
       // разойдётся с tripSchema и клиент отбросит всю историю.
-      trip: serializeTrip(b.trip),
+      //
+      // Приватные поля — по тому же правилу, что в /my (isTripParticipant),
+      // и это здесь не косметика: выборка истории ЯВНО включает
+      // `{status: "declined"}`, то есть в неё попадают брони, по которым
+      // пассажиру отказали. Отдавать ему точный адрес встречи и госномер
+      // машины нельзя — адрес показывает, где водитель его ждал (F1).
+      trip: serializeTrip(b.trip, {
+        includePrivateDetails: seesTripPrivateDetails,
+        includePlate: seesTripPrivateDetails,
+      }),
     };
   });
 
@@ -265,7 +294,7 @@ queriesRouter.get("/history", async (c) => {
  * - поездка активна и отправляется в будущем;
  * - сортировка по времени отправления, затем по времени создания.
  */
-queriesRouter.get("/driver", async (c) => {
+queriesRouter.get("/driver", bookingsReadLimiter, async (c) => {
   const user = c.get("user");
   const now = new Date();
 
@@ -319,7 +348,7 @@ queriesRouter.get("/driver", async (c) => {
  * - limit: 1–50 (по умолчанию 50), значения вне диапазона клампаются;
  * - cursor: UUID id последней заявки предыдущей страницы (необязательный).
  */
-queriesRouter.get("/trip/:tripId", async (c) => {
+queriesRouter.get("/trip/:tripId", bookingsReadLimiter, async (c) => {
   const user = c.get("user");
   const tripId = c.req.param("tripId");
 
@@ -328,11 +357,17 @@ queriesRouter.get("/trip/:tripId", async (c) => {
   });
 
   if (!trip) {
-    return c.json({ message: "Trip not found" }, 404);
+    return c.json(
+      { code: ERROR_CODES.NOT_FOUND, message: "Trip not found" },
+      404,
+    );
   }
 
   if (trip.driverId !== user.id) {
-    return c.json({ message: "Forbidden" }, 403);
+    return c.json(
+      { code: ERROR_CODES.FORBIDDEN, message: "Forbidden" },
+      403,
+    );
   }
 
   const rawLimit = Number(c.req.query("limit") ?? DEFAULT_BOOKINGS_LIMIT);
@@ -346,6 +381,33 @@ queriesRouter.get("/trip/:tripId", async (c) => {
       { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid cursor format" },
       400,
     );
+  }
+
+  // Курсор обязан принадлежать ЭТОЙ поездке (регрессия F9).
+  //
+  // `skip: 1` ниже — идиома Prisma «пропустить саму строку-курсор», и она
+  // верна только когда эта строка попадает в выборку. При курсоре ЧУЖОЙ
+  // поездки (остаток от прошлой, рукотный запрос) строка отсекается
+  // фильтром where, но skip:1 всё равно выбрасывает одну честную запись
+  // этой поездки — пагинация молча теряет элемент и уезжает на сдвинутую
+  // позицию. Поэтому курсор проверяется ЗАРАНЕЕ, а не «чинится» после.
+  //
+  // Несуществующий курсор — НЕ ошибка: он даёт пустой хвост с 200
+  // (поведение закреплено bookings-pagination.test.ts: «valid-format
+  // expired cursor → 200, items: []»). Так ведёт себя и Prisma, и такой
+  // курсор безопаснее отвергать негромко. Ломаем только случай, который
+  // реально портит выдачу: курсор существует, но принадлежит не той поездке.
+  if (cursor !== undefined) {
+    const cursorRow = await db.booking.findUnique({
+      where: { id: cursor },
+      select: { tripId: true },
+    });
+    if (cursorRow && cursorRow.tripId !== tripId) {
+      return c.json(
+        { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid cursor for this trip" },
+        400,
+      );
+    }
   }
 
   // take: limit + 1 — лишний элемент определяет hasMore.

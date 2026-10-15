@@ -26,6 +26,8 @@ describe("POST /api/v1/bookings — P2002 conflict handling", () => {
   let passenger1Id: string;
   let passenger2Id: string;
   let tripId: string;
+  // Дополнительные поездки, созданные внутри отдельных тестов (F3).
+  const extraTripIds: string[] = [];
 
   beforeAll(async () => {
     await db.$executeRawUnsafe(`
@@ -96,6 +98,11 @@ describe("POST /api/v1/bookings — P2002 conflict handling", () => {
   afterEach(async () => {
     await db.booking.deleteMany({ where: { tripId } });
     await db.trip.deleteMany({ where: { id: tripId } });
+    if (extraTripIds.length > 0) {
+      await db.booking.deleteMany({ where: { tripId: { in: extraTripIds } } });
+      await db.trip.deleteMany({ where: { id: { in: extraTripIds } } });
+      extraTripIds.length = 0;
+    }
     await db.user.deleteMany({ where: { id: { in: [driverId, passenger1Id, passenger2Id] } } });
   });
 
@@ -125,6 +132,48 @@ describe("POST /api/v1/bookings — P2002 conflict handling", () => {
       body: JSON.stringify({ tripId, seat }),
     });
     return { status: res.status, body: (await res.json()) as BookingResponse };
+  }
+
+  /**
+   * То же, но для поездки из конкретного теста (F3): поездка на 1 место
+   * нужна, чтобы seatsAvailable стал 0 уже первой бронью.
+   */
+  async function bookOn(
+    passengerId: string,
+    targetTripId: string,
+    seat: number
+  ): Promise<{ status: number; body: BookingResponse }> {
+    const res = await app.request("/api/v1/bookings", {
+      method: "POST",
+      headers: {
+        ...JSON_HEADERS,
+        Authorization: `Bearer ${devMockAccessToken(passengerId)}`,
+      },
+      body: JSON.stringify({ tripId: targetTripId, seat }),
+    });
+    return { status: res.status, body: (await res.json()) as BookingResponse };
+  }
+
+  /** Поездка с заданным числом мест; убирается в afterEach. */
+  async function createTrip(seatsTotal: number): Promise<string> {
+    const trip = await db.trip.create({
+      data: {
+        driverId,
+        fromCity: "Москва",
+        fromAddress: "Тверская 1",
+        toCity: "СПб",
+        toAddress: "Невский 1",
+        departureAt: new Date("2030-06-01T09:00:00Z"),
+        durationMinutes: 420,
+        distanceKm: 700,
+        price: 2000,
+        seatsTotal,
+        seatsAvailable: seatsTotal,
+        tags: [],
+      },
+    });
+    extraTripIds.push(trip.id);
+    return trip.id;
   }
 
   // Отклонение брони водителем через API (полный цикл F15: место
@@ -164,6 +213,58 @@ describe("POST /api/v1/bookings — P2002 conflict handling", () => {
       where: { tripId, status: { in: ["pending", "confirmed"] } },
     });
     expect(count).toBe(1);
+  });
+
+  // F3: псевдо-идемпотентность проверяется ДО guard'а остатка мест.
+  it("F3: retry of an identical booking on a full 1-seat trip returns the existing booking (200)", async () => {
+    const soloTripId = await createTrip(1);
+
+    const first = await bookOn(passenger1Id, soloTripId, 1);
+    expect(first.status).toBe(201);
+
+    // Первая бронь исчерпала единственное место.
+    const afterFirst = await db.trip.findUnique({ where: { id: soloTripId } });
+    expect(afterFirst?.seatsAvailable).toBe(0);
+
+    // Клиент потерял ответ 201 и повторил запрос буквально тем же телом.
+    const retry = await bookOn(passenger1Id, soloTripId, 1);
+
+    expect(retry.status).toBe(200);
+    expect(retry.body.id).toBe(first.body.id);
+
+    const count = await db.booking.count({
+      where: { tripId: soloTripId, status: { in: ["pending", "confirmed"] } },
+    });
+    expect(count).toBe(1);
+  });
+
+  it("F3: another passenger still gets 409 CONFLICT for the last seat of a full trip", async () => {
+    const soloTripId = await createTrip(1);
+    expect((await bookOn(passenger1Id, soloTripId, 1)).status).toBe(201);
+
+    const other = await bookOn(passenger2Id, soloTripId, 1);
+
+    expect(other.status).toBe(409);
+    // Код/текст для ЧУЖИХ не менялись: остаток мест по-прежнему первый.
+    expect(other.body.code).toBe("CONFLICT");
+    expect(other.body.message).toBe("Not enough available seats");
+  });
+
+  it("F3: a brand-new booking on a full trip keeps 409 CONFLICT even for a free slot", async () => {
+    const twoSeatTripId = await createTrip(2);
+    expect((await bookOn(passenger1Id, twoSeatTripId, 1)).status).toBe(201);
+
+    // Слот 2 свободен, но счётчик мест исчерпан (вторую бронь не создавали).
+    await db.trip.update({
+      where: { id: twoSeatTripId },
+      data: { seatsAvailable: 0 },
+    });
+
+    const res = await bookOn(passenger2Id, twoSeatTripId, 2);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("CONFLICT");
+    expect(res.body.message).toBe("Not enough available seats");
   });
 
   it("returns 409 SEAT_TAKEN when another passenger books the same seat", async () => {

@@ -16,17 +16,35 @@ import { env } from "../src/env.js";
 const MOCK_ACCESS_TOKEN_PREFIX = "mock-access-token-";
 const MOCK_REFRESH_TOKEN_PREFIX = "mock-refresh-token-";
 
+/** Дописывает id в общий dev allowlist (идемпотентно). */
+function addToAllowlist(id: string): void {
+  const raw = process.env.DEV_AUTH_USER_ALLOWLIST ?? "";
+  const list = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!list.includes(id)) {
+    list.push(id);
+    process.env.DEV_AUTH_USER_ALLOWLIST = list.join(",");
+  }
+}
+
 /**
  * Регистрирует пользователя в dev allowlist (идемпотентно).
  * Вызывается из devMockAccessToken/devMockRefreshToken автоматически.
  */
 export function registerDevMockUser(userId: string): void {
-  const raw = process.env.DEV_AUTH_USER_ALLOWLIST ?? "";
-  const list = raw.split(",").map((s) => s.trim()).filter(Boolean);
-  if (!list.includes(userId)) {
-    list.push(userId);
-    process.env.DEV_AUTH_USER_ALLOWLIST = list.join(",");
-  }
+  addToAllowlist(userId);
+}
+
+/**
+ * Регистрирует TELEGRAM user id в том же dev allowlist (F6).
+ *
+ * Dev-bypass initData (hash=dev-hash, auth/telegramSign.ts) принимает
+ * только telegram id из allowlist — тот же список, что и для
+ * mock-токенов. Тесты генерируют эти id динамически, поэтому
+ * регистрируют их здесь; в вызывающем хелпере достаточно передать id
+ * в devInitData. Пустой список = bypass выключен.
+ */
+export function registerDevTelegramUser(telegramUserId: number | bigint): void {
+  addToAllowlist(String(telegramUserId));
 }
 
 /**

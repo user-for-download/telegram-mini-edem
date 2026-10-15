@@ -1,14 +1,20 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { wsServerEventSchema } from "@edem/contracts";
 import {
+  WS_EVENT_DEDUP_POLICY,
   WS_RECONNECT_BASE_DELAY_MS,
   WS_RECONNECT_MAX_DELAY_MS,
+  WS_REPEATABLE_EVENT_WINDOW_MS,
   WS_SEEN_EVENTS_MAX,
   buildWsEventKey,
   classifyWsClose,
   computeReconnectDelay,
   getWsUrl,
   markSeenEvent,
+  wsEventDedupPolicy,
 } from "@/api/ws";
 
 /**
@@ -132,6 +138,187 @@ describe("дедупликация эффектов WS-событий", () => {
     const overflow = markSeenEvent(seen, "event:overflow");
     expect(overflow.duplicate).toBe(false);
     expect(overflow.seen).toEqual(new Set(["event:overflow"]));
+  });
+});
+
+/**
+ * F5: дедупликация по типу события, а не по форме ключа.
+ *
+ * `trip:details_changed` приходит при каждом `PATCH /trips/:id` с ОДНИМ И ТЕМ
+ * ЖЕ payload `{tripId}` (backend/src/trips/index.ts). Ключ `type+payload`
+ * делал вторую правку в сессии неотличимой от первой, и она молча
+ * проглатывалась: пассажир оставался с устаревшими ценой/адресом/временем
+ * (`staleTime: 60_000`, `refetchOnWindowFocus: false`).
+ */
+describe("политика дедупликации по типу события (F5)", () => {
+  /** Ровно по границе окна: T0 кратен WS_REPEATABLE_EVENT_WINDOW_MS. */
+  const T0 = 1_700_000_000_000;
+  const window = WS_REPEATABLE_EVENT_WINDOW_MS;
+
+  it("таблица политики совпадает с классификацией событий контракта", () => {
+    expect(WS_EVENT_DEDUP_POLICY).toEqual({
+      // Уникальны по природе: в payload идентификатор сущности или её
+      // новое состояние.
+      "booking:new": "strict",
+      "booking:status_changed": "strict",
+      "trip:status_changed": "strict",
+      // Повторяемы: payload `{tripId}` одинаков при любой правке.
+      "trip:details_changed": "repeatable",
+      // Sentinel-хинт «перезабери inbox» — payload всегда одинаков.
+      "notification:new": "repeatable",
+    });
+  });
+
+  it("каждый подписанный useWsEvent тип имеет строку политики", () => {
+    const source = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        "../../providers/TelegramRealtimeListener.tsx",
+      ),
+      "utf8",
+    );
+    const subscribed = [
+      ...source.matchAll(/useWsEvent\(\s*["']([^"']+)["']/g),
+    ].map((match) => match[1] as string);
+
+    // Скан не должен молча разойтись с исходником (смена кавычек/формата).
+    expect(subscribed).toEqual(
+      expect.arrayContaining([
+        "booking:new",
+        "booking:status_changed",
+        "trip:status_changed",
+        "trip:details_changed",
+        "notification:new",
+      ]),
+    );
+    for (const type of subscribed) {
+      // Object.hasOwn, а не прямая индексация: прототипные ключи Set/Object
+      // не должны «найти» политику (MEMORY.md §18).
+      expect(Object.hasOwn(WS_EVENT_DEDUP_POLICY, type)).toBe(true);
+    }
+  });
+
+  it("trip:details_changed: вторая правка за окно — НЕ дубликат (F5)", () => {
+    const firstKey = buildWsEventKey("trip:details_changed", { tripId: "t-1" }, T0);
+    const secondKey = buildWsEventKey(
+      "trip:details_changed",
+      { tripId: "t-1" },
+      T0 + window,
+    );
+    // Ключи различаются — иначе вторая правка неотличима от первой.
+    expect(secondKey).not.toBe(firstKey);
+
+    const first = markSeenEvent(new Set(), firstKey);
+    expect(first.duplicate).toBe(false);
+    const second = markSeenEvent(first.seen, secondKey);
+    expect(second.duplicate).toBe(false);
+    expect(second.seen.size).toBe(2);
+
+    // N правок подряд за окнами — N эффектов (первая + три следующих).
+    let seen = first.seen;
+    for (let i = 1; i <= 3; i++) {
+      const step = markSeenEvent(
+        seen,
+        buildWsEventKey("trip:details_changed", { tripId: "t-1" }, T0 + i * window),
+      );
+      expect(step.duplicate).toBe(false);
+      seen = step.seen;
+    }
+    expect(seen.size).toBe(4);
+  });
+
+  it("trip:details_changed: повтор доставки ВНУТРИ окна — дубликат", () => {
+    const key = buildWsEventKey("trip:details_changed", { tripId: "t-1" }, T0);
+    const resent = buildWsEventKey(
+      "trip:details_changed",
+      { tripId: "t-1" },
+      T0 + window - 1,
+    );
+    expect(resent).toBe(key);
+
+    const first = markSeenEvent(new Set(), key);
+    expect(first.duplicate).toBe(false);
+    expect(markSeenEvent(first.seen, resent).duplicate).toBe(true);
+  });
+
+  it("booking:new: тот же payload дважды — всегда дубликат (в любом времени)", () => {
+    const first = buildWsEventKey(
+      "booking:new",
+      { bookingId: "b-1", tripId: "t-1" },
+      T0,
+    );
+    const second = buildWsEventKey(
+      "booking:new",
+      { bookingId: "b-1", tripId: "t-1" },
+      T0 + 10 * window,
+    );
+    expect(second).toBe(first);
+
+    const seen = markSeenEvent(new Set(), first);
+    expect(seen.duplicate).toBe(false);
+    expect(markSeenEvent(seen.seen, second).duplicate).toBe(true);
+  });
+
+  it("*_status_changed: тот же booking/trip + status — всегда дубликат", () => {
+    const cases = [
+      {
+        type: "booking:status_changed",
+        payload: { bookingId: "b-1", tripId: "t-1", status: "confirmed" },
+      },
+      { type: "trip:status_changed", payload: { tripId: "t-1", status: "cancelled" } },
+    ] as const;
+
+    for (const { type, payload } of cases) {
+      expect(wsEventDedupPolicy(type)).toBe("strict");
+      const first = markSeenEvent(
+        new Set(),
+        buildWsEventKey(type, payload, T0),
+      );
+      expect(first.duplicate).toBe(false);
+      // Даже спустя 10 окон повтор того же перехода — дубль.
+      const second = markSeenEvent(
+        first.seen,
+        buildWsEventKey(type, payload, T0 + 10 * window),
+      );
+      expect(second.duplicate).toBe(true);
+      // Смена status — другой переход, дубликатом не считается.
+      const next = markSeenEvent(
+        first.seen,
+        buildWsEventKey(
+          type,
+          { ...payload, status: payload.status === "confirmed" ? "declined" : "completed" },
+          T0,
+        ),
+      );
+      expect(next.duplicate).toBe(false);
+    }
+  });
+
+  it("неизвестный тип события дедуплицируется строго (fail-closed)", () => {
+    expect(wsEventDedupPolicy("booking:unknown_future")).toBe("strict");
+    const key = buildWsEventKey("booking:unknown_future", { x: 1 }, T0);
+    const other = buildWsEventKey("booking:unknown_future", { x: 1 }, T0 + 10 * window);
+    expect(other).toBe(key);
+  });
+
+  it("потолок WS_SEEN_EVENTS_MAX держится и на repeatable-ключах, вход не мутируется", () => {
+    let seen: ReadonlySet<string> = new Set();
+    const before = new Set(seen);
+    for (let i = 0; i < WS_SEEN_EVENTS_MAX * 2; i++) {
+      const step = markSeenEvent(
+        seen,
+        buildWsEventKey(
+          "trip:details_changed",
+          { tripId: "t-1" },
+          T0 + i * window,
+        ),
+      );
+      expect(step.duplicate).toBe(false);
+      seen = step.seen;
+      expect(seen.size).toBeLessThanOrEqual(WS_SEEN_EVENTS_MAX);
+    }
+    // Чистота markSeenEvent: предыдущее множество не тронуто.
+    expect(before.size).toBe(0);
   });
 });
 

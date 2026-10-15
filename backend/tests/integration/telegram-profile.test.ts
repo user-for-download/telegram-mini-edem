@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { registerDevTelegramUser } from "../dev-mock-auth.js";
 
 // Лимитер /auth/telegram создаётся при импорте app со значениями из env —
 // поднимаем до импорта (паттерн telegram-auth.test.ts); mutation-лимитер
@@ -64,6 +65,8 @@ function authed(method: string, path: string, token: string | null, body?: unkno
 
 /** Dev-initData для проверки tombstone через реальный /auth/telegram. */
 function devInitData(tgId: bigint): string {
+  // Bypass fail-closed (F6): id обязан быть в allowlist.
+  registerDevTelegramUser(tgId);
   return new URLSearchParams([
     ["user", JSON.stringify({ id: Number(tgId), first_name: "Ghost" })],
     ["hash", "dev-hash"],

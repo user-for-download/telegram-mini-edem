@@ -66,14 +66,24 @@ export const TelegramRealtimeListener: FC = () => {
     setNotices((prev) => prev.filter((item) => item.key !== key));
   }, []);
 
-  const isDuplicate = useCallback((type: string, payload: unknown): boolean => {
-    const { seen, duplicate } = markSeenEvent(
-      realtimeSeenEvents,
-      buildWsEventKey(type, payload),
-    );
-    realtimeSeenEvents = seen;
-    return duplicate;
-  }, []);
+  /**
+   * Забирает событие из seen-множества: `null` = дубль доставки (эффект
+   * пропускаем), иначе возвращается ключ, по которому событие засчитано.
+   *
+   * Ключ отдаём подписчикам, а не только флаг: у `repeatable`-событий
+   * (см. WS_EVENT_DEDUP_POLICY в api/ws.ts) в ключ входит временное окно,
+   * поэтому он же годится основанием для ключа нотиса — каждая правка
+   * поездки получает свой тост, а не один на весь сеанс.
+   */
+  const claimEvent = useCallback(
+    (type: string, payload: unknown): string | null => {
+      const key = buildWsEventKey(type, payload);
+      const { seen, duplicate } = markSeenEvent(realtimeSeenEvents, key);
+      realtimeSeenEvents = seen;
+      return duplicate ? null : key;
+    },
+    [],
+  );
 
   // Reconnect после разрыва: за время обрыва данные могли устареть —
   // обновляем всё, что зависит от WS-событий. Дедуп выше гасит повторную
@@ -108,7 +118,7 @@ export const TelegramRealtimeListener: FC = () => {
   });
 
   useWsEvent("booking:new", ({ bookingId, tripId }) => {
-    if (isDuplicate("booking:new", { bookingId, tripId })) return;
+    if (claimEvent("booking:new", { bookingId, tripId }) === null) return;
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.my() });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.trip(tripId) });
     // Новая бронь меняет seatsAvailable — обновляем и публичные списки.
@@ -126,7 +136,8 @@ export const TelegramRealtimeListener: FC = () => {
   });
 
   useWsEvent("booking:status_changed", ({ bookingId, tripId, status }) => {
-    if (isDuplicate("booking:status_changed", { bookingId, tripId, status })) return;
+    if (claimEvent("booking:status_changed", { bookingId, tripId, status }) === null)
+      return;
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.my() });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.history() });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.trip(tripId) });
@@ -153,7 +164,7 @@ export const TelegramRealtimeListener: FC = () => {
   });
 
   useWsEvent("trip:status_changed", ({ tripId, status }) => {
-    if (isDuplicate("trip:status_changed", { tripId, status })) return;
+    if (claimEvent("trip:status_changed", { tripId, status }) === null) return;
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.my() });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.my() });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.history() });
@@ -187,14 +198,23 @@ export const TelegramRealtimeListener: FC = () => {
   });
 
   useWsEvent("trip:details_changed", ({ tripId }) => {
-    if (isDuplicate("trip:details_changed", { tripId })) return;
+    // Правка деталей поездки (PATCH /trips/:id) приходит с одинаковым
+    // payload {tripId} при ЛЮБОЙ правке — по ключу type+payload вторая
+    // правка в сессии не отличалась от первой и молча проглатывалась.
+    // Тип помечен repeatable (WS_EVENT_DEDUP_POLICY), поэтому ключ несёт
+    // временное окно: N правок дают N инвалидаций и N тостов.
+    const eventKey = claimEvent("trip:details_changed", { tripId });
+    if (eventKey === null) return;
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.detail(tripId) });
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.my() });
     // Публичные списки (поиск/главная) тоже могут показывать изменённые
     // маршрут/цену/время — инвалидируем, чтобы не отдавать устаревшее.
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.lists() });
     enqueueNotice({
-      key: `ws_trip_changed_${tripId}`,
+      // Ключ нотиса = ключ дедупликации: у этого типа он различает правки
+      // окном, поэтому вторая правка не молчит, как это было с
+      // строгим `ws_trip_changed_${tripId}`.
+      key: eventKey,
       title: "Детали поездки изменены",
       subtitle: "Водитель внёс изменения, проверьте информацию",
     });

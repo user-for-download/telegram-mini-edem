@@ -317,6 +317,39 @@ export const feedbackReadLimiter = createUserRateLimiter({
 });
 
 /**
+ * Пользователь: чтение своих броней (GET /bookings/my, /history,
+ * /driver, /trip/:tripId), 100 в минуту.
+ *
+ * Регрессия F7: эти четыре маршрута остались единственными чтениями в
+ * bookings без лимита, при том что каждый тянет тяжёлый findMany с
+ * включениями (бронь + поездка + водитель + две машины). Лимит
+ * ПОЛЬЗОВАТЕЛЬСКИЙ, а не IP: список поездок/истории — это персональные
+ * данные, и IP-бюджет не защищает от одного пользователя, который
+ * крутит запросы с разных адресов.
+ */
+export const bookingsReadLimiter = createUserRateLimiter({
+  windowMs: env.BOOKINGS_READ_RATE_WINDOW_MS,
+  max: env.BOOKINGS_READ_RATE_MAX,
+  keyPrefix: "user-bookings-read",
+});
+
+/**
+ * Пользователь: создание обращения (POST /feedback), 10 в час.
+ *
+ * Регрессия F7: у POST /feedback стоял только общий `mutationLimiter`,
+ * который IP-based и общий на всех. Ротация адресов полностью обходила
+ * его, а список обращений пользователя отдаётся целиком (GET /feedback) —
+ * то есть один аккаунт мог набить себе десятки тысяч строк и получить
+ * их одним ответом. Лимит ПОЛЬЗОВАТЕЛЬСКИЙ: он бьёт по конкретному
+ * аккаунту, а не по адресу, который можно сменить.
+ */
+export const feedbackCreateLimiter = createUserRateLimiter({
+  windowMs: env.FEEDBACK_CREATE_RATE_WINDOW_MS,
+  max: env.FEEDBACK_CREATE_RATE_MAX,
+  keyPrefix: "user-feedback-create",
+});
+
+/**
  * GET-эндпоинты админ-панели: IP-based, лимит выше публичного read-лимитера
  * (300/мин против 100/мин) — UI админки отдаёт запросами пачками
  * (дашборд + списки + пагинация). Ставится после adminGuard:

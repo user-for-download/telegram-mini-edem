@@ -8,7 +8,7 @@
 // Диапазоны идентификаторов не пересекаются с другими сьютами:
 // telegramUserId — BigInt 9_940_000+, уникален на файл.
 import { db } from "../../src/db.js";
-import { devMockAccessToken } from "../dev-mock-auth.js";
+import { devMockAccessToken, registerDevTelegramUser } from "../dev-mock-auth.js";
 
 export const JSON_HEADERS = { "Content-Type": "application/json" };
 
@@ -82,6 +82,10 @@ export function devInitData(
   user: Record<string, unknown>,
   hash = "dev-hash",
 ): string {
+  // Bypass принимает только telegram id из DEV_AUTH_USER_ALLOWLIST (F6).
+  if (typeof user.id === "number") {
+    registerDevTelegramUser(user.id);
+  }
   return new URLSearchParams([
     ["user", JSON.stringify(user)],
     ["auth_date", String(Math.floor(Date.now() / 1000))],

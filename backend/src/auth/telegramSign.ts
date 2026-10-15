@@ -19,7 +19,7 @@ import {
   parse,
   validate,
 } from "@tma.js/init-data-node";
-import { env } from "../env.js";
+import { devUserAllowlist, env } from "../env.js";
 import { logger } from "../logger.js";
 
 export interface TelegramInitUser {
@@ -80,30 +80,58 @@ function extractUser(userJson: string | null): TelegramInitUser | null {
 }
 
 /**
+ * Telegram user.id из явного dev-allowlist?
+ *
+ * Тот же список (DEV_AUTH_USER_ALLOWLIST), что и для mock-токенов, но в
+ * другой системе координат: там внутренний user.id (uuid), здесь —
+ * числовой telegram id. Пространства не пересекаются, поэтому список
+ * общий (см. devUserAllowlist в env.ts). Аналог isDevMockUserAllowed
+ * в tokens.ts — тот же паттерн «формат → allowlist».
+ */
+export function isDevTelegramUserAllowed(
+  telegramUserId: number | bigint
+): boolean {
+  return devUserAllowlist().has(String(telegramUserId));
+}
+
+/**
  * Валидирует RAW initData Telegram Mini Apps.
  *
  * Клиент обязан передать строку ровно как её отдал Telegram (ключи не
  * пересортированы, значения не перекодированы) — иначе HMAC не сойдётся
  * (см. telegramAuthRequestSchema в @edem/contracts).
  *
- * Токен не задан + ALLOW_DEV_AUTH (dev/test) → dev-bypass: точное
- * совпадение hash=dev-hash и валидный user.id из JSON. Произвольный id
- * принимается — это одноразовый dev-инструмент,
- * в production ALLOW_DEV_AUTH всегда false, а реальная ветка требует
- * TELEGRAM_BOT_TOKEN. Вызывающий роут отвечает 503, если токен не задан
+ * Токен не задан + ALLOW_DEV_AUTH + dev-среда (development/test) →
+ * dev-bypass. Он fail-closed по двум независимым признакам:
+ *  1) ALLOW_DEV_AUTH разрешён только в development/test (env.ts,
+ *     resolveAllowDevAuth) — staging/qa/preview/пустой NODE_ENV → false;
+ *  2) принимается ТОЛЬКО telegram id из явного allowlist
+ *     (DEV_AUTH_USER_ALLOWLIST) — тот же контракт, что у mock-токенов
+ *     (tokens.ts: isDevMockUserAllowed). Произвольный id из чужого JSON
+ *     больше не имплицирует аккаунт.
+ *
+ * Реальная ветка всегда требует TELEGRAM_BOT_TOKEN. Вызывающий роут
+ * отвечает 503, если токен не задан
  * и dev-режим выключен (роут «не сконфигурирован» ≠ «невалидная подпись»).
  */
 export function verifyTelegramInitData(
   rawInitData: string,
 ): TelegramAuthResult {
-  // Dev-bypass: только вне production и только без реального токена.
-  if (!env.TELEGRAM_BOT_TOKEN && env.ALLOW_DEV_AUTH && !env.isProduction) {
+  // Dev-bypass: только без реального токена и только в dev-среде.
+  if (!env.TELEGRAM_BOT_TOKEN && env.ALLOW_DEV_AUTH && env.isDevAuthEnv) {
     const params = new URLSearchParams(rawInitData);
     if (params.get("hash") !== DEV_HASH) {
       return { isValid: false };
     }
     const user = extractUser(params.get("user"));
     if (!user) {
+      return { isValid: false };
+    }
+    if (!isDevTelegramUserAllowed(user.id)) {
+      logger.warn(
+        { env: env.NODE_ENV },
+        "[Auth] DEV telegram initData bypass rejected: user not in allowlist"
+      );
       return { isValid: false };
     }
     logger.warn(

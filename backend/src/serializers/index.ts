@@ -154,6 +154,39 @@ export function serializePublicUser(user: UserWithCar) {
   };
 }
 
+/**
+ * ЕДИНОЕ определение «участника поездки» — права на приватные поля
+ * (точные адреса встречи и госномер машины).
+ *
+ * Правило ровно то же, что в GET /trips/:id (trips/index.ts):
+ * водитель либо пассажир с НЕИСТЁКШЕЙ активной (pending/confirmed)
+ * бронью. Просроченный, но ещё не выметенный воркером pending прав не
+ * даёт — иначе адрес висел бы у пассажира до часа после фактического
+ * отказа в брони (тот же expiry-aware предикат, что `activeBookingWhere`
+ * в bookings/shared.ts, только для ответа, а не для выборки).
+ *
+ * Держится здесь, рядом с serializeTrip, потому что serializers — граница
+ * приватности: правило участника обязано быть одно, а не повторяться по
+ * роутам (иначе «прав на адрес» снова разъедутся между /trips/:id и
+ * /bookings/history).
+ */
+export function isTripParticipant(
+  booking: {
+    trip: { driverId: string };
+    status: string;
+    expiresAt?: Date | null;
+  },
+  viewerId: string,
+  now: Date = new Date(),
+): boolean {
+  if (booking.trip.driverId === viewerId) return true;
+  if (booking.status === "confirmed") return true;
+  return (
+    booking.status === "pending" &&
+    (booking.expiresAt == null || booking.expiresAt > now)
+  );
+}
+
 export function serializeTrip(
   trip: TripWithDriver,
   options?: {
@@ -168,6 +201,14 @@ export function serializeTrip(
       status: string;
       createdAt?: Date;
     } | null;
+    /**
+     * Приватные поля поездки — FAIL-CLOSED: отдаются только при явном
+     * `true`. Раньше дефолт был обратным («отдаём, если не сказали
+     * false»), и любой новый вызов без опций молча показывал адрес
+     * встречи и госномер машины тому, кому их видеть нельзя (F1:
+     * отклонённый пассажир в /bookings/history). Правило участника —
+     * водитель или неистёкшая активная бронь, см. trips/index.ts.
+     */
     includePlate?: boolean;
     includePrivateDetails?: boolean;
     // Телефон водителя в деталях поездки (F1): только водителю
@@ -181,11 +222,11 @@ export function serializeTrip(
     // В публичном режиме адреса встречи не отдаются: подстановка города
     // в поле адреса создавала дубли «Москва / Москва» на карточках.
     fromAddress:
-      options?.includePrivateDetails === false ? undefined : trip.fromAddress,
+      options?.includePrivateDetails === true ? trip.fromAddress : undefined,
     fromCityId: trip.fromCityId ?? null,
     toCity: trip.toCity,
     toAddress:
-      options?.includePrivateDetails === false ? undefined : trip.toAddress,
+      options?.includePrivateDetails === true ? trip.toAddress : undefined,
     toCityId: trip.toCityId ?? null,
     date: formatDateRu(trip.departureAt),
     time: formatTimeRu(trip.departureAt),
@@ -196,7 +237,10 @@ export function serializeTrip(
     seatsTotal: trip.seatsTotal,
     seatsAvailable: trip.seatsAvailable,
     driver: serializeUser(trip.driver, {
-      includePlate: options?.includePlate,
+      // Госномер — приватное поле поездки с тем же fail-closed дефолтом,
+      // что и адреса: без явного `includePlate: true` его в ответе нет
+      // (в /trips/:id его нет даже для участников — см. вызов роута).
+      includePlate: options?.includePlate === true,
       includePhone: options?.includeDriverPhone,
     }),
     tags: trip.tags,
@@ -226,6 +270,18 @@ export function serializeTrip(
 }
 
 export function serializeBooking(booking: BookingWithRelations) {
+  // Приватность вложенной поездки ЗАКРЫТА этим сериализатором по построению:
+  // ответ сюда уходит либо владельцу брони (create/status — тот, кто её
+  // создал, подтвердил или отклонил), либо водителю самой поездки
+  // (/bookings/driver, /bookings/trip/:tripId). В обоих случаях зритель —
+  // участник, поэтому приватные поля отдаются явно.
+  //
+  // Важно: «участник» здесь НЕ вычисляется по статусу брони. Ответ
+  // bookings/status.ts на ОТКЛОНЕНИЕ заявки приходит водителю его же
+  // поездки, и предикат по статусу (`status === declined` → не участник)
+  // молча убрал бы из ответа адреса его собственной поездки.
+  // Правило «кому видны адреса» живёт в isTripParticipant и применяется
+  // там, где зритель может быть посторонним (bookings/queries.ts).
   return {
     id: booking.id,
     seat: booking.seat,
@@ -233,7 +289,10 @@ export function serializeBooking(booking: BookingWithRelations) {
     expiresAt: booking.expiresAt?.toISOString() ?? null,
     comment: booking.comment ?? undefined,
     passenger: serializeUser(booking.passenger),
-    trip: serializeTrip(booking.trip),
+    trip: serializeTrip(booking.trip, {
+      includePlate: true,
+      includePrivateDetails: true,
+    }),
   };
 }
 

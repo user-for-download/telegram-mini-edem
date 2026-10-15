@@ -12,7 +12,14 @@
 //   hasNextPage, т.е. уже после загрузки данных. Эффект подписки
 //   поэтому вызывается на каждом рендере и сверяет узел/rootMargin
 //   с текущей подпиской (observedRef), а не пересоздаёт observer;
-// - guard двойного срабатывания: флаг in-flight + isFetchingNextPage;
+// - guard двойного срабатывания: флаг in-flight + isFetchingNextPage.
+//   Жизнь флага привязана к ПРОМИСЕ догрузки: он отпускается в finally,
+//   когда промис рассыпался (успех, ошибка, отмена), и в эффекте по
+//   isFetchingNextPage. Привязка только к эффекту была недостаточной:
+//   при networkMode "online" офлайн-скролл ставит fetch в paused,
+//   isFetchingNextPage не взводится вовсе, а смена фильтра отменяет
+//   паузу — флаг залипал навсегда и автодогрузка умирала до конца
+//   сессии, включая все следующие поиски на этой странице;
 // - cleanup: observer.disconnect() при размонтировании;
 // - якорь скролла: сентинел нулевого размера вне потока (места не
 //   занимает); от прыжка при схлопывании скелетона страхует возврат
@@ -114,10 +121,25 @@ export function useInfiniteSentinel(
       anchorTopRef.current = readScrollTop();
       try {
         const result = fetchNextPage();
-        // fetchNextPage void | Promise: promise-ветку не ждём здесь —
-        // сброс in-flight идёт по isFetchingNextPage (эффект выше).
-        void result;
+        if (result && typeof result.then === "function") {
+          // Отпускаем флаг вместе с промисом, а не только по флагу
+          // isFetchingNextPage: промис react-query ВСЕГДА рассыпается
+          // (успех, ошибка или отмена) — QueryObserver#executeFetch
+          // оборачивает его в .catch(noop), поэтому отмена приходит
+          // как resolve, а не как reject. try/catch ниже ловит только
+          // СИНХРОННЫЙ бросок и отмену не покрывает.
+          void result.then(
+            () => {
+              inFlightRef.current = false;
+            },
+            () => {
+              inFlightRef.current = false;
+            },
+          );
+        }
       } catch {
+        // Синхронный бросок (например, снятый observer): якорь не
+        // восстановим — догрузки не было.
         inFlightRef.current = false;
         anchorTopRef.current = null;
       }

@@ -99,6 +99,7 @@ import {
 } from "@/providers/WebSocketProvider";
 import { TelegramRealtimeListener } from "@/providers/TelegramRealtimeListener";
 import { ApiError } from "@/api/client";
+import { WS_REPEATABLE_EVENT_WINDOW_MS } from "@/api/ws";
 import { useAuthStore } from "@/store/useAuthStore";
 import { BOOKING_KEYS, REVIEW_KEYS, TRIP_KEYS } from "@/queries/keys";
 import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
@@ -490,6 +491,41 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
       document.body.textContent?.match(/Ваша заявка подтверждена!/g) ?? [];
     expect(matches).toHaveLength(1);
     expect(mockHaptic).toHaveBeenCalledTimes(1);
+  });
+
+  it("trip:details_changed: вторая правка поездки в сессии не проглатывается (F5)", async () => {
+    // Правка деталей приходит с одинаковым payload {tripId} при ЛЮБОМ
+    // PATCH /trips/:id. Повтор доставки в пределах окна дедупликации — дубль,
+    // а следующая правка (за окном) обязана инвалидировать и показать тост.
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+    invalidateSpy.mockClear();
+
+    const event = {
+      type: "trip:details_changed",
+      payload: { tripId: "t-details-5" },
+    };
+    await act(async () => {
+      ws.serverMessage(event);
+      ws.serverMessage(event);
+    });
+    expect(invalidateCallsFor([...TRIP_KEYS.detail("t-details-5")])).toBe(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(WS_REPEATABLE_EVENT_WINDOW_MS + 1);
+      ws.serverMessage(event);
+    });
+
+    expect(invalidateCallsFor([...TRIP_KEYS.detail("t-details-5")])).toBe(2);
+    expect(invalidateCallsFor([...TRIP_KEYS.my()])).toBe(2);
+    const notices =
+      document.body.textContent?.match(/Детали поездки изменены/g) ?? [];
+    expect(notices).toHaveLength(2);
   });
 
   it("обрыв 1001 → reconnect с backoff; после auth:ok — resync trips+bookings+notifications", async () => {

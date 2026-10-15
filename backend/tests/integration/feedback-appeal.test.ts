@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { registerDevTelegramUser } from "../dev-mock-auth.js";
 
 // appealLimiter создаётся при импорте app с фиксированными значениями
 // (5 запросов в час, keyPrefix "feedback-appeal") и через ENV не
@@ -77,6 +78,8 @@ function devInitData(
   telegramUserId: bigint,
   hash = "dev-hash"
 ): string {
+  // Bypass fail-closed (F6): id обязан быть в allowlist.
+  registerDevTelegramUser(telegramUserId);
   return new URLSearchParams([
     ["user", JSON.stringify({ id: Number(telegramUserId), first_name: "Appeal" })],
     ["auth_date", String(Math.floor(Date.now() / 1000))],

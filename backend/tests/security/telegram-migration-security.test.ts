@@ -14,6 +14,7 @@ vi.hoisted(() => {
 
 const { app } = await import("../../src/app.js");
 const { db } = await import("../../src/db.js");
+const { registerDevTelegramUser } = await import("../dev-mock-auth.js");
 
 /**
  * Границы безопасности Telegram-миграции (tg-migration-18):
@@ -54,6 +55,7 @@ async function postTelegramLogin(body: unknown, ip = uniqueIp()) {
 }
 
 function devInitData(tgId: bigint): string {
+  registerDevTelegramUser(tgId);
   return initData({
     user: JSON.stringify({ id: Number(tgId), first_name: "Sec" }),
     auth_date: String(Math.floor(Date.now() / 1000)),

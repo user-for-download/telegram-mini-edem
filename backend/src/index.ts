@@ -14,9 +14,16 @@ import {
 
 initSentry();
 
-if (env.isProduction && env.ALLOW_DEV_AUTH) {
+// Инвариант dev-аутентификации: ALLOW_DEV_AUTH разрешён только в
+// development/test (см. resolveAllowDevAuth/isDevAuthEnv в env.ts), где
+// mock-токены и dev-hash принимаются для allowlist-пользователей.
+// Вне этих сред env уже вернул false; проверка остаётся как tripwire
+// на сам инвариант (раньше она ловила только production — staging/qa
+// с ALLOW_DEV_AUTH=true проходили).
+if (env.ALLOW_DEV_AUTH && !env.isDevAuthEnv) {
   throw new Error(
-    "[FATAL] ALLOW_DEV_AUTH is enabled in production. This is a security risk."
+    "[FATAL] ALLOW_DEV_AUTH is enabled outside development/test. " +
+      "This is a security risk."
   );
 }
 

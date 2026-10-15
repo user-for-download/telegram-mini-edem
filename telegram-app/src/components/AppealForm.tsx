@@ -23,9 +23,12 @@ import {
 /**
  * Форма обжалования блокировки (порт FeedbackModal для экрана
  * бана): тема предзаполнена «Обжалование блокировки», отправка — через
- * публичный POST /feedback/appeal с raw initData (без токена).
- * Используется в AuthGate (экран бана) и SupportPage (секция обжалования,
- * 403-ветка mid-session бана). Остальной UI не затрагивает.
+ * публичный POST /feedback/appeal с raw initData. Канал выбирает хук
+ * useAppealFeedbackMutation, а не наличие токена: на ветке 403 в SupportPage
+ * сессия ещё жива, и вывод по токену уводил апелляцию в requireUser → 403.
+ * Форма живёт ровно в двух местах: экран бана (AuthGate) и секция
+ * обжалования 403-ветки SupportPage (mid-session бан). Остальной UI
+ * не затрагивает.
  */
 export function AppealForm() {
   const [subject, setSubject] = useState("Обжалование блокировки");

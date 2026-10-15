@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { registerDevTelegramUser } from "../dev-mock-auth.js";
 
 // Лимитер /auth/refresh создаётся при импорте app со значениями из env.
 // Поднимаем лимит до импорта модулей, чтобы тест не упирался в 429.
@@ -82,6 +83,10 @@ async function createActiveUser(): Promise<CreatedUser> {
 function devInitData(telegramUserId: bigint): string {
   // Dev-bypass TG: hash=dev-hash. verifyTelegramInitData в dev-режиме
   // (ALLOW_DEV_AUTH=true) принимает такое initData без проверки HMAC.
+  //
+  // Bypass fail-closed (F6): принимает только id из allowlist, поэтому
+  // каждый вызов регистрирует свой id — иначе тест молча уходит в 401.
+  registerDevTelegramUser(telegramUserId);
   return new URLSearchParams([
     ["user", JSON.stringify({ id: Number(telegramUserId), first_name: "Ban" })],
     ["auth_date", String(Math.floor(Date.now() / 1000))],

@@ -29,6 +29,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format";
+import { countPages } from "@/lib/page-clamp";
+import { useClampedPageIndex } from "@/lib/use-clamped-page";
 
 import { useBookingStatusMutation, useBookingsQuery } from "./queries";
 
@@ -72,6 +74,16 @@ export function BookingsPage() {
     pageSize: PAGE_SIZE,
   });
 
+  // Смена статуса брони на последней странице сжимает выборку — индекс
+  // страницы прижимается, иначе таблица пустеет (audit F8).
+  const currentPage = useClampedPageIndex(
+    page,
+    bookingsQuery.data
+      ? countPages(bookingsQuery.data.total, bookingsQuery.data.pageSize)
+      : undefined,
+    setPage,
+  );
+
   const handleFilterChange = (next: StatusFilterValue) => {
     setStatus(next);
     setPage(1);
@@ -104,7 +116,7 @@ export function BookingsPage() {
         <>
           <BookingsTable bookings={bookingsQuery.data.items} />
           <Pagination
-            page={bookingsQuery.data.page}
+            page={currentPage}
             total={bookingsQuery.data.total}
             pageSize={bookingsQuery.data.pageSize}
             onPageChange={setPage}
@@ -297,7 +309,8 @@ function Pagination({
   pageSize: number;
   onPageChange: (page: number) => void;
 }) {
-  const hasNext = page * pageSize < total;
+  const totalPages = countPages(total, pageSize);
+  const hasNext = page < totalPages;
   return (
     <div className="flex items-center justify-between">
       <p className="text-sm text-muted-foreground">

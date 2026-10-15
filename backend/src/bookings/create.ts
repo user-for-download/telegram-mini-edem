@@ -141,14 +141,6 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
           );
         }
 
-        if (trip.seatsAvailable <= 0) {
-          throw new BookingError(
-            "Not enough available seats",
-            409,
-            ERROR_CODES.CONFLICT,
-          );
-        }
-
         // Слот занят, только если на нём висит активная (не истёкшая) бронь.
         // declined/cancelled, как и просроченный pending, слот освобождают —
         // поэтому предикат — общий expiry-aware activeBookingWhere().
@@ -161,35 +153,49 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
           select: { id: true, passengerId: true },
         });
 
-        if (seatConflict) {
-          // Псевдо-идемпотентность: конфликт на НАШЕМ же месте — клиент
-          // повторил запрос после таймаута, а бронь уже создалась.
-          // Возвращаем существующую бронь с 200 вместо 409.
-          if (seatConflict.passengerId === passenger.id) {
-            const existing = await tx.booking.findUnique({
-              where: { id: seatConflict.id },
-              include: {
-                trip: {
-                  include: {
-                    driver: {
-                      include: {
-                        car: true,
-                      },
+        // Псевдо-идемпотентность проверяется ДО guard'а остатка мест (F3).
+        // Первая, реально прошедшая попытка уже списала одно место, поэтому
+        // seatsAvailable на повторе может быть уже 0 (поездка на 1 место) —
+        // и клиент, повторивший запрос после потерянного 201, получил бы 409
+        // на собственную, уже существующую бронь. Возвращаем её с 200.
+        // Ветка «слот занят кем-то ДРУГИМ» (SEAT_TAKEN) намеренно остаётся
+        // ниже guard'а остатка: для чужих код/текст 409 не меняются.
+        if (seatConflict?.passengerId === passenger.id) {
+          const existing = await tx.booking.findUnique({
+            where: { id: seatConflict.id },
+            include: {
+              trip: {
+                include: {
+                  driver: {
+                    include: {
+                      car: true,
                     },
                   },
                 },
-                passenger: {
-                  include: {
-                    car: true,
-                  },
+              },
+              passenger: {
+                include: {
+                  car: true,
                 },
               },
-            });
-            if (existing) {
-              return { kind: "idempotent", booking: existing };
-            }
+            },
+          });
+          if (existing) {
+            return { kind: "idempotent", booking: existing };
           }
+        }
 
+        // Остаток мест — только для действительно новых запросов: повтор
+        // от того же пассажира выше уже разобран.
+        if (trip.seatsAvailable <= 0) {
+          throw new BookingError(
+            "Not enough available seats",
+            409,
+            ERROR_CODES.CONFLICT,
+          );
+        }
+
+        if (seatConflict) {
           throw new BookingError(
             "Seat is already reserved",
             409,

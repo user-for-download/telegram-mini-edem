@@ -16,6 +16,61 @@ const isProduction = NODE_ENV === "production";
 const isDevelopment = NODE_ENV === "development";
 
 /**
+ * Среды, в которых dev-аутентификация вообще допустима.
+ *
+ * Fail-closed по построению: перечислены РАЗРЕШЁННЫЕ среды, а не
+ * запрещённые. Любая другая (staging/qa/preview/…) и незаданный NODE_ENV
+ * дают deny. Обратная формулировка («всё, что не production») — ровно та
+ * дыра, которую закрывает этот список: NODE_ENV=staging проходил как dev.
+ */
+const DEV_AUTH_ENV_ALLOWLIST: ReadonlySet<string> = new Set([
+  "development",
+  "test",
+]);
+
+/**
+ * NODE_ENV из allowlist dev-сред (development|test)?
+ *
+ * Значение НЕ дефолтится в «development»: незаданный NODE_ENV означает
+ * «среда неизвестна», а не «локальная машина разработчика».
+ * Регистр и пробелы нормализуются (значения из .env/CI).
+ */
+export function isDevAuthEnv(
+  nodeEnv: string | undefined = process.env.NODE_ENV
+): boolean {
+  return DEV_AUTH_ENV_ALLOWLIST.has((nodeEnv ?? "").trim().toLowerCase());
+}
+
+/**
+ * Разрешение ALLOW_DEV_AUTH — чистая функция (тестируется без импорта
+ * модуля, который читает .env и валидирует секреты при загрузке).
+ *
+ * Порядок проверок: сначала среда (allowlist), потом намерение оператора.
+ * Под vitest dev-ветки включены принудительно, но только если NODE_ENV
+ * явно не указывает на другую среду.
+ */
+export function resolveAllowDevAuth(input: {
+  /** Сырой process.env.NODE_ENV (без дефолта): пусто → deny. */
+  nodeEnv: string | undefined;
+  /** process.env.VITEST — маркер тестового стенда. */
+  vitest: string | undefined;
+  /** Сырое process.env.ALLOW_DEV_AUTH. */
+  raw: string | undefined;
+}): boolean {
+  const explicit = (input.nodeEnv ?? "").trim().toLowerCase();
+  // Тестовый стенд подставляет test ТОЛЬКО при незаданном NODE_ENV:
+  // явный NODE_ENV=production остаётся production.
+  const nodeEnv = explicit !== "" ? explicit : input.vitest ? "test" : "";
+  if (!isDevAuthEnv(nodeEnv)) {
+    return false;
+  }
+  if (input.vitest) {
+    return true;
+  }
+  return input.raw === "true";
+}
+
+/**
  * Dev-множитель rate-лимитов: в development все MAX-лимиты ×100.
  *
  * Зачем: dev-стенд делит один IP-бюджет (Vite-прокси, HMR-перезаходы,
@@ -88,14 +143,22 @@ export function chatIdEnv(name: string): number | undefined {
 }
 
 /**
- * Явный allowlist пользователей, которым разрешены dev mock-токены
- * (DEV_AUTH_USER_ALLOWLIST: comma-separated user id).
+ * Явный allowlist пользователей, которым разрешены dev-механизмы auth
+ * (DEV_AUTH_USER_ALLOWLIST: comma-separated id).
+ *
+ * Пространство значений — непрозрачные строки id, в которых участвуют
+ * ДВА разных идентификатора:
+ *  - внутренний user.id (uuid) — для mock-токенов (auth/tokens.ts);
+ *  - telegram user id (числовой) — для dev-bypass initData
+ *    (auth/telegramSign.ts).
+ * Пересечения между ними не бывает (uuid ≠ десятичное число), поэтому
+ * один список на оба механизма. Пустой список = dev-механизмы выключены.
  *
  * Читаем из process.env при КАЖДОМ вызове, а не снапшотим в env-объект:
  * интеграционные тесты создают пользователей динамически и регистрируют
  * их в allowlist во время выполнения. Функция вызывается только в ветке
- * ALLOW_DEV_AUTH (dev/test) — в production ALLOW_DEV_AUTH всегда false,
- * mock-токены сюда не доходят.
+ * ALLOW_DEV_AUTH (dev/test) — в остальных средах ALLOW_DEV_AUTH всегда
+ * false (см. resolveAllowDevAuth), dev-механизмы сюда не доходят.
  */
 export function devUserAllowlist(): ReadonlySet<string> {
   const raw = process.env.DEV_AUTH_USER_ALLOWLIST;
@@ -371,14 +434,40 @@ export const env = {
     : process.env.CORS_ORIGINS ?? "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001",
 
   /**
-   * Dev-имитация разрешена только в development/test (если ALLOW_DEV_AUTH=true).
-   * В production всегда false.
+   * Dev-имитация разрешена ТОЛЬКО в development/test (allowlist сред,
+   * см. DEV_AUTH_ENV_ALLOWLIST) и только при явном ALLOW_DEV_AUTH=true
+   * (под vitest — принудительно). Всё остальное (production, staging,
+   * qa, preview, незаданный NODE_ENV) → false.
+   *
+   * Запрос `ALLOW_DEV_AUTH=true` в неподдерживаемой среде не меняет
+   * поведение молча: печатается предупреждение с именами обеих
+   * переменных (политика ENVIRONMENT.md «не молча меняем поведение»).
+   * Старт при этом НЕ останавливается: неподдерживаемая среда не
+   * должна падать из-за лишней переменной, безопасность обеспечена
+   * deny-веткой.
    */
   ALLOW_DEV_AUTH: (() => {
-    if (isProduction) return false;
-    if (process.env.VITEST) return true;
-    return process.env.ALLOW_DEV_AUTH === "true";
+    const resolved = resolveAllowDevAuth({
+      nodeEnv: process.env.NODE_ENV,
+      vitest: process.env.VITEST,
+      raw: process.env.ALLOW_DEV_AUTH,
+    });
+    if (!resolved && process.env.ALLOW_DEV_AUTH === "true") {
+      console.warn(
+        `[env] ALLOW_DEV_AUTH=true ignored: NODE_ENV=` +
+          `${process.env.NODE_ENV ?? "(unset)"} is not one of ` +
+          `${[...DEV_AUTH_ENV_ALLOWLIST].join(", ")}. Dev auth is disabled.`
+      );
+    }
+    return resolved;
   })(),
+
+  /**
+   * Текущая среда входит в allowlist dev-сред? Второй слой защиты для
+   * dev-веток в auth: даже при ALLOW_DEV_AUTH=true вне development/test
+   * bypass остаётся выключенным.
+   */
+  isDevAuthEnv: isDevAuthEnv(),
 
   /**
    * JWT TTL.
@@ -440,6 +529,10 @@ export const env = {
   REVIEWS_READ_RATE_MAX: positiveIntEnv("REVIEWS_READ_RATE_MAX", devRateMax(100)),
   FEEDBACK_READ_RATE_WINDOW_MS: positiveIntEnv("FEEDBACK_READ_RATE_WINDOW_MS", 24 * 60 * 60 * 1000),
   FEEDBACK_READ_RATE_MAX: positiveIntEnv("FEEDBACK_READ_RATE_MAX", devRateMax(100)),
+  BOOKINGS_READ_RATE_WINDOW_MS: positiveIntEnv("BOOKINGS_READ_RATE_WINDOW_MS", 60 * 1000),
+  BOOKINGS_READ_RATE_MAX: positiveIntEnv("BOOKINGS_READ_RATE_MAX", devRateMax(200)),
+  FEEDBACK_CREATE_RATE_WINDOW_MS: positiveIntEnv("FEEDBACK_CREATE_RATE_WINDOW_MS", 60 * 60 * 1000),
+  FEEDBACK_CREATE_RATE_MAX: positiveIntEnv("FEEDBACK_CREATE_RATE_MAX", devRateMax(10)),
 
   LOG_LEVEL:
     process.env.LOG_LEVEL ||

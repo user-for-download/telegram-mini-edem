@@ -40,6 +40,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format";
+import { countPages } from "@/lib/page-clamp";
+import { useClampedPageIndex } from "@/lib/use-clamped-page";
 import { ApiError } from "@/lib/api-client";
 
 import {
@@ -91,6 +93,16 @@ export function ReviewsPage() {
   const approveMutation = useApproveReviewMutation();
   const rejectMutation = useRejectReviewMutation();
   const isModerating = approveMutation.isPending || rejectMutation.isPending;
+
+  // Модерация последнего отзыва на странице сжимает выборку — индекс не должен
+  // уезжать за totalPages, иначе таблица выглядит пустой (audit F8).
+  const currentPage = useClampedPageIndex(
+    page,
+    reviewsQuery.data
+      ? countPages(reviewsQuery.data.total, reviewsQuery.data.pageSize)
+      : undefined,
+    setPage,
+  );
 
   const handleFilterChange = (next: StatusFilterValue) => {
     setStatus(next);
@@ -169,7 +181,7 @@ export function ReviewsPage() {
           />
           <ReviewsPagination
             data={reviewsQuery.data}
-            page={page}
+            page={currentPage}
             onPageChange={setPage}
           />
         </>
@@ -366,12 +378,12 @@ function ReviewsPagination({
   page: number;
   onPageChange: (page: number) => void;
 }) {
-  const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
+  const totalPages = countPages(data.total, data.pageSize);
 
   return (
     <nav className="flex flex-wrap items-center justify-between gap-2" aria-label="Навигация по страницам отзывов">
       <p className="text-sm text-muted-foreground" aria-live="polite">
-        стр. {data.page} из {totalPages} · всего отзывов: {data.total}
+        стр. {page} из {totalPages} · всего отзывов: {data.total}
       </p>
       <div className="flex gap-2">
         <Button

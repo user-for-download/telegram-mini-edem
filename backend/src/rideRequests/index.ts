@@ -43,7 +43,7 @@ async function getOwnedRequest(id: string, userId: string) {
   });
 }
 
-rideRequestsRouter.get("/", async (c) => {
+rideRequestsRouter.get("/", publicReadLimiter, async (c) => {
   const parsed = rideRequestListQuerySchema.safeParse(
     sanitizeValue(c.req.query()),
   );

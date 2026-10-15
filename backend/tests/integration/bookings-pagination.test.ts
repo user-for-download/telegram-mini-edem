@@ -14,6 +14,12 @@ describe("GET /bookings/trip/:tripId — cursor pagination", () => {
   let driverId: string;
   let tripId: string;
   const passengerIds: string[] = [];
+  // Пользователи/поездки, созданные ОТДЕЛЬНО внутри отдельных тестов
+  // (курсор чужой поездки, не-водитель). Их тоже нужно чистить: БД общая
+  // для всех сьютов, а tgSeq начинается заново при каждом запуске файла —
+  // оставленная строка ломала бы СЛЕДУЮЩИЙ прогон уникальным индексом.
+  const extraUserIds: string[] = [];
+  const extraTripIds: string[] = [];
   // telegramUserId — BigInt: безопасный счётчик вместо Date.now() (выходит за 32 бита).
   let tgSeq = 1_600_000n;
 
@@ -75,8 +81,14 @@ describe("GET /bookings/trip/:tripId — cursor pagination", () => {
   afterEach(async () => {
     await db.booking.deleteMany({ where: { tripId } });
     await db.trip.deleteMany({ where: { id: tripId } });
-    await db.user.deleteMany({ where: { id: { in: [driverId, ...passengerIds] } } });
+    await db.booking.deleteMany({ where: { tripId: { in: extraTripIds } } });
+    await db.trip.deleteMany({ where: { id: { in: extraTripIds } } });
+    await db.user.deleteMany({
+      where: { id: { in: [driverId, ...passengerIds, ...extraUserIds] } },
+    });
     passengerIds.length = 0;
+    extraUserIds.length = 0;
+    extraTripIds.length = 0;
   });
 
   it("requires authentication", async () => {
@@ -183,6 +195,88 @@ describe("GET /bookings/trip/:tripId — cursor pagination", () => {
 
     const body = await res.json();
     expect(body.code).toBe("VALIDATION_FAILED");
+  });
+
+  /**
+   * Регрессия F9: курсор ЧУЖОЙ поездки.
+   *
+   * Раньше такой курсор проходил: строка отсекалась фильтром
+   * `where: { tripId }`, но `skip: 1` (идиома Prisma «пропустить строку-курсор»)
+   * всё равно выбрасывал одну честную запись ЭТОЙ поездки — пагинация молча
+   * теряла элемент и уезжала на сдвинутую позицию, без единой ошибки.
+   *
+   * Существующий, но «протухший» курсор (строки уже нет) такому НЕ является:
+   * он даёт пустой хвост с 200 — это закреплено тестом выше и ломать
+   * нельзя.
+   */
+  it("rejects a cursor that belongs to ANOTHER trip with 400", async () => {
+    const otherDriver = await db.user.create({
+      data: {
+        name: `OtherDriver-${Date.now()}`,
+        telegramUserId: ++tgSeq,
+        avatar: "https://i.pravatar.cc/200?img=4",
+      },
+    });
+    extraUserIds.push(otherDriver.id);
+    const otherTrip = await db.trip.create({
+      data: {
+        driverId: otherDriver.id,
+        fromCity: "Kazan",
+        fromAddress: "Center",
+        toCity: "Omsk",
+        toAddress: "Station",
+        departureAt: new Date(Date.now() + 86_400_000),
+        durationMinutes: 60,
+        distanceKm: 900,
+        price: 900,
+        seatsTotal: 3,
+        seatsAvailable: 3,
+        tags: [],
+      },
+    });
+    extraTripIds.push(otherTrip.id);
+    const foreignBooking = await db.booking.create({
+      data: {
+        tripId: otherTrip.id,
+        passengerId: passengerIds[0],
+        seat: 1,
+        status: "declined",
+        cancelledAt: new Date(),
+        cancelledByType: "driver",
+      },
+    });
+
+    const res = await app.request(
+      `/api/v1/bookings/trip/${tripId}?cursor=${foreignBooking.id}&limit=5`,
+      { headers: { Authorization: `Bearer ${devMockAccessToken(driverId)}` } },
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("VALIDATION_FAILED");
+  });
+
+  it("404/403 on this route carry the machine-readable `code` (ApiErrorBody)", async () => {
+    const missing = await app.request(
+      "/api/v1/bookings/trip/99999999-9999-9999-9999-999999999999",
+      { headers: { Authorization: `Bearer ${devMockAccessToken(driverId)}` } },
+    );
+    expect(missing.status).toBe(404);
+    expect((await missing.json()).code).toBe("NOT_FOUND");
+
+    const otherDriver = await db.user.create({
+      data: {
+        name: `Stranger-${Date.now()}`,
+        telegramUserId: ++tgSeq,
+        avatar: "https://i.pravatar.cc/200?img=5",
+      },
+    });
+    extraUserIds.push(otherDriver.id);
+    const forbidden = await app.request(`/api/v1/bookings/trip/${tripId}`, {
+      headers: { Authorization: `Bearer ${devMockAccessToken(otherDriver.id)}` },
+    });
+    expect(forbidden.status).toBe(403);
+    expect((await forbidden.json()).code).toBe("FORBIDDEN");
   });
 });
 

@@ -12,17 +12,35 @@ import { sign } from "@tma.js/init-data-node";
 const envMocks = vi.hoisted(() => ({
   NODE_ENV: "test",
   isProduction: false,
+  isDevAuthEnv: true,
   ALLOW_DEV_AUTH: true,
   TELEGRAM_BOT_TOKEN: "",
   TG_INIT_DATA_TTL_SECONDS: 3600,
+  // Ветка dev-bypass fail-closed (F6): принимает только telegram id из
+  // allowlist. Мок повторяет ЧТЕНИЕ ИЗ process.env при каждом вызове, как
+  // настоящий devUserAllowlist (src/env.ts) — иначе registerDevTelegramUser,
+  // который пишет в process.env, не был бы виден здесь.
+  devUserAllowlist: () =>
+    new Set(
+      (process.env.DEV_AUTH_USER_ALLOWLIST ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
 }));
 
-vi.mock("../../src/env.js", () => ({ env: envMocks }));
+// Мок отдаёт ИМЯ devUserAllowlist, а не только env: telegramSign.ts импортирует
+// его отдельным именованным импортом (src/auth/telegramSign.ts).
+vi.mock("../../src/env.js", () => ({
+  env: envMocks,
+  devUserAllowlist: envMocks.devUserAllowlist,
+}));
 vi.mock("../../src/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 const { verifyTelegramInitData } = await import("../../src/auth/telegramSign.js");
+const { registerDevTelegramUser } = await import("../dev-mock-auth.js");
 
 // Тестовый токен из документации пакета (публичный пример, не секрет).
 const TEST_TOKEN = "5768337691:AAH5YkoiEuPk8-FZa32hStHTqXiLPtAEhx8";
@@ -37,6 +55,9 @@ function signedInitData(
 
 /** Dev-формат: hash=dev-hash + urlencoded user JSON. */
 function devInitData(user: Record<string, unknown>, hash = "dev-hash"): string {
+  // Bypass принимает только id из allowlist — регистрируем (F6). Через
+  // общий хелпер, иначе этот файл снова обойдёт allowlist молча.
+  registerDevTelegramUser(user.id as number);
   return new URLSearchParams([
     ["user", JSON.stringify(user)],
     ["hash", hash],
@@ -151,7 +172,28 @@ describe("verifyTelegramInitData: fail-closed", () => {
   });
 
   it("dev-bypass не работает в production", () => {
+    // Запрет теперь keyed на allowlist СРЕД (development|test), а не на
+    // «не production»: staging/qa/preview — тоже deny (F6).
+    envMocks.isDevAuthEnv = false;
     envMocks.isProduction = true;
     expect(verifyTelegramInitData(devInitData({ id: 1 })).isValid).toBe(false);
+    envMocks.isDevAuthEnv = true;
+    envMocks.isProduction = false;
+  });
+
+  /**
+   * Регрессия F6: произвольный id из чужого initData больше не даёт токены.
+   * Раньше bypass принимал ЛЮБОЙ валидный user.id, а выключался только при
+   * NODE_ENV === "production" — на staging/qa/preview это был вход в чужой
+   * аккаунт. Теперь нужен явный allowlist.
+   */
+  it("dev-bypass отклоняет id, которого нет в allowlist (регрессия F6)", () => {
+    const чужой = new URLSearchParams([
+      ["user", JSON.stringify({ id: 777000777, first_name: "Impostor" })],
+      ["hash", "dev-hash"],
+    ]).toString();
+    // Регистрируем ДРУГОЙ id — целевой остаётся вне allowlist.
+    registerDevTelegramUser(111000111);
+    expect(verifyTelegramInitData(чужой).isValid).toBe(false);
   });
 });

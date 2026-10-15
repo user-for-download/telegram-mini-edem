@@ -9,7 +9,7 @@ import { db } from "../db.js";
 import { requireUser, type AuthEnv } from "../auth/middleware.js";
 import { verifyTelegramInitData } from "../auth/telegramSign.js";
 import { logger } from "../logger.js";
-import { createRateLimiter, mutationLimiter, feedbackReadLimiter } from "../middleware/rateLimit.js";
+import { createRateLimiter, mutationLimiter, feedbackReadLimiter, feedbackCreateLimiter } from "../middleware/rateLimit.js";
 import { devRateMax } from "../env.js";
 import { getSanitizedBody } from "../middleware/sanitize.js";
 import { ACCOUNT_DELETED_MESSAGE, ERROR_CODES } from "../errors.js";
@@ -31,7 +31,7 @@ const appealLimiter = createRateLimiter({
  * Поля уже ограничены контрактом (subject ≤ 100, text ≤ 2000) и
  * санитизированы DOMPurify в getSanitizedBody.
  */
-feedbackRouter.post("/", requireUser, mutationLimiter, async (c) => {
+feedbackRouter.post("/", requireUser, mutationLimiter, feedbackCreateLimiter, async (c) => {
   const body = await getSanitizedBody(c);
   const parseResult = createFeedbackDtoSchema.safeParse(body);
 

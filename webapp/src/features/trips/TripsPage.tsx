@@ -36,6 +36,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format";
+import { countPages } from "@/lib/page-clamp";
+import { useClampedPageIndex } from "@/lib/use-clamped-page";
 
 import type { TripStatus } from "./api";
 import { useCancelTripMutation, useTripsQuery } from "./queries";
@@ -73,6 +75,14 @@ export function TripsPage() {
   });
   const cancelMutation = useCancelTripMutation();
 
+  // Список поездок может сжаться (фильтр/отмена) — индекс страницы обязан
+  // остаться валидным, иначе таблица пустеет при непустых данных (audit F8).
+  const currentPage = useClampedPageIndex(
+    page,
+    tripsQuery.data ? countPages(tripsQuery.data.total, tripsQuery.data.pageSize) : undefined,
+    setPage,
+  );
+
   const handleStatusChange = (next: StatusFilterValue) => {
     setStatus(next);
     setPage(1);
@@ -101,7 +111,7 @@ export function TripsPage() {
       {tripsQuery.data && (
         <>
           <TripsTable trips={tripsQuery.data.items} onCancel={setTripToCancel} />
-          <TripsPagination data={tripsQuery.data} page={page} onPageChange={setPage} />
+          <TripsPagination data={tripsQuery.data} page={currentPage} onPageChange={setPage} />
         </>
       )}
       <CancelTripDialog
@@ -251,12 +261,12 @@ function TripsPagination({
   page: number;
   onPageChange: (page: number) => void;
 }) {
-  const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
+  const totalPages = countPages(data.total, data.pageSize);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="text-sm text-muted-foreground">
-        Страница {data.page} из {totalPages} · всего поездок: {data.total}
+        Страница {page} из {totalPages} · всего поездок: {data.total}
       </p>
       <div className="flex gap-2">
         <Button

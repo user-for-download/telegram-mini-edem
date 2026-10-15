@@ -298,3 +298,75 @@ describe("useInfiniteSentinel: браузерная ветка (IntersectionObse
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * Регрессия F10: in-flight флаг не должен переживать саму догрузку.
+ *
+ * Состояние, которое ломало автодогрузку: react-query с networkMode
+ * "online" НЕ взводит isFetchingNextPage, если сеть недоступна — запрос
+ * уходит в paused. Старый код отпускал флаг только по фронту
+ * true→false у isFetchingNextPage, то есть НИКОГДА. Один скролл без
+ * сети оставлял флаг на весь остаток страницы, включая все следующие
+ * поиски (смена фильтра отменяет паузу, и обратного фронта тоже нет).
+ *
+ * Здесь isFetchingNextPage НАМЕРЕННО не меняется — это и есть paused.
+ */
+describe("useInfiniteSentinel: in-flight флаг живёт не дольше промисса", () => {
+  /** Отложенный промис: рассыпается только когда тест его отпустит. */
+  function deferred<T = void>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  it("пауза (isFetchingNextPage не взводится) — второй скролл уходит в догрузку", async () => {
+    const { handles } = installObserver();
+    const gate = deferred();
+    const fetchNextPage = vi.fn(() => gate.promise);
+    const { rerender } = renderHost(
+      <Host hasNextPage fetchNextPage={fetchNextPage} isFetchingNextPage={false} />,
+    );
+
+    triggerIntersect(handles.at(-1)!);
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+
+    // Пока промис жив — флаг держит, повторный скролл не стреляет.
+    triggerIntersect(handles.at(-1)!);
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+
+    // Догрузка завершилась (успех ИЛИ отмена — react-query присылает
+    // отмену как resolve через .catch(noop)). isFetchingNextPage при
+    // этом НЕ меняется: отпускать флаг обязан сам промис.
+    gate.resolve();
+    await gate.promise;
+    await Promise.resolve();
+
+    // Перерендер НЕ нужен и не должен быть: освобождение пришло из промиса.
+    rerender(
+      <Host hasNextPage fetchNextPage={fetchNextPage} isFetchingNextPage={false} />,
+    );
+    triggerIntersect(handles.at(-1)!);
+    expect(fetchNextPage).toHaveBeenCalledTimes(2);
+  });
+
+  it("отмена догрузки (промис отклонён) — флаг тоже освобождается", async () => {
+    const { handles } = installObserver();
+    const gate = deferred();
+    const fetchNextPage = vi.fn(() => gate.promise);
+    renderHost(<Host hasNextPage fetchNextPage={fetchNextPage} isFetchingNextPage={false} />);
+
+    triggerIntersect(handles.at(-1)!);
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+
+    gate.reject(new Error("CancelledError"));
+    await gate.promise.catch(() => undefined);
+    await Promise.resolve();
+
+    triggerIntersect(handles.at(-1)!);
+    expect(fetchNextPage).toHaveBeenCalledTimes(2);
+  });
+});

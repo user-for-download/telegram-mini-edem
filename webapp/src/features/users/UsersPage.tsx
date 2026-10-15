@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/format";
+import { countPages } from "@/lib/page-clamp";
+import { useClampedPageIndex } from "@/lib/use-clamped-page";
 import { cn } from "@/lib/utils";
 
 import {
@@ -72,6 +74,13 @@ export function UsersPage() {
   const q = useDebouncedValue(search.trim());
 
   const usersQuery = useUsersQuery({ q: q || undefined, page, pageSize: PAGE_SIZE });
+  // Поиск/бан/разбан сжимают выборку — индекс страницы прижимается к
+  // валидному, иначе таблица выглядит пустой (audit F8, тот же дефект).
+  const currentPage = useClampedPageIndex(
+    page,
+    usersQuery.data ? countPages(usersQuery.data.total, usersQuery.data.pageSize) : undefined,
+    setPage,
+  );
   const banMutation = useBanUserMutation();
   const unbanMutation = useUnbanUserMutation();
   const resetOnboardingMutation = useResetOnboardingMutation();
@@ -133,7 +142,7 @@ export function UsersPage() {
       )}
       {usersQuery.data && (
         <Pagination
-          page={usersQuery.data.page}
+          page={currentPage}
           pageSize={usersQuery.data.pageSize}
           total={usersQuery.data.total}
           onPageChange={setPage}
@@ -325,7 +334,7 @@ function Pagination({
   total: number;
   onPageChange: (page: number) => void;
 }) {
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = countPages(total, pageSize);
   return (
     <nav className="flex items-center justify-end gap-2" aria-label="Навигация по страницам пользователей">
       <Button

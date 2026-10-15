@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { registerDevTelegramUser } from "../dev-mock-auth.js";
 
 // appealLimiter создаётся при импорте app с фиксированными значениями
 // (5 запросов в час, keyPrefix "feedback-appeal"). Ключ — IP клиента.
@@ -46,6 +47,8 @@ function nextTgId(): bigint {
 
 /** Dev-initData: user JSON + hash=dev-hash (формат dev-bypass). */
 function devInitData(user: Record<string, unknown>, hash = "dev-hash"): string {
+  // Bypass fail-closed (F6): id обязан быть в allowlist.
+  if (typeof user.id === "number") registerDevTelegramUser(user.id);
   return new URLSearchParams([
     ["user", JSON.stringify(user)],
     ["hash", hash],

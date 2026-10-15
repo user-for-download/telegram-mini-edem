@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { db } from "../src/db.js";
-import { devMockAccessToken } from "./dev-mock-auth.js";
+import { devMockAccessToken, registerDevTelegramUser } from "./dev-mock-auth.js";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json",
@@ -38,6 +38,7 @@ describe("health", () => {
 
 /** Dev-initData формата dev-bypass (hash=dev-hash, ALLOW_DEV_AUTH под vitest). */
 function devInitData(tgId: number, firstName = "Smoke"): string {
+  registerDevTelegramUser(tgId);
   return new URLSearchParams([
     ["user", JSON.stringify({ id: tgId, first_name: firstName })],
     ["auth_date", String(Math.floor(Date.now() / 1000))],

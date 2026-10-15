@@ -86,12 +86,12 @@ describe("supportApi.appeal (TG-ветка POST /feedback/appeal)", () => {
   });
 });
 
-describe("submitSupportFeedback: маршрутизация submitFeedback", () => {
-  it("с токеном → supportApi.create с dto, appeal не вызывается", async () => {
+describe("submitSupportFeedback: канал выбирает ВЫЗЫВАЮЩИЙ", () => {
+  it("channel=session → supportApi.create, appeal не вызывается", async () => {
     mockGetToken.mockReturnValue("access-token");
     requestMock.mockResolvedValue(created);
 
-    const result = await submitSupportFeedback(dto);
+    const result = await submitSupportFeedback(dto, "session");
 
     expect(result).toEqual(created);
     expect(requestMock).toHaveBeenCalledWith(
@@ -106,12 +106,39 @@ describe("submitSupportFeedback: маршрутизация submitFeedback", () 
     );
   });
 
-  it("без токена + initData в сторе → appeal с { initData, ...dto }, create не вызывается", async () => {
-    mockGetToken.mockReturnValue(null);
+  /**
+   * Регрессия F2: бан mid-session — токен в apiClient ещё валиден (JWT
+   * stateless, бан не приходит в открытый WS, emitBanned живёт только в
+   * performRefresh), но апелляция обязана уйти в публичный /feedback/appeal.
+   * Старая реализация выводила канал из наличия токена и уводила её в
+   * requireUser → 403 в тупик до истечения токена (~15 мин).
+   * Токен здесь намеренно НЕ пустой — именно этот случай регрессировал.
+   */
+  it("channel=appeal при ЖИВОМ токене → appeal, а не requireUser (регрессия F2)", async () => {
+    mockGetToken.mockReturnValue("access-token");
     mockStoreGetState.mockReturnValue({ initData: RAW_INIT_DATA });
     requestMock.mockResolvedValue(created);
 
-    const result = await submitSupportFeedback(dto);
+    const result = await submitSupportFeedback(dto, "appeal");
+
+    expect(result).toEqual(created);
+    expect(requestMock).toHaveBeenCalledWith(
+      "/feedback/appeal",
+      { method: "POST", body: JSON.stringify({ initData: RAW_INIT_DATA, ...dto }) },
+      createFeedbackResponseSchema,
+    );
+    expect(requestMock).not.toHaveBeenCalledWith(
+      "/feedback",
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it("channel=appeal: initData из стора → { initData, ...dto }", async () => {
+    mockStoreGetState.mockReturnValue({ initData: RAW_INIT_DATA });
+    requestMock.mockResolvedValue(created);
+
+    const result = await submitSupportFeedback(dto, "appeal");
 
     expect(result).toEqual(created);
     expect(requestMock).toHaveBeenCalledWith(
@@ -121,22 +148,22 @@ describe("submitSupportFeedback: маршрутизация submitFeedback", () 
     );
   });
 
-  it("без токена и без initData → throw, сеть не вызывается", async () => {
-    mockGetToken.mockReturnValue(null);
+  it("channel=appeal без initData и в сторе, и в SDK → throw, сеть не вызывается", async () => {
     mockStoreGetState.mockReturnValue({ initData: null });
 
-    await expect(submitSupportFeedback(dto)).rejects.toThrow("Не удалось отправить обращение");
+    await expect(submitSupportFeedback(dto, "appeal")).rejects.toThrow(
+      "Не удалось отправить обращение",
+    );
     expect(requestMock).not.toHaveBeenCalled();
   });
 
-  it("initData в сторе null, но SDK её отдаёт → appeal уходит с SDK-строкой", async () => {
+  it("channel=appeal: initData в сторе null, но SDK её отдаёт → appeal уходит с SDK-строкой", async () => {
     // Ветка «403 на /feedback» в стор не заходит: initData берём из SDK.
-    mockGetToken.mockReturnValue(null);
     mockStoreGetState.mockReturnValue({ initData: null });
     mockGetRawInitData.mockReturnValue(RAW_INIT_DATA);
     requestMock.mockResolvedValue(created);
 
-    const result = await submitSupportFeedback(dto);
+    const result = await submitSupportFeedback(dto, "appeal");
 
     expect(result).toEqual(created);
     expect(requestMock).toHaveBeenCalledWith(
@@ -146,13 +173,12 @@ describe("submitSupportFeedback: маршрутизация submitFeedback", () 
     );
   });
 
-  it("initData в сторе приоритетнее SDK-строки", async () => {
-    mockGetToken.mockReturnValue(null);
+  it("channel=appeal: initData в сторе приоритетнее SDK-строки", async () => {
     mockStoreGetState.mockReturnValue({ initData: "from-store" });
     mockGetRawInitData.mockReturnValue(RAW_INIT_DATA);
     requestMock.mockResolvedValue(created);
 
-    await submitSupportFeedback(dto);
+    await submitSupportFeedback(dto, "appeal");
 
     expect(requestMock).toHaveBeenCalledWith(
       "/feedback/appeal",

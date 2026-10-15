@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime } from "@/lib/format";
+import { useClampedPageIndex } from "@/lib/use-clamped-page";
 import { useReportsQuery, useUpdateReportStatusMutation } from "./queries";
 import {
   REPORT_CATEGORY_LABELS,
@@ -45,6 +46,13 @@ export function ReportsPage() {
   // Обратная связь модерации: успех/сбой обязаны быть объявлены (audit:
   // мутации без анонса выглядели как «ничего не произошло»).
   const [feedback, setFeedback] = useState<MutationFeedback | null>(null);
+  // Резолв жалобы на последней странице сжимает «pending»-выборку: индекс
+  // страницы без прижимки уехал бы за totalPages (audit F8).
+  const currentPage = useClampedPageIndex(
+    page,
+    query.data?.pagination.totalPages,
+    setPage,
+  );
 
   const runStatusUpdate = (
     reportId: string,
@@ -207,13 +215,13 @@ export function ReportsPage() {
           <Button
             variant="outline"
             aria-label="Предыдущая страница жалоб"
-            disabled={page === 1}
+            disabled={currentPage === 1}
             onClick={() => setPage((current) => current - 1)}
           >
             Назад
           </Button>
           <span role="status" className="px-2 py-2 text-sm">
-            Страница {page} из {Math.max(1, query.data.pagination.totalPages)}
+            Страница {currentPage} из {Math.max(1, query.data.pagination.totalPages)}
           </span>
           <Button
             variant="outline"

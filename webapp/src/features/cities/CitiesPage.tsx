@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { AlertCircle, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format";
 import { ApiError } from "@/lib/api-client";
+import { useClampedPageIndex } from "@/lib/use-clamped-page";
 import { CITY_NAME_MAX_LENGTH } from "@edem/contracts";
 
 import {
@@ -39,16 +40,13 @@ import {
   useDeleteCityMutation,
   useUpdateCityMutation,
 } from "./queries";
+import {
+  cityFormOnMutationError,
+  EMPTY_CITY_FORM,
+  type CityFormState,
+} from "./mutationError";
 
 const PAGE_SIZE = 50;
-
-interface CityFormState {
-  name: string;
-  /** Серверные ошибки полей (из 400 VALIDATION_FAILED с `errors`). */
-  fieldError?: string;
-}
-
-const EMPTY_FORM: CityFormState = { name: "" };
 
 /**
  * Управление справочником точек: список + создание + переименование
@@ -79,6 +77,14 @@ export function CitiesPage() {
     pageSize: PAGE_SIZE,
     q: debouncedSearch || undefined,
   });
+
+  // Удаление последнего города на странице сжимает список — индекс страницы
+  // обязан уехать на последнюю валидную, иначе таблица пустеет (audit F8).
+  const currentPage = useClampedPageIndex(
+    page,
+    citiesQuery.data?.pagination.totalPages,
+    setPage,
+  );
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<{
@@ -145,7 +151,7 @@ export function CitiesPage() {
           />
           <CitiesPagination
             data={citiesQuery.data}
-            page={page}
+            page={currentPage}
             onPageChange={setPage}
           />
         </>
@@ -261,7 +267,7 @@ function CreateCityDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [form, setForm] = useState<CityFormState>(EMPTY_FORM);
+  const [form, setForm] = useState<CityFormState>(EMPTY_CITY_FORM);
   const create = useCreateCityMutation();
   // create — новый объект каждый рендер (спред результата useMutation),
   // его нельзя класть в deps: смена статуса pending→error перезапускала бы
@@ -275,7 +281,7 @@ function CreateCityDialog({
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
-    if (open) setForm(EMPTY_FORM);
+    if (open) setForm(EMPTY_CITY_FORM);
   }
   useEffect(() => {
     if (open) resetCreate();
@@ -517,7 +523,7 @@ function CitiesPagination({
 }) {
   return (
     <nav className="flex items-center justify-between text-sm text-muted-foreground" aria-label="Навигация по страницам городов">
-      <span aria-live="polite">Страница {page} из {data.pagination.totalPages}</span>
+      <span aria-live="polite">Страница {page} из {Math.max(1, data.pagination.totalPages)}</span>
       <div className="flex gap-2">
         <Button
           variant="outline"
@@ -568,23 +574,12 @@ function CitiesError({
 }
 
 /**
- * Маппинг ApiError → пользовательское сообщение в форме. 409 → текст
- * с сервера (там уже «Город с таким именем уже существует»). Иначе —
- * общее сообщение по статусу.
+ * Маппинг ApiError → состояние формы. Вынесено в ./mutationError, потому что
+ * решение обязано быть тестируемым без DOM (см. cityFormOnMutationError).
  */
 function handleMutationError(
   error: unknown,
-  setForm: (s: CityFormState) => void,
+  setForm: Dispatch<SetStateAction<CityFormState>>,
 ): void {
-  if (error instanceof ApiError) {
-    if (error.status === 409) {
-      setForm({ name: "", fieldError: "Город с таким именем уже существует" });
-      return;
-    }
-    if (error.status === 400) {
-      setForm({ name: "", fieldError: error.message });
-      return;
-    }
-  }
-  setForm({ name: "", fieldError: undefined });
+  setForm((current) => cityFormOnMutationError(error, current));
 }
