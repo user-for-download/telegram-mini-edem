@@ -38,6 +38,14 @@ interface CitySelectFieldProps {
   /** Ошибка поля: aria-invalid + aria-describedby + текст (Field умеет). */
   error?: string | null;
   disabled?: boolean;
+  /**
+   * Город обязателен по контракту (createTripDtoSchema: fromCityId/toCityId —
+   * uuid без .optional()). Опция, а не постоянное поведение: справочник
+   * используется и как фильтр (главная, поиск, заявка на попутку), где
+   * город можно не выбирать. Свободный ввод при этом по-прежнему невозможен —
+   * обязательность меняет только объявление, а не набор `<option>`.
+   */
+  required?: boolean;
 }
 
 export function CitySelectField({
@@ -50,16 +58,25 @@ export function CitySelectField({
   excludeId,
   error,
   disabled = false,
+  required = false,
 }: CitySelectFieldProps) {
   // Подпись: Field даёт скрытый label (имя для скринридера на всех
   // платформах) и header на контрол — видимую подпись base; связка
   // htmlFor+id держит e2e getByLabel (канон вместо локальной копии).
+  //
+  // required + aria-required рядом: китовский Select спредит остальные пропы на
+  // нативный <select> (Select.js → Text/Subheadline → Typography), поэтому
+  // атрибут доезжает до DOM без обёрток. Дублируем явно, потому что здесь
+  // атрибут СТАТИЧЕН и разойтись ему не с чем — в отличие от aria-checked у
+  // Switch (MEMORY.md §18), который выводит браузер из меняющегося checked.
   return (
     <Field label={label} id={id} className={styles.field} error={error}>
       {(field) => (
         <Select
           {...field}
           disabled={disabled}
+          required={required}
+          aria-required={required || undefined}
           value={valueId}
           onChange={(event) => {
             haptic.selection();

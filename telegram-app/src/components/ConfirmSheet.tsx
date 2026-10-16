@@ -34,6 +34,7 @@ export function ConfirmSheet({
   description,
   pending = false,
   destructive = false,
+  nested = false,
   onConfirm,
 }: {
   open: boolean;
@@ -44,13 +45,28 @@ export function ConfirmSheet({
   /** Действие в полёте: кнопка в loading и повторный клик гаснут. */
   pending?: boolean;
   destructive?: boolean;
+  /**
+   * Подтверждение открывается ПОВЕРХ открытой шторки (удалённая машина в
+   * «Автомобиле», «принять/отклонить» в «Заявках»). Тогда ui/Sheet
+   * поднимает `Drawer.NestedRoot`: без него подтверждение — это вторая
+   * шторка, у которой собственный root, своя блокировка скролла и своя
+   * анимация поверх открытой. Ставить только из содержимого другой
+   * открытой шторки — на странице (ProfilePage, DriverPanel, TripCard,
+   * BookingPanel, RideRequestsList) подтверждение остаётся обычным.
+   */
+  nested?: boolean;
   onConfirm: () => void;
 }) {
   // Нативная кнопка «Назад» закрывает шторку, а не уводит с экрана:
   // без этой подписки Back ушёл бы по истории вместе со страницей.
   useModalBack(onClose, open);
   return (
-    <Sheet open={open} onClose={onClose} title={confirmLabel}>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={confirmLabel}
+      nested={nested}
+    >
       <Stack>
         <Text Component="p">{description}</Text>
         <Stack gap="xs">

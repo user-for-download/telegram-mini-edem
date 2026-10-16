@@ -12,9 +12,13 @@ import { Button } from "@/ui/Button";
 import { CharCounter } from "@/ui/CharCounter";
 import { HINT } from "@/ui/classes";
 import { Field } from "@/ui/Field";
-import { Notice } from "@/ui/Notice";
 import { haptic } from "@/utils/haptics";
-import { normalizeSupportForm, validateSupportForm } from "./supportValidation";
+import {
+  normalizeSupportForm,
+  validateSupportForm,
+  type SupportField,
+  type SupportFieldError,
+} from "./supportValidation";
 
 /**
  * Форма обращения в поддержку — тело всплывающего окна `FeedbackModal`.
@@ -37,7 +41,15 @@ export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
   const create = useCreateFeedbackMutation();
   const [subject, setSubject] = useState("");
   const [text, setText] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
+  // Клиентская ошибка приходит С ПОЛЕМ: <Field error=…> сам ставит
+  // aria-invalid + aria-describedby и рисует текст рядом с нужным
+  // контролом. Отдельной общей плашки больше нет — она была причиной
+  // дефекта: одно сообщение красило оба поля сразу, а ошибку про тему
+  // скринридер на `<Input>` не объявлял (MEMORY.md §18, п. «ошибка поля
+  // связывается FieldError через id + aria-describedby»).
+  const [fieldError, setFieldError] = useState<SupportFieldError | null>(null);
+  const errorFor = (field: SupportField) =>
+    fieldError?.field === field ? fieldError.message : undefined;
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
   // второй клик до ре-рендера не отправит второй запрос.
   const submitGuard = useRef(false);
@@ -46,10 +58,10 @@ export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
     if (create.isPending || submitGuard.current) return;
     const validationError = validateSupportForm(subject, text);
     if (validationError) {
-      setFormError(validationError);
+      setFieldError(validationError);
       return;
     }
-    setFormError(null);
+    setFieldError(null);
     submitGuard.current = true;
     create.mutate(normalizeSupportForm(subject, text), {
       onSettled: () => {
@@ -74,7 +86,7 @@ export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
   return (
     <>
       <MutationError error={create.error} />
-      <Field label="Тема" id="support-subject">
+      <Field label="Тема" id="support-subject" error={errorFor("subject")}>
         {(field) => (
           <Input
             {...field}
@@ -82,15 +94,17 @@ export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
             placeholder="Например: не приходит уведомление"
             value={subject}
             maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
-            status={formError ? "error" : undefined}
+            status={errorFor("subject") ? "error" : undefined}
             onChange={(event) => {
               setSubject(event.target.value);
-              if (formError) setFormError(null);
+              // Гасим ТОЛЬКО свою ошибку: правка соседнего поля не должна
+              // снимать сообщение, которое всё ещё верно.
+              if (fieldError?.field === "subject") setFieldError(null);
             }}
           />
         )}
       </Field>
-      <Field label="Сообщение" id="support-text">
+      <Field label="Сообщение" id="support-text" error={errorFor("text")}>
         {(field) => (
           <Textarea
             {...field}
@@ -98,22 +112,16 @@ export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
             maxLength={FEEDBACK_TEXT_MAX_LENGTH}
             placeholder="Расскажите подробнее, что произошло"
             value={text}
-            aria-invalid={Boolean(formError)}
-            status={formError ? "error" : undefined}
+            status={errorFor("text") ? "error" : undefined}
             onChange={(event) => {
               setText(event.target.value);
-              if (formError) setFormError(null);
+              if (fieldError?.field === "text") setFieldError(null);
             }}
           />
         )}
       </Field>
       {text.length > 0 && (
         <CharCounter value={text.length} max={FEEDBACK_TEXT_MAX_LENGTH} />
-      )}
-      {formError && (
-        <Notice tone="danger" variant="text">
-          {formError}
-        </Notice>
       )}
       <Button
         stretched

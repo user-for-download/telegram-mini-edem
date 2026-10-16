@@ -19,6 +19,13 @@ interface RealtimeNotice {
   key: string;
   title: string;
   subtitle?: string;
+  /**
+   * Отказ/отмена — role=alert (немедленный анонс), подтверждение и
+   * информационные правки — role=status. Тот же флаг, что у Toast.toast
+   * в components/Toast/ToastProvider.tsx, и по той же причине: событие
+   * с haptic-ошибкой нельзя пропустить мимо ушей, ждать своей очереди.
+   */
+  assertive?: boolean;
 }
 
 /** Максимум одновременных realtime-уведомлений (старые вытесняются). */
@@ -159,6 +166,9 @@ export const TelegramRealtimeListener: FC = () => {
       enqueueNotice({
         key: `ws_booking_declined_${bookingId}`,
         title: "Ваша заявка отклонена",
+        // Пара haptic-ошибки: тост обязан быть не только услышан, но и
+        // назван скринридером сразу, а не в общей очереди polite-сообщений.
+        assertive: true,
       });
     }
   });
@@ -179,6 +189,8 @@ export const TelegramRealtimeListener: FC = () => {
       enqueueNotice({
         key: `ws_trip_cancelled_${tripId}`,
         title: "Поездка отменена водителем",
+        // Как и отказ брони: отмена — потеря, а не обновление.
+        assertive: true,
       });
     } else if (status === "completed") {
       notifyHaptic("success");
@@ -220,21 +232,27 @@ export const TelegramRealtimeListener: FC = () => {
     });
   });
 
-  return (
-    <div aria-live="polite" data-testid="tg-realtime-notices">
-      {notices.map(
-        (notice): ReactNode => (
-          <Snackbar
-            key={notice.key}
-            className={toastStyles.snackbar}
-            description={notice.subtitle}
-            duration={4000}
-            onClose={() => dismissNotice(notice.key)}
-          >
-            {notice.title}
-          </Snackbar>
-        ),
-      )}
-    </div>
-  );
+  // a11y: tgui Snackbar — голый div без live-семантики, поэтому роль
+  // даём ЕМУ САМОМУ, а не обёртке: AppRoot рендерит Snackbar через
+  // портал (RootRenderer → createPortal в узел самого AppRoot), и роль
+  // на обёртке висела бы на ПУСТОМ узле — тост скринридеру не
+  // объявлялся бы вовсе, при том что haptic уже отыграл. Обёртка с
+  // aria-live="polite" вокруг списка нотисов стоила ровно этого.
+  //
+  // Snackbar наследует HTMLAttributes<HTMLDivElement> и спредит
+  // ...restProps на ВНЕШНИЙ div тоста, а текст лежит во вложенном
+  // Caption, поэтому узел роли одновременно несёт и текст.
+  return notices.map((notice): ReactNode => (
+    <Snackbar
+      key={notice.key}
+      className={toastStyles.snackbar}
+      role={notice.assertive ? "alert" : "status"}
+      aria-live={notice.assertive ? "assertive" : "polite"}
+      description={notice.subtitle}
+      duration={4000}
+      onClose={() => dismissNotice(notice.key)}
+    >
+      {notice.title}
+    </Snackbar>
+  ));
 };

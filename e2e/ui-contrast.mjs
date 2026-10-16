@@ -23,6 +23,11 @@
 // веса, а не задаётся списком «известных крупных»: иначе подняли бы
 // размер на 1px и получили бы «проходит» там, где обычный текст.
 //
+// ПОКРЫТИЕ ТЕМ. Каждая тональная пара проверяется в ОБЕИХ темах: в тёмной
+// `--app-*` — это другая формула (смеси с белым вместо смесей с чёрным),
+// а оверрейд `.dark .app-theme` — единственное, что её вообще включает.
+// Проверка одной темы оставляла половину системы `--app-*` незащищённой.
+//
 // Env:
 // - TG_BASE_URL (default http://localhost:3012)
 // - E2E_CONTRAST_VERBOSE=1 — подробные замеры.
@@ -50,6 +55,17 @@ async function step(name, fn) {
     record(name, false, String(error.message ?? error));
   }
 }
+
+/**
+ * Разрешённые цвета носителей по шагам: `имя/тема → [цвет, …]`.
+ *
+ * Нужно шагу «.dark .app-theme действительно перекрывает тон»: без него мы
+ * УТВЕРЖДАЕМ, что оверрейд работает, а на самом деле проверяем только
+ * «ниже 4.5 не упало». Тон, одинаковый в обеих темах, означал бы, что
+ * `.dark .app-theme` не применился (светлые смеси в тёмной теме — ровно
+ * тот провал, который он и чинит: 4.21 вместо 9.70).
+ */
+const resolvedTones = new Map();
 
 const browser = await chromium.launch();
 const context = await browser.newContext({
@@ -181,11 +197,18 @@ async function measure(route, pick, theme, pseudo = null, prepare = null) {
       const cs = getComputedStyle(el, pseudo);
       const fg = parseColor(cs.color);
       const bg = backdropOf(el);
+      const asHex = (rgb) => (rgb ? `rgb(${rgb.join(",")})` : null);
       return {
         label: el.textContent?.trim().slice(0, 24) || String(el.className),
         fontSize: cs.fontSize,
         fontWeight: cs.fontWeight,
         ratio: fg && bg ? contrast(fg, bg) : null,
+        // Разрешённые цвета нужны шагу «.dark .app-theme действительно
+        // перекрывает тон»: он сравнивает ЗНАЧЕНИЯ, а не строки вывода
+        // движка (один и тот же цвет движок отдаёт то как `rgb(…)`, то как
+        // `color(srgb …)`, и сравнение строк дало бы ложное «не перекрыто»).
+        fgHex: asHex(fg),
+        bgHex: asHex(bg),
         error: !fg ? "не разобран цвет текста" : !bg ? "нет непрозрачного фона-предка" : null,
       };
     });
@@ -202,6 +225,12 @@ async function measure(route, pick, theme, pseudo = null, prepare = null) {
  * ничего не нашёл и шаг «прошёл бы» вхолостую. Это ровно тот класс ошибки,
  * что был с протечкой cleanup: проверка, которая проходит, ничего не
  * проверяя.
+ *
+ * `minRatio` — АБСОЛЮТНЫЙ пол, независимый от порога по размеру/весу.
+ * Нужен там, где «крупный текст» снял бы требование: подпись выбранного
+ * чипа и заголовок секции крупными не считаются, но полагаться на одну
+ * лишь эвристику размера — значило бы проверять их на 3:1, если бы когда-нибудь
+ * кто-то поднял кегль на 1px.
  */
 async function contrastStep({
   name,
@@ -211,6 +240,7 @@ async function contrastStep({
   requireMin = 1,
   pseudo = null,
   prepare = null,
+  minRatio = null,
 }) {
   const { rows, errors } = await measure(route, pick, theme, pseudo, prepare);
   if (errors.length) throw new Error(`pageerror: ${errors[0]}`);
@@ -231,12 +261,18 @@ async function contrastStep({
         `«${row.label}» ${row.fontSize}/${row.fontWeight}: ${row.ratio}:1 < ${need}:1`,
       );
     }
+    if (minRatio !== null && row.ratio < minRatio) {
+      failures.push(
+        `«${row.label}» ${row.fontSize}/${row.fontWeight}: ${row.ratio}:1 < ${minRatio}:1 (абсолютный пол)`,
+      );
+    }
     if (VERBOSE) {
       console.log(`   · ${name}/${theme}: «${row.label}» ${row.ratio}:1 (нужно ${need})`);
     }
   }
   if (failures.length) throw new Error(failures.join("; "));
   const worst = rows.reduce((a, r) => Math.min(a, r.ratio ?? 99), 99);
+  resolvedTones.set(name, rows.map((r) => r.fgHex));
   return `${rows.length} носителей, худший ${worst}:1`;
 }
 
@@ -281,67 +317,98 @@ await step("тон подписи поля ≥ AA (тёмная тема)", () =
 //
 // Кнопку не перекрывает шторка «Автомобиль»: дев-юзер сидится с машиной
 // (backend/prisma/seed.ts, u-dev), а reviveDevUser её не сносит.
-await step("тона Notice ≥ AA (светлая тема)", () =>
-  contrastStep({
-    name: "notice",
-    route: "/trips/my/new",
-    theme: "light",
-    requireMin: 1,
-    // Носитель появляется только после отправки пустой формы — на странице
-    // плашек нет.
-    prepare: { click: "Опубликовать", waitFor: "[data-variant]" },
-    // ТОЛЬКО плашки ui/Notice. Селектор вида `[data-tone], [role='alert']`
-    // ловил ещё и StatusPill: тот помечен data-tone, но его фон —
-    // полупрозрачная заливка (`… / 0.15`), а не сплошная. Функция подложки
-    // умеет искать непрозрачный предок, но останавливается на самой плашке,
-    // то есть сравнивала тон текста с его СОБСТВЕННЫМ фоном и давала 1.17:1 —
-    // ложное падение. Тона StatusPill проверяются отдельно, по своему фону.
-    pick: () =>
-      [...document.querySelectorAll("[data-variant]")].filter(
-        (el) => el.textContent?.trim(),
-      ),
-  }),
-);
+//
+// ОБЕ ТЕМЫ (2026-10-15): раньше шаг был только светлым, то есть половина
+// правок тонов — ровно те, что перекрывает `.dark .app-theme`, — не была
+// защищена ничем. Тёмный шаг не «дублирует» светлый: в тёмной теме
+// `--app-danger`/`--app-warning`/`--app-muted` считаются как смеси с БЕЛЫМ
+// (минимальный процент против самой светлой тёмной поверхности #24303c),
+// то есть это другая формула и другой набор чисел.
+for (const theme of ["light", "dark"]) {
+  await step(
+    `тона Notice ≥ AA (${theme === "light" ? "светлая" : "тёмная"} тема)`,
+    () =>
+      contrastStep({
+        name: `notice-${theme}`,
+        route: "/trips/my/new",
+        theme,
+        requireMin: 1,
+        // Абсолютный пол, а не только порог по размеру: текст плашки —
+        // обычный (13–15px), и полагаться на одну лишь эвристику кегля
+        // значило бы завтра пропустить просадку, если кто-то поднимет шрифт.
+        minRatio: 4.5,
+        // Носитель появляется только после отправки пустой формы — на странице
+        // плашек нет.
+        prepare: { click: "Опубликовать", waitFor: "[data-variant]" },
+        // ТОЛЬКО плашки ui/Notice. Селектор вида `[data-tone], [role='alert']`
+        // ловил ещё и StatusPill: тот помечен data-tone, но его фон —
+        // полупрозрачная заливка (`… / 0.15`), а не сплошная. Функция подложки
+        // умеет искать непрозрачный предок, но останавливается на самой плашке,
+        // то есть сравнивала тон текста с его СОБСТВЕННЫМ фоном и давала 1.17:1 —
+        // ложное падение. Тона StatusPill проверяются отдельно, по своему фону.
+        pick: () =>
+          [...document.querySelectorAll("[data-variant]")].filter(
+            (el) => el.textContent?.trim(),
+          ),
+      }),
+  );
+}
 
 // ── 3. Приглушённый текст (реестр #21) ───────────────────────────────────
 // --app-muted: подписи, «Осталось мест», даты. Носители — элементы с
 // цветом, отличным от --tgui--text_color, но НЕ h6 (подпись поля уже
 // проверена выше) и не кит-примитивы.
-await step("приглушённый текст ≥ AA (тёмная тема, худшая тёмная поверхность)", () =>
-  contrastStep({
-    name: "app-muted",
-    route: "/bookings",
-    theme: "dark",
-    requireMin: 1,
-    pick: () => {
-      const root = document.querySelector(".app-theme") ?? document.body;
-      const probe = document.createElement("span");
-      probe.style.color = "var(--app-muted)";
-      root.appendChild(probe);
-      const target = getComputedStyle(probe).color;
-      probe.remove();
-      // СРАВНИЕМ ЧИСЛА, а не строки: один и тот же цвет движок отдаёт то как
-      // `rgb(135,152,169)`, то как `color(srgb 0.529 0.595 0.664)`. Сравнение
-      // строк давало 0 носителей при 38 листьях на странице — шаг валился
-      // вхолостую, а не по дефекту.
-      const key = (value) => {
-        const nums = String(value || "").match(/[\d.]+/g);
-        if (!nums || nums.length < 3) return null;
-        return String(value).startsWith("color(")
-          ? nums.slice(0, 3).map((v) => Math.round(Number(v) * 255)).join(",")
-          : nums.slice(0, 3).join(",");
-      };
-      const wanted = key(target);
-      if (!wanted) return [];
-      return [...document.querySelectorAll("span, p, div, caption, h1, h2, h3")].filter(
-        (el) =>
-          el.textContent?.trim() &&
-          key(getComputedStyle(el).color) === wanted &&
-          !el.closest("[class*='fieldRoot']"),
-      );
-    },
-  }),
-);
+//
+// ОБЕ ТЕМЫ (2026-10-15): раньше был только тёмный шаг. Светлая формула
+// `--app-muted` — 91 % кита + ЧЁРНЫЙ против самой тёмной из светлых
+// поверхностей (#eaeaeb), и она даёт 4.51:1, то есть ВОСЕМЬ СОТЫХ над
+// порогом. Незакреплённая величина в восемь сотых от порога — это ровно то
+// значение, ради которого нужен гейт: следующий bump палитры кита или
+// смена серой плашки тихо уводит её под AA, и никто этого не видит.
+for (const theme of ["light", "dark"]) {
+  await step(
+    `приглушённый текст ≥ AA (${theme === "light" ? "светлая" : "тёмная"} тема, своя худшая поверхность)`,
+    () =>
+      contrastStep({
+        name: `app-muted-${theme}`,
+        route: "/bookings",
+        theme,
+        // Пол НЕ 1: реестр #21 замерял 85 носителей в каждой теме. Ставим
+        // 5 — настолько ниже реального числа, что шаг падает только если
+        // зонд перестал находить приглушённый текст, то есть на самом
+        // дефекте, а не «нулевая страница».
+        requireMin: 5,
+        minRatio: 4.5,
+        pick: () => {
+          const root = document.querySelector(".app-theme") ?? document.body;
+          const probe = document.createElement("span");
+          probe.style.color = "var(--app-muted)";
+          root.appendChild(probe);
+          const target = getComputedStyle(probe).color;
+          probe.remove();
+          // СРАВНИЕМ ЧИСЛА, а не строки: один и тот же цвет движок отдаёт то как
+          // `rgb(135,152,169)`, то как `color(srgb 0.529 0.595 0.664)`. Сравнение
+          // строк давало 0 носителей при 38 листьях на странице — шаг валился
+          // вхолостую, а не по дефекту.
+          const key = (value) => {
+            const nums = String(value || "").match(/[\d.]+/g);
+            if (!nums || nums.length < 3) return null;
+            return String(value).startsWith("color(")
+              ? nums.slice(0, 3).map((v) => Math.round(Number(v) * 255)).join(",")
+              : nums.slice(0, 3).join(",");
+          };
+          const wanted = key(target);
+          if (!wanted) return [];
+          return [...document.querySelectorAll("span, p, div, caption, h1, h2, h3")].filter(
+            (el) =>
+              el.textContent?.trim() &&
+              key(getComputedStyle(el).color) === wanted &&
+              !el.closest("[class*='fieldRoot']"),
+          );
+        },
+      }),
+  );
+}
 
 // ── 4. Плейсхолдеры полей ────────────────────────────────────────────────
 // Кит красит ::placeholder в secondary_hint_color — ниже AA на серой
@@ -366,6 +433,89 @@ for (const theme of ["light", "dark"]) {
         ),
     }),
   );
+}
+
+// ── 5. Тон, который читают выбранный тег и активный пункт (реестр #38) ─────
+// `ui/Chip.module.css .accent[aria-pressed="true"]` и
+// `ui/Switcher.module.css .active` — единственные два места, где тон лежит
+// на ТОНИРОВАННОЙ плашке и потому меряется против неё (MEMORY §18: худшая
+// подложка тона, а не фон секции). Проверка против фона секции дала бы
+// ложное «проходит».
+//
+// Носитель — НАСТОЯЩИЙ зонд, а не текст страницы: на чистом стенде ни один
+// тег не выбран, и шаг, ищущий `[aria-pressed="true"]`, прошёл бы вхолостую.
+// Зонд кладётся в реальный контейнер приложения, красится тоном и
+// подкладывает плашку подложкой — `backdropOf` сама дойдёт вверх до
+// непрозрачного предка, то есть посчитает ровно «тон на плашке поверх
+// секции». Кегль зонда задан явно (13px) и НЕ наследуется от страницы:
+// иначе порог выводился бы из чужого шрифта.
+//
+// Хост — `section` ВНУТРИ `.app-theme`, а не сам `.app-theme`: класс темы
+// висит на корне AppRoot, который ВЫШЕ колонки AppShell, и подложкой вышел
+// бы цвет `<body>` (--tgui--secondary_bg_color), а не `--tgui--bg_color`.
+//
+// Замерено на стенде (платформа base): 4.86:1 светлая тема, 5.46:1 тёмная.
+// Плашка iOS даёт 4.91 / 5.84, серая `#eaeaeb`/`#24303c` — 4.58 / 5.99;
+// худшая из них (4.58) и закреплена в ui/__tests__/contrastTones.test.ts.
+for (const theme of ["light", "dark"]) {
+  await step(
+    `тон --app-info на своей плашке ≥ AA (${theme === "light" ? "светлая" : "тёмная"} тема)`,
+    () =>
+      contrastStep({
+        name: `app-info-on-plate-${theme}`,
+        route: "/trips",
+        theme,
+        requireMin: 1,
+        minRatio: 4.5,
+        pick: () => {
+          const root = document.querySelector(".app-theme");
+          const host = root?.querySelector("section, main, [class*='card']") ?? root;
+          if (!host) return [];
+          const probe = document.createElement("span");
+          probe.textContent = "--app-info на --app-info-bg";
+          probe.style.color = "var(--app-info)";
+          probe.style.backgroundColor = "var(--app-info-bg)";
+          probe.style.fontSize = "13px";
+          probe.style.fontWeight = "400";
+          // Не сдвигаем вёрстку: замер всё равно читает вычисленный стиль.
+          probe.style.position = "absolute";
+          probe.style.left = "-9999px";
+          probe.setAttribute("data-contrast-probe", "app-info");
+          host.appendChild(probe);
+          return [probe];
+        },
+      }),
+  );
+}
+
+// ── 6. `.dark .app-theme` действительно перекрывает тон ───────────────────
+// Числовой пол выше — недоказуемое утверждение: «4.5 не упало» одинаково
+// верно и при работающем оверрейде, и при сломанном. Разница значений —
+// доказательство. Светлые смеси в тёмной теме дают 4.21 вместо 9.70
+// (именно это чинит `.dark .app-theme`), а чтение сырого `--tgui--*` в
+// обход системы `--app-*` оверрейд не достигает вовсе.
+const OVERRIDDEN = [
+  { name: "notice-light", dark: "notice-dark", why: "тон плашки Notice" },
+  { name: "app-muted-light", dark: "app-muted-dark", why: "приглушённый текст" },
+  { name: "app-info-on-plate-light", dark: "app-info-on-plate-dark", why: "тон --app-info" },
+];
+for (const item of OVERRIDDEN) {
+  await step(`тёмная тема перекрывает тон: ${item.why}`, () => {
+    const light = resolvedTones.get(item.name) ?? [];
+    const dark = resolvedTones.get(item.dark) ?? [];
+    if (light.length === 0 || dark.length === 0) {
+      throw new Error(
+        `не собраны значения тона: ${item.name}=${light.length}, ${item.dark}=${dark.length} — шаг прошёл бы вхолостую`,
+      );
+    }
+    const same = light.filter((color) => color && dark.includes(color));
+    if (same.length) {
+      throw new Error(
+        `тон не изменился при смене темы (${same[0]}): оверрейд .dark .app-theme не применился`,
+      );
+    }
+    return `${light[0]} → ${dark[0]}`;
+  });
 }
 
 await step("нет pageerror на экранах", () => {

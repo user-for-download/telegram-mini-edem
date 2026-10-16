@@ -4,15 +4,21 @@ import { Cell } from "@/ui/Cell";
 import { haptic } from "@/utils/haptics";
 import { RatingPill } from "@/components/RatingPill";
 import { useProfileQuery } from "@/queries/profile";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import styles from "./ProfileSection.module.css";
 
 /** Профиль-бар главной: аватар, имя, счётчик поездок и пилюля рейтинга. Тап — в профиль. */
 export function ProfileSection() {
   const navigate = useNavigate();
   const profile = useProfileQuery();
+  // Без условия пульсация гасилась ВСЕГДА, в том числе у тех, кто её не
+  // просил отключать. Теперь поведение совпадает с остальными болванками
+  // (components/Skeletons.tsx): анимация есть по умолчанию, гасится по
+  // системной настройке (WCAG 2.3.3).
+  const reduceMotion = usePrefersReducedMotion();
 
   return (
-    <Skeleton visible={profile.isLoading} withoutAnimation>
+    <Skeleton visible={profile.isLoading} withoutAnimation={reduceMotion}>
       <Cell
         Component="button"
         type="button"

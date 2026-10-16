@@ -2,6 +2,7 @@ import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { Notice } from "@/ui/Notice";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { MIN_TARGET } from "@/ui/classes";
 import { EditTripForm } from "@/components/Trip/EditTripForm";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
@@ -40,8 +41,39 @@ export function DriverPanel({
   trip,
 }: DriverPanelProps) {
   const navigate = useNavigate();
+  const toast = useToast();
   const cancelTrip = useCancelTripMutation();
   const completeTrip = useCompleteTripMutation();
+  // Исход завершения/отмены водителю объявляем ВСЛУХ: без этого кнопки просто
+  // исчезают из DOM (после инвалидации trip перестаёт быть активным), и ни
+  // скринридер, ни клавиатурный пользователь не узнают, что действие прошло.
+  //
+  // Механизм — тот же, что у бронирования (useTripActions.ts) и у отмены на
+  // главной (TripActivePage.tsx): toast.show → Snackbar с role="status" и
+  // aria-live="polite". Роль ставит сам ToastProvider на узел с ТЕКСТОМ, а не
+  // на обёртку — портал иначе оставил бы её на пустом узле (MEMORY.md:485).
+  //
+  // Это подтверждение успеха, поэтому toast НЕ assertive: role="alert" здесь
+  // был бы враньём. Неудача объявляется отдельно и громче — Notice
+  // tone="danger" ниже, у него role="alert" по умолчанию.
+  //
+  // onSuccess передан В МУТАЦИЮ, а не в хук: семантика useCompleteTripMutation
+  // (инвалидация trips + доступных для отзыва поездок) не меняется — TanStack
+  // выполняет хуковый и поточечный обработчики оба.
+  const complete = () =>
+    completeTrip.mutate(tripId, {
+      onSuccess: () =>
+        toast.show({
+          text: "Поездка завершена",
+          description: "Пассажиры могут оставить отзыв",
+        }),
+    });
+  // Формулировка та же, что на главной (TripActivePage) и в пуш-уведомлении
+  // бэкенда: одно и то же действие не должно называться по-разному.
+  const cancel = () =>
+    cancelTrip.mutate(tripId, {
+      onSuccess: () => toast.show({ text: "Поездка отменена" }),
+    });
   // Заявки видны только водителю: остальным бэкенд вернёт 403,
   // поэтому запрос делаем только здесь.
   const bookings = useTripBookingsQuery(tripId, { enabled: isActive });
@@ -66,13 +98,18 @@ export function DriverPanel({
       <Text weight="2" Component="div">
         Управление поездкой
       </Text>
+      {/* role="status" — НА САМОМ узле с текстом (MEMORY.md:485), не на
+          обёртке: строка появляется в DOM уже с готовым текстом и остаётся
+          после того, как тост (3,2 с) скроется, то есть это и есть постоянная
+          запись исхода, а тост — мгновенное объявление. Образец: TripHero.tsx
+          (shareStatus). */}
       {status === "completed" && (
-        <Caption Component="p">
+        <Caption Component="p" role="status">
           Поездка завершена — пассажиры могут оставить отзыв.
         </Caption>
       )}
       {status === "cancelled" && (
-        <Caption Component="p">
+        <Caption Component="p" role="status">
           Поездка отменена — недоступна для бронирования.
         </Caption>
       )}
@@ -109,7 +146,7 @@ export function DriverPanel({
               !canCompleteTrip || completeTrip.isPending || cancelTrip.isPending
             }
             className={MIN_TARGET}
-            onConfirm={() => completeTrip.mutate(tripId)}
+            onConfirm={complete}
           />
           {!canCompleteTrip && (
             <p className={styles.hintXs}>
@@ -127,7 +164,7 @@ export function DriverPanel({
               disabled={cancelTrip.isPending || completeTrip.isPending}
               destructive
               className={MIN_TARGET}
-              onConfirm={() => cancelTrip.mutate(tripId)}
+              onConfirm={cancel}
             />
           )}
           {departed && (

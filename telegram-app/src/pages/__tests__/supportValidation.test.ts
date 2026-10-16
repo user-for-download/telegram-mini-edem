@@ -7,16 +7,34 @@ import {
 } from "@/pages/Support/supportValidation";
 
 describe("validateSupportForm", () => {
-  it("пустая тема и пустой текст отклоняются", () => {
-    expect(validateSupportForm("", "текст")).toBe("Укажите тему обращения");
-    expect(validateSupportForm("   ", "текст")).toBe("Укажите тему обращения");
-    expect(validateSupportForm("тема", "")).toBe("Опишите проблему или вопрос");
-    expect(validateSupportForm("тема", "   ")).toBe("Опишите проблему или вопрос");
+  it("пустая тема и пустой текст отклоняются — с указанием поля", () => {
+    expect(validateSupportForm("", "текст")).toEqual({
+      field: "subject",
+      message: "Укажите тему обращения",
+    });
+    expect(validateSupportForm("   ", "текст")).toEqual({
+      field: "subject",
+      message: "Укажите тему обращения",
+    });
+    expect(validateSupportForm("тема", "")).toEqual({
+      field: "text",
+      message: "Опишите проблему или вопрос",
+    });
+    expect(validateSupportForm("тема", "   ")).toEqual({
+      field: "text",
+      message: "Опишите проблему или вопрос",
+    });
   });
 
   it("сверхлимитные поля отклоняются (100/2000 из контракта)", () => {
-    expect(validateSupportForm("s".repeat(101), "текст")).toContain("100");
-    expect(validateSupportForm("тема", "t".repeat(2001))).toContain("2000");
+    expect(validateSupportForm("s".repeat(101), "текст")).toEqual({
+      field: "subject",
+      message: expect.stringContaining("100"),
+    });
+    expect(validateSupportForm("тема", "t".repeat(2001))).toEqual({
+      field: "text",
+      message: expect.stringContaining("2000"),
+    });
   });
 
   it("граничные значения проходят", () => {

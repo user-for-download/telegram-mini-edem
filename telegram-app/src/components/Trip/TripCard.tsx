@@ -134,6 +134,12 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
               size="s"
               aria-label="Поделиться поездкой"
               title="Поделиться поездкой"
+              // Тап-таргет: size="s" у кита — это padding 6px + иконка 15px,
+              // то есть ~27×27px. MIN_TARGET (min-height:44px) поднимает
+              // ВЫСОТУ, ширину и вид не трогает — та же строка футера не
+              // едет. Конвенция репозитория: DriverTripRequests.tsx:211,224
+              // так же поднимает «принять/отклонить» (WCAG 2.5.5 AAA).
+              className={MIN_TARGET}
               onClick={(event) => {
                 event.stopPropagation();
                 haptic.light();
@@ -199,6 +205,10 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
             size="s"
             aria-label="Поделиться поездкой"
             title="Поделиться поездкой"
+            // MIN_TARGET — тот же приём, что у кнопки отмены рядом и у
+            // «принять/отклонить» в DriverTripRequests: size="s" сам по
+            // себе даёт ~27px высоты, а не 44.
+            className={MIN_TARGET}
             onClick={(event) => {
               event.stopPropagation();
               haptic.light();

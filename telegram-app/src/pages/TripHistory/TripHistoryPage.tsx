@@ -16,6 +16,7 @@ import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { haptic } from "@/utils/haptics";
 import { relativeMoscowDay } from "@/utils/date";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
+import { listBlockingError } from "@/helpers/listBlockingError";
 import { usePassengerHistoryQuery } from "@/queries/useBookingsQuery";
 import { useInfiniteMyTripsQuery } from "@/queries/useTripsQuery";
 import type { Trip } from "@edem/contracts";
@@ -112,6 +113,9 @@ export function TripHistoryPage() {
   const archiveSentinelRef = useInfiniteSentinel({
     hasNextPage: driverArchive.hasNextPage,
     isFetchingNextPage: driverArchive.isFetchingNextPage,
+    // После сбоя страницы N+1 hasNextPage остаётся истинным — сентинел без
+    // глушения зацикливал бы запросы вслед за плейсхолдером (MEMORY.md:511).
+    disabled: driverArchive.isFetchNextPageError,
     fetchNextPage: () => {
       void driverArchive.fetchNextPage();
     },
@@ -129,7 +133,7 @@ export function TripHistoryPage() {
       <VisuallyHidden Component="h1">История поездок</VisuallyHidden>
       <QueryState
         loading={history.isLoading || driverArchive.isLoading}
-        error={history.error ?? driverArchive.error}
+        error={history.error ?? listBlockingError(driverArchive)}
         empty={historyItems.length === 0}
         emptyText={EMPTY_STATES.tripHistory.description}
         skeleton={<TripCardsSkeleton />}
@@ -196,9 +200,16 @@ export function TripHistoryPage() {
                     needReview ? navigate("/reviews") : open(trip.id)
                   }
                   aria-label={
-                    needReview
-                      ? `Поездка ${trip.fromCity} — ${trip.toCity}, ${status.label}, оставьте отзыв`
-                      : `Поездка ${trip.fromCity} — ${trip.toCity}, ${status.label}`
+                    // Имя строки = все её видимые части, как в ui/MenuRow:66
+                    // (`${label}. ${subtitle}`). aria-label ЗАМЕНЯет доступное
+                    // имя, поэтому дата-время (subtitle) и цена/бейдж (after)
+                    // иначе были недостижимы: скринридер не мог сказать, КОГДА
+                    // поездка и СКОЛЬКО стоила.
+                    `Поездка ${trip.fromCity} — ${trip.toCity}. ${relativeMoscowDay(
+                      trip.departureAt,
+                    )}, ${trip.time}. ${status.label}. ${
+                      needReview ? "Оставьте отзыв" : `${trip.price} ₽`
+                    }`
                   }
                 >
                   {trip.fromCity} → {trip.toCity}
@@ -211,6 +222,9 @@ export function TripHistoryPage() {
           hasNextPage={driverArchive.hasNextPage}
           isFetchingNextPage={driverArchive.isFetchingNextPage}
           fetchNextPage={() => void driverArchive.fetchNextPage()}
+          error={
+            driverArchive.isFetchNextPageError ? driverArchive.error : null
+          }
           sentinelRef={archiveSentinelRef}
           placeholder={<TripCardSkeleton />}
           placeholderLabel="Загрузка ещё поездок"

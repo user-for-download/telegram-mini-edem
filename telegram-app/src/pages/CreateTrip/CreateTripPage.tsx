@@ -45,6 +45,32 @@ import { MAX_SEATS, type TripTag } from "@edem/contracts";
 import styles from "./CreateTripPage.module.css";
 
 /**
+ * Объявление обязательности для полей, которые обязательны ПО КОНТРАКТУ
+ * (`createTripDtoSchema` → `baseTripSchema`, packages/contracts/src/dto/
+ * trip.dto.ts:19-49): fromCityId, toCityId, departureAt, durationMinutes,
+ * distanceKm, price, seatsTotal. Источник истины — схема, не этот список:
+ * адреса там `z.string().max(200)` без `.min(1)` (пустой адрес валиден), а
+ * comment/tags/флаги помечены optional или имеют дефолт — их required был бы
+ * враньём скринридеру.
+ *
+ * Почему и `required`, и `aria-required` рядом. Киты `Input`/`Select`
+ * спредят остальные пропы на нативный элемент (Input.js/Select.js →
+ * Text/Subheadline → Typography), поэтому атрибут доезжает до DOM сам; но
+ * MEMORY.md §18 запрещает дублировать только ПРОИЗВОДНЫЕ состояния
+ * (aria-checked у Switch — его выводит браузер из меняющегося checked, и
+ * ручная копия разошлась бы). Здесь атрибут СТАТИЧЕН: «обязательно» не
+ * меняется при вводе, разойтись ему не с чем, а WebView-скринридеры
+ * надёжнее читают явный aria-required.
+ *
+ * Нативная валидация при этом НЕ включается: форма не внутри <form>,
+ * отправка идёт по клику «Опубликовать» (см. submit ниже), поэтому
+ * required ничего не блокирует и не конкурирует с zod-проверкой черновика
+ * (`validateCreateTripDraft`). Русские тексты и их привязка к полям
+ * (Field/FieldError → aria-describedby) остались как были.
+ */
+const REQUIRED = { required: true, "aria-required": true } as const;
+
+/**
  * Создание поездки — отдельная страница (роут /trips/my/new).
  *
  * Почему не модалка: форма из 10+ полей в шторке с внутренним скроллом
@@ -332,6 +358,7 @@ export function CreateTripForm({
               cities={cities.data}
               placeholder="Откуда едем"
               error={errorFor("create-from")}
+              required
               excludeId={toCityId}
               onChange={(next) => {
                 touch();
@@ -354,6 +381,7 @@ export function CreateTripForm({
               cities={cities.data}
               placeholder="Куда едем"
               error={errorFor("create-to")}
+              required
               excludeId={fromCityId}
               onChange={(next) => {
                 touch();
@@ -372,6 +400,10 @@ export function CreateTripForm({
                   {...field}
                   before={<Navigation size={16} className={HINT} />}
                   value={fromAddress}
+                  // maxLength — зеркало контракта (fromAddress: max(200)),
+                  // в том же стиле, что maxLength={500} у комментария: лимит
+                  // виден в поле, а не приходит алертом после отправки.
+                  maxLength={200}
                   status={statusFor("create-from-address")}
                   onChange={(event) => {
                     touch();
@@ -393,6 +425,8 @@ export function CreateTripForm({
                   {...field}
                   before={<Navigation size={16} className={HINT} />}
                   value={toAddress}
+                  // Зеркало контракта (toAddress: max(200)) — см. fromAddress.
+                  maxLength={200}
                   status={statusFor("create-to-address")}
                   onChange={(event) => {
                     touch();
@@ -420,6 +454,7 @@ export function CreateTripForm({
                   before={<Calendar size={16} className={HINT} />}
                   type="datetime-local"
                   value={date}
+                  {...REQUIRED}
                   status={statusFor("create-date")}
                   onChange={(event) => {
                     touch();
@@ -444,6 +479,7 @@ export function CreateTripForm({
                     min="1"
                     max="100000"
                     value={price}
+                    {...REQUIRED}
                     status={statusFor("create-price")}
                     onChange={(event) => {
                       touch();
@@ -462,6 +498,7 @@ export function CreateTripForm({
                 <Select
                   {...field}
                   value={seats}
+                  {...REQUIRED}
                   status={statusFor("create-seats")}
                   onChange={(event) => {
                     haptic.selection();
@@ -493,6 +530,7 @@ export function CreateTripForm({
                     min="1"
                     max="20000"
                     value={distanceKm}
+                    {...REQUIRED}
                     status={statusFor("create-distance")}
                     onChange={(event) => {
                       touch();
@@ -517,6 +555,7 @@ export function CreateTripForm({
                     min="1"
                     max="168"
                     value={durationHours}
+                    {...REQUIRED}
                     status={statusFor("create-duration")}
                     onChange={(event) => {
                       touch();

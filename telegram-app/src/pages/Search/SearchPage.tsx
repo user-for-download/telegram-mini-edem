@@ -132,6 +132,11 @@ export function SearchPage() {
   const sentinelRef = useInfiniteSentinel({
     hasNextPage: trips.hasNextPage,
     isFetchingNextPage: trips.isFetchingNextPage,
+    // После сбоя страницы N+1 hasNextPage остаётся истинным, а плейсхолдер
+    // догрузки встаёт/убирается и сдвигает сентинел обратно во вьюпорт —
+    // observer перестреливал бы бесконечно (MEMORY.md:511). На ошибке
+    // следующей страницы наблюдение глохнет до явного «Повторить».
+    disabled: trips.isFetchNextPageError,
     fetchNextPage: () => {
       void trips.fetchNextPage();
     },
@@ -337,7 +342,7 @@ export function SearchPage() {
         </Section>
 
         <div className={styles.resultsBar}>
-          <Caption weight="2">Найдено поездок: {trips.data?.pages[0]?.pagination.total ?? items.length}</Caption>
+          <Caption weight="2">Найдено поездок: {trips.data?.pages[0]?.pagination?.total ?? items.length}</Caption>
           <Caption Component="span">Цены без комиссии</Caption>
         </div>
 

@@ -53,6 +53,7 @@ export function ConfirmPopup({
   disabled = false,
   destructive = false,
   className,
+  nested = false,
   onConfirm,
 }: {
   label: string;
@@ -64,6 +65,13 @@ export function ConfirmPopup({
   destructive?: boolean;
   /** Класс на кнопку-триггер (нативный MIN_TARGET). */
   className?: string;
+  /**
+   * Триггер лежит ВНУТРИ открытой шторки — ConfirmSheet поднимается как
+   * вложенный корень (см. ConfirmSheet). Ставится вызывающим, который
+   * знает, что он нарисован в содержимом шторки: тот же ConfirmPopup на
+   * странице вложенным быть не может.
+   */
+  nested?: boolean;
   onConfirm: () => void;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -135,6 +143,7 @@ export function ConfirmPopup({
         description={description}
         pending={pending}
         destructive={destructive}
+        nested={nested}
         onConfirm={() => {
           setSheetOpen(false);
           onConfirm();

@@ -5,28 +5,62 @@ import {
 import { ApiError } from "@/api/client";
 
 /**
+ * Поле формы обращения — КЛЮЧ, а не DOM-id.
+ *
+ * Валидацию делят две формы с разными id (`support-subject`/`support-text`
+ * в FeedbackForm и `appeal-subject`/`appeal-text` в AppealForm), поэтому
+ * возвращать здесь id чужого экрана было бы ложью: каждый потребитель
+ * сам сопоставляет ключ со своим `Field id`.
+ */
+export type SupportField = "subject" | "text";
+
+/**
+ * Ошибка формы обращения С ПРИВЯЗКОЙ К ПОЛЮ (паттерн reportValidation).
+ *
+ * Раньше возвращалась одна строка, и оба контрола получали статус «error»
+ * независимо от того, о каком поле сообщение. Ошибка про тему красила
+ * кольцо вокруг textarea, а у `<Input>` не появлялось ни aria-invalid,
+ * ни aria-describedby — при фокусе скринридер молчал (MEMORY.md §18).
+ */
+export interface SupportFieldError {
+  field: SupportField;
+  message: string;
+}
+
+/**
  * Чистая валидация формы обращения в поддержку (порт FeedbackModal).
  * DOM-free модуль — покрывается unit-тестом без jsdom
  * (паттерн reviewValidation/profileValidation).
+ *
+ * Тексты сообщений — контракт app.md, не переписываются.
  *
  * Лимиты — единые константы FEEDBACK_*_MAX_LENGTH из @edem/contracts:
  * те же лимиты enforced на записи через createFeedbackDtoSchema
  * (backend POST /feedback отклоняет пустое/сверхлимитное тем же кодом 400).
  */
-export function validateSupportForm(subject: string, text: string): string | null {
+export function validateSupportForm(
+  subject: string,
+  text: string,
+): SupportFieldError | null {
   const trimmedSubject = subject.trim();
   if (trimmedSubject.length === 0) {
-    return "Укажите тему обращения";
+    return { field: "subject", message: "Укажите тему обращения" };
   }
   if (trimmedSubject.length > FEEDBACK_SUBJECT_MAX_LENGTH) {
-    return `Тема: максимум ${FEEDBACK_SUBJECT_MAX_LENGTH} символов`;
+    return {
+      field: "subject",
+      message: `Тема: максимум ${FEEDBACK_SUBJECT_MAX_LENGTH} символов`,
+    };
   }
   const trimmedText = text.trim();
   if (trimmedText.length === 0) {
-    return "Опишите проблему или вопрос";
+    return { field: "text", message: "Опишите проблему или вопрос" };
   }
   if (trimmedText.length > FEEDBACK_TEXT_MAX_LENGTH) {
-    return `Сообщение: максимум ${FEEDBACK_TEXT_MAX_LENGTH} символов`;
+    return {
+      field: "text",
+      message: `Сообщение: максимум ${FEEDBACK_TEXT_MAX_LENGTH} символов`,
+    };
   }
   return null;
 }

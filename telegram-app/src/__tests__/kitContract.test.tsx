@@ -266,7 +266,16 @@ describe("фасад Section: заголовок секции повторяет
     );
     expect(ours).toMatch(/padding: 20px 24px 4px 22px/);
     expect(ours).toMatch(/padding: 16px 16px 8px/);
-    expect(ours).toContain("var(--tgui--link_color)");
+    // Токен ТЕКСТА на base перестал быть кит-овым (реестр #38): сырой
+    // --tgui--link_color давал 4.02:1 на белой секции, а заголовок 13/15px —
+    // не крупный текст. Теперь это --app-info, тот же китовый оттенок,
+    // но с проверенным на своей худшей подложке коэффициентом смешения.
+    // Паддинги остаются пингом паритета с китом — их по-прежнему сверяет
+    // соседний тест по styles.css.
+    expect(ours).toContain("color: var(--app-info)");
+    expect(ours).not.toMatch(/color:\s*var\(--tgui--link_color\)/);
+    // iOS-подпись остаётся китовой: там не мы перекрашиваем заголовок, а
+    // выбирает платформа (Caption платформы iOS).
     expect(ours).toContain("var(--tgui--section_header_text_color)");
   });
 

@@ -18,6 +18,8 @@ import {
   feedbackErrorMessage,
   normalizeSupportForm,
   validateSupportForm,
+  type SupportField,
+  type SupportFieldError,
 } from "@/pages/Support/supportValidation";
 
 /**
@@ -34,6 +36,12 @@ export function AppealForm() {
   const [subject, setSubject] = useState("Обжалование блокировки");
   const [text, setText] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  // Ошибка ВАЛИДАЦИИ — с полем: <Field error=…> ставит aria-invalid +
+  // aria-describedby сам и рисует текст у того поля, о котором сообщение.
+  // formError выше остаётся для ответов сервера, которые полю не принадлежат.
+  const [fieldError, setFieldError] = useState<SupportFieldError | null>(null);
+  const errorFor = (field: SupportField) =>
+    fieldError?.field === field ? fieldError.message : undefined;
   const [success, setSuccess] = useState(false);
   useClosingConfirmation(text !== "");
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
@@ -46,9 +54,10 @@ export function AppealForm() {
     if (appeal.isPending || submitGuard.current) return;
     const validationError = validateSupportForm(subject, text);
     if (validationError) {
-      setFormError(validationError);
+      setFieldError(validationError);
       return;
     }
+    setFieldError(null);
     setFormError(null);
     setSuccess(false);
     submitGuard.current = true;
@@ -76,7 +85,7 @@ export function AppealForm() {
 
   return (
     <>
-      <Field label="Тема" id="appeal-subject">
+      <Field label="Тема" id="appeal-subject" error={errorFor("subject")}>
         {(field) => (
           <Input
             {...field}
@@ -85,16 +94,18 @@ export function AppealForm() {
             }
             value={subject}
             maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
-            status={formError ? "error" : undefined}
+            status={errorFor("subject") ? "error" : undefined}
             onChange={(event) => {
               setSubject(event.target.value);
+              // Гасим только ошибку СВОЕГО поля — чужая ещё верна.
+              if (fieldError?.field === "subject") setFieldError(null);
               if (formError) setFormError(null);
               if (success) setSuccess(false);
             }}
           />
         )}
       </Field>
-      <Field label="Сообщение" id="appeal-text">
+      <Field label="Сообщение" id="appeal-text" error={errorFor("text")}>
         {(field) => (
           <Textarea
             {...field}
@@ -102,10 +113,10 @@ export function AppealForm() {
             maxLength={FEEDBACK_TEXT_MAX_LENGTH}
             placeholder="Почему блокировка ошибочна и что просите пересмотреть"
             value={text}
-            aria-invalid={Boolean(formError)}
-            status={formError ? "error" : undefined}
+            status={errorFor("text") ? "error" : undefined}
             onChange={(event) => {
               setText(event.target.value);
+              if (fieldError?.field === "text") setFieldError(null);
               if (formError) setFormError(null);
               if (success) setSuccess(false);
             }}

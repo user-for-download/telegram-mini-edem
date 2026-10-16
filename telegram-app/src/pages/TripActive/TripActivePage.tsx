@@ -17,6 +17,7 @@ import { useToast } from "@/components/Toast/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
+import { listBlockingError } from "@/helpers/listBlockingError";
 import {
   useCancelBookingMutation,
   useMyBookingsQuery,
@@ -194,6 +195,10 @@ export function TripActivePage() {
   const activeSentinelRef = useInfiniteSentinel({
     hasNextPage: driverActive.hasNextPage,
     isFetchingNextPage: driverActive.isFetchingNextPage,
+    // Упавшая догрузка не сбрасывает hasNextPage, а плейсхолдер сентинел
+    // возвращает во вьюпорт — без глушения observer бьёт по кругу
+    // (MEMORY.md:511). Стоп до явного повтора пользователем.
+    disabled: driverActive.isFetchNextPageError,
     fetchNextPage: () => {
       void driverActive.fetchNextPage();
     },
@@ -277,7 +282,7 @@ export function TripActivePage() {
       ) : segment === "driver" ? (
         <QueryState
           loading={driverActive.isLoading}
-          error={driverActive.error}
+          error={listBlockingError(driverActive)}
           empty={driverList.length === 0}
           emptyHeader={emptyHeader}
           emptyText={emptyText}
@@ -305,6 +310,9 @@ export function TripActivePage() {
               hasNextPage={driverActive.hasNextPage}
               isFetchingNextPage={driverActive.isFetchingNextPage}
               fetchNextPage={() => void driverActive.fetchNextPage()}
+              error={
+                driverActive.isFetchNextPageError ? driverActive.error : null
+              }
               sentinelRef={activeSentinelRef}
               placeholder={<TripCardSkeleton />}
               placeholderLabel="Загрузка ещё поездок"
@@ -314,7 +322,7 @@ export function TripActivePage() {
       ) : (
         <QueryState
           loading={driverActive.isLoading || bookings.isLoading}
-          error={driverActive.error ?? bookings.error}
+          error={listBlockingError(driverActive) ?? bookings.error}
           empty={allCards.length === 0}
           emptyHeader={emptyHeader}
           emptyText={emptyText}
@@ -343,6 +351,9 @@ export function TripActivePage() {
               hasNextPage={driverActive.hasNextPage}
               isFetchingNextPage={driverActive.isFetchingNextPage}
               fetchNextPage={() => void driverActive.fetchNextPage()}
+              error={
+                driverActive.isFetchNextPageError ? driverActive.error : null
+              }
               sentinelRef={activeSentinelRef}
               placeholder={<TripCardSkeleton />}
               placeholderLabel="Загрузка ещё поездок"

@@ -70,12 +70,30 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
             <Caption Component="div">{review.date}</Caption>
           </div>
         </button>
+        {/* a11y: оценка — одна картинка с именем, число — в aria-label.
+            На голом <div> (role=generic) подпись не экспонировалась вовсе:
+            generic не expose'ит aria-label, и оценка выпадала из дерева
+            доступности целиком. Роль img имя экспонирует — тот же приём,
+            что в components/Trip/AvatarStack.tsx.
+            Звёзды декоративны: aria-hidden на каждой снимает их из имени,
+            иначе озвучка шла бы «Оценка 5 из 5» + пять безымянных SVG.
+            Ставим атрибут явно, а не полагаемся на поведение lucide:
+            v1.44 сам проставляет aria-hidden="true", только если на иконке
+            нет НИ ОДНОГО a11y-пропа (aria-*, role, title — их набор
+            зашит в hasA11yProp). Правило декора не должно зависеть от
+            версии вендора. */}
         <div
           className={styles.rating}
+          role="img"
           aria-label={`Оценка ${review.rating} из 5`}
         >
           {Array.from({ length: review.rating }, (_, index) => (
-            <Star key={index} size={13} className={styles.star} />
+            <Star
+              key={index}
+              size={13}
+              className={styles.star}
+              aria-hidden="true"
+            />
           ))}
         </div>
       </div>

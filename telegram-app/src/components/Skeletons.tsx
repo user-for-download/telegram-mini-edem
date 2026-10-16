@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Skeleton } from "@telegram-apps/telegram-ui";
 import { Stack } from "@/ui/Stack";
 import { CARD_PAD, CARD_SURFACE } from "@/ui/classes";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import styles from "./Skeletons.module.css";
 
 /* Скелетоны списков на tgui Skeleton (tgui.xelene.me, Blocks/Feedback).
@@ -15,14 +16,25 @@ import styles from "./Skeletons.module.css";
  * Одиночные болванки (без списка) role="status" НЕ несут: их объявляет
  * родитель — QueryState skeleton через SkeletonStack или FetchMore
  * через свой role="status"-контейнер (placeholderLabel).
+ *
+ * WCAG 2.3.3: пульсацию 1.8s гасим ПРОПОМ withoutAnimation, а не
+ * CSS-правилом. Кит вешает анимацию на `.tgui-…:not(.tgui-…):after`,
+ * то есть перебить её из своего модуля можно только повторив этот
+ * хеш (сломается при смене версии кита — ровно о чём предупреждает
+ * примечание к `[vaul-drawer][vaul-drawer]` в index.css) или выиграв
+ * специфичностью, то есть `!important`, который здесь запрещён. Проп
+ * кладёт нужный класс сам, и вопроса специфичности не возникает.
+ * Гасится только анимация: сама болванка и её aria-объявление остаются.
  */
 
 /** Болванка карточки поездки — зеркало эталона TripStandardCard:
  * шапка дата/статус/цена, вертикальный маршрут, строка персоны. */
 export function TripCardSkeleton() {
+  const reduceMotion = usePrefersReducedMotion();
   return (
     <Skeleton
       visible
+      withoutAnimation={reduceMotion}
       aria-hidden="true"
       className={`${styles.cardSkeleton} ${CARD_SURFACE}`}
     >
@@ -51,9 +63,11 @@ export function TripCardSkeleton() {
 /** Болванка уведомления — зеркало NotificationCell (три однострочные
  * строки без аватара). */
 export function NotificationCardSkeleton() {
+  const reduceMotion = usePrefersReducedMotion();
   return (
     <Skeleton
       visible
+      withoutAnimation={reduceMotion}
       aria-hidden="true"
       className={`${styles.cardSkeleton} ${CARD_SURFACE}`}
     >
@@ -71,9 +85,11 @@ export function NotificationCardSkeleton() {
 /** Болванка отзыва — зеркало ReviewCard: автор с аватаром,
  * звёзды, строки текста, маршрут. */
 export function ReviewCardSkeleton() {
+  const reduceMotion = usePrefersReducedMotion();
   return (
     <Skeleton
       visible
+      withoutAnimation={reduceMotion}
       aria-hidden="true"
       className={`${styles.cardSkeleton} ${CARD_SURFACE}`}
     >
@@ -103,10 +119,12 @@ export function ReviewCardSkeleton() {
 /** Болванка профиль-бара главной: аватар + имя + пилюля рейтинга.
  *  Отступы — у родителя (страница), здесь только форма. */
 export function ProfileBarSkeleton() {
+  const reduceMotion = usePrefersReducedMotion();
   return (
     <div role="status" aria-label="Загрузка профиля">
       <Skeleton
         visible
+        withoutAnimation={reduceMotion}
         aria-hidden="true"
         className={styles.profileBarRoot}
       >

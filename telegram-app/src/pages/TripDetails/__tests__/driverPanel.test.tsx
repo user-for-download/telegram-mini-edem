@@ -33,6 +33,7 @@ vi.mock("@/queries/useTripsQuery", () => ({
 }));
 
 import { DriverPanel } from "@/pages/TripDetails/DriverPanel";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function mutationState() {
   return {
@@ -89,16 +90,18 @@ function renderPanel(
   return renderToString(
     <AppRoot platform="base">
       <MemoryRouter initialEntries={["/trips/t-1"]}>
-        <DriverPanel
-          tripId="t-1"
-          status="active"
-          isActive
-          canCompleteTrip={departed}
-          departed={departed}
-          editing={false}
-          onToggleEdit={vi.fn()}
-          trip={trip as never}
-        />
+        <ToastProvider>
+          <DriverPanel
+            tripId="t-1"
+            status="active"
+            isActive
+            canCompleteTrip={departed}
+            departed={departed}
+            editing={false}
+            onToggleEdit={vi.fn()}
+            trip={trip as never}
+          />
+        </ToastProvider>
       </MemoryRouter>
     </AppRoot>,
   );
@@ -165,16 +168,18 @@ describe("DriverPanel: счётчик заявок точный за преде�
     const html = renderToString(
       <AppRoot platform="base">
         <MemoryRouter initialEntries={["/trips/t-1"]}>
-          <DriverPanel
-            tripId="t-1"
-            status="active"
-            isActive
-            departed={false}
-            canCompleteTrip={false}
-            editing={false}
-            onToggleEdit={vi.fn()}
-            trip={makeTrip({ pendingRequestsCount: 12 }) as never}
-          />
+          <ToastProvider>
+            <DriverPanel
+              tripId="t-1"
+              status="active"
+              isActive
+              departed={false}
+              canCompleteTrip={false}
+              editing={false}
+              onToggleEdit={vi.fn()}
+              trip={makeTrip({ pendingRequestsCount: 12 }) as never}
+            />
+          </ToastProvider>
         </MemoryRouter>
       </AppRoot>,
     );

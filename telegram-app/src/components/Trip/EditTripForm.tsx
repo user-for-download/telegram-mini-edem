@@ -268,6 +268,9 @@ export function EditTripForm({
             stretched
             size="m"
             loading={update.isPending}
+            // Кит у `loading` не гасит кнопку: без `disabled` она остаётся
+            // фокусируемой и активной во время сохранения.
+            disabled={update.isPending}
             onClick={submit}
           >
             Сохранить

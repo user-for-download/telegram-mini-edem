@@ -6,6 +6,7 @@ import { Stack } from "@/ui/Stack";
 import { Notice } from "@/ui/Notice";
 import { useAllCitiesQuery } from "@/queries/useAllCities";
 import { useCreateRideRequestMutation } from "@/queries/useRideRequestsQuery";
+import { QueryState } from "@/components/QueryState";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { haptic } from "@/utils/haptics";
 import { RideRequestFields } from "./RideRequestFields";
@@ -61,6 +62,31 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
   // Синхронный гейт: предпроверка (`checkTrip`) — тоже await, и в это
   // время кнопка не pending, поэтому два быстрых тапа создавали две заявки.
   const submittingRef = useRef(false);
+
+  // Справочник — гейт до формы, а не её поле: пока он не пришёл, селекты
+  // пустые, и любой submit падал бы в buildRideRequestDraft(values,
+  // undefined) с «Выберите города из справочника» — то есть СЕТЕВОЙ СБОЙ
+  // справочника показывался как ошибка валидации, вина пользователя
+  // (MEMORY.md:487). Поэтому loading — спиннер, ошибка — терминальный
+  // `QueryState` с «Повторить»; тот же приём в CreateTripPage.
+  if (cities.isLoading || cities.isError) {
+    return (
+      <Stack>
+        <Text weight="2" Component="span">
+          Новый запрос
+        </Text>
+        <QueryState
+          loading={cities.isLoading}
+          error={cities.error}
+          empty={false}
+          emptyText=""
+          onRetry={() => void cities.refetch()}
+        >
+          {null}
+        </QueryState>
+      </Stack>
+    );
+  }
 
   /** Маршрут и окно чистим, выбранные места оставляем — как было. */
   const clear = () =>
@@ -159,6 +185,9 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
         stretched
         size="l"
         loading={create.isPending}
+        // Кит у `loading` не гасит кнопку: без `disabled` она остаётся
+        // фокусируемой и активной во время отправки.
+        disabled={create.isPending}
         onClick={() => void submit()}
       >
         Опубликовать запрос

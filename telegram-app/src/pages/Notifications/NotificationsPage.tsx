@@ -391,6 +391,10 @@ export function NotificationsPage() {
   const sentinelRef = useInfiniteSentinel({
     hasNextPage: inbox.hasNextPage,
     isFetchingNextPage: inbox.isFetchingNextPage,
+    // Сбой курсорной страницы не гасит hasNextPage: без флага сентинел
+    // снова входит во вьюпорт после схлопывания плейсхолдера и догрузка
+    // зацикливается (MEMORY.md:511). Молчим до явного «Повторить загрузку».
+    disabled: inbox.isFetchNextPageError,
     fetchNextPage: () => {
       void inbox.fetchNextPage();
     },

@@ -39,10 +39,13 @@ import { useTripBookingsQuery } from "@/queries/useBookingsQuery";
 import {
   normalizeReviewText,
   validateReviewForm,
+  type ReviewField,
+  type ReviewFieldError,
 } from "@/pages/Reviews/reviewValidation";
 import { plural } from "@/utils/plural";
 import styles from "./ReviewsPage.module.css";
 import { formatRating } from "@/helpers/rating";
+import { listBlockingError } from "@/helpers/listBlockingError";
 
 export type ReviewsTab = "mine" | "new" | "about";
 
@@ -167,6 +170,17 @@ export const ReviewsBody = memo(function ReviewsBody({
   );
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
+  // Клиентская ошибка приходит С ПОЛЕМ: <Field error=…> сам ставит
+  // aria-invalid + aria-describedby и рисует текст (FieldError) рядом с тем
+  // контролом, о котором сообщение. Раньше была одна строка formError, и
+  // «Выберите поездку» красила кольцо вокруг комментария, а плашка без id не
+  // была связана ни с одним полем — на фокусе скринридер молчал
+  // (MEMORY.md §18).
+  const [fieldError, setFieldError] = useState<ReviewFieldError | null>(null);
+  const errorFor = (field: ReviewField) =>
+    fieldError?.field === field ? fieldError.message : undefined;
+  // formError остаётся для ошибок, которые не принадлежат конкретному полю:
+  // ответ сервера (409 ALREADY_REVIEWED, конфликт параллельной записи).
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   useClosingConfirmation(
@@ -201,6 +215,23 @@ export const ReviewsBody = memo(function ReviewsBody({
     );
   }, [isDriverTrip, tripBookings.data, reviewedTargets, selectedTrip?.id]);
 
+  // Состояния запроса адресатов — пассажиров смотрит только водитель, поэтому
+  // всё это имеет силу на своей поездке. Считать их ОТДЕЛЬНО от самого списка
+  // обязательно: раньше ошибка читалась только как `data?.pages.flatMap(...)`,
+  // `passengers` становился `[]`, `targetUser` — null, и «Отправить отзыв»
+  // гасла навсегда, не сказав ни слова (MEMORY.md:487 — сетевая ошибка не
+  // ошибка валидации).
+  const targetsPending = isDriverTrip && tripBookings.isLoading;
+  const targetsFailed = isDriverTrip && tripBookings.isError;
+  // Пустота по-настоящему: сервер ответил и подтверждённых пассажиров не
+  // осталось. Пока грузится или упало — утверждать «пассажиров нет» нельзя
+  // (MEMORY.md:491: неизвестное число не ноль).
+  const targetsEmpty =
+    isDriverTrip &&
+    !targetsPending &&
+    !targetsFailed &&
+    passengers.length === 0;
+
   // Цель отзыва: пассажир всегда пишет водителю; водитель выбирает
   // пассажира (явный выбор > первый в списке).
   const targetUser: User | null = isDriverTrip
@@ -223,6 +254,10 @@ export const ReviewsBody = memo(function ReviewsBody({
     setSelectedPassengerId(passengerId);
     setText("");
     setRating(5);
+    // Сброс формы гасит и ошибку поля: текст/rating обнулены, значит
+    // прежняя претензия к комментарию больше не про эту форму — оставить
+    // её значило бы пометить поле, которое сбросили.
+    setFieldError(null);
     setFormError(null);
     setSuccess(false);
   };
@@ -234,21 +269,27 @@ export const ReviewsBody = memo(function ReviewsBody({
   const submit = () => {
     if (create.isPending || submitGuard.current) return;
 
+    // Ошибка формы всегда идёт С ПОЛЕМ: без этого textarea получал
+    // aria-invalid при ошибке про поездку, а у обоих Select не появлялось
+    // ни aria-invalid, ни aria-describedby (MEMORY.md §18).
     if (!selectedTrip) {
-      setFormError("Выберите поездку");
+      setFieldError({ field: "trip", message: "Выберите поездку" });
       return;
     }
     if (!targetUser) {
-      setFormError("Не найден пользователь для отзыва");
+      setFieldError({
+        field: "target",
+        message: "Не найден пользователь для отзыва",
+      });
       return;
     }
     const validationError = validateReviewForm(text);
     if (validationError) {
-      setFormError(validationError);
+      setFieldError(validationError);
       return;
     }
 
-    setFormError(null);
+    setFieldError(null);
     setSuccess(false);
     submitGuard.current = true;
     create.mutate(
@@ -369,7 +410,11 @@ export const ReviewsBody = memo(function ReviewsBody({
               />
             ) : (
               <Card className={styles.card}>
-                <Field label="Поездка" id="review-trip">
+                <Field
+                  label="Поездка"
+                  id="review-trip"
+                  error={errorFor("trip")}
+                >
                   {(field) => (
                     <Select
                       {...field}
@@ -386,23 +431,63 @@ export const ReviewsBody = memo(function ReviewsBody({
                 </Field>
 
                 {isDriverTrip ? (
-                  <Field label="Кому оставить отзыв" id="review-target">
-                    {(field) => (
-                      <Select
-                        {...field}
-                        value={targetUser?.id ?? ""}
-                        onChange={(event) => {
-                          resetTarget(null, event.target.value);
-                        }}
-                      >
-                        {passengers.map((passenger) => (
-                          <option key={passenger.id} value={passenger.id}>
-                            {passenger.name}
-                          </option>
-                        ))}
-                      </Select>
+                  <>
+                    {targetsFailed && (
+                      <>
+                        <Notice tone="danger" variant="text">
+                          Не удалось загрузить список пассажиров поездки
+                        </Notice>
+                        {/* Повтор точечный (не через QueryState): поездки
+                            приехали, сломался один запрос — адресаты. */}
+                        <Button
+                          variant="ghost"
+                          size="m"
+                          onClick={() => void tripBookings.refetch()}
+                        >
+                          Повторить
+                        </Button>
+                      </>
                     )}
-                  </Field>
+                    <Field
+                      label="Кому оставить отзыв"
+                      id="review-target"
+                      error={errorFor("target")}
+                    >
+                      {(field) => (
+                        <Select
+                          {...field}
+                          value={targetUser?.id ?? ""}
+                          disabled={
+                            targetsPending || targetsFailed || targetsEmpty
+                          }
+                          onChange={(event) => {
+                            resetTarget(null, event.target.value);
+                          }}
+                        >
+                          {targetsPending && (
+                            <option value="">Загрузка…</option>
+                          )}
+                          {targetsFailed && (
+                            <option value="">Список недоступен</option>
+                          )}
+                          {targetsEmpty && (
+                            <option value="">Нет пассажиров</option>
+                          )}
+                          {passengers.map((passenger) => (
+                            <option key={passenger.id} value={passenger.id}>
+                              {passenger.name}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
+                    </Field>
+                    {targetsEmpty && (
+                      <Notice tone="info" variant="text">
+                        Не найден пользователь для отзыва: по этой поездке не
+                        осталось неоценённых пассажиров.
+                      </Notice>
+                    )}
+                  </>
                 ) : (
                   <Text weight="2" Component="p">
                     Отзыв о {targetUser?.name ?? "водителе"}
@@ -414,7 +499,11 @@ export const ReviewsBody = memo(function ReviewsBody({
                   <RatingInput value={rating} onChange={setRating} />
                 </div>
 
-                <Field label="Комментарий" id="review-text">
+                <Field
+                  label="Комментарий"
+                  id="review-text"
+                  error={errorFor("text")}
+                >
                   {(field) => (
                     <Textarea
                       {...field}
@@ -422,11 +511,9 @@ export const ReviewsBody = memo(function ReviewsBody({
                       maxLength={REVIEW_TEXT_MAX_LENGTH}
                       placeholder="Расскажите, что понравилось или что стоит улучшить"
                       value={text}
-                      aria-invalid={Boolean(formError)}
-                      status={formError ? "error" : undefined}
                       onChange={(event) => {
                         setText(event.target.value);
-                        if (formError) setFormError(null);
+                        if (fieldError) setFieldError(null);
                         if (success) setSuccess(false);
                       }}
                     />
@@ -439,6 +526,9 @@ export const ReviewsBody = memo(function ReviewsBody({
                   />
                 )}
 
+                {/* Ошибка СЕРВЕРА (409 и пр.) — не привязана к полю: её показываем
+                    общей плашкой, в отличие от клиентских ошибок формы,
+                    которые уехали в errorFor(...) на конкретный контрол. */}
                 {formError && (
                   <Notice tone="danger" variant="text">
                     {formError}
@@ -450,15 +540,33 @@ export const ReviewsBody = memo(function ReviewsBody({
                     одобрения
                   </Notice>
                 )}
-                <Button
-                  stretched
-                  size="l"
-                  loading={create.isPending}
-                  disabled={!canSubmit}
-                  onClick={submit}
-                >
-                  Отправить отзыв
-                </Button>
+                {/* Кнопка не рендерится, когда адресаты не загрузились: она бы
+                    осталась выключенной навсегда и выглядела бы так, будто
+                    заполнять форму нечем (MEMORY.md:487). Терминальное
+                    состояние с «Повторить» — выше, рядом с выбором. В остальных
+                    случаях каждая причина блокировки — клиентская, и рядом с
+                    кнопкой написано, чего именно не хватает. */}
+                {!targetsFailed && (
+                  <Button
+                    stretched
+                    size="l"
+                    loading={create.isPending}
+                    disabled={!canSubmit}
+                    onClick={submit}
+                  >
+                    Отправить отзыв
+                  </Button>
+                )}
+                {/* Причина блокировки названа рядом с кнопкой: пустой
+                    комментарий — единственная оставшаяся клиентская причина,
+                    и текст тот же, что отдаёт validateReviewForm. */}
+                {!targetsFailed &&
+                  !create.isPending &&
+                  text.trim().length === 0 && (
+                    <Caption Component="p">
+                      Добавьте комментарий к отзыву
+                    </Caption>
+                  )}
               </Card>
             )}
           </QueryState>
@@ -467,7 +575,7 @@ export const ReviewsBody = memo(function ReviewsBody({
         {tab === "about" && (
           <QueryState
             loading={profile.isLoading || about.isLoading}
-            error={profile.error ?? about.error}
+            error={profile.error ?? listBlockingError(about)}
             empty={false}
             emptyText=""
             skeleton={<ReviewCardsSkeleton />}
@@ -500,6 +608,7 @@ export const ReviewsBody = memo(function ReviewsBody({
                   hasNextPage={about.hasNextPage}
                   isFetchingNextPage={about.isFetchingNextPage}
                   fetchNextPage={() => void about.fetchNextPage()}
+                  error={about.isFetchNextPageError ? about.error : null}
                 />
               </Stack>
             )}

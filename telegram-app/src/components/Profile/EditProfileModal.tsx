@@ -4,6 +4,8 @@ import { Notice } from "@/ui/Notice";
 import { Field } from "@/ui/Field";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
+import { QueryState } from "@/components/QueryState";
+import { EMPTY_STATES } from "@/ui/emptyStates";
 
 import { useNavigate } from "react-router-dom";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
@@ -134,84 +136,105 @@ export const EditProfileBody = memo(function EditProfileBody({
       </p>
     );
   }
-  if (!profile.data) {
-    return (
-      <Notice role="alert" tone="danger" variant="text">
-        {profile.error instanceof Error
-          ? profile.error.message
-          : "Не удалось загрузить профиль"}
-      </Notice>
-    );
-  }
 
+  // Ошибка загрузки — это НЕ ошибка валидации (MEMORY.md §18): раньше
+  // здесь стоял тупиковый Notice без единого действия, и выйти из него
+  // можно было только закрытием и повторным открытием шторки. Теперь
+  // ветка уходит в общий QueryState — ровно как в соседних VehicleModal,
+  // SettingsModal и ProfilePage: он один владеет экраном ошибки и
+  // кнопкой «Повторить», а повтор зовёт refetch ТОГО ЖЕ запроса, то
+  // есть перечитывает профиль, не пересоздавая шторку.
+  // loading здесь всегда false: своё состояние загрузки с подписью
+  // «Загрузка профиля» отрисовано выше, у QueryState — другое.
   return (
-    <Stack>
-      <Field label="Имя" id="profile-name" error={errorFor("profile-name")}>
-        {(field) => (
-          <Input
-            {...field}
-            value={name}
-            maxLength={100}
-            onChange={(event) => {
-              setName(event.target.value);
-              clearErrors();
-            }}
-          />
-        )}
-      </Field>
-      <Field label="О себе" id="profile-about" error={errorFor("profile-about")}>
-        {(field) => (
-          <Textarea
-            {...field}
-            rows={3}
-            maxLength={500}
-            placeholder="Например: за рулём 7 лет, люблю музыку 80-х"
-            value={about}
-            onChange={(event) => {
-              setAbout(event.target.value);
-              clearErrors();
-            }}
-          />
-        )}
-      </Field>
-      <Field label="Телефон" id="profile-phone" error={errorFor("profile-phone")}>
-        {(field) => (
-          <Input
-            {...field}
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            maxLength={25}
-            placeholder="+7 900 123-45-67"
-            value={phone}
-            onChange={(event) => {
-              setPhone(event.target.value);
-              clearErrors();
-            }}
-          />
-        )}
-      </Field>
-      {formError && (
-        <Notice tone="danger" variant="text">
-          {formError instanceof Error
-            ? formError.message
-            : "Не удалось сохранить"}
-        </Notice>
-      )}
-      <Stack gap="xs">
-        <Button
-          stretched
-          size="l"
-          loading={update.isPending}
-          disabled={update.isPending}
-          onClick={save}
+    <QueryState
+      loading={false}
+      error={profile.error}
+      empty={!profile.data}
+      emptyText={EMPTY_STATES.profileEmpty.description}
+      onRetry={() => void profile.refetch()}
+    >
+      <Stack>
+        <Field label="Имя" id="profile-name" error={errorFor("profile-name")}>
+          {(field) => (
+            <Input
+              {...field}
+              value={name}
+              maxLength={100}
+              onChange={(event) => {
+                setName(event.target.value);
+                clearErrors();
+              }}
+            />
+          )}
+        </Field>
+        <Field
+          label="О себе"
+          id="profile-about"
+          error={errorFor("profile-about")}
         >
-          Сохранить изменения
-        </Button>
-        <Button size="l" stretched disabled={update.isPending} onClick={onDone}>
-          Отмена
-        </Button>
+          {(field) => (
+            <Textarea
+              {...field}
+              rows={3}
+              maxLength={500}
+              placeholder="Например: за рулём 7 лет, люблю музыку 80-х"
+              value={about}
+              onChange={(event) => {
+                setAbout(event.target.value);
+                clearErrors();
+              }}
+            />
+          )}
+        </Field>
+        <Field
+          label="Телефон"
+          id="profile-phone"
+          error={errorFor("profile-phone")}
+        >
+          {(field) => (
+            <Input
+              {...field}
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              maxLength={25}
+              placeholder="+7 900 123-45-67"
+              value={phone}
+              onChange={(event) => {
+                setPhone(event.target.value);
+                clearErrors();
+              }}
+            />
+          )}
+        </Field>
+        {formError && (
+          <Notice tone="danger" variant="text">
+            {formError instanceof Error
+              ? formError.message
+              : "Не удалось сохранить"}
+          </Notice>
+        )}
+        <Stack gap="xs">
+          <Button
+            stretched
+            size="l"
+            loading={update.isPending}
+            disabled={update.isPending}
+            onClick={save}
+          >
+            Сохранить изменения
+          </Button>
+          <Button
+            size="l"
+            stretched
+            disabled={update.isPending}
+            onClick={onDone}
+          >
+            Отмена
+          </Button>
+        </Stack>
       </Stack>
-    </Stack>
+    </QueryState>
   );
 });

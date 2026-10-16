@@ -140,6 +140,7 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
           {vehicle && (
             <>
               <ConfirmPopup
+                nested
                 label="Удалить автомобиль"
                 confirmLabel="Да, удалить"
                 description="Автомобиль будет удалён из профиля. Без него нельзя создавать новые поездки. При активных поездках удаление заблокировано."
@@ -271,6 +272,10 @@ function VehicleForm({
         stretched
         size="l"
         loading={upsert.isPending}
+        // Кит у `loading` только вешает класс и спиннер — кнопка остаётся
+        // и фокусируемой, и активной. Гасим её явно, иначе состояние
+        // «сохраняется» видно только глазом.
+        disabled={upsert.isPending}
         onClick={save}
       >
         Сохранить автомобиль

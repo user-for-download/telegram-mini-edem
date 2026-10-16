@@ -1,10 +1,7 @@
 import { useRef, useState } from "react";
-import {
-  Caption,
-  IconContainer,
-  VisuallyHidden,
-} from "@telegram-apps/telegram-ui";
+import { IconContainer, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
+import { Blockquote } from "@/ui/Blockquote";
 import { ProfileHero } from "@/components/Profile/ProfileHero";
 import { MenuRow } from "@/ui/MenuRow";
 import { SwitchRow } from "@/ui/SwitchRow";
@@ -31,7 +28,7 @@ import { SectionBody } from "@/ui/SectionBody";
 import { Section } from "@/ui/Section";
 import { Stack } from "@/ui/Stack";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { HINT, MIN_TARGET } from "@/ui/classes";
+import { MIN_TARGET } from "@/ui/classes";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { isAccountDeletedError, ApiError } from "@/api/client";
 import {
@@ -180,8 +177,13 @@ export function ProfilePage() {
                   }
                 />
 
+                {/* «О себе» — свободный текст человека, поэтому ровно та же
+                    плашка-цитата, что в шторке профиля (UserProfileSheet):
+                    одно поле на двух экранах не должно выглядеть по-разному, а
+                    правило переносов (`pre-wrap` + `overflow-wrap`) общее для
+                    всех мест, где текст писал человек. */}
                 {profile.data.about && (
-                  <Caption className={HINT}>{profile.data.about}</Caption>
+                  <Blockquote>{profile.data.about}</Blockquote>
                 )}
                 {/* Плитки «Поездки / Отзывы / Рейтинг» убраны: те же три
                     числа уже стоят строкой метрик в шапке, а дубль на одном

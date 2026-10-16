@@ -14,13 +14,20 @@ vi.mock("@tma.js/sdk-react", () => ({
   },
 }));
 
-const profileState = vi.hoisted(() => ({ current: "ok" as "ok" | "loading" | "error" }));
+const profileState = vi.hoisted(() => ({
+  current: "ok" as "ok" | "loading" | "error",
+}));
 
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: () => {
     if (profileState.current === "loading") return { isLoading: true };
     if (profileState.current === "error") {
-      return { isLoading: false, data: undefined, error: new Error("boom") };
+      return {
+        isLoading: false,
+        data: undefined,
+        error: new Error("boom"),
+        refetch: vi.fn(),
+      };
     }
     return {
       isLoading: false,
@@ -28,7 +35,11 @@ vi.mock("@/queries/profile", () => ({
       error: null,
     };
   },
-  useProfileUpdateMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
+  useProfileUpdateMutation: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+  }),
 }));
 
 vi.mock("@/pages/Profile/profileValidation", () => ({
@@ -43,7 +54,9 @@ vi.mock("@/components/Toast/ToastProvider", () => ({
 import { EditProfileBody } from "@/components/Profile/EditProfileModal";
 
 function render(): string {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return renderToString(
     <AppRoot platform="base">
       <QueryClientProvider client={client}>
@@ -68,8 +81,14 @@ describe("EditProfileBody", () => {
   it("loading и ошибка", () => {
     profileState.current = "loading";
     expect(render()).toContain("Загрузка профиля");
+    // Ошибка загрузки — терминальный экран QueryState с «Повторить»,
+    // а не Notice-тупик; сам повтор проверен по DOM в
+    // editProfileModal.retry.dom.test.tsx.
     profileState.current = "error";
-    expect(render()).toContain("boom");
+    const errorHtml = render();
+    expect(errorHtml).toContain("Не удалось загрузить данные");
+    expect(errorHtml).toContain("Повторить");
+    expect(errorHtml).not.toContain("Сохранить изменения");
     profileState.current = "ok";
   });
 });

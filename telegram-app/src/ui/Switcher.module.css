@@ -24,9 +24,17 @@
   color: var(--app-muted);
 }
 
-/* Активный — голубая пилюля во всю ширину пункта. */
+/* Активный — тонированная плашка во всю ширину пункта, тон --app-info
+ * (реестр #38). ЗАЛИВКА НЕ ИЗМЕНИЛАСЬ: `--app-info-bg` — это и есть
+ * `--tgui--secondary_fill`, просто адресуется через систему `--app-*`.
+ * Переписать надо было только ЦВЕТ: `--tgui--link_color` на тонированной
+ * плашке давал 3.54:1 в светлой теме (платформа base) и 3.58:1 в тёмной на
+ * платформе iOS со статическим тёмным фолбэком кита — оба ниже AA.
+ * Тон на СВОЕЙ худшей подложке (не на фоне секции, см. MEMORY §18):
+ * 4.86:1 светлая / 5.46:1 тёмная на плашке base, 4.91 / 5.84 на плашке iOS,
+ * 4.58 / 5.99 на серой `#eaeaeb`/`#24303c`. Пин — ui/__tests__/contrastTones.test.ts. */
 .active.active {
-  background: var(--tgui--secondary_fill);
+  background: var(--app-info-bg);
   box-shadow: none;
   border-radius: var(--app-radius-pill);
   font-weight: 600;
@@ -34,5 +42,5 @@
 
 .active.active,
 .active.active * {
-  color: var(--tgui--link_color);
+  color: var(--app-info);
 }

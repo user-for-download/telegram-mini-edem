@@ -13,9 +13,18 @@ describe("validateReviewForm (порт CreateReviewModal)", () => {
     expect(validateReviewForm("Отличная поездка, спасибо!")).toBeNull();
   });
 
+  // Валидация возвращает { field, message }, а не строку (F16): странице
+// нужно знать, КАКОЕ поле помечать, иначе сообщение про поездку красило
+// кольцо вокруг комментария (MEMORY.md §18).
   it("отклоняет пустой и пробельный комментарий", () => {
-    expect(validateReviewForm("")).toBe("Добавьте комментарий к отзыву");
-    expect(validateReviewForm("   ")).toBe("Добавьте комментарий к отзыву");
+    expect(validateReviewForm("")).toEqual({
+      field: "text",
+      message: "Добавьте комментарий к отзыву",
+    });
+    expect(validateReviewForm("   ")).toEqual({
+      field: "text",
+      message: "Добавьте комментарий к отзыву",
+    });
   });
 
   it("принимает ровно 150 символов (граница лимита)", () => {
@@ -23,9 +32,10 @@ describe("validateReviewForm (порт CreateReviewModal)", () => {
   });
 
   it("отклоняет 151 символ", () => {
-    expect(validateReviewForm("x".repeat(REVIEW_TEXT_MAX_LENGTH + 1))).toBe(
-      `Максимум ${REVIEW_TEXT_MAX_LENGTH} символов`,
-    );
+    expect(validateReviewForm("x".repeat(REVIEW_TEXT_MAX_LENGTH + 1))).toEqual({
+      field: "text",
+      message: `Максимум ${REVIEW_TEXT_MAX_LENGTH} символов`,
+    });
   });
 });
 

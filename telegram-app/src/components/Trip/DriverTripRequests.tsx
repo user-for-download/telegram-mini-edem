@@ -14,6 +14,7 @@ import { Armchair, Check, X } from "lucide-react";
 import { haptic } from "@/utils/haptics";
 import { isNativeConfirmAvailable, nativeConfirm } from "@/utils/telegram-adapter";
 import { useToast } from "@/components/Toast/ToastProvider";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { formatRating } from "@/helpers/rating";
 import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
@@ -44,6 +45,9 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
   const query = useDriverRequestsQuery();
   const updateStatus = useUpdateBookingStatusMutation();
   const openUserProfile = useOpenUserProfile();
+  // Болванки заявок — тот же tgui Skeleton, что и в components/Skeletons.tsx:
+  // пульсацию 1.8s гасим ПРОПОМ по системной настройке (WCAG 2.3.3).
+  const reduceMotion = usePrefersReducedMotion();
 
   const pending = (query.data ?? []).filter(
     (booking) => booking.trip.id === tripId && booking.status === "pending",
@@ -123,7 +127,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
         className={styles.requestsList}
       >
         {[0, 1].map((index) => (
-          <Skeleton key={index} visible aria-hidden="true">
+          <Skeleton key={index} visible withoutAnimation={reduceMotion} aria-hidden="true">
             <div className={styles.requestSkeletonRow}>
               <span className={styles.requestSkeletonAvatar} />
               <span className={styles.requestSkeletonLines}>

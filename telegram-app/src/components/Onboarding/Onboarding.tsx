@@ -7,6 +7,7 @@ import {
 import { Button } from "@/ui/Button";
 import { Section } from "@/ui/Section";
 import { Cell } from "@/ui/Cell";
+import { STATIC_CELL } from "@/ui/classes";
 import { Notice } from "@/ui/Notice";
 import { Page } from "@/ui/Page";
 
@@ -64,8 +65,14 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
         header="Прочитайте перед началом"
         footer="Сервис доступен пользователям старше 14 лет"
       >
+        {/* Три строки — статичный текст договора: ни одна никуда не ведёт.
+            Класс ОБЯЗАТЕЛЕН: кит внутри `Cell` всегда тянет `Tappable`
+            (`cursor:pointer` + hover-подложка), поэтому без него строки
+            обещали бы переход, которого нет. Тот же приём, что в
+            RideRequestFeedSection. */}
         <Cell
           multiline
+          className={STATIC_CELL}
           before={<Handshake aria-hidden />}
           subtitle={
             <Caption level="1" weight="3">
@@ -78,6 +85,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
         </Cell>
         <Cell
           multiline
+          className={STATIC_CELL}
           before={<Scale aria-hidden />}
           subtitle={
             <Caption level="1" weight="3">
@@ -90,6 +98,7 @@ export const Onboarding: FC<PropsWithChildren> = ({ children }) => {
         </Cell>
         <Cell
           multiline
+          className={STATIC_CELL}
           before={<Lock aria-hidden />}
           subtitle={
             <Caption level="1" weight="3">

@@ -1,4 +1,5 @@
 import { Caption, Text } from "@telegram-apps/telegram-ui";
+import { Blockquote } from "@/ui/Blockquote";
 import { Button } from "@/ui/Button";
 import { Chip } from "@/ui/Chip";
 import { IconButton } from "@/ui/IconButton";
@@ -207,7 +208,13 @@ export function TripHero({
           <Caption weight="2" Component="span" className={styles.noteTitle}>
             Комментарий водителя:
           </Caption>
-          {item.comment}
+          {/* Комментарий — свободный текст человека (контракт допускает 500
+              знаков, dto/trip.dto.ts), поэтому слова водителя идут через
+              ui/Blockquote, как жалоба, ответ модерации и «О себе»: переносы,
+              набранные им, не склеиваются в одну строку, а длинное слово без
+              пробела (ссылка, имя файла) не вылезает за блок. Правила
+              переносов живут в фасаде — руками на потребителе их не пишем. */}
+          <Blockquote>{item.comment}</Blockquote>
         </div>
       )}
     </>

@@ -66,6 +66,13 @@ const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
   [(p) => p.startsWith("/profile/edit"), "Редактирование профиля"],
   [(p) => p.startsWith("/profile/support"), "Поддержка"],
   [(p) => p.startsWith("/profile/reports"), "Жалобы"],
+  // Шторки поверх профиля, открываемые с экрана профиля. Обе — deep-link
+  // цели из бэкенда (telegramNotifications.ts), и без правила NavHeader
+  // возвращал null: 44px шапка исчезала на обеих страницах, тогда как у
+  // /profile/edit (тот же паттерн «профиль + шторка») заголовок был.
+  // Названия — по строкам меню профиля, которые эти шторки открывают.
+  [(p) => p === "/settings", "Настройки"],
+  [(p) => p === "/vehicle", "Автомобиль"],
   [(p) => p.startsWith("/reviews"), "Отзывы"],
   [(p) => p.startsWith("/profile"), "Профиль"],
 ];
