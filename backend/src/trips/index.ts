@@ -222,7 +222,7 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
   }
 
   if (tagsParam && tagsParam.length > 600) {
-    return c.json({ message: "Invalid tags" }, 400);
+    return c.json({ code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid tags" }, 400);
   }
 
   const where: Prisma.TripWhereInput = {
@@ -274,7 +274,7 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
     if (!parsedDate) {
       // Невалидная дата — это ошибка ввода, а не «без фильтра»: молчаливое
       // игнорирование отдавало бы все поездки вместо ожидаемого подмножества.
-      return c.json({ message: "Invalid dateFrom" }, 400);
+      return c.json({ code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid dateFrom" }, 400);
     }
     where.departureAt = {
       ...(where.departureAt as object),
@@ -285,7 +285,7 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
   if (dateTo) {
     const parsedDateTo = moscowDateBoundary(dateTo, true);
     if (!parsedDateTo) {
-      return c.json({ message: "Invalid dateTo" }, 400);
+      return c.json({ code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid dateTo" }, 400);
     }
     where.departureAt = {
       ...(where.departureAt as object),
@@ -296,7 +296,7 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
   if (tagsParam) {
     const tags = tagsParam.split(",").filter(Boolean);
     if (tags.length > 6 || tags.some((tag) => tag.length > MAX_SEARCH_LENGTH)) {
-      return c.json({ message: "Invalid tags" }, 400);
+      return c.json({ code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid tags" }, 400);
     }
     if (tags.length > 0) {
       where.tags = { hasEvery: tags };
@@ -308,12 +308,12 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
     // цены поездки: строку разбираем строго, иначе parseInt("100abc") → 100
     // молча принимал бы мусор.
     if (!/^\d+$/.test(maxPrice)) {
-      return c.json({ message: "Invalid maxPrice" }, 400);
+      return c.json({ code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid maxPrice" }, 400);
     }
     const parsedMaxPrice = Number.parseInt(maxPrice, 10);
 
     if (parsedMaxPrice < 1 || parsedMaxPrice > MAX_FILTER_PRICE) {
-      return c.json({ message: "Invalid maxPrice" }, 400);
+      return c.json({ code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid maxPrice" }, 400);
     }
 
     where.price = { lte: parsedMaxPrice };

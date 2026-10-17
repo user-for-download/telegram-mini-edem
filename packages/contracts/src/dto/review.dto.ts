@@ -13,6 +13,6 @@ export const createReviewDtoSchema = z.object({
   // строки только из пробелов отклоняются, а лимиты применяются к обрезанному
   // значению (единообразно с createFeedbackDtoSchema).
   text: z.string().trim().min(1).max(REVIEW_TEXT_MAX_LENGTH),
-});
+}).strict();
 
 export type CreateReviewDto = z.infer<typeof createReviewDtoSchema>;

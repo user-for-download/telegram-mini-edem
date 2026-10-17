@@ -12,7 +12,7 @@ export const createRideRequestDtoSchema = z.object({
   latestAt: dateTime,
   seats: z.number().int().min(1).max(MAX_SEATS).default(1),
   expiresAt: dateTime,
-}).superRefine((data, ctx) => {
+}).strict().superRefine((data, ctx) => {
   if (data.fromCityId === data.toCityId) {
     ctx.addIssue({ code: "custom", path: ["toCityId"], message: "Cities must be different" });
   }

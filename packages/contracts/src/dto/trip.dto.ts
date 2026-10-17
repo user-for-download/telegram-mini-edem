@@ -57,6 +57,9 @@ export const createTripDtoSchema = baseTripSchema
     autoComplete: z.boolean().default(false),
     matchingEnabled: z.boolean().default(true),
   })
+  // .strict() — input-DTO отвергает неизвестные поля (400), а не молча их
+  // отбрасывает (конвенция input-схем, см. contracts-dto).
+  .strict()
   .refine(
     (data) =>
       data.fromCity.trim().toLowerCase() !== data.toCity.trim().toLowerCase(),

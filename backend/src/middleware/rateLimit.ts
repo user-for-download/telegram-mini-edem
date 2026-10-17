@@ -107,12 +107,9 @@ function resolveClientIp(c: Context): string {
     const connInfo = getConnInfo(c);
     return connInfo.remote.address || "unknown";
   } catch {
-    // Фоллбек для сред, где getConnInfo недоступен (например, vitest app.request).
     // X-Forwarded-For без доверенного прокси подделывается клиентом —
-    // в production не используем его, иначе лимитер обходится по заголовку.
-    if (env.TRUST_PROXY) {
-      return c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    }
+    // в production не используем его (TRUST_PROXY-ветка уже обработана выше),
+    // поэтому здесь только неподделываемый фолбэк.
     return "unknown";
   }
 }

@@ -414,5 +414,31 @@ describe("GET /bookings/my и /bookings/history — address visibility", () => {
     expect(body.toAddress).toBe(TO_ADDRESS);
     expect(body.driver.car?.plate).toBe(PLATE);
   });
+
+  it("driver's /bookings/trip view hides the passenger's car plate (own-context only)", async () => {
+    const driver = await createUser("PlateDriver", true);
+    const passenger = await createUser("PlatePassenger", true);
+    const trip = await createTrip(driver.id, new Date(Date.now() + 86_400_000));
+    await db.booking.create({
+      data: { tripId: trip.id, passengerId: passenger.id, seat: 1, status: "pending" },
+    });
+
+    // Водитель видит заявку, но номер чужой машины пассажира — нет
+    // (plate fail-closed: только own-контекст).
+    const res = await app.request(`/api/v1/bookings/trip/${trip.id}`, {
+      headers: { Authorization: `Bearer ${devMockAccessToken(driver.id)}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const item = body.items.find(
+      (i: { trip: { id: string } }) => i.trip.id === trip.id,
+    );
+    expect(item).toBeDefined();
+    expect(item.passenger.car?.plate).toBeUndefined();
+
+    // А своё авто пассажир по-прежнему видит в /bookings/my.
+    const mine = await getBookings("/my", passenger.id);
+    expect(findItem(mine, trip.id).passenger.car?.plate).toBe(PLATE);
+  });
 });
 

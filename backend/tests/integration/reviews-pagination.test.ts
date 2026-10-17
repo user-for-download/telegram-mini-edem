@@ -180,4 +180,37 @@ describe("GET /reviews/user/:userId — cursor pagination", () => {
     const res = await app.request(`/api/v1/reviews/user/${fakeUuid}`);
     expect(res.status).toBe(404);
   });
+
+  it("rejects a cursor that belongs to another user's review with 400", async () => {
+    const otherTarget = await db.user.create({
+      data: {
+        name: `OtherTarget-${Date.now()}`,
+        telegramUserId: ++tgSeq,
+        avatar: "https://i.pravatar.cc/200?img=3",
+      },
+    });
+    const foreign = await db.review.create({
+      data: {
+        authorId: authorIds[0],
+        targetUserId: otherTarget.id,
+        targetRole: "driver",
+        rating: 5,
+        text: "Foreign",
+        tripRoute: "Moscow → SPb",
+        status: "published",
+      },
+    });
+
+    try {
+      const res = await app.request(
+        `/api/v1/reviews/user/${targetUserId}?cursor=${foreign.id}`
+      );
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.code).toBe("VALIDATION_FAILED");
+    } finally {
+      await db.review.delete({ where: { id: foreign.id } });
+      await db.user.delete({ where: { id: otherTarget.id } });
+    }
+  });
 });

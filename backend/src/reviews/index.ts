@@ -13,12 +13,25 @@ import {
   publicReadLimiter,
   mutationLimiter,
   reviewsReadLimiter,
+  createUserRateLimiter,
 } from "../middleware/rateLimit.js";
+import { devRateMax } from "../env.js";
 import { getSanitizedBody } from "../middleware/sanitize.js";
 import { ERROR_CODES } from "../errors.js";
 import { logBusinessEvent } from "../logger/business.js";
 
 export const reviewsRouter = new Hono<AuthEnv>();
+
+/**
+ * Пассажир/водитель: создание отзывов, 20 в сутки.
+ * Раньше у POST /reviews был только IP-based mutationLimiter — аккаунт
+ * мог набивать отзывы со сменой адреса. Лимит ПОЛЬЗОВАТЕЛЬСКИЙ.
+ */
+const reviewsCreateLimiter = createUserRateLimiter({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: devRateMax(20),
+  keyPrefix: "user-reviews-create",
+});
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DEFAULT_PAGE_LIMIT = 20;
@@ -339,7 +352,10 @@ reviewsRouter.get("/user/:userId", publicReadLimiter, async (c) => {
   });
 
   if (!targetUser) {
-    return c.json({ message: "User not found" }, 404);
+    return c.json(
+      { code: ERROR_CODES.NOT_FOUND, message: "User not found" },
+      404
+    );
   }
 
   // === Пагинация ===
@@ -363,6 +379,29 @@ reviewsRouter.get("/user/:userId", publicReadLimiter, async (c) => {
       );
     }
     cursor = cursorStr;
+
+    // Курсор обязан принадлежать этой же выборке (targetUserId + published):
+    // `skip: 1` идиоматичен только когда строка-курсор попадает в фильтр.
+    // Чужой/скрытый курсор отсекается where, но skip:1 всё равно выбрасывает
+    // одну честную запись и сдвигает страницу — тот же класс, что F9 в
+    // GET /bookings/trip/:tripId. Несуществующий id — не ошибка (пустой
+    // хвост, 200), как у Prisma.
+    const cursorRow = await db.review.findUnique({
+      where: { id: cursorStr },
+      select: { targetUserId: true, status: true },
+    });
+    if (
+      cursorRow &&
+      (cursorRow.targetUserId !== userId || cursorRow.status !== "published")
+    ) {
+      return c.json(
+        {
+          code: ERROR_CODES.VALIDATION_FAILED,
+          message: "Invalid cursor for this user",
+        },
+        400
+      );
+    }
   }
 
   // Берём limit + 1, чтобы понять, есть ли следующая страница.
@@ -422,7 +461,7 @@ reviewsRouter.get("/user/:userId", publicReadLimiter, async (c) => {
  * - отзыв создаётся со статусом "pending": публичная видимость — после
  *   одобрения модерацией, рейтинг target-пользователя при создании не меняется.
  */
-reviewsRouter.post("/", requireUser, mutationLimiter, async (c) => {
+reviewsRouter.post("/", requireUser, mutationLimiter, reviewsCreateLimiter, async (c) => {
   const body = await getSanitizedBody(c);
   const parseResult = createReviewDtoSchema.safeParse(body);
 
@@ -616,6 +655,6 @@ reviewsRouter.post("/", requireUser, mutationLimiter, async (c) => {
     );
     reportServerError(error, c.req.method, c.req.path);
 
-    return c.json({ message: "Internal server error" }, 500);
+    return c.json({ code: ERROR_CODES.INTERNAL_ERROR, message: "Internal server error" }, 500);
   }
 });

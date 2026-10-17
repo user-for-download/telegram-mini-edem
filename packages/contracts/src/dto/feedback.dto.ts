@@ -17,7 +17,7 @@ export const createFeedbackDtoSchema = z.object({
   // значению (backend сохраняет trimmed-значения).
   subject: z.string().trim().min(1).max(FEEDBACK_SUBJECT_MAX_LENGTH),
   text: z.string().trim().min(1).max(FEEDBACK_TEXT_MAX_LENGTH),
-});
+}).strict();
 
 export type CreateFeedbackDto = z.infer<typeof createFeedbackDtoSchema>;
 
@@ -41,7 +41,7 @@ export const feedbackTelegramAppealDtoSchema = z.object({
     .max(FEEDBACK_APPEAL_INIT_DATA_MAX_LENGTH),
   subject: z.string().trim().min(1).max(FEEDBACK_SUBJECT_MAX_LENGTH),
   text: z.string().trim().min(1).max(FEEDBACK_TEXT_MAX_LENGTH),
-});
+}).strict();
 
 export type FeedbackTelegramAppealDto = z.infer<
   typeof feedbackTelegramAppealDtoSchema

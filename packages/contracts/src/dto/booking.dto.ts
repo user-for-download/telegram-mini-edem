@@ -20,10 +20,10 @@ export const createBookingDtoSchema = z.object({
    * и принадлежность проверяет БД.
    */
   requestId: z.string().trim().min(1).optional(),
-});
+}).strict();
 export type CreateBookingDto = z.infer<typeof createBookingDtoSchema>;
 
 export const updateBookingStatusDtoSchema = z.object({
   status: driverBookingActionSchema,
-});
+}).strict();
 export type UpdateBookingStatusDto = z.infer<typeof updateBookingStatusDtoSchema>;

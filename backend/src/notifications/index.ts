@@ -5,6 +5,7 @@ import {
   notificationReadLimiter,
   publicReadLimiter,
 } from "../middleware/rateLimit.js";
+import { ERROR_CODES } from "../errors.js";
 import { z } from "zod";
 import {
   notificationSchema,
@@ -38,7 +39,10 @@ notificationsRouter.get("/my", publicReadLimiter, async (c) => {
     unreadOnly: c.req.query("unreadOnly") ?? undefined,
   });
   if (!filterParse.success) {
-    return c.json({ message: "Invalid query" }, 400);
+    return c.json(
+      { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid query" },
+      400,
+    );
   }
   const { role, unreadOnly } = filterParse.data;
 
@@ -47,7 +51,10 @@ notificationsRouter.get("/my", publicReadLimiter, async (c) => {
     // Cap base64-курсора до декодирования: отсекаем заведомо мусорные
     // длинные строки до JSON.parse/Buffer (DoS-поверхность).
     if (cursorStr.length > 512) {
-      return c.json({ message: "Invalid cursor" }, 400);
+      return c.json(
+        { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid cursor" },
+        400,
+      );
     }
     try {
       const parsed = JSON.parse(
@@ -56,7 +63,10 @@ notificationsRouter.get("/my", publicReadLimiter, async (c) => {
       const validated = notificationCursorSchema.parse(parsed);
       cursor = { createdAt: new Date(validated.createdAt), id: validated.id };
     } catch {
-      return c.json({ message: "Invalid cursor" }, 400);
+      return c.json(
+        { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid cursor" },
+        400,
+      );
     }
   }
 
@@ -161,10 +171,10 @@ notificationsRouter.patch("/:id/read", notificationReadLimiter, async (c) => {
   const id = c.req.param("id");
   const user = c.get("user");
 
-  // Fail-closed на границе: malformed id → 404 тем же контрактом
-  // { message }, без похода в БД (иначе Prisma бросит и будет 500).
+  // Fail-closed на границе: malformed id → 404 тем же конвертом ошибки
+  // { code, message }, без похода в БД (иначе Prisma бросит и будет 500).
   if (!z.string().uuid().safeParse(id).success) {
-    return c.json({ message: "Not found" }, 404);
+    return c.json({ code: ERROR_CODES.NOT_FOUND, message: "Not found" }, 404);
   }
 
   // Один скоупадный write: ownership — в WHERE, отдельной выборки нет.
@@ -174,12 +184,12 @@ notificationsRouter.patch("/:id/read", notificationReadLimiter, async (c) => {
     data: { isRead: true },
   });
   if (count === 0) {
-    return c.json({ message: "Not found" }, 404);
+    return c.json({ code: ERROR_CODES.NOT_FOUND, message: "Not found" }, 404);
   }
 
   const updated = await db.notification.findUnique({ where: { id } });
   if (!updated) {
-    return c.json({ message: "Not found" }, 404);
+    return c.json({ code: ERROR_CODES.NOT_FOUND, message: "Not found" }, 404);
   }
 
   return c.json(

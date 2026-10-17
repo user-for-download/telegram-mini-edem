@@ -44,7 +44,7 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
   const parseResult = updateBookingStatusDtoSchema.safeParse(body);
 
   if (!parseResult.success) {
-    return c.json({ message: "Invalid payload" }, 400);
+    return c.json({ code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid payload" }, 400);
   }
 
   const newStatus = parseResult.data.status;
@@ -343,6 +343,6 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
     );
     reportServerError(error, c.req.method, c.req.path);
 
-    return c.json({ message: "Internal server error" }, 500);
+    return c.json({ code: ERROR_CODES.INTERNAL_ERROR, message: "Internal server error" }, 500);
   }
 });

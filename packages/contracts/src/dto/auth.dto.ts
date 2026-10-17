@@ -15,7 +15,7 @@ export type AuthResponse = z.infer<typeof authResponseSchema>;
 
 export const refreshRequestSchema = z.object({
   refreshToken: z.string().min(1).max(4096),
-});
+}).strict();
 
 export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
 
@@ -30,7 +30,7 @@ export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
  */
 export const telegramAuthRequestSchema = z.object({
   initData: z.string().min(1).max(4096),
-});
+}).strict();
 
 export type TelegramAuthRequest = z.infer<typeof telegramAuthRequestSchema>;
 

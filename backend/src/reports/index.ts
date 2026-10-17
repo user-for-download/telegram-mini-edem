@@ -241,7 +241,10 @@ reportsRouter.get("/targets", reportReadLimiter, async (c) => {
       "report_targets_response_validation_failed",
     );
     reportServerError(parsed.error, c.req.method, c.req.path);
-    return c.json({ message: "Internal response validation failed" }, 500);
+    return c.json(
+      { code: ERROR_CODES.INTERNAL_ERROR, message: "Internal response validation failed" },
+      500,
+    );
   }
   return c.json(parsed.data);
 });

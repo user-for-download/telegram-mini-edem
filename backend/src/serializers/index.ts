@@ -102,12 +102,15 @@ export function serializeUser(
       ? {
           model: user.car.model,
           color: user.car.color,
-          // plate опционален (string | null в БД): null не сериализуем,
-          // т.к. контракт carSchema допускает только string | undefined
-          // (fail-closed валидация ответов на клиенте).
-          ...(options?.includePlate === false || user.car.plate == null
-            ? {}
-            : { plate: user.car.plate }),
+          // plate — приватное поле машины (fail-closed, opt-in): отдаётся
+          // только при явном `includePlate: true` — own-контексты (профиль,
+          // «мои брони») и подтверждённая сторона деталей поездки. Дефолт
+          // opt-in: чужому номер не уезжает (водителю — номер чужой машины
+          // пассажира). null не сериализуем: контракт carSchema допускает
+          // только string | undefined.
+          ...(options?.includePlate === true && user.car.plate != null
+            ? { plate: user.car.plate }
+            : {}),
         }
       : undefined,
     about: isDeleted ? undefined : (user.about ?? undefined),

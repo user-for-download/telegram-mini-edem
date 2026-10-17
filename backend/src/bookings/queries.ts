@@ -115,7 +115,9 @@ queriesRouter.get("/my", bookingsReadLimiter, async (c) => {
       canReview,
       hasReview,
 
-      passenger: serializeUser(b.passenger),
+      // passenger здесь — сам зритель (список по passengerId = user.id),
+      // поэтому своё авто (в т.ч. номер) отдаём: own-контекст.
+      passenger: serializeUser(b.passenger, { includePlate: true }),
 
       // Тот же сериализатор, что у /bookings/driver и /bookings/trip/:id:
       // ручная сборка trip-объекта уже один раз разошлась с контрактом
@@ -142,7 +144,10 @@ queriesRouter.get("/my", bookingsReadLimiter, async (c) => {
       "passenger_bookings_response_validation_failed",
     );
     reportServerError(validation.error, c.req.method, c.req.path);
-    return c.json({ message: "Internal response validation failed" }, 500);
+    return c.json(
+      { code: ERROR_CODES.INTERNAL_ERROR, message: "Internal response validation failed" },
+      500,
+    );
   }
 
   return c.json(validation.data);
@@ -253,7 +258,8 @@ queriesRouter.get("/history", bookingsReadLimiter, async (c) => {
       hasReview,
       historyCategory,
 
-      passenger: serializeUser(b.passenger),
+      // passenger — сам зритель (own-контекст), номер своего авто отдаём.
+      passenger: serializeUser(b.passenger, { includePlate: true }),
 
       // Единый сериализатор (см. комментарий в /my) — иначе ответ снова
       // разойдётся с tripSchema и клиент отбросит всю историю.
@@ -277,7 +283,10 @@ queriesRouter.get("/history", bookingsReadLimiter, async (c) => {
       "passenger_history_response_validation_failed",
     );
     reportServerError(validation.error, c.req.method, c.req.path);
-    return c.json({ message: "Internal response validation failed" }, 500);
+    return c.json(
+      { code: ERROR_CODES.INTERNAL_ERROR, message: "Internal response validation failed" },
+      500,
+    );
   }
 
   return c.json(validation.data);
@@ -333,7 +342,10 @@ queriesRouter.get("/driver", bookingsReadLimiter, async (c) => {
       "driver_bookings_response_validation_failed",
     );
     reportServerError(validation.error, c.req.method, c.req.path);
-    return c.json({ message: "Internal response validation failed" }, 500);
+    return c.json(
+      { code: ERROR_CODES.INTERNAL_ERROR, message: "Internal response validation failed" },
+      500,
+    );
   }
 
   return c.json(validation.data);
@@ -448,7 +460,10 @@ queriesRouter.get("/trip/:tripId", bookingsReadLimiter, async (c) => {
       "bookings_pagination_response_validation_failed",
     );
     reportServerError(validation.error, c.req.method, c.req.path);
-    return c.json({ message: "Internal response validation failed" }, 500);
+    return c.json(
+      { code: ERROR_CODES.INTERNAL_ERROR, message: "Internal response validation failed" },
+      500,
+    );
   }
 
   return c.json(validation.data);

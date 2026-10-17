@@ -69,7 +69,10 @@ authRouter.post("/telegram", tgAuthLimiter, async (c) => {
   const result = verifyTelegramInitData(initData);
 
   if (!result.isValid || result.telegramUserId === undefined) {
-    return c.json({ message: "Invalid or expired signature" }, 401);
+    return c.json(
+      { code: ERROR_CODES.UNAUTHORIZED, message: "Invalid or expired signature" },
+      401,
+    );
   }
 
   const telegramUserId = result.telegramUserId;
@@ -176,7 +179,7 @@ authRouter.post("/telegram", tgAuthLimiter, async (c) => {
     accessToken,
     refreshToken,
     expiresIn: env.JWT_ACCESS_TTL_SECONDS,
-    user: serializeUser(finalUser, { includePhone: true }),
+    user: serializeUser(finalUser, { includePhone: true, includePlate: true }),
   });
 });
 
@@ -185,7 +188,10 @@ authRouter.post("/refresh", refreshLimiter, async (c) => {
   const parseResult = refreshRequestSchema.safeParse(body);
 
   if (!parseResult.success) {
-    return c.json({ message: "Invalid refresh token" }, 400);
+    return c.json(
+      { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid refresh token" },
+      400,
+    );
   }
 
   try {
@@ -206,7 +212,10 @@ authRouter.post("/refresh", refreshLimiter, async (c) => {
       });
 
       if (!user) {
-        return c.json({ message: "User not found" }, 401);
+        return c.json(
+          { code: ERROR_CODES.UNAUTHORIZED, message: "User not found" },
+          401,
+        );
       }
 
       // Единообразно с основной веткой: забаненному пользователю токены
@@ -242,7 +251,7 @@ authRouter.post("/refresh", refreshLimiter, async (c) => {
         accessToken,
         refreshToken: `${MOCK_REFRESH_TOKEN_PREFIX}${userId}-${refreshExp}`,
         expiresIn: env.JWT_ACCESS_TTL_SECONDS,
-        user: serializeUser(user, { includePhone: true }),
+        user: serializeUser(user, { includePhone: true, includePlate: true }),
       });
     }
 
@@ -255,7 +264,10 @@ authRouter.post("/refresh", refreshLimiter, async (c) => {
     });
 
     if (!user) {
-      return c.json({ message: "User not found" }, 401);
+      return c.json(
+        { code: ERROR_CODES.UNAUTHORIZED, message: "User not found" },
+        401,
+      );
     }
 
     if (user.deletedAt) {
@@ -313,13 +325,19 @@ authRouter.post("/refresh", refreshLimiter, async (c) => {
           "[Auth] Refresh token reuse detected — failed to revoke active tokens",
         );
       }
-      return c.json({ message: "Invalid refresh token" }, 401);
+      return c.json(
+        { code: ERROR_CODES.UNAUTHORIZED, message: "Invalid refresh token" },
+        401,
+      );
     }
 
     // Ошибки ВАЛИДАЦИИ токена (невалидный формат/подпись/TTL, отозванный
     // или уже ротированный токен) — вина клиента → 401.
     if (error instanceof TokenValidationError) {
-      return c.json({ message: "Invalid refresh token" }, 401);
+      return c.json(
+        { code: ERROR_CODES.UNAUTHORIZED, message: "Invalid refresh token" },
+        401,
+      );
     }
 
     // Инфраструктурные сбои (Prisma/доступ к БД, подписание) НЕ обязаны

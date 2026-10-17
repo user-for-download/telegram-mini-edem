@@ -107,7 +107,10 @@ feedbackRouter.post("/appeal", appealLimiter, async (c) => {
   // Display-поля (имя/аватар из initData) игнорируются.
   const { isValid, telegramUserId } = verifyTelegramInitData(payload.initData);
   if (!isValid || telegramUserId === undefined) {
-    return c.json({ message: "Invalid or expired signature" }, 401);
+    return c.json(
+      { code: ERROR_CODES.UNAUTHORIZED, message: "Invalid or expired signature" },
+      401,
+    );
   }
   const user = await db.user.findUnique({ where: { telegramUserId } });
   if (!user) {

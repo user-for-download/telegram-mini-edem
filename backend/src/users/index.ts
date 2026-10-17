@@ -298,7 +298,7 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
 usersRouter.get("/me", requireUser, async (c) => {
   const user = c.get("user");
 
-  return c.json(serializeUser(user, { includePhone: true }));
+  return c.json(serializeUser(user, { includePhone: true, includePlate: true }));
 });
 
 usersRouter.patch(
@@ -311,7 +311,10 @@ usersRouter.patch(
     const parseResult = updateNotificationSettingsSchema.safeParse(body);
 
     if (!parseResult.success) {
-      return c.json({ message: "Invalid payload" }, 400);
+      return c.json(
+        { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid payload" },
+        400,
+      );
     }
 
     const updated = await db.user.update({
@@ -323,7 +326,7 @@ usersRouter.patch(
       include: { car: true },
     });
 
-    return c.json(serializeUser(updated, { includePhone: true }));
+    return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
   },
 );
 
@@ -343,7 +346,10 @@ usersRouter.post("/me/onboarding", requireUser, mutationLimiter, async (c) => {
   const parseResult = completeOnboardingBodySchema.safeParse(body);
 
   if (!parseResult.success) {
-    return c.json({ message: "Invalid payload" }, 400);
+    return c.json(
+      { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid payload" },
+      400,
+    );
   }
 
   const updated = await db.user.update({
@@ -355,7 +361,7 @@ usersRouter.post("/me/onboarding", requireUser, mutationLimiter, async (c) => {
     include: { car: true },
   });
 
-  return c.json(serializeUser(updated, { includePhone: true }));
+  return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
 });
 
 /**
@@ -397,7 +403,7 @@ usersRouter.patch("/me", requireUser, profileUpdateLimiter, async (c) => {
     },
   });
 
-  return c.json(serializeUser(updated, { includePhone: true }));
+  return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
 });
 
 async function upsertCar(c: Context<AuthEnv>) {
@@ -432,7 +438,7 @@ async function upsertCar(c: Context<AuthEnv>) {
     },
   });
 
-  return c.json(serializeUser(updated, { includePhone: true }));
+  return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
 }
 
 /**
@@ -506,7 +512,7 @@ usersRouter.delete("/me/car", requireUser, profileUpdateLimiter, async (c) => {
     );
   }
 
-  return c.json(serializeUser(updated, { includePhone: true }));
+  return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
 });
 
 /**
@@ -523,7 +529,10 @@ usersRouter.get("/:id", publicReadLimiter, async (c) => {
   });
 
   if (!user) {
-    return c.json({ message: "User not found" }, 404);
+    return c.json(
+      { code: ERROR_CODES.NOT_FOUND, message: "User not found" },
+      404,
+    );
   }
 
   return c.json(serializePublicUser(user));

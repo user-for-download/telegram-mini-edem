@@ -141,6 +141,6 @@ cancelRouter.patch("/:id/cancel", cancelBookingLimiter, async (c) => {
     );
     reportServerError(error, c.req.method, c.req.path);
 
-    return c.json({ message: "Internal server error" }, 500);
+    return c.json({ code: ERROR_CODES.INTERNAL_ERROR, message: "Internal server error" }, 500);
   }
 });

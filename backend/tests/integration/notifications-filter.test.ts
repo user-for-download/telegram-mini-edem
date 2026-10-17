@@ -434,7 +434,7 @@ describe("PATCH /notifications/:id/read — scoped updateMany + read-back", () =
 
     const { status, body } = await patchRead(stranger.accessToken, row.id);
     expect(status).toBe(404);
-    expect(body).toEqual({ message: "Not found" });
+    expect(body).toEqual({ code: "NOT_FOUND", message: "Not found" });
 
     const after = await db.notification.findUnique({ where: { id: row.id } });
     expect(after?.isRead).toBe(false);
@@ -449,6 +449,6 @@ describe("PATCH /notifications/:id/read — scoped updateMany + read-back", () =
 
     const { status, body } = await patchRead(accessToken, "not-a-uuid");
     expect(status).toBe(404);
-    expect(body).toEqual({ message: "Not found" });
+    expect(body).toEqual({ code: "NOT_FOUND", message: "Not found" });
   });
 });
