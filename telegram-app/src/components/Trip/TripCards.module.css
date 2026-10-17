@@ -57,12 +57,16 @@
 
 /* Имя пассажира — кнопка шторки профиля. UA-сброс нативной кнопки:
    иначе Arial 13.33px, серый фон и рамка ломают вид строки заявки.
-   min-height 44px: строка из одного имени давала ~20px — ниже даже
-   24×24 WCAG 2.5.8 AA (M6 аудита). */
+ *
+ * Тап-таргет 44px (WCAG 2.5.5 AAA) держит ПСЕВДОЭЛЕМЕНТ, а не min-height:
+ * min-height растягивал кнопку в потоке, и между ФИО и строкой
+ * «место №N · комментарий» появлялась пустая полоса (~20px). Теперь кнопка
+ * занимает высоту строки текста, а невидимая зона 44px центрирована на ней;
+ * клики по псевдоэлементу принадлежат самой кнопке (это её часть). */
 .requestPerson.requestPerson {
+  position: relative;
   display: flex;
   align-items: center;
-  min-height: 44px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -73,6 +77,16 @@
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
+}
+
+.requestPerson.requestPerson::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
 }
 
 /* Фокус виден: имя пассажира открывается и с клавиатуры. */

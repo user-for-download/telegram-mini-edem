@@ -174,6 +174,23 @@ describe("деструктивный тон один: --app-danger, а не сы
   });
 });
 
+describe("имя пассажира: тап-таргет без отступа до «место/комментарий»", () => {
+  it("44px держит ::after, а не min-height (иначе полоса между ФИО и subtitle)", () => {
+    const css = readSrc("components/Trip/TripCards.module.css");
+    const rule =
+      css.match(/\.requestPerson\.requestPerson\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(rule).toContain("position: relative");
+    // min-height в потоке растягивал кнопку и создавал пустую полосу.
+    expect(rule).not.toContain("min-height");
+
+    const hitArea =
+      css.match(/\.requestPerson\.requestPerson::after\s*\{([^}]*)\}/)?.[1] ??
+      "";
+    expect(hitArea).toContain("position: absolute");
+    expect(hitArea).toContain("height: 44px");
+  });
+});
+
 describe("механизм: MIN_TARGET доходит до DOM", () => {
   it("ConfirmPopup с MIN_TARGET выставляет триггеру data-tap-target=44", () => {
     const withTarget = renderToString(
