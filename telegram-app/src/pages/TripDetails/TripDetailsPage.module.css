@@ -97,7 +97,7 @@
 
 /* Фокус виден: карточка водителя открывается и с клавиатуры. */
 .driverOpen:focus-visible {
-  outline: 2px solid var(--tgui--link_color);
+  outline: var(--app-focus-width) solid var(--app-info);
   outline-offset: 2px;
   border-radius: var(--app-radius-md);
 }
@@ -195,12 +195,6 @@
   background: var(--tgui--tertiary_bg_color);
 }
 
-/* Заголовок внутри плашки комментария — мета-роль, не второй заголовок. */
-.noteTitle.noteTitle {
-  color: var(--app-muted);
-  font-weight: 600;
-}
-
 /* Цитата внутри карточки: у Blockquote снимаем вторую поверхность —
  * подложку, скругление и правый отступ под иконку (иконку не рендерим),
  * оставляя только смысловую левую полосу. Иначе на tertiary появлялась
@@ -233,19 +227,6 @@
   margin-top: var(--app-space-2xs);
   padding-top: var(--app-space-sm);
   border-top: 1px solid var(--tgui--outline);
-}
-
-/* Заголовок группы («Место», «Управление поездкой»): 13/600 muted —
- * это НАДпись над группой, а не ещё один заголовок экрана. Раньше он шёл
- * Text 17/600 и спорил с названием поездки. */
-.sectionTitle.sectionTitle {
-  color: var(--app-muted);
-  font-weight: 600;
-}
-
-/* Подзаголовок «Место» над сеткой мест (было mb-2). */
-.subtitle {
-  margin-bottom: var(--app-space-xs);
 }
 
 /* ── Выбор места ───────────────────────────────────────────────────── */

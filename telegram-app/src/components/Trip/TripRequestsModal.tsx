@@ -1,6 +1,7 @@
 import { memo, useMemo } from "react";
 import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
+import { GroupLabel } from "@/ui/GroupLabel";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { BTN_ROW, GROW, MIN_TARGET, SHRINK, TRUNCATE } from "@/ui/classes";
@@ -321,9 +322,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         )}
         {pending.length > 0 && (
           <Stack aria-live="polite" aria-label="Ожидают решения">
-            <Caption weight="2" Component="span" className={styles.groupLabel}>
-              {`Ожидают решения (${pending.length})`}
-            </Caption>
+            <GroupLabel Component="span">{`Ожидают решения (${pending.length})`}</GroupLabel>
             {pending.map((booking) => (
               <PendingBookingCard
                 key={booking.id}
@@ -355,9 +354,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         )}
         {confirmed.length > 0 && (
           <Stack aria-label="Подтверждены">
-            <Caption weight="2" Component="span" className={styles.groupLabel}>
-              {`Подтверждены (${confirmed.length})`}
-            </Caption>
+            <GroupLabel Component="span">{`Подтверждены (${confirmed.length})`}</GroupLabel>
             {confirmed.map((booking) => (
               <ConfirmedBookingCard key={booking.id} booking={booking} />
             ))}
@@ -365,9 +362,7 @@ export const TripRequestsBody = memo(function TripRequestsBody({
         )}
         {closed.length > 0 && (
           <Stack aria-label="Закрытые заявки">
-            <Caption weight="2" Component="span" className={styles.groupLabel}>
-              {`Закрытые (${closed.length})`}
-            </Caption>
+            <GroupLabel Component="span">{`Закрытые (${closed.length})`}</GroupLabel>
             {closed.map((booking) => (
               <ClosedBookingCard key={booking.id} booking={booking} />
             ))}

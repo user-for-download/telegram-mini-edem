@@ -1,5 +1,6 @@
 import { Avatar, Caption, Subheadline } from "@telegram-apps/telegram-ui";
 import { Cell } from "@/ui/Cell";
+import { GroupLabel } from "@/ui/GroupLabel";
 import { STATIC_CELL } from "@/ui/classes";
 import { DriverTripRequests } from "@/components/Trip/DriverTripRequests";
 import { useTripBookingsQuery } from "@/queries/useBookingsQuery";
@@ -49,9 +50,7 @@ export function TripPassengers({
       )}
 
       {pending > 0 && (
-        <Caption weight="2" Component="p" className={styles.passengersGroup}>
-          {`Ожидают решения (${pending})`}
-        </Caption>
+        <GroupLabel>{`Ожидают решения (${pending})`}</GroupLabel>
       )}
 
       {/* Ожидающие решения — ровно те же строки, что в карточке поездки:
@@ -61,13 +60,7 @@ export function TripPassengers({
 
       {confirmed.length > 0 && (
         <>
-          <Caption
-            weight="2"
-            Component="p"
-            className={styles.passengersGroup}
-          >
-            {`В поездке (${confirmed.length})`}
-          </Caption>
+          <GroupLabel>{`В поездке (${confirmed.length})`}</GroupLabel>
           {confirmed.map((booking) => (
             <Cell
               key={booking.id}

@@ -113,11 +113,15 @@ describe("действия водителя: одна главная кнопк�
     expect(driverTsx).toMatch(/label="Отменить поездку"[\s\S]*?mode="plain"/);
   });
 
-  it("заголовок группы — мета 13/600, а не второй заголовок экрана", () => {
-    expect(driverTsx).toContain("styles.sectionTitle");
-    expect(ruleBody(pageCss, ".sectionTitle.sectionTitle")).toMatch(
+  it("заголовок группы — общий ui/GroupLabel, а не локальная копия", () => {
+    expect(driverTsx).toContain("GroupLabel");
+    expect(driverTsx).not.toContain("styles.sectionTitle");
+    // Одна реализация роли: 13/600 + muted (`ui/GroupLabel.module.css`).
+    const groupCss = readSrc("ui/GroupLabel.module.css");
+    expect(ruleBody(groupCss, ".label.label")).toMatch(
       /color:\s*var\(--app-muted\)/,
     );
+    expect(ruleBody(groupCss, ".label.label")).toMatch(/font-weight:\s*600/);
   });
 });
 

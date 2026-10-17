@@ -163,7 +163,9 @@ describe("NextTripBanner: видимый индикатор фокуса (стр
     // jsdom не считает каскад — поэтому читаем исходник модуля.
     const body = ruleBody(bannerCss, ".banner\\.banner:focus-visible");
     expect(body, "правило :focus-visible не найдено").not.toBeNull();
-    expect(body ?? "", "outline не объявлен").toMatch(/outline:\s*2px solid/);
+    expect(body ?? "", "outline не объявлен").toMatch(
+      /outline:\s*var\(--app-focus-width\) solid var\(--app-info\)/,
+    );
     expect(body, "нет отступа кольца от поверхности").toMatch(
       /outline-offset:\s*2px/,
     );
@@ -171,9 +173,10 @@ describe("NextTripBanner: видимый индикатор фокуса (стр
 
   it("рецепт совпадает с соседними открывающими поверхностями", () => {
     // Канон репозитория (.open / .author / .rowInfo / .requestPerson):
-    // 2px solid --tgui--link_color, outline-offset 2px, радиус по токену.
-    // Сверяем с .open.open карточки поездки — если тот поменяет рецепт,
-    // упадёт здесь, а не «тихо разъедется визуально».
+    // кольцо из общего токена --app-focus-width и смыслового --app-info
+    // (реестр #39: сырой --tgui--link_color минует --app-* и не проходит AA),
+    // outline-offset 2px, радиус по токену. Сверяем с .open.open карточки
+    // поездки — если тот поменяет рецепт, упадёт здесь.
     const card = declarations(
       ruleBody(cardCss, ".open\\.open:focus-visible") ?? "",
     );
@@ -181,7 +184,7 @@ describe("NextTripBanner: видимый индикатор фокуса (стр
       ruleBody(bannerCss, ".banner\\.banner:focus-visible") ?? "",
     );
     for (const expected of [
-      "outline: 2px solid var(--tgui--link_color)",
+      "outline: var(--app-focus-width) solid var(--app-info)",
       "outline-offset: 2px",
     ]) {
       expect(card, `у соседа нет «${expected}»`).toContain(expected);

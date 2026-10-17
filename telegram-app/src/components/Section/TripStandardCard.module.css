@@ -55,7 +55,7 @@
 /* Клавиатурный фокус обязан быть виден: кнопка — основной способ открыть
    поездку с клавиатуры, и без кольца её не найти. */
 .open.open:focus-visible {
-  outline: 2px solid var(--tgui--link_color);
+  outline: var(--app-focus-width) solid var(--app-info);
   outline-offset: 2px;
   border-radius: var(--app-card-radius);
 }
@@ -259,7 +259,7 @@
 
 /* Фокус виден: с клавиатуры персону тоже надо открыть. */
 .personButton.personButton:focus-visible {
-  outline: 2px solid var(--tgui--link_color);
+  outline: var(--app-focus-width) solid var(--app-info);
   outline-offset: -2px;
   border-radius: var(--app-card-radius);
 }

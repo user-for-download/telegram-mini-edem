@@ -47,7 +47,7 @@
 }
 
 .star:has(.input:focus-visible) .icon {
-  outline: 2px solid var(--tgui--link_color, #2481cc);
+  outline: var(--app-focus-width) solid var(--app-info);
   outline-offset: 2px;
   border-radius: var(--app-radius-xs);
 }

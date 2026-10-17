@@ -6,6 +6,7 @@ import { useToast } from "@/components/Toast/ToastProvider";
 import { MIN_TARGET } from "@/ui/classes";
 import { EditTripForm } from "@/components/Trip/EditTripForm";
 import { TripPassengers } from "@/components/Trip/TripPassengers";
+import { GroupLabel } from "@/ui/GroupLabel";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import {
   useCancelTripMutation,
@@ -95,9 +96,7 @@ export function DriverPanel({
       <div className={styles.section}>
       {/* Надпись над группой действий, а не второй заголовок экрана:
           раньше это был Text 17/600, и он спорил с названием поездки. */}
-      <Caption weight="2" Component="div" className={styles.sectionTitle}>
-        Управление поездкой
-      </Caption>
+      <GroupLabel Component="div">Управление поездкой</GroupLabel>
       {/* role="status" — НА САМОМ узле с текстом (MEMORY.md:485), не на
           обёртке: строка появляется в DOM уже с готовым текстом и остаётся
           после того, как тост (3,2 с) скроется, то есть это и есть постоянная

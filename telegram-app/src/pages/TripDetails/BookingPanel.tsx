@@ -5,6 +5,7 @@ import { Field } from "@/ui/Field";
 import { Notice } from "@/ui/Notice";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
+import { GroupLabel } from "@/ui/GroupLabel";
 import { MIN_TARGET } from "@/ui/classes";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
@@ -107,13 +108,7 @@ export function BookingPanel({
       {canBook && (
         <div className={styles.sectionLoose}>
           <div role="group" aria-label="Выбор места">
-            <Caption
-              weight="2"
-              Component="p"
-              className={styles.sectionTitle}
-            >
-              Выберите место
-            </Caption>
+            <GroupLabel>Выберите место</GroupLabel>
             <div className={styles.seatGrid}>
               {Array.from(
                 { length: item.seatsTotal },

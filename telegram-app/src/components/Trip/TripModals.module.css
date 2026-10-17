@@ -13,11 +13,6 @@
   padding-bottom: var(--app-space-lg);
 }
 
-/* Заголовок группы заявок («Ожидают решения (N)»): кегль с бока 4px. */
-.groupLabel {
-  padding: 0 var(--app-space-2xs);
-}
-
 /* Карточка: раскладка поверх ui/Card (поверхность и паддинг 16 — у Card),
  * колонка с зазором 12px. */
 .card {
@@ -65,7 +60,7 @@
 }
 
 .rowInfo:focus-visible {
-  outline: 2px solid var(--tgui--link_color);
+  outline: var(--app-focus-width) solid var(--app-info);
   outline-offset: 2px;
   border-radius: var(--app-radius-sm);
 }

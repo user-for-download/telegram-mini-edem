@@ -90,7 +90,8 @@ describe("фасад: смысловые variant указывают на реа�
       variants: {
         secondary: <IconButton variant="secondary" aria-label="д" />,
         ghost: <IconButton variant="ghost" aria-label="д" />,
-        muted: <IconButton variant="muted" aria-label="д" />,
+        gray: <IconButton variant="gray" aria-label="д" />,
+        outline: <IconButton variant="outline" aria-label="д" />,
       },
     },
     {
@@ -181,6 +182,18 @@ describe("фасад: variant указывает на ИМЕННО тот реж
       expectedMode: "plain",
       ours: <IconButton variant="ghost" aria-label="д" />,
       kit: <TguiIconButton mode="plain" aria-label="д" />,
+    },
+    {
+      name: "IconButton.gray",
+      expectedMode: "gray",
+      ours: <IconButton variant="gray" aria-label="д" />,
+      kit: <TguiIconButton mode="gray" aria-label="д" />,
+    },
+    {
+      name: "IconButton.outline",
+      expectedMode: "outline",
+      ours: <IconButton variant="outline" aria-label="д" />,
+      kit: <TguiIconButton mode="outline" aria-label="д" />,
     },
     {
       name: "Chip.quiet",

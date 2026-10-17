@@ -1,5 +1,6 @@
 import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { Blockquote } from "@/ui/Blockquote";
+import { GroupLabel } from "@/ui/GroupLabel";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
 import { Stack } from "@/ui/Stack";
@@ -140,7 +141,7 @@ export function TripHero({
           {item.driver.phone && isConfirmedBooking ? (
             <IconButton
               size="m"
-              variant="muted"
+              variant="gray"
               aria-label={`Позвонить водителю: ${item.driver.phone}`}
               title={item.driver.phone}
               onClick={() => {
@@ -155,7 +156,7 @@ export function TripHero({
             !isConfirmedBooking && (
               <IconButton
                 size="m"
-                variant="muted"
+                variant="gray"
                 disabled
                 title="Телефон водителя доступен после подтверждения"
                 aria-label="Телефон водителя доступен после подтверждения"
@@ -216,9 +217,7 @@ export function TripHero({
 
       {item.comment && (
         <div className={styles.noteCard}>
-          <Caption weight="2" Component="span" className={styles.noteTitle}>
-            Комментарий водителя
-          </Caption>
+          <GroupLabel Component="span">Комментарий водителя</GroupLabel>
           {/* Комментарий — свободный текст человека (контракт допускает 500
               знаков, dto/trip.dto.ts), поэтому слова водителя идут через
               ui/Blockquote, как жалоба, ответ модерации и «О себе»: переносы,

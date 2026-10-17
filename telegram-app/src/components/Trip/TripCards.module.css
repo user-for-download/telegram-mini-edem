@@ -42,14 +42,6 @@
   gap: var(--app-space-xs);
 }
 
-/* Подпись группы («В поездке (N)») — мета-роль, 13/600 и приглушённый
-   цвет: это надпись над списком, а не ещё один заголовок. */
-.passengersGroup.passengersGroup {
-  margin-top: var(--app-space-2xs);
-  color: var(--app-muted);
-  font-weight: 600;
-}
-
 /* Служебные подписи списка: пусто/ошибка. */
 .passengersHint.passengersHint {
   color: var(--app-muted);
@@ -163,7 +155,7 @@
 
 /* Фокус виден: имя пассажира открывается и с клавиатуры. */
 .requestPerson.requestPerson:focus-visible {
-  outline: 2px solid var(--tgui--link_color);
+  outline: var(--app-focus-width) solid var(--app-info);
   outline-offset: 2px;
   border-radius: var(--app-radius-sm);
 }

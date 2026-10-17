@@ -1,12 +1,13 @@
 /* Единый чип приложения (ui/Chip): одна роль — одно правило.
  *
- * — виден фокус клавиатуры (outline 2px --app-info, только :focus-visible —
+ * — виден фокус клавиатуры (общий рецепт --app-focus-width/--app-info, только
+ *   :focus-visible —
  *   канон WCAG 2.4.7);
  * — тональные чипы-теги (tone="accent") при aria-pressed=true становятся
  *   тонированной плашкой с тоном --app-info (реестр #38). */
 
 .chip:focus-visible {
-  outline: 2px solid var(--app-info);
+  outline: var(--app-focus-width) solid var(--app-info);
   outline-offset: 2px;
 }
 
