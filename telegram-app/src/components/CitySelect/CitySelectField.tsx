@@ -46,6 +46,8 @@ interface CitySelectFieldProps {
    * обязательность меняет только объявление, а не набор `<option>`.
    */
   required?: boolean;
+  /** Компактное поле (поиск/фильтры): ~50px вместо 84px, см. ui/Field. */
+  compact?: boolean;
 }
 
 export function CitySelectField({
@@ -59,6 +61,7 @@ export function CitySelectField({
   error,
   disabled = false,
   required = false,
+  compact = false,
 }: CitySelectFieldProps) {
   // Подпись: Field даёт скрытый label (имя для скринридера на всех
   // платформах) и header на контрол — видимую подпись base; связка
@@ -70,7 +73,13 @@ export function CitySelectField({
   // атрибут СТАТИЧЕН и разойтись ему не с чем — в отличие от aria-checked у
   // Switch (MEMORY.md §18), который выводит браузер из меняющегося checked.
   return (
-    <Field label={label} id={id} className={styles.field} error={error}>
+    <Field
+      label={label}
+      id={id}
+      className={styles.field}
+      compact={compact}
+      error={error}
+    >
       {(field) => (
         <Select
           {...field}

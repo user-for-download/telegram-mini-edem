@@ -56,6 +56,7 @@ export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
               placeholder="Город или село отправления"
               onChange={setFromCityId}
               excludeId={toCityId}
+              compact
             />
             <CitySelectField
               id="home-to"
@@ -65,6 +66,7 @@ export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
               placeholder="Город или село назначения"
               onChange={setToCityId}
               excludeId={fromCityId}
+              compact
             />
           </div>
           <Button

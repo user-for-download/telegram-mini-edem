@@ -5,6 +5,7 @@ import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
 import { useInfiniteMyTripsQuery } from "@/queries/useTripsQuery";
 import { formatRelativeDeparture } from "@/utils/bookingSplit";
 import { haptic } from "@/utils/haptics";
+import { plural } from "@/utils/plural";
 import styles from "./NextTripBanner.module.css";
 
 interface NextTripSource {
@@ -29,7 +30,12 @@ export interface NextTrip extends NextTripSource {
  * Чистая: покрыта юнитом без моков запросов.
  */
 export function pickNextTrip(
-  bookings: Array<{ status: string; scope?: string; seat: number; trip: NextTripSource }>,
+  bookings: Array<{
+    status: string;
+    scope?: string;
+    seat: number;
+    trip: NextTripSource;
+  }>,
   driverTrips: NextTripSource[],
   now: number = Date.now(),
 ): NextTrip | null {
@@ -73,7 +79,8 @@ export function NextTripBanner() {
   if (bookings.isLoading || driverTrips.isLoading) return null;
   const next = pickNextTrip(
     (bookings.data ?? []) as Parameters<typeof pickNextTrip>[0],
-    (driverTrips.data?.pages.flatMap((page) => page.items) ?? []) as NextTripSource[],
+    (driverTrips.data?.pages.flatMap((page) => page.items) ??
+      []) as NextTripSource[],
   );
   if (!next) return null;
 
@@ -83,7 +90,12 @@ export function NextTripBanner() {
   const seatInfo =
     next.role === "passenger" && next.seat !== undefined
       ? `место ${next.seat}`
-      : `свободно ${next.seatsAvailable}`;
+      : // «свободно 0» читается как опечатка: ноль мест — это «мест нет».
+        // С нуля же берём склонение (1 место / 2 места / 5 мест) вместо
+        // голого числа, как в карточке поездки.
+        next.seatsAvailable === 0
+        ? "мест нет"
+        : `${next.seatsAvailable} ${plural(next.seatsAvailable, "место", "места", "мест")}`;
   const label = `${next.fromCity} — ${next.toCity}, ${when}`;
 
   const go = () => {
@@ -104,7 +116,9 @@ export function NextTripBanner() {
           )}
         </IconContainer>
       }
-      callout={next.role === "driver" ? "Едете как водитель" : "Едете как пассажир"}
+      callout={
+        next.role === "driver" ? "Едете как водитель" : "Едете как пассажир"
+      }
       header={`${next.fromCity} → ${next.toCity}`}
       description={`${when} · ${next.price} ₽ · ${seatInfo}`}
       role="button"

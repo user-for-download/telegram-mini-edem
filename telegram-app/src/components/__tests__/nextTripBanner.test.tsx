@@ -126,7 +126,26 @@ describe("NextTripBanner", () => {
     );
     const html = render(<NextTripBanner />);
     expect(html).toContain("Едете как водитель");
-    expect(html).toContain("свободно 2");
+    expect(html).toContain("2 места");
+  });
+
+  it("мест нет — словами, а не «свободно 0»", () => {
+    // Заполненная поездка попадала на главную с подписью «свободно 0»:
+    // ноль рядом со словом «свободно» читается как опечатка, а ноль мест —
+    // это факт, а не «свободно ноль мест».
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({ data: pages([trip({ id: "td", seatsAvailable: 0 })]) }),
+    );
+    const html = render(<NextTripBanner />);
+    expect(html).toContain("мест нет");
+    expect(html).not.toContain("свободно 0");
+  });
+
+  it("одно место склоняется как «1 место», а не «1 места»", () => {
+    mockUseInfiniteMyTrips.mockReturnValue(
+      queryState({ data: pages([trip({ id: "td", seatsAvailable: 1 })]) }),
+    );
+    expect(render(<NextTripBanner />)).toContain("1 место");
   });
 
   it("показывает московское время, а не UTC-срез ISO", () => {

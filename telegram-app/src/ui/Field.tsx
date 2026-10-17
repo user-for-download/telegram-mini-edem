@@ -15,8 +15,10 @@ export interface FieldControl {
   "aria-invalid"?: boolean;
 }
 
-export interface FieldProps
-  extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
+export interface FieldProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "children"
+> {
   /** Текст лейбла: он же доступное имя поля. Один источник. */
   label: string;
   /** id нативного контрола (htmlFor ↔ id). */
@@ -29,6 +31,16 @@ export interface FieldProps
   error?: string | null;
   /** id узла ошибки; по умолчанию `${id}-error`. */
   errorId?: string;
+  /**
+   * Компактный вариант для поиска/фильтров: снимает резерв кита под его
+   * header (подпись рисуем мы) — поле становится ~50px вместо 84px.
+   *
+   * Не по умолчанию: в формах (создание поездки, профиль) высокое поле —
+   * норма клиента, а на первом экране два таких поля съедали треть
+   * карточки. Включается только потребителем, который знает, что это
+   * фильтр, а не форма.
+   */
+  compact?: boolean;
   children: (control: FieldControl) => ReactNode;
 }
 
@@ -54,6 +66,7 @@ export function Field({
   id,
   error,
   errorId,
+  compact = false,
   className,
   children,
   ...rest
@@ -73,8 +86,15 @@ export function Field({
       // Свой класс фасада — ALWAYS, а не только когда потребитель что-то
       // передал: по нему живут правила подписи и подложки
       // (.fieldLabel, .fieldRoot > div > label в ui.module.css).
-      // Без класса правила мёртвые.
-      className={className ? `${styles.fieldRoot} ${className}` : styles.fieldRoot}
+      // Без класса правила мёртвые. `.fieldCompact` — тот же резон: он
+      // снимает китовый резерв под неиспользуемый header.
+      className={[
+        styles.fieldRoot,
+        compact ? styles.fieldCompact : undefined,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <label htmlFor={id} className={styles.fieldLabel}>
         {label}

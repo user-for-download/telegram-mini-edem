@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 import { VisuallyHidden } from "@telegram-apps/telegram-ui";
-import { Button } from "@/ui/Button";
-import { EmptyState } from "@/ui/EmptyState";
-import { PlusCircle, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { NextTripBanner } from "@/components/Section/NextTripBanner";
 import { RideRequestFeedSection } from "@/components/Section/RideRequestFeedSection";
@@ -16,6 +13,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useModalBack } from "@/utils/modalBack";
 import { haptic } from "@/utils/haptics";
 import { Page } from "@/ui/Page";
+import { HomeActionsSection } from "@/components/Section/HomeActionsSection";
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -107,32 +105,11 @@ export function HomePage() {
       <TripCountersSection />
       <NextTripBanner />
       <TripSearchSection onSearch={goToSearch} />
+      {/* Действия — сразу под поиском: это вторая половина главного
+          сценария («не нашёл — создай/попроси»). Раньше здесь стояли два
+          промо-EmptyState на ~460px, теперь компактные строки. */}
+      <HomeActionsSection onCreateTrip={goToCreate} onFindRide={openCreate} />
       <RideRequestFeedSection />
-      <EmptyState
-        header="Едете на машине?"
-        description="Найдите попутчиков в дорогу по области, чтобы разделить путь и совместные расходы"
-        action={
-          <Button
-            size="l"
-            before={<PlusCircle size={16} />}
-            onClick={goToCreate}
-          >
-            Создать поездку
-          </Button>
-        }
-      />
-      {/* Пассажирский CTA — отдельным блоком, а не второй кнопкой в
-          водительском: «Едете на машине?» — про водителя, и пассажиру он
-          враньё. Свой заголовок и своё действие у каждой роли. */}
-      <EmptyState
-        header="Нужна попутка?"
-        description="Оставьте заявку с маршрутом и датой — водители с подходящей поездкой её увидят"
-        action={
-          <Button size="l" before={<Users size={16} />} onClick={openCreate}>
-            Ищу попутку
-          </Button>
-        }
-      />
       <VehicleModal open={vehicleOpen} onClose={closeVehicle} />
       <RideRequestCreateModal
         open={createOpen}
