@@ -10,13 +10,13 @@ import { IconButton } from "@/ui/IconButton";
 import { ICON_TARGET } from "@/ui/classes";
 import { Notice } from "@/ui/Notice";
 
-import { Armchair, Check, X } from "lucide-react";
+import { Armchair, Check, Star, X } from "lucide-react";
 import { haptic } from "@/utils/haptics";
 import { isNativeConfirmAvailable, nativeConfirm } from "@/utils/telegram-adapter";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
-import { formatRating } from "@/helpers/rating";
+import { formatRating, hasRating } from "@/helpers/rating";
 import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
 import {
   useDriverRequestsQuery,
@@ -192,30 +192,65 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
               size={40}
               src={booking.passenger.avatar}
               acronym={booking.passenger.name.slice(0, 2).toUpperCase()}
-            >
-              {/* Без отзывов — прочерк «—», а не мнимое 5.0 нового
-                  пассажира: контракт отдаёт rating обязательным числом
-                  (app.md §5, formatRating). */}
-              <Avatar.Badge mode="white" type="number">
-                {formatRating(
-                  booking.passenger.rating,
-                  booking.passenger.reviewsCount,
-                )}
-              </Avatar.Badge>
-            </Avatar>
+            />
           }
           subtitle={
             <Caption
               level="1"
               Component="p"
-              weight="2"
+              weight="3"
               className={styles.requestSubtitle}
             >
-              <span className={styles.seat}>
-                <Armchair size={14} aria-hidden />
-                {`место №${booking.seat}`}
+              {/* Мета одной строкой в inline-flex: рейтинг · место.
+                  Флекс не даёт разделителю оторваться от соседа (обычный
+                  текст переносил « · » в конец строки), а комментарий уходит
+                  следующим блоком — он реплика пассажира, а не ещё один
+                  факт в перечислении. */}
+              <span className={styles.requestMeta}>
+                <span
+                  className={styles.requestRating}
+                  role="img"
+                  aria-label={
+                    hasRating(
+                      booking.passenger.rating,
+                      booking.passenger.reviewsCount,
+                    )
+                      ? `Рейтинг ${formatRating(
+                          booking.passenger.rating,
+                          booking.passenger.reviewsCount,
+                        )} из 5`
+                      : "Рейтинг пока отсутствует"
+                  }
+                >
+                  {hasRating(
+                    booking.passenger.rating,
+                    booking.passenger.reviewsCount,
+                  ) && (
+                    <Star
+                      size={11}
+                      fill="currentColor"
+                      strokeWidth={0}
+                      aria-hidden
+                    />
+                  )}
+                  {formatRating(
+                    booking.passenger.rating,
+                    booking.passenger.reviewsCount,
+                  )}
+                </span>
+                <span className={styles.metaSep} aria-hidden>
+                  ·
+                </span>
+                <span className={styles.seat}>
+                  <Armchair size={14} aria-hidden />
+                  {`место №${booking.seat}`}
+                </span>
               </span>
-              {booking.comment?.trim() ? ` · «${booking.comment.trim()}»` : ""}
+              {booking.comment?.trim() ? (
+                <span className={styles.comment}>
+                  {`«${booking.comment.trim()}»`}
+                </span>
+              ) : null}
             </Caption>
           }
           after={
@@ -269,7 +304,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
               });
             }}
           >
-            <Subheadline level="2" Component="p" weight="1">
+            <Subheadline level="2" Component="span" weight="2">
               {booking.passenger.name}
             </Subheadline>
           </button>

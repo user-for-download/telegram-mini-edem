@@ -14,16 +14,31 @@
 }
 
 .standardHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
+
+/* Та же зона, что у живой шапки: «когда + статус» в строку. */
+.headMeta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--app-space-sm);
+  gap: var(--app-space-xs);
+  min-width: 0;
 }
 
 .standardRoute {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-xs);
+  gap: var(--app-space-sm);
+}
+
+/* Пункт маршрута: город + адрес, как у живого рельса. */
+.standardStop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2xs);
 }
 
 .standardPerson {

@@ -1,8 +1,18 @@
 /*
- * Стандарт карточки поездки (вкладка «Поездки», активные): шапка
- * дата — статус — цена, свой маршрут, Cell персоны, слот действий.
+ * Стандарт карточки поездки (вкладка «Поездки», лента, брони): шапка
+ * «когда + статус — цена», маршрут-рельс, Cell персоны, слот действий.
  * Поверхность — ui/Card (единый рецепт: radius 16, hairline, xs-тень,
  * фон секции).
+ *
+ * Сетка: ОДНА внутренняя полоса 16px на все блоки (шапка, маршрут,
+ * персона, футер). Раньше шапка и маршрут жили на 16px, а китовый Cell —
+ * на своих 24px, из-за чего аватар, город и дата начинались на трёх
+ * разных вертикалях. Теперь левый край карточки один.
+ *
+ * Типографика — тише: имена/подписи были 700/600 и перекрикивали друг
+ * друга (пять «жирных» строк в карточке). Осталось два акцента —
+ * название города и цена; всё мета — 13px/400 приглушённым тоном.
+ *
  * Свои селекторы удвоены — стили кита подключены позже своих,
  * !important не используем, хэш-классы кита не используем.
  */
@@ -10,9 +20,9 @@
 .card.card {
   display: block;
   /* Внешние отступы задаёт лента (padding + gap), у карточки их нет;
-     паддинг тоже нулевой (flush) — внутренние блоки держат 16px сами. */
+     внутреннюю полосу держат сами блоки (16px), поэтому паддинг нулевой. */
   margin: 0;
-  padding: var(--app-space-2xs) 0;
+  padding: 0;
   cursor: pointer;
 }
 
@@ -50,16 +60,30 @@
   border-radius: var(--app-card-radius);
 }
 
-/* Шапка: дата слева — статус в центре — цена справа, всё по центру. */
+/* Шапка: слева «когда» + плашка статуса (переносятся на вторую строку,
+   если плашка длинная), справа цена на уровне даты. Сетка, а не
+   space-between трёх равных: с тремя элементами плашка уезжала в середину
+   с рваными зазорами, а длинная («Забронировано: 1/3») выталкивала цену. */
 .head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--app-space-sm);
-  padding: 2px var(--app-space-md) 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "meta price";
+  align-items: baseline;
+  column-gap: var(--app-space-sm);
+  padding: 14px var(--app-space-md) var(--app-space-xs);
 }
 
-/* Дата с иконкой-календарём. */
+.headMeta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--app-space-xs);
+  min-width: 0;
+}
+
+/* Дата с иконкой-календарём: мета-роль (13–15px, muted), город ниже —
+   главный герой карточки. */
 .when {
   display: inline-flex;
   align-items: center;
@@ -68,95 +92,106 @@
   white-space: nowrap;
 }
 
-.price.price {
-  font-size: 16px;
-  line-height: 1.2;
-  color: var(--tgui--link_color);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.seats.seats {
+.status {
   display: inline-flex;
   align-items: center;
-  color: var(--tgui--subtitle_text_color);
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Цена — самый сильный элемент шапки, но НЕ цветом: раньше она красилась
+   в сырой --tgui--link_color и читалась как ссылка (плюс обходила
+   --app-* переопределения тёмной темы, реестр #38). Теперь обычный цвет
+   текста, 17/700 и табличные цифры — вес вместо цвета. */
+.price.price {
+  grid-area: price;
+  font-size: 17px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  color: inherit;
+}
+
+/* Знак рубля — тише самой суммы: 450 ₽ читается как одно число, а не
+   как «450» и отдельная буква. */
+.currency {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--app-muted);
 }
 
 /*
- * Свой вертикальный маршрут: колонка «рельса» (номерная точка + сегмент
- * линии, flex:1) и текст (город + место) справа. Сегменты линий соседних
- * пунктов стыкуются встык, поэтому линия непрерывна при любой высоте
- * текста и одинакова на iOS и Android.
+ * Маршрут: рельс из двух точек и отрезка линии. Колонка рельса уже
+ * текстовой (12px против 16px у прежних иконок-пинов), поэтому город
+ * доминирует, а служебная графика не спорит с ним.
  */
 .route {
   display: flex;
   flex-direction: column;
-  padding: 6px var(--app-space-md) 2px;
+  padding: 2px var(--app-space-md) var(--app-space-sm);
 }
 
-/* Один пункт маршрута: рельса слева, текст справа. */
 .stop {
   display: flex;
-  gap: var(--app-space-sm);
+  gap: 10px;
 }
 
-/* Рельса: точка сверху, сегмент линии тянется до низа пункта.
- * Фиксированная ширина = ширине точки, иначе линия сместится. */
+/* Колонка рельса: точка сверху, отрезок линии тянется до низа пункта.
+ * Ширина = ширине точки, иначе линия сместится. */
 .rail {
   display: flex;
   flex-direction: column;
   align-items: center;
   flex: none;
-  width: 16px;
+  width: 12px;
 }
 
-/* Стрелка вниз у отправления — вместо верхнего кружка. */
-.arrow {
-  display: block;
+/* Отправление — кольцо: «отсюда», прибытие — заливка: «сюда». Разница
+   формы несёт смысл без стрелки и без второй иконки-пина. Общая геометрия
+   продублирована осознанно: список селекторов (`.a, .b {}`) не даёт
+   однозначно привязать правило к варианту — а пин в tripCardVisual
+   проверяет каждый вариант отдельно. */
+.dotFrom {
   flex: none;
-  color: var(--tgui--link_color);
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 2px solid var(--app-info);
+  background: transparent;
 }
 
-/* Иконка места вместо кружка: синяя метка. */
-.pin {
-  display: block;
+.dotTo {
   flex: none;
-  color: var(--tgui--link_color);
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: var(--app-info);
 }
-
-/* Вертикальный сегмент: круглые точки по оси. Маска снизу срезает
- * частично умещающийся тайл — обрезанных точек не бывает. */
-.vbar {
+/* Отрезок пути: сплошная линия вместо пунктира из радиальных точек —
+   тот давал муар на маленьком экране и обрезался маской. Дотягиваемся до
+   следующей точки (точка приёма опущена на 5px своим margin-top), иначе
+   линия обрывалась в 5px от прибытия и таймлайн читался разорванным. */
+.line {
   flex: 1;
-  min-height: 8px;
-  width: 5px;
-  background-image: radial-gradient(
-    circle,
-    var(--tgui--link_color) 0 2.5px,
-    transparent 2.5px
-  );
-  background-size: 5px 18px;
-  background-repeat: repeat-y;
-  background-position: top center;
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 calc(100% - 5px),
-    transparent calc(100% - 5px)
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 calc(100% - 5px),
-    transparent calc(100% - 5px)
-  );
+  width: 2px;
+  min-height: 10px;
+  margin-top: 2px;
+  margin-bottom: -5px;
+  background: var(--app-info);
+  opacity: 0.3;
 }
 
-/* Текст пункта: город вплотную к месту посадки. */
+/* Текст пункта: город и адрес — одна смысловая группа, поэтому воздух
+   между ними 2px, а не 0 (впритык читалось как один абзац). */
 .stopBody {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding-bottom: var(--app-space-2xs);
+  padding-bottom: 10px;
 }
 
 /* У последнего пункта нижний отступ не нужен (линия там не рисуется). */
@@ -165,16 +200,18 @@
 }
 
 .city {
-  font-size: 16px;
-  line-height: 1.25;
+  font-size: 17px;
+  line-height: 1.3;
   font-weight: 600;
 }
 
+/* Адрес — 13px вместо 12: 12px на мобильном ниже комфортного минимума,
+   а точка встречи — не декоративная подпись, её читают. */
 .place {
-  margin-top: 0;
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--tgui--subtitle_text_color);
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--app-muted);
 }
 
 /* Машина с иконкой в подписи водителя. */
@@ -184,15 +221,18 @@
   gap: var(--app-space-2xs);
 }
 
-/* Персона: убираем китовые отступы средней колонки (padding 16px 0, gap 2px).
- * Padding — через var-хук кита, gap — у прямых детей (before/middle/after
- * без своих паддингов, безопасно). */
+/* Персона: та же полоса 16px, что у шапки и маршрута (кит по умолчанию
+   даёт 24px — из-за него аватар стоял правее города), и gap 12 вместо
+   китовых 24: подпись водителя иначе отрывалась от аватара. */
 .person.person {
-  --tgui--cell--middle--padding: 5px 0;
+  --tgui--cell--middle--padding: var(--app-space-xs) 0;
+  gap: var(--app-space-sm);
+  padding: 0 var(--app-space-md);
 }
 
+/* Средняя колонка: имя и подпись вплотную (2px), а не с китовым зазором. */
 .person.person > div {
-  gap: 0;
+  gap: 2px;
 }
 
 /*
@@ -224,12 +264,13 @@
   border-radius: var(--app-card-radius);
 }
 
-/* Слот действий: кнопки под персоной, с верхней hairline. */
+/* Слот действий: кнопки под персоной, с верхней hairline. 16px по бокам —
+   та же полоса, что у остальных блоков; 8px сверху и 12px снизу держат
+   кнопку 44px внутри карточки. */
 .footer {
   display: flex;
   align-items: center;
-  gap: var(--app-space-xs);
-  margin: var(--app-space-2xs) var(--app-space-md) var(--app-space-sm);
-  padding-top: var(--app-space-sm);
+  margin: 0 var(--app-space-md);
+  padding: var(--app-space-xs) 0 var(--app-space-sm);
   border-top: var(--tgui--border--width, 1px) solid var(--tgui--outline);
 }

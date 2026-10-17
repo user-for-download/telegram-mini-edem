@@ -10,6 +10,7 @@ import { DriverTripRequests } from "@/components/Trip/DriverTripRequests";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { ICON_TARGET, MIN_TARGET } from "@/ui/classes";
 import { shareTrip } from "@/helpers/tripShare";
+import { useAuthStore } from "@/store/useAuthStore";
 import { haptic } from "@/utils/haptics";
 import type { PassengerBooking, Trip } from "@edem/contracts";
 import styles from "./TripCards.module.css";
@@ -30,12 +31,15 @@ function tripStatusLabel(trip: Trip): { label: string; tone: StatusTone } {
   const pending = trip.pendingRequestsCount ?? 0;
   if (pending > 0) return { label: `Заявки: ${pending}`, tone: "warning" };
   const confirmed = trip.confirmedBookingsCount ?? 0;
+  // Коротко — «Занято 1 из 3», а не «Забронировано: 1/3»: длинная плашка
+  // не помещалась рядом с датой и уезжала на вторую строку, из-за чего
+  // шапки соседних карточек стояли на разной высоте.
   if (confirmed > 0)
     return {
-      label: `Забронировано: ${confirmed}/${trip.seatsTotal}`,
+      label: `Занято ${confirmed} из ${trip.seatsTotal}`,
       tone: "info",
     };
-  return { label: `Свободно: ${trip.seatsAvailable}`, tone: "success" };
+  return { label: `Свободно ${trip.seatsAvailable}`, tone: "success" };
 }
 
 export type TripCardVariant =
@@ -82,6 +86,10 @@ function isCancellable(trip: Trip, now: Date = new Date()): boolean {
  */
 export function TripCard({ variant }: { variant: TripCardVariant }) {
   const navigate = useNavigate();
+  // Своя строка «Вы водитель» показывает собственный аватар: «ВЫ» из
+  // первых двух букв имени читалось как ошибка инициалов. Хранилище может
+  // быть пустым (SSR/тесты) — тогда аватар деградирует до акронима.
+  const me = useAuthStore((state) => state.user);
 
   if (variant.kind === "booking") {
     const { booking, onCancel, cancelPending } = variant;
@@ -131,6 +139,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
           // Всплытие гасят сами кнопки — обёртка с onClick запрещена jsx-a11y.
           <div className={styles.footerEnd}>
             <IconButton
+              variant="outline"
               size="s"
               aria-label="Поделиться поездкой"
               title="Поделиться поездкой"
@@ -185,6 +194,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
       headerStatus={<StatusPill tone={status.tone}>{status.label}</StatusPill>}
       person={{
         name: "Вы водитель",
+        avatar: me?.avatar ?? null,
         subtitle: `Пассажиры: ${trip.confirmedBookingsCount ?? trip.seatsTotal - trip.seatsAvailable}`,
         passengers: trip.passengers ?? [],
       }}
@@ -201,6 +211,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
         // Всплытие гасят сами кнопки — обёртка с onClick запрещена jsx-a11y.
         <div className={styles.footerEnd}>
           <IconButton
+            variant="outline"
             size="s"
             aria-label="Поделиться поездкой"
             title="Поделиться поездкой"

@@ -3,17 +3,20 @@
  * Цвета из --tgui--* / --app-*, удвоенные селекторы против каскада кита,
  * без !important и хэш-классов. */
 
-/* Группа действий футера у правого края (поделиться + отмена). */
+/* Группа действий футера: поделиться слева, отмена справа. Раньше обе
+ * кнопки жались к правому краю, и левая половина полосы пустовала —
+ * футер читался перекошенным. space-between использует всю ширину. */
 .footerEnd.footerEnd {
-  margin-left: auto;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--app-space-xs);
+  width: 100%;
 }
 
-/* Отмена у правого края футера (поделиться — слева): обёртка едет
- * вправо через margin-left, stretched кита (flex-grow:1 + width:100%)
- * снимаем удвоенным селектором против каскада, без !important. */
+/* Отмена в правой зоне футера (поделиться — в левой). Stretched кита
+ * (flex-grow:1 + width:100%) снимаем удвоенным селектором против каскада,
+ * без !important. */
 .cancelRight.cancelRight {
   margin-left: auto;
 }
@@ -28,25 +31,68 @@
   flex-direction: column;
 }
 
-/* Заявка: те же убранные отступы средней колонки, что у персоны.
- * gap 12 вместо китовых 24: после перевода текста в multiline комментарий
- * переносится, и средней колонке нужна ширина — китовые 24px с каждой
- * стороны забирали ~1/3 строки, из-за чего «Поеду до Суды, можно по пути
- * высадить?» ложилось в 4 строки. Вертикальные отступы и выравнивание
- * аватара с пином маршрута (padding 24) не трогаем. */
+/* Заявка: полоса 16px как у остальных блоков карточки (кит даёт 24px —
+ * из-за него аватар пассажира стоял правее аватара водителя), gap 12
+ * вместо китовых 24: комментарий переносится, средней колонке нужна
+ * ширина. Выравнивание — ПО ВЕРХУ, а не по центру: на трёхстрочной
+ * заявке центрированный аватар уезжал вниз, и имя висело в воздухе
+ * отдельно от него. Аватар компенсирует верхний паддинг текста, чтобы
+ * первая строка и аватар начинались на одной линии. */
 .requestCell.requestCell {
-  --tgui--cell--middle--padding: 5px 0;
+  --tgui--cell--middle--padding: var(--app-space-xs) 0;
+  align-items: flex-start;
   gap: var(--app-space-sm);
+  padding: 0 var(--app-space-md);
 }
 
+.requestCell.requestCell > div:first-child {
+  padding-top: var(--app-space-xs);
+}
+
+/* Средняя колонка: имя и подпись вплотную, без китового зазора. */
 .requestCell.requestCell > div {
-  gap: 0;
+  gap: 2px;
+}
+
+/* Имя и рейтинг в одну строку: рейтинг больше не сидит бейджем поверх
+ * аватара (он перекрывал лицо и спорил со статусом), а идёт тихой
+ * подписью в строке меты. */
+.requestRating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-muted);
+  white-space: nowrap;
 }
 
 /* Комментарий — свободный текст (контракт допускает 300 знаков): длинное
- * слово без пробелов (ссылка, ник) не должно вылезать за колонку. */
+ * слово без пробелов (ссылка, ник) не должно вылезать за колонку. Тон
+ * меты: 13px/400 muted, а не 600 — подпись не должна весить как имя.
+ * display:block — комментарий идёт своей строкой под «рейтинг · место». */
 .requestSubtitle.requestSubtitle {
+  color: var(--app-muted);
+  font-weight: 400;
   overflow-wrap: anywhere;
+}
+
+/* Мета заявки: рейтинг · место одной строкой. Разделитель — отдельный
+ * флекс-элемент: он не переносится в конец строки и не прилипает к иконке. */
+.requestMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.metaSep {
+  color: var(--app-muted);
+}
+
+.comment {
+  display: block;
+  margin-top: 2px;
 }
 
 .requestActions {
@@ -67,6 +113,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -78,6 +125,7 @@
   appearance: none;
   -webkit-appearance: none;
 }
+
 
 .requestPerson.requestPerson::after {
   content: "";

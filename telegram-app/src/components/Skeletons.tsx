@@ -40,13 +40,19 @@ export function TripCardSkeleton() {
     >
       <div className={`${CARD_PAD} ${styles.standardSkeleton}`}>
         <div className={styles.standardHead}>
-          <div className={styles.lineDate} />
-          <div className={styles.seatsPill} />
+          <div className={styles.headMeta}>
+            <div className={styles.lineDate} />
+            <div className={styles.seatsPill} />
+          </div>
           <div className={styles.linePrice} />
         </div>
         <div className={styles.standardRoute}>
-          <div className={styles.lineCities} />
-          <div className={styles.lineSub} />
+          {[0, 1].map((index) => (
+            <div className={styles.standardStop} key={index}>
+              <div className={styles.lineCities} />
+              <div className={styles.lineSub} />
+            </div>
+          ))}
         </div>
         <div className={styles.standardPerson}>
           <div className={styles.avatarCircle} />

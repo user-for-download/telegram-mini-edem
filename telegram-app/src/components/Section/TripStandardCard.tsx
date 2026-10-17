@@ -1,12 +1,7 @@
 import type { ReactNode } from "react";
-import {
-  Avatar,
-  Caption,
-  Headline,
-  Subheadline,
-} from "@telegram-apps/telegram-ui";
+import { Avatar, Caption, Subheadline, Text } from "@telegram-apps/telegram-ui";
 import type { TripPassenger } from "@edem/contracts";
-import { ArrowDown, Calendar, CarFront, MapPin } from "lucide-react";
+import { Calendar, CarFront } from "lucide-react";
 import { formatRelativeDeparture } from "@/utils/bookingSplit";
 import { RatingPill } from "@/components/RatingPill";
 import { AvatarStack } from "@/components/Trip/AvatarStack";
@@ -123,7 +118,7 @@ export function TripStandardCard({
         />
       }
       subtitle={
-        <Caption level="1" Component="p" weight="2">
+        <Caption level="1" Component="p" weight="3">
           <span className={styles.car}>
             {person.showCarIcon && <CarFront size={14} aria-hidden />}
             {person.subtitle}
@@ -142,7 +137,7 @@ export function TripStandardCard({
         )
       }
     >
-      <Subheadline level="2" Component="p" weight="1">
+      <Subheadline level="2" Component="p" weight="2">
         {person.name}
       </Subheadline>
     </Cell>
@@ -150,44 +145,51 @@ export function TripStandardCard({
 
   const content = (
     <>
+      {/* Шапка в две зоны: слева «когда» + статус, справа цена. Три
+          равноправных столбца (дата — плашка — цена) не помещались в
+          360px и плашка «улетала» в середину с рваными зазорами. */}
       <div className={styles.head}>
-        <span className={styles.when}>
-          <Calendar size={14} aria-hidden />
-          <Subheadline level="2" weight="2">
-            {formatRelativeDeparture(departureAt ?? undefined)}
-          </Subheadline>
-        </span>
-        <div className={styles.seats}>{headerStatus}</div>
+        <div className={styles.headMeta}>
+          <span className={styles.when}>
+            <Calendar size={14} aria-hidden />
+            <Subheadline level="2" weight="2">
+              {formatRelativeDeparture(departureAt ?? undefined)}
+            </Subheadline>
+          </span>
+          <span className={styles.status}>{headerStatus}</span>
+        </div>
         {typeof price === "number" && (
-          <Headline weight="1" className={styles.price}>
-            {price} ₽
-          </Headline>
+          <Text Component="span" weight="1" className={styles.price}>
+            {price}
+            <span className={styles.currency}> ₽</span>
+          </Text>
         )}
       </div>
+      {/* Маршрут: точка отправления (кольцо) — линия — точка прибытия
+          (заливка). Иконки-пины в 16px были крупнее самого города и
+          спорили с текстом; пунктирная линия из радиальных точек читалась
+          как шум. Точки вдвое меньше текста и молчат, город ведёт. */}
       <div className={styles.route}>
         {(
           [
             { city: fromCity, place: fromAddress },
             { city: toCity, place: toAddress },
           ] as const
-        ).map((stop, index) => (
-          <div className={styles.stop} key={`${stop.city}-${index}`}>
-            <div className={styles.rail}>
-              <MapPin size={16} className={styles.pin} aria-hidden />
-              {index === 0 && (
-                <>
-                  <span className={styles.vbar} />
-                  <ArrowDown size={14} className={styles.arrow} aria-hidden />
-                  <span className={styles.vbar} />
-                </>
-              )}
+        ).map((stop, index, stops) => {
+          const isLast = index === stops.length - 1;
+          return (
+            <div className={styles.stop} key={`${stop.city}-${index}`}>
+              <div className={styles.rail} aria-hidden>
+                <span className={isLast ? styles.dotTo : styles.dotFrom} />
+                {!isLast && <span className={styles.line} />}
+              </div>
+              <div className={styles.stopBody}>
+                <span className={styles.city}>{stop.city}</span>
+                {stop.place && <span className={styles.place}>{stop.place}</span>}
+              </div>
             </div>
-            <div className={styles.stopBody}>
-              <span className={styles.city}>{stop.city}</span>
-              {stop.place && <span className={styles.place}>{stop.place}</span>}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {!personAsButton && personCell}
     </>
