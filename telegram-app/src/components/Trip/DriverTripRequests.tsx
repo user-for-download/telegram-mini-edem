@@ -209,6 +209,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
           after={
             <span className={styles.requestActions}>
               <IconButton
+                variant="outline"
                 size="s"
                 aria-label={`Отклонить заявку ${booking.passenger.name}`}
                 disabled={actingId === booking.id}

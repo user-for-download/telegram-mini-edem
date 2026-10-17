@@ -7,18 +7,20 @@ import { IconButton as TguiIconButton } from "@telegram-apps/telegram-ui";
  *
  * - `secondary` (bezeled) — обычная кнопка-действие;
  * - `ghost` (plain, по умолчанию) — «тихая» иконка в строке;
- * - `muted` (gray) — нейтральная иконка-действие на поверхности карточки.
+ * - `muted` (gray) — нейтральная иконка-действие на поверхности карточки;
+ * - `outline` (outline) — контурная кнопка без заливки: кольцо вокруг
+ *   иконки (деструктивные действия вроде «Отклонить заявку»).
  *
  * `filled` у кита отсутствует для IconButton (только outline/bezeled/
  * plain/gray), поэтому «главного действия» здесь нет и маппить нечего:
  * главное действие — это ui/Button, а не иконка.
  */
-export type IconButtonVariant = "secondary" | "ghost" | "muted";
-
+export type IconButtonVariant = "secondary" | "ghost" | "muted" | "outline";
 const MODES = {
   secondary: "bezeled",
   ghost: "plain",
   muted: "gray",
+  outline: "outline",
 } as const;
 
 export interface IconButtonProps

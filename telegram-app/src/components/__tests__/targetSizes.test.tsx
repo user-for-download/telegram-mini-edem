@@ -114,6 +114,39 @@ describe("кнопки −/+ заявок (IconButton size=s) держат 44px 
       expect(block).not.toContain("MIN_TARGET");
     }
   });
+
+  it("крестик «Отклонить» — outline-вариант (кольцо), галочка — secondary", () => {
+    const blocks = jsxBlocks(
+      readSrc("components/Trip/DriverTripRequests.tsx"),
+      "IconButton",
+    );
+    const decline = blocks.find((block) => block.includes("Отклонить заявку"));
+    const accept = blocks.find((block) => block.includes("Принять заявку"));
+    expect(decline).toBeDefined();
+    expect(accept).toBeDefined();
+    expect(decline).toContain('variant="outline"');
+    expect(accept).toContain('variant="secondary"');
+  });
+});
+
+describe("деструктивный тон один: --app-danger, а не сырой kit-токен", () => {
+  // Два «красных» рядом (крестик заявки и «Отменить поездку») обязаны
+  // совпадать: --app-danger — смешение под контраст 4.5+, а
+  // --tgui--destructive_text_color светлее и даёт другой оттенок.
+  it("TripCards.module.css: .declineIcon — цвет и кольцо из --app-danger", () => {
+    const css = readSrc("components/Trip/TripCards.module.css");
+    const body = css.match(/\.declineIcon\.declineIcon\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(body).toContain("color: var(--app-danger)");
+    expect(body).toContain("box-shadow: 0 0 0 1px var(--app-danger)");
+    expect(body).not.toContain("--tgui--destructive_text_color");
+  });
+
+  it("TripModals.module.css: .declineButton — --app-danger", () => {
+    const css = readSrc("components/Trip/TripModals.module.css");
+    const body = css.match(/\.declineButton\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(body).toContain("var(--app-danger)");
+    expect(body).not.toContain("--tgui--destructive_text_color");
+  });
 });
 
 describe("механизм: MIN_TARGET доходит до DOM", () => {

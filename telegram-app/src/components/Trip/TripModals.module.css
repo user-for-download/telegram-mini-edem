@@ -99,7 +99,10 @@
 }
 
 /* Деструктивное решение в досье («Отказать», было style={{ color }}
- * на Button, U3): неслойный модуль бьёт слой кита без !important. */
+ * на Button, U3): неслойный модуль бьёт слой кита без !important.
+ * Тон — `--app-danger`, как у всех деструктивных контролов: сырой
+ * `--tgui--destructive_text_color` давал другой (более светлый) оттенок
+ * рядом с «Отменить поездку». */
 .declineButton {
-  color: var(--tgui--destructive_text_color);
+  color: var(--app-danger);
 }
