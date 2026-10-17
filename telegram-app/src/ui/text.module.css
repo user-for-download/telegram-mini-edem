@@ -52,6 +52,21 @@
   min-height: 44px;
 }
 
+/* Круглый тап-таргет ИКОНОЧНОЙ кнопки: 44×44, а не «высота 44 при родной
+ * ширине». У IconButton size="s" кит рисует круг (border-radius:50%) и
+ * центрирует содержимое не он: inline-flex с align-items:stretch прижимает
+ * иконку к верхнему краю. Неквадратный бокс с radius 50% — это овал, а
+ * иконка в нём «уезжает вверх» (баг карточки поездки: подтверждение заявки
+ * и «поделиться»). min-width выравнивает ширину под высоту (круг), явное
+ * центрирование ставит иконку в середину. Отдельный класс, а не minTarget:
+ * текстовым кнопкам ширина 44 не нужна и ломала бы ряд. */
+.iconTarget {
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Loading placeholder pulse (avatar before entering viewport).
  * Анимация приложения; disabled under prefers-reduced-motion. */
 @keyframes pulseSoft {

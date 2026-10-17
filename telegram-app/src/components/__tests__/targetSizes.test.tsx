@@ -3,7 +3,9 @@
 // Триггер ConfirmPopup — внутренне Button size="s" (~36px у кита), поэтому
 // высоту 44 доводит вызывающий код через className={MIN_TARGET} (тот же
 // приём, что у Accept/Decline в TripRequestsModal). Кнопки −/+ в строках
-// заявок — IconButton size="s" (~28px): тот же MIN_TARGET классом.
+// заявок — IconButton size="s" (~28px): им нужен ICON_TARGET (44×44 круг +
+// центрирование), потому что MIN_TARGET поднимает только высоту и на
+// border-radius:50% даёт овал с иконкой у верхнего края.
 //
 // Почему пиним текстом исходника, а не DOM: эти компоненты живут за
 // провайдерами (роутер, react-query) и в renderToString не собираются, а
@@ -23,7 +25,7 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { IconButton } from "@/ui/IconButton";
-import { MIN_TARGET } from "@/ui/classes";
+import { ICON_TARGET, MIN_TARGET } from "@/ui/classes";
 
 const here = dirname(fileURLToPath(import.meta.url));
 /** Исходник компонента относительно components/__tests__/. */
@@ -97,8 +99,8 @@ describe("таргеты ConfirmPopup size=s держат 44px через MIN_TA
   });
 });
 
-describe("кнопки −/+ заявок (IconButton size=s) держат 44px", () => {
-  it("DriverTripRequests: обе иконки с MIN_TARGET", () => {
+describe("кнопки −/+ заявок (IconButton size=s) держат 44px кругом", () => {
+  it("DriverTripRequests: обе иконки с ICON_TARGET", () => {
     const blocks = jsxBlocks(
       readSrc("components/Trip/DriverTripRequests.tsx"),
       "IconButton",
@@ -106,7 +108,10 @@ describe("кнопки −/+ заявок (IconButton size=s) держат 44px"
     expect(blocks).toHaveLength(2);
     for (const block of blocks) {
       expect(block).toContain('size="s"');
-      expect(block).toContain("MIN_TARGET");
+      // ICON_TARGET (44×44 + центрирование), а не MIN_TARGET: min-height
+      // без min-width на border-radius:50% даёт овал и иконку у верха.
+      expect(block).toContain("ICON_TARGET");
+      expect(block).not.toContain("MIN_TARGET");
     }
   });
 });
@@ -151,5 +156,16 @@ describe("механизм: MIN_TARGET доходит до DOM", () => {
     // MIN_TARGET импортирован из того же модуля, что у компонента, —
     // сравнение идёт по хэшированному имени, а не по исходному.
     expect(html).toContain(MIN_TARGET);
+  });
+
+  it("IconButton size=s прокидывает ICON_TARGET (круг 44×44) в class", () => {
+    const html = renderToString(
+      <AppRoot platform="base">
+        <IconButton size="s" aria-label="Принять заявку" className={ICON_TARGET}>
+          <span>+</span>
+        </IconButton>
+      </AppRoot>,
+    );
+    expect(html).toContain(ICON_TARGET);
   });
 });

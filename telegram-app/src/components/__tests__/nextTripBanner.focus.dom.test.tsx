@@ -87,7 +87,7 @@ function givenDriverTrip() {
 function renderBanner() {
   givenDriverTrip();
   // MemoryRouter — конвенция репозитория для компонентов с useNavigate
-  // (см. modals.test.tsx, tripCard.minTarget.dom.test.tsx): баннер
+  // (см. modals.test.tsx, tripCard.iconTarget.dom.test.tsx): баннер
   // переходит по `/trips/:id`, и без провайдера useNavigate бросает.
   return render(
     <AppRoot platform="base">

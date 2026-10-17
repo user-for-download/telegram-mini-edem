@@ -63,6 +63,16 @@ export const VISUALLY_HIDDEN = textStyles.visuallyHidden;
 export const MIN_TARGET = textStyles.minTarget;
 
 /**
+ * Круглый тап-таргет 44×44 для иконочных кнопок (WCAG 2.5.5 AAA).
+ *
+ * `MIN_TARGET` поднимает только высоту — для текстовых кнопок этого
+ * достаточно, а у `IconButton` (border-radius:50%) неквадратный бокс
+ * превращается в овал и иконка прижимается к верху. Здесь ширина = высоте
+ * плюс центрирование содержимого.
+ */
+export const ICON_TARGET = textStyles.iconTarget;
+
+/**
  * Сброс UA-стилей нативной кнопки для КОМПОНЕНТОВ КИТА, переключённых в
  * `<button>` через `Component="button"` (Tappable/Cell/Accordion.Summary).
  *

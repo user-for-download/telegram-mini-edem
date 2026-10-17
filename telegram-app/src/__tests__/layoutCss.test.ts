@@ -175,6 +175,17 @@ describe("каркас: тап-таргет 44px (WCAG 2.5.5 AAA) — пин з�
     expect(rule.match(/min-height:/g)).toHaveLength(1);
   });
 
+  // Иконочные кнопки: min-height-only на border-radius:50% — овал, а
+  // align-items:stretch прижимает иконку к верху. Пин квадрата и
+  // центрирования не даёт регрессии вернуться.
+  it(".iconTarget — квадрат 44×44 с центрированием (круг, не овал)", () => {
+    const rule = ruleBody(textCss, ".iconTarget");
+    expect(rule).toContain("min-width: 44px");
+    expect(rule).toContain("min-height: 44px");
+    expect(rule).toContain("align-items: center");
+    expect(rule).toContain("justify-content: center");
+  });
+
   it("44px выше нативных 42px кита (mode m), иначе height обнулит минимум", () => {
     expect(44).toBeGreaterThan(42);
   });

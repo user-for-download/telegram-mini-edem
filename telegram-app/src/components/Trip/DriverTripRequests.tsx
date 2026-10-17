@@ -7,7 +7,7 @@ import {
 import { Button } from "@/ui/Button";
 import { Cell } from "@/ui/Cell";
 import { IconButton } from "@/ui/IconButton";
-import { MIN_TARGET } from "@/ui/classes";
+import { ICON_TARGET } from "@/ui/classes";
 import { Notice } from "@/ui/Notice";
 
 import { Armchair, Check, X } from "lucide-react";
@@ -212,7 +212,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
                 size="s"
                 aria-label={`Отклонить заявку ${booking.passenger.name}`}
                 disabled={actingId === booking.id}
-                className={`${styles.declineIcon} ${MIN_TARGET}`}
+                className={`${styles.declineIcon} ${ICON_TARGET}`}
                 onClick={(event) => {
                   event.stopPropagation();
                   void askAndAct(booking, "declined");
@@ -225,7 +225,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
                 size="s"
                 aria-label={`Принять заявку ${booking.passenger.name}`}
                 disabled={actingId === booking.id}
-                className={MIN_TARGET}
+                className={ICON_TARGET}
                 onClick={(event) => {
                   event.stopPropagation();
                   void askAndAct(booking, "confirmed");
