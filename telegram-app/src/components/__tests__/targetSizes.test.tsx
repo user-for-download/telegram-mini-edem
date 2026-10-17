@@ -158,11 +158,12 @@ describe("деструктивный тон один: --app-danger, а не сы
   // Два «красных» рядом (крестик заявки и «Отменить поездку») обязаны
   // совпадать: --app-danger — смешение под контраст 4.5+, а
   // --tgui--destructive_text_color светлее и даёт другой оттенок.
-  it("TripCards.module.css: .declineIcon — цвет и кольцо из --app-danger", () => {
+  it("TripCards.module.css: .declineIcon — красный крестик, нейтральное кольцо", () => {
     const css = readSrc("components/Trip/TripCards.module.css");
     const body = css.match(/\.declineIcon\.declineIcon\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(body).toContain("color: var(--app-danger)");
-    expect(body).toContain("box-shadow: 0 0 0 1px var(--app-danger)");
+    // Рамка — как у «Отменить поездку» (outline-режим кита), не красная.
+    expect(body).toContain("box-shadow: 0 0 0 1px var(--tgui--outline)");
     expect(body).not.toContain("--tgui--destructive_text_color");
   });
 
