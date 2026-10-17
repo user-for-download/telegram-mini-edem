@@ -180,6 +180,13 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
         <Cell
           key={booking.id}
           className={styles.requestCell}
+          // Комментарий пассажира переносится, а не обрезается многоточием:
+          // без `multiline` кит ставит `white-space: nowrap` + ellipsis на
+          // subtitle (`.tgui-…:not(.tgui-…multiline) …>*`), и текст вида
+          // «· «Буду с рюкзаком, еду к родителям»» превращался в «· «Буду…».
+          // Это документированный проп кита (Cell.d.ts: «Allows for multiline
+          // content without truncation»), а не CSS-костыль.
+          multiline
           before={
             <Avatar
               size={40}
@@ -198,7 +205,12 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
             </Avatar>
           }
           subtitle={
-            <Caption level="1" Component="p" weight="2">
+            <Caption
+              level="1"
+              Component="p"
+              weight="2"
+              className={styles.requestSubtitle}
+            >
               <span className={styles.seat}>
                 <Armchair size={14} aria-hidden />
                 {`место №${booking.seat}`}

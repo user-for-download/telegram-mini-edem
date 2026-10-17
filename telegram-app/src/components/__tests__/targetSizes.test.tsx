@@ -129,6 +129,31 @@ describe("кнопки −/+ заявок (IconButton size=s) держат 44px 
   });
 });
 
+describe("комментарий заявки переносится, а не обрезается", () => {
+  it("Cell заявки включает документированный проп multiline", () => {
+    const blocks = jsxBlocks(
+      readSrc("components/Trip/DriverTripRequests.tsx"),
+      "Cell",
+    );
+    const requestCell = blocks.find((block) => block.includes("requestCell"));
+    expect(requestCell).toBeDefined();
+    // Без multiline кит ставит white-space: nowrap + ellipsis на subtitle.
+    expect(requestCell).toContain("multiline");
+  });
+
+  it("CSS: средняя колонка шире китовых 24px, длинные слова переносятся", () => {
+    const css = readSrc("components/Trip/TripCards.module.css");
+    // gap 12 (--app-space-sm) вместо 24 кита: комментарию нужна ширина.
+    expect(css).toMatch(
+      /\.requestCell\.requestCell\s*\{[^}]*gap:\s*var\(--app-space-sm\)/,
+    );
+    // Слово без пробелов (ссылка/ник) не вылезает за колонку.
+    expect(css).toMatch(
+      /\.requestSubtitle\.requestSubtitle\s*\{[^}]*overflow-wrap:\s*anywhere/,
+    );
+  });
+});
+
 describe("деструктивный тон один: --app-danger, а не сырой kit-токен", () => {
   // Два «красных» рядом (крестик заявки и «Отменить поездку») обязаны
   // совпадать: --app-danger — смешение под контраст 4.5+, а
