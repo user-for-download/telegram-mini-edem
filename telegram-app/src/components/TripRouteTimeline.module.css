@@ -1,0 +1,114 @@
+/*
+ * Маршрут поездки в деталях: время — рельс — город/адрес.
+ * Язык тот же, что у карточки поездки (TripStandardCard): кольцо
+ * отправления, заливка прибытия, линия --app-info 30%.
+ * Селекторы удвоены — против каскада кита, без !important.
+ */
+
+.wrap.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.route.route {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stop {
+  display: flex;
+  align-items: stretch;
+  gap: var(--app-space-sm);
+}
+
+/* Колонка времени: 13/600, табличные цифры — «06:00» и «07:50» не
+ * прыгают по ширине, обе остановки выровнены. */
+.time {
+  flex: none;
+  width: 44px;
+  padding-top: 1px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-muted);
+  white-space: nowrap;
+}
+
+/* Рельс: точка сверху, линия тянется до низа пункта. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  width: 10px;
+}
+
+.dotFrom,
+.dotTo {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.dotFrom {
+  border: 2px solid var(--app-info);
+  background: transparent;
+}
+
+.dotTo {
+  background: var(--app-info);
+}
+
+/* Линия дотянута до следующей точки: та опущена своим margin-top 5px. */
+.line {
+  flex: 1;
+  width: 2px;
+  min-height: 10px;
+  margin-top: 2px;
+  margin-bottom: -5px;
+  background: var(--app-info);
+  opacity: 0.3;
+}
+
+/* Город и адрес — одна смысловая группа: воздух 2px, а не 0. */
+.body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 0 14px;
+}
+
+.stop:last-child .body {
+  padding-bottom: 0;
+}
+
+.city {
+  font-size: 16px;
+  line-height: 21px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.place {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--app-muted);
+  overflow-wrap: anywhere;
+}
+
+/* Одна подсказка на весь маршрут вместо двух абзацев под городами. */
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--app-muted);
+}

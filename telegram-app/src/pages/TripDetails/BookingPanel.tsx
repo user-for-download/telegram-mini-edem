@@ -1,4 +1,4 @@
-import { Caption, Text, Textarea } from "@telegram-apps/telegram-ui";
+import { Caption, Headline, Text, Textarea } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { EmptyState } from "@/ui/EmptyState";
 import { Field } from "@/ui/Field";
@@ -107,9 +107,13 @@ export function BookingPanel({
       {canBook && (
         <div className={styles.sectionLoose}>
           <div role="group" aria-label="Выбор места">
-            <Text weight="2" Component="p" className={styles.subtitle}>
-              Место
-            </Text>
+            <Caption
+              weight="2"
+              Component="p"
+              className={styles.sectionTitle}
+            >
+              Выберите место
+            </Caption>
             <div className={styles.seatGrid}>
               {Array.from(
                 { length: item.seatsTotal },
@@ -127,6 +131,7 @@ export function BookingPanel({
                 ) : effectiveSeat === seat ? (
                   <Button
                     key={seat}
+                    variant="primary"
                     disabled={createBooking.isPending}
                     onClick={() => onSelectSeat(seat)}
                     aria-pressed
@@ -164,17 +169,16 @@ export function BookingPanel({
           <div className={styles.priceRow}>
             <div>
               <Caption Component="div">Цена за место</Caption>
-              <Text weight="2" Component="div">
+              <Headline weight="1" Component="div">
                 {item.price} ₽
-              </Text>
+              </Headline>
             </div>
             <Caption Component="div" className={styles.payHint}>
-              Оплата водителю
-              <br />
-              при посадке
+              Оплата водителю при посадке
             </Caption>
           </div>
           <Button
+            variant="primary"
             size="l"
             stretched
             loading={createBooking.isPending}

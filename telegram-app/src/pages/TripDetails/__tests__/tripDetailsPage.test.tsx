@@ -205,7 +205,7 @@ describe("TripDetailsPage parity", () => {
     expect(render()).toContain("Поделиться поездкой");
   });
 
-  it("keeps date/duration header and native Timeline route (no manual rail)", () => {
+  it("keeps date/duration header and route list (no tailwind rail)", () => {
     setMocks(makeTrip());
     const html = render();
     // Строка даты/длительности над маршрутом не тронута.
@@ -213,7 +213,10 @@ describe("TripDetailsPage parity", () => {
     expect(html).toContain("2 ч 30 мин");
     expect(html).toContain("180");
     expect(html).toContain("км");
-    // Маршрут — нативный Timeline, самодельного border-l-2 больше нет.
+    // Маршрут — упорядоченный список остановок. Нативный tgui Timeline
+    // (padding 32px 44px) убран: внутри карточки он съедал треть высоты,
+    // см. components/__tests__/tripRouteTimeline.test.tsx.
+    expect(html).toContain("<ol");
     expect(html).toContain("09:00");
     expect(html).toContain("Москва");
     expect(html).toContain("Тула");

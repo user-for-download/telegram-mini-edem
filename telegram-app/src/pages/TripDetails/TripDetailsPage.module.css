@@ -1,7 +1,12 @@
 /* Детали поездки (TripDetailsPage): раскладка без Tailwind (миграция
  * папка/компонент). Цвета только --tgui--* / --app-*.
- * Вертикальный ритм блоков — Stack (токен --app-space-sm), ниже —
- * локальные роли: карточки маршрута/водителя, строки, секции. */
+ *
+ * Сетка шторки — одна полоса 16px (её даёт SheetBody), вертикальный
+ * ритм блоков — Stack (--app-space-sm). Внутри карточек — 16px
+ * (--app-card-pad), поэтому текст карточки стоит на 32px от края
+ * экрана, а свободные подписи (секции, теги) — на 16px: так в iOS
+ * группируются «блок / заголовок группы».
+ */
 
 /* Плашка «Вы записались попутчиком»: успешный фон + рамка 20% токена
  * (было border-(--app-success)/20; смешение с transparent в любом
@@ -16,8 +21,11 @@
   color: color-mix(in srgb, var(--app-success) 80%, transparent);
 }
 
-/* Карточка маршрута: приглушённая поверхность tertiary, паддинг 16 и
- * радиус — из токенов карточки (14→16 в этой сессии). */
+/* ── Карточка маршрута ─────────────────────────────────────────────── */
+
+/* Приглушённая поверхность tertiary, паддинг 16, радиус — из токенов
+ * карточки. Внутренний зазор 12: шапка и маршрут — разные блоки, а не
+ * строки одного списка. */
 .routeCard {
   display: flex;
   flex-direction: column;
@@ -27,7 +35,24 @@
   background: var(--tgui--tertiary_bg_color);
 }
 
-/* Карточка водителя: тонированная плашка, hairline НЕ рисуем.
+/* Шапка карточки: день слева, путь справа. */
+.routeHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+}
+
+/* Подпись «В пути ~ 1 ч 50 мин · 155 км» — мета, поэтому приглушённая
+ * и без переноса: цифры короткие, ломать их на две строки незачем. */
+.routeMeta {
+  color: var(--app-muted);
+  white-space: nowrap;
+}
+
+/* ── Карточка водителя ─────────────────────────────────────────────── */
+
+/* Тонированная плашка, hairline НЕ рисуем.
  *
  * Единый принцип для блоков внутри шторки (соседние .routeCard/.carRow
  * держат то же): фон — `--tgui--tertiary_bg_color`, без рамки.
@@ -43,7 +68,6 @@
 .driverCard {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--app-space-xs);
   padding: var(--app-card-pad);
   border-radius: var(--app-card-radius);
@@ -51,9 +75,9 @@
 }
 
 /* Кнопка «открыть профиль водителя» — сосед блока действий, а не его
-   родитель: кнопки «Позвонить»/«Поделиться» внутри неё были бы вложенными.
+   родитель: кнопка «Позвонить» внутри неё была бы вложенной.
    Занимает свободное место и ужимается, чтобы длинное имя не выдавило
-   действия. UA-сброс кнопки (шрифт/рамка/фон) — тот же, что у .open
+   действие. UA-сброс кнопки (шрифт/рамка/фон) — тот же, что у .open
    в TripStandardCard. */
 .driverOpen {
   display: flex;
@@ -75,7 +99,7 @@
 .driverOpen:focus-visible {
   outline: 2px solid var(--tgui--link_color);
   outline-offset: 2px;
-  border-radius: var(--app-card-radius);
+  border-radius: var(--app-radius-md);
 }
 
 /* Строка «аватар + имя»: обязана ужиматься. */
@@ -91,6 +115,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 /* Значок верификации: синий штрих + заливка фона, не сжимается. */
@@ -105,6 +130,7 @@
   display: flex;
   align-items: center;
   gap: var(--app-space-2xs);
+  color: var(--app-muted);
 }
 
 /* Звезда рейтинга: штрих и заливка одним токеном. */
@@ -113,7 +139,7 @@
   fill: var(--app-rating);
 }
 
-/* Кнопки действий водителя (поделиться/телефон). */
+/* Действия водителя (телефон после подтверждения брони). */
 .driverActions {
   display: flex;
   align-items: center;
@@ -123,44 +149,79 @@
 
 /* Статус шаринга — плотный Stack gap="2xs" в TSX. */
 
-/* Строка автомобиля: приглушённая поверхность, кегль 12px. */
+/* ── Строка автомобиля ─────────────────────────────────────────────── */
+
+/* Иконка + две строки текста. Раньше здесь был text-xs на всю плашку и
+ * space-between: модель и госномер стояли по краям и переносились
+ * каждый по-своему («Lada Vesta · | графитовый»). Теперь это одна
+ * осмысленная группа: иконка слева, модель и номер друг под другом. */
 .carRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--app-space-sm);
-  border-radius: var(--app-radius-md);
+  gap: var(--app-space-sm);
+  padding: var(--app-card-pad);
+  border-radius: var(--app-card-radius);
   background: var(--tgui--tertiary_bg_color);
-  font-size: 12px;
-  line-height: 16px;
 }
 
-/* Комментарий водителя: поверхность секции + hairline; кегль 12px и
- * межстрочный 1.625 (в Tailwind leading-relaxed перебивает line-height
- * от text-xs). */
-/* Комментарий водителя: та же тонированная плашка, что соседние блоки
- * (принцип и почему без рамки — в .driverCard выше). */
+.carIcon {
+  flex: none;
+  color: var(--app-muted);
+}
+
+.carText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.carText > * {
+  overflow-wrap: anywhere;
+}
+
+/* ── Комментарий водителя ──────────────────────────────────────────── */
+
+/* Та же тонированная плашка, что соседние блоки (принцип и почему без
+ * рамки — в .driverCard выше). Внутри — только текст: у Blockquote
+ * снята собственная подложка (см. TSX), иначе на tertiary появлялась
+ * вторая поверхность «коробка в коробке». */
 .noteCard {
-  padding: var(--app-space-sm);
-  border-radius: var(--app-radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  padding: var(--app-card-pad);
+  border-radius: var(--app-card-radius);
   background: var(--tgui--tertiary_bg_color);
-  font-size: 12px;
-  line-height: 1.625;
-  color: var(--tgui--text_color);
 }
 
-/* Заголовок внутри плашки комментария (было block mb-0.5). */
-.noteTitle {
-  display: block;
-  margin-bottom: 2px;
+/* Заголовок внутри плашки комментария — мета-роль, не второй заголовок. */
+.noteTitle.noteTitle {
+  color: var(--app-muted);
+  font-weight: 600;
 }
 
-/* Секция под разделителем: плотный список (зазор 8px). */
+/* Цитата внутри карточки: у Blockquote снимаем вторую поверхность —
+ * подложку, скругление и правый отступ под иконку (иконку не рендерим),
+ * оставляя только смысловую левую полосу. Иначе на tertiary появлялась
+ * «коробка в коробке» с собственным фоном (регистры #36/#37). */
+.noteQuote.noteQuote {
+  padding: 0 0 0 var(--app-space-xs);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* ── Секции под разделителем ───────────────────────────────────────── */
+
+/* Секция действий: плотный список (зазор 8px). Разделитель отделяет
+ * «информацию о поездке» от «действий с ней» — поэтому он есть, но
+ * воздух над ним больше, чем внутри списка. */
 .section {
   display: flex;
   flex-direction: column;
   gap: var(--app-space-xs);
-  padding-top: var(--app-space-xs);
+  margin-top: var(--app-space-2xs);
+  padding-top: var(--app-space-sm);
   border-top: 1px solid var(--tgui--outline);
 }
 
@@ -169,8 +230,17 @@
   display: flex;
   flex-direction: column;
   gap: var(--app-space-sm);
-  padding-top: var(--app-space-xs);
+  margin-top: var(--app-space-2xs);
+  padding-top: var(--app-space-sm);
   border-top: 1px solid var(--tgui--outline);
+}
+
+/* Заголовок группы («Место», «Управление поездкой»): 13/600 muted —
+ * это НАДпись над группой, а не ещё один заголовок экрана. Раньше он шёл
+ * Text 17/600 и спорил с названием поездки. */
+.sectionTitle.sectionTitle {
+  color: var(--app-muted);
+  font-weight: 600;
 }
 
 /* Подзаголовок «Место» над сеткой мест (было mb-2). */
@@ -178,24 +248,66 @@
   margin-bottom: var(--app-space-xs);
 }
 
-/* Сетка кнопок выбора места. */
+/* ── Выбор места ───────────────────────────────────────────────────── */
+
+/* Сетка кнопок выбора места — В СТРОКУ. Раньше у сетки не было
+ * columns, и места выстраивались вертикально во всю ширину: три места
+ * = три полосы по 44px и метр прокрутки ради одного тапа.
+ * auto-FIT, а не auto-fill: при auto-fill пустые треки остаются в сетке,
+ * и три места жались в 64px-колонки слева, обрезая подпись «(зан.)». */
 .seatGrid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
   gap: var(--app-space-xs);
 }
 
-/* Строка «цена — оплата водителю» (было py-1). */
+/* ── Теги поездки ──────────────────────────────────────────────────── */
+
+/* Пилюля-подпись: 13px, тонированная secondary_fill. Это МЕТА, а не
+ * элемент управления — поэтому не Chip (тот интерактивен и навязывает
+ * кегль 16), а список подписей. */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  padding: var(--app-space-2xs) var(--app-space-xs);
+  border-radius: var(--app-radius-pill);
+  background: var(--tgui--secondary_fill);
+  color: var(--app-info);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* ── Цена и CTA ────────────────────────────────────────────────────── */
+
+/* Строка «цена — оплата водителю»: цена главная (19/700), подсказка —
+ * мета справа. По базовой линии, а не по центру: строка подсказки из
+ * двух строк не должна поднимать цену вверх. */
 .priceRow {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
+  gap: var(--app-space-sm);
   padding: var(--app-space-2xs) 0;
 }
 
-/* Правая подпись строки цены (было text-right). */
-/* Подсказка в строке цены (не счётчик!): вправо, подпись способа оплаты. */
+/* Подсказка в строке цены (не счётчик!): подпись способа оплаты.
+ * Одной строкой: раньше здесь стоял max-width 45% + жёсткий <br>, и
+ * «Оплата водителю при посадке» переносилась на две строки даже там, где
+ * помещалась в одну. Ширину держит flex, а не доля от контейнера. */
 .payHint {
+  min-width: 0;
   text-align: right;
+  color: var(--app-muted);
+  line-height: 1.3;
 }
 
 /* Подсказка под деструктивной кнопкой: кегль 12px + приглушённый цвет. */

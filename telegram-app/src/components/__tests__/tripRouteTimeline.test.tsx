@@ -1,7 +1,14 @@
 // Рендер-тесты TripRouteTimeline без @testing-library/react (не установлен):
 // react-dom/server renderToString + AppRoot — паттерн
 // telegram-app/src/components/__tests__/lazyAvatar.test.tsx.
-// Проверяется только обёртка, внутренности нативного tgui Timeline не тестируем.
+//
+// 2026-10-17 контракт изменился осознанно: раньше здесь стоял нативный
+// tgui `Timeline`, и тест пинил `<ul>/<li>`. У `Timeline` padding 32px 44px
+// и gap 24px — внутри карточки с паддингом 16 это давало 256px высоты на
+// две строки маршрута и пустую полосу под адресом прибытия (треть
+// карточки). Заменён на свой рельс ТОЙ ЖЕ геометрии, что у карточки поездки
+// (кольцо → линия → заливка), но семантика списка сохранена: у маршрута
+// есть порядок, поэтому это `<ol>`, а не набор div'ов.
 import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -48,17 +55,31 @@ describe("TripRouteTimeline", () => {
     expect(html).toContain("09:30");
   });
 
-  it("null addresses → meeting-point fallback hint for both stops", () => {
+  // Раньше подсказка повторялась ПОД КАЖДЫМ городом — два одинаковых
+  // абзаца по три строки читались как ошибка и съедали пол-карточки.
+  // Теперь она одна, под маршрутом.
+  it("null addresses → одна подсказка на весь маршрут, а не две", () => {
     const html = render({ fromAddress: null, toAddress: null });
     expect(html).toContain(FALLBACK);
-    // Фолбэк встречается дважды — для отправления и прибытия.
-    expect(html.split(FALLBACK).length - 1).toBe(2);
+    expect(html.split(FALLBACK).length - 1).toBe(1);
   });
 
-  it("renders native Timeline list, not the manual border-l-2 rail", () => {
+  it("маршрут — упорядоченный список (ol/li), время отдельной колонкой", () => {
     const html = render();
-    expect(html).toContain("<ul");
+    expect(html).toContain("<ol");
     expect(html).toContain("<li");
+    // Самодельного tailwind-класса border-l-2 по-прежнему нет: рельс —
+    // это CSS-модуль, а не утилиты.
     expect(html).not.toContain("border-l-2");
+  });
+
+  it("точка отправления — кольцо, прибытия — заливка", () => {
+    const html = render();
+    // Оба класса приходят из CSS-модуля: в SSR классы видны как имена
+    // (CSS-модули отдают строку), поэтому проверяем по data-атрибуту
+    // структуры, а не по хэшу кита.
+    expect(html).toContain("dotFrom");
+    expect(html).toContain("dotTo");
+    expect(html).toContain("line");
   });
 });

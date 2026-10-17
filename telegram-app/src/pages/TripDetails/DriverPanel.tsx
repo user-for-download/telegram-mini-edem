@@ -1,4 +1,4 @@
-import { Caption, Text } from "@telegram-apps/telegram-ui";
+import { Caption } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { Notice } from "@/ui/Notice";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
@@ -95,9 +95,11 @@ export function DriverPanel({
 
   return (
     <div className={styles.section}>
-      <Text weight="2" Component="div">
+      {/* Надпись над группой действий, а не второй заголовок экрана:
+          раньше это был Text 17/600, и он спорил с названием поездки. */}
+      <Caption weight="2" Component="div" className={styles.sectionTitle}>
         Управление поездкой
-      </Text>
+      </Caption>
       {/* role="status" — НА САМОМ узле с текстом (MEMORY.md:485), не на
           обёртке: строка появляется в DOM уже с готовым текстом и остаётся
           после того, как тост (3,2 с) скроется, то есть это и есть постоянная
@@ -116,6 +118,7 @@ export function DriverPanel({
       {isActive && (
         <>
           <Button
+            variant="primary"
             stretched
             onClick={() => navigate(`/trips/my/${tripId}/requests`)}
           >
@@ -133,7 +136,7 @@ export function DriverPanel({
               </Button>
             </Notice>
           )}
-          <Button stretched onClick={onToggleEdit}>
+          <Button stretched variant="outline" onClick={onToggleEdit}>
             {editing ? "Скрыть редактирование" : "Редактировать поездку"}
           </Button>
           {editing && <EditTripForm trip={trip} onDone={onToggleEdit} />}
@@ -145,6 +148,10 @@ export function DriverPanel({
             disabled={
               !canCompleteTrip || completeTrip.isPending || cancelTrip.isPending
             }
+            // outline: завершение — не главное действие экрана (главное —
+            // заявки), и две одинаковые залитые плашки рядом читались как
+            // равнозначные.
+            mode="outline"
             className={MIN_TARGET}
             onConfirm={complete}
           />
@@ -163,6 +170,11 @@ export function DriverPanel({
               // поездку, оно не должно проходить, пока PATCH в полёте.
               disabled={cancelTrip.isPending || completeTrip.isPending}
               destructive
+              // plain: деструктивное действие — тише остальных, но
+              // по-прежнему красным. Раньше это была ещё одна залитая
+              // плашка 44px, и четыре равных по весу кнопки подряд не
+              // давали понять, какая из них основная.
+              mode="plain"
               className={MIN_TARGET}
               onConfirm={cancel}
             />

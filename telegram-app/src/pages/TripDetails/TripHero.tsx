@@ -1,10 +1,9 @@
 import { Caption, Text } from "@telegram-apps/telegram-ui";
 import { Blockquote } from "@/ui/Blockquote";
 import { Button } from "@/ui/Button";
-import { Chip } from "@/ui/Chip";
 import { IconButton } from "@/ui/IconButton";
 import { Stack } from "@/ui/Stack";
-import { GROW, ROW_BETWEEN, TRUNCATE, BTN_ROW_WRAP } from "@/ui/classes";
+import { GROW, TRUNCATE } from "@/ui/classes";
 import { LazyAvatar } from "@/components/LazyAvatar";
 import { useOpenUserProfile } from "@/components/Profile/UserProfileProvider";
 import { TripRouteTimeline } from "@/components/TripRouteTimeline";
@@ -13,7 +12,7 @@ import { formatDuration, relativeMoscowDay } from "@/utils/date";
 import { plural } from "@/utils/plural";
 import { terminalTripStatusLabel } from "@/utils/tripStatus";
 import { hapticFeedback } from "@tma.js/sdk-react";
-import { Phone, Send, ShieldCheck, Star } from "lucide-react";
+import { CarFront, Phone, Send, ShieldCheck, Star } from "lucide-react";
 import type { Trip } from "@edem/contracts";
 import styles from "./TripDetailsPage.module.css";
 
@@ -27,8 +26,18 @@ interface TripHeroProps {
 }
 
 /**
- * Верх деталей: маршрут с таймлайном, водитель, шаринг, авто, теги,
- * комментарий водителя. Чистый рендер — состояние живёт в useTripActions.
+ * Верх деталей: маршрут, водитель, шаринг, авто, теги, комментарий
+ * водителя. Чистый рендер — состояние живёт в useTripActions.
+ *
+ * Порядок — по вопросам, с которыми открывают поездку:
+ *  1. когда и куда едем → карточка маршрута;
+ *  2. кто везёт и можно ли связаться → карточка водителя;
+ *  3. на чём → строка авто;
+ *  4. остальное → теги и комментарий.
+ * Шаринг живёт ПОСЛЕ водителя, а не иконкой внутри его карточки: в
+ * карточке водителя две иконки-действия (поделиться и телефон) читались
+ * как «действия с водителем», хотя поделиться можно поездкой, а не
+ * человеком. Иконка шаринга убрана — осталась явная кнопка ниже.
  */
 export function TripHero({
   item,
@@ -39,22 +48,24 @@ export function TripHero({
   onShare,
 }: TripHeroProps) {
   const openUserProfile = useOpenUserProfile();
+  const terminal = terminalTripStatusLabel(item.status);
+
   return (
     <>
       <div className={styles.routeCard}>
-        <Caption className={ROW_BETWEEN} Component="div">
-          {/* moscowDayLabel от departureAt, а НЕ dayLabel(item.date):
-              бэк отдаёт trip.date подписью ru-RU («ср, 16 сентября»,
-              serializers/index.ts formatDateRu), её /\d{4}-\d{2}-\d{2}$/
-              не берёт, new Date такую строку не разбирает — и «Сегодня»/
-              «Завтра» на карточке поездки были недостижимы. */}
-          <span>{relativeMoscowDay(item.departureAt)}</span>
-          <span>
-            {terminalTripStatusLabel(item.status) ??
-              `В пути ~ ${formatDuration(item.durationMinutes)}`}{" "}
-            · {item.distanceKm} км
-          </span>
-        </Caption>
+        {/* Шапка карточки: слева день, справа путь — как в карточке
+            поездки (там дата слева, цена справа). Две подписи по краям
+            читаются лучше, чем строка, растянутая space-between через
+            всю ширину. */}
+        <div className={styles.routeHead}>
+          <Text weight="2" Component="span">
+            {relativeMoscowDay(item.departureAt)}
+          </Text>
+          <Caption Component="span" className={styles.routeMeta}>
+            {terminal ?? `В пути ~ ${formatDuration(item.durationMinutes)}`}
+            {` · ${item.distanceKm} км`}
+          </Caption>
+        </div>
 
         <TripRouteTimeline
           fromCity={item.fromCity}
@@ -69,8 +80,8 @@ export function TripHero({
       <div className={styles.driverCard}>
         {/* Карточка водителя открывает шторку его профиля. Кнопка —
             сосед блока действий справа, а не их родитель: вложенные
-            кнопки запрещены, и «Позвонить»/«Поделиться» остаются
-            самостоятельными действиями. */}
+            кнопки запрещены, и «Позвонить» остаётся самостоятельным
+            действием. */}
         <button
           type="button"
           className={styles.driverOpen}
@@ -126,15 +137,6 @@ export function TripHero({
         </button>
 
         <div className={styles.driverActions}>
-          <IconButton
-            size="m"
-            variant="muted"
-            onClick={onShare}
-            aria-label="Поделиться поездкой"
-            title="Поделиться поездкой"
-          >
-            <Send size={16} />
-          </IconButton>
           {item.driver.phone && isConfirmedBooking ? (
             <IconButton
               size="m"
@@ -175,7 +177,7 @@ export function TripHero({
           before={<Send size={16} />}
           onClick={onShare}
         >
-          Поделиться поездкой с попутчиком в Telegram
+          Поделиться поездкой
         </Button>
         {shareStatus && (
           <Caption Component="p" role="status">
@@ -186,27 +188,36 @@ export function TripHero({
 
       {item.driver.car && (
         <div className={styles.carRow}>
-          <Text weight="2" Component="span">
-            {item.driver.car.model} · {item.driver.car.color}
-          </Text>
-          <Caption Component="span">
-            {item.driver.car.plate ?? "Госномер после брони"}
-          </Caption>
+          <CarFront size={20} className={styles.carIcon} aria-hidden />
+          <div className={styles.carText}>
+            <Text weight="2" Component="div">
+              {item.driver.car.model} · {item.driver.car.color}
+            </Text>
+            <Caption Component="div">
+              {item.driver.car.plate ?? "Госномер после брони"}
+            </Caption>
+          </div>
         </div>
       )}
 
       {item.tags.length > 0 && (
-        <div className={BTN_ROW_WRAP}>
+        // Теги — статические подписи, а не управляющие элементы: раньше это
+        // были Chip'ы кита (интерактивный фасад, кегль 16 через Subheadline),
+        // и «Тихая поездка» читалась как заголовок раздела. Здесь это
+        // пилюли 13px — мета-роль, один ряд, перенос по словам.
+        <ul className={styles.tags}>
           {item.tags.map((tag) => (
-            <Chip key={tag}>{tag}</Chip>
+            <li key={tag} className={styles.tag}>
+              {tag}
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {item.comment && (
         <div className={styles.noteCard}>
           <Caption weight="2" Component="span" className={styles.noteTitle}>
-            Комментарий водителя:
+            Комментарий водителя
           </Caption>
           {/* Комментарий — свободный текст человека (контракт допускает 500
               знаков, dto/trip.dto.ts), поэтому слова водителя идут через
@@ -214,7 +225,9 @@ export function TripHero({
               набранные им, не склеиваются в одну строку, а длинное слово без
               пробела (ссылка, имя файла) не вылезает за блок. Правила
               переносов живут в фасаде — руками на потребителе их не пишем. */}
-          <Blockquote>{item.comment}</Blockquote>
+          <Blockquote className={styles.noteQuote} topRightIcon={null}>
+            {item.comment}
+          </Blockquote>
         </div>
       )}
     </>
