@@ -22,6 +22,12 @@ module.exports = {
       env: {
         FORCE_COLOR: "0",
         ADMIN_TOKEN: "dev-admin-token-12345",
+        // Dev-bypass initData (hash=dev-hash) принимает только allowlist.
+        // 9800001 — мокнутый пользователь telegram-app/src/mockEnv.ts и seed
+        // (u-dev); 9890001 — контрагент e2e. Id публичные, не секреты.
+        // Без этого строки POST /auth/telegram отвечает 401, и клиент
+        // показывает ложное «Данные входа устарели».
+        DEV_AUTH_USER_ALLOWLIST: "9800001,9890001",
       },
     },
     {
