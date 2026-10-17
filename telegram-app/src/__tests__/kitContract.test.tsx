@@ -257,21 +257,33 @@ describe("фасад Section: заголовок секции повторяет
     expect(css).toMatch(/padding:16px 16px 8px/);
   });
 
-  it("наш ui/Section повторяет именно эти значения", () => {
+  it("наш ui/Section: вертикаль выровнена (top = bottom), горизонталь кита", () => {
     // ui/Section.module.css — наш источник истины, а не китовский класс:
     // хэш-классы кита меняются от версии к версии, значения — контракт.
     const ours = readFileSync(
       join(dirname(new URL(import.meta.url).pathname), "..", "ui", "Section.module.css"),
       "utf8",
     );
-    expect(ours).toMatch(/padding: 20px 24px 4px 22px/);
-    expect(ours).toMatch(/padding: 16px 16px 8px/);
+    // Осознанное отклонение от кита: у него верх 20/16 против низа 4/8,
+    // и подпись сидела не по центру полосы. Сумма 24px сохранена —
+    // вертикальный ритм секций не едет.
+    expect(ours).toMatch(/padding: 12px 24px 12px 22px/);
+    expect(ours).toMatch(/padding: 12px 16px/);
+    // Симметрия по вертикали — главное требование (см. layoutCss-пин).
+    for (const padding of [
+      ours.match(/padding: (12px 24px 12px 22px)/)?.[1],
+      ours.match(/padding: (12px 16px)/)?.[1],
+    ]) {
+      const parts = (padding ?? "").split(/\s+/).filter(Boolean);
+      const top = parts[0];
+      // 2 значения — [верт, гориз]; 3 — [верх, гориз, низ]; 4 — [верх, право, низ, лево].
+      const bottom = parts.length === 4 ? parts[2] : parts.length === 3 ? parts[2] : parts[0];
+      expect(top).toBe(bottom);
+    }
     // Токен ТЕКСТА на base перестал быть кит-овым (реестр #38): сырой
     // --tgui--link_color давал 4.02:1 на белой секции, а заголовок 13/15px —
     // не крупный текст. Теперь это --app-info, тот же китовый оттенок,
     // но с проверенным на своей худшей подложке коэффициентом смешения.
-    // Паддинги остаются пингом паритета с китом — их по-прежнему сверяет
-    // соседний тест по styles.css.
     expect(ours).toContain("color: var(--app-info)");
     expect(ours).not.toMatch(/color:\s*var\(--tgui--link_color\)/);
     // iOS-подпись остаётся китовой: там не мы перекрашиваем заголовок, а

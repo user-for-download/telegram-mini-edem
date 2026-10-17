@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // iOS-ветка фасада ui/Section: обёртка и типографика повторяют китовые
-// значения для iOS (паддинг 16px 16px 8px, Caption caps), тогда как на базовой
-// платформе — 20px 24px 4px 22px и Subheadline level=2 weight=2.
+// значения для iOS (паддинг 12px 16px — вертикаль выровнена нами, у кита
+// 16px 16px 8px; Caption caps), тогда как на базовой платформе —
+// 12px 24px 12px 22px и Subheadline level=2 weight=2.
 // Мок платформы — тот же приём, что в sheet.ios.test.tsx.
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";

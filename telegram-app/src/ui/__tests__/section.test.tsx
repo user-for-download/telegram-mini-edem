@@ -80,9 +80,10 @@ describe("Section: обёртка повторяет китовую геомет
     expect(html).toContain("<h2");
   });
 
-  it("геометрия обёртки совпадает с китовой Section.Header", () => {
-    // Кит отдаёт padding в своём классе; мы повторяем его значениями в
-    // Section.module.css. Закреплено измерением — см. kitContract.test.tsx.
+  it("геометрия обёртки: вертикальный паддинг симметричен (top = bottom)", () => {
+    // Обёртка своя (кит зашивает h1), геометрия — в Section.module.css.
+    // Осознанное отклонение от кита: там верх 20/iOS 16 против низа 4/8,
+    // из-за чего подпись сидела не по центру. Сумму 24px сохранили.
     expect(styles.header).toBeTruthy();
     expect(styles.headerIos).toBeTruthy();
   });

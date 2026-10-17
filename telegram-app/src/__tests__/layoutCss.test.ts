@@ -19,6 +19,7 @@ const indexCss = readCss("../index.css");
 const pageCss = readCss("../ui/ui.module.css");
 const textCss = readCss("../ui/text.module.css");
 const chipCss = readCss("../ui/Chip.module.css");
+const sectionCss = readCss("../ui/Section.module.css");
 const tabbarCss = readCss("../components/TabsBar/Tabbar.module.css");
 const toastCss = readCss("../components/Toast/Toast.module.css");
 
@@ -189,6 +190,24 @@ describe("каркас: тап-таргет 44px (WCAG 2.5.5 AAA) — пин з�
   it("44px выше нативных 42px кита (mode m), иначе height обнулит минимум", () => {
     expect(44).toBeGreaterThan(42);
   });
+});
+
+describe("каркас: заголовок секции центрирован по вертикали", () => {
+  // Кит даёт асимметрию: base 20px сверху / 4px снизу, iOS 16/8 — подпись
+  // сидит не по центру своей полосы. Мы выровняли (12/12), сохранив сумму
+  // 24px, чтобы не поехал вертикальный ритм секций. Пиним симметрию,
+  // а не конкретные числа: любое будущее изменение обязано её сохранять.
+  for (const selector of [".header", ".headerIos"]) {
+    it(`${selector}: top === bottom`, () => {
+      const rule = ruleBody(sectionCss, selector);
+      const padding = rule.match(/padding:\s*([^;]+);/)?.[1]?.trim() ?? "";
+      const parts = padding.split(/\s+/).filter(Boolean);
+      expect(parts.length).toBeGreaterThanOrEqual(2);
+      const top = parts[0];
+      const bottom = parts.length === 4 ? parts[2] : parts[0];
+      expect(top).toBe(bottom);
+    });
+  }
 });
 
 describe("каркас: рецепт выбранного тега (ui/Chip tone=accent)", () => {
