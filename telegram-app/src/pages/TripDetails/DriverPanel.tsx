@@ -5,13 +5,12 @@ import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { MIN_TARGET } from "@/ui/classes";
 import { EditTripForm } from "@/components/Trip/EditTripForm";
+import { TripPassengers } from "@/components/Trip/TripPassengers";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
-import { useTripBookingsQuery } from "@/queries/useBookingsQuery";
 import {
   useCancelTripMutation,
   useCompleteTripMutation,
 } from "@/queries/useTripsQuery";
-import { useNavigate } from "react-router-dom";
 import styles from "./TripDetailsPage.module.css";
 
 interface DriverPanelProps {
@@ -40,7 +39,6 @@ export function DriverPanel({
   onToggleEdit,
   trip,
 }: DriverPanelProps) {
-  const navigate = useNavigate();
   const toast = useToast();
   const cancelTrip = useCancelTripMutation();
   const completeTrip = useCompleteTripMutation();
@@ -74,27 +72,27 @@ export function DriverPanel({
     cancelTrip.mutate(tripId, {
       onSuccess: () => toast.show({ text: "Поездка отменена" }),
     });
-  // Заявки видны только водителю: остальным бэкенд вернёт 403,
-  // поэтому запрос делаем только здесь.
-  const bookings = useTripBookingsQuery(tripId, { enabled: isActive });
-  // Число в кнопке — СЕРВЕРНЫЙ pendingRequestsCount из trip (детали уже
-  // загружены, нового запроса не нужно). Считать по загруженным
-  // страницам нельзя: /bookings/trip/:id отдаёт по 50 строк на страницу,
-  // и при >50 заявках водитель видел бы «50» вместо реального числа
-  // (пагинация при этом не подгружается — кнопка ведёт на экран заявок).
-  // Строки по 50 для отрисовки списка на экране заявок остаются: там нужен
-  // сам список, а не его длина.
-  //
-  // pendingRequestsCount опционален в контракте — при его отсутствии
-  // откатываемся к подсчёту по загруженным страницам.
-  const loadedPendingCount =
-    bookings.data?.pages
-      .flatMap((page) => page.items)
-      .filter((booking) => booking.status === "pending").length ?? 0;
-  const pendingCount = trip.pendingRequestsCount ?? loadedPendingCount;
-
   return (
-    <div className={styles.section}>
+    <>
+      {/* Заявки и подтверждённые пассажиры — ПРЯМО ЗДЕСЬ, а не второй
+          шторкой поверх деталей: «Заявки пассажиров» открывали ещё одну
+          route-backed модалку, и водитель закрывал две подряд. Те же
+          Cell'ы, что в карточке поездки (TripPassengers → DriverTripRequests).
+          Секция целиком скрыта у неактивной поездки: список над пустотой
+          читался как незагрузившийся.
+          Отдельного заголовка «Пассажиры» нет — группы подписаны сами
+          («Ожидают решения (N)» / «В поездке (N)»), третий уровень над
+          ними был бы лишним. */}
+      {isActive && (
+        <div className={styles.section}>
+          <TripPassengers
+            tripId={tripId}
+            pendingCount={trip.pendingRequestsCount}
+          />
+        </div>
+      )}
+
+      <div className={styles.section}>
       {/* Надпись над группой действий, а не второй заголовок экрана:
           раньше это был Text 17/600, и он спорил с названием поездки. */}
       <Caption weight="2" Component="div" className={styles.sectionTitle}>
@@ -117,25 +115,6 @@ export function DriverPanel({
       )}
       {isActive && (
         <>
-          <Button
-            variant="primary"
-            stretched
-            onClick={() => navigate(`/trips/my/${tripId}/requests`)}
-          >
-            Заявки пассажиров{bookings.data ? ` (${pendingCount})` : ""}
-          </Button>
-          {bookings.isError && (
-            <Notice tone="danger" variant="text">
-              {bookingErrorMessage(bookings.error)}{" "}
-              <Button
-                variant="ghost"
-                size="s"
-                onClick={() => void bookings.refetch()}
-              >
-                Повторить
-              </Button>
-            </Notice>
-          )}
           <Button stretched variant="outline" onClick={onToggleEdit}>
             {editing ? "Скрыть редактирование" : "Редактировать поездку"}
           </Button>
@@ -191,6 +170,7 @@ export function DriverPanel({
           )}
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }

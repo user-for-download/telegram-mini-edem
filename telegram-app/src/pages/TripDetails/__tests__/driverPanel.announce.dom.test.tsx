@@ -22,20 +22,29 @@ import { MemoryRouter } from "react-router-dom";
 
 const {
   mockUseTripBookings,
+  mockUseDriverRequests,
   mockUseCancelTrip,
   mockUseCompleteTrip,
 } = vi.hoisted(() => ({
   mockUseTripBookings: vi.fn(),
+  mockUseDriverRequests: vi.fn(),
   mockUseCancelTrip: vi.fn(),
   mockUseCompleteTrip: vi.fn(),
 }));
 
 vi.mock("@/queries/useBookingsQuery", () => ({
   useTripBookingsQuery: mockUseTripBookings,
+  useDriverRequestsQuery: mockUseDriverRequests,
   useCancelBookingMutation: vi.fn(),
-  useUpdateBookingStatusMutation: vi.fn(),
+  // Панель показывает список заявок (TripPassengers), значит мутация нужна
+  // с полным контрактом, а не голым vi.fn().
+  useUpdateBookingStatusMutation: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+    variables: undefined,
+  }),
   useMyBookingsQuery: vi.fn(),
-  useDriverRequestsQuery: vi.fn(),
 }));
 
 vi.mock("@/queries/useTripsQuery", () => ({
@@ -85,6 +94,12 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  mockUseDriverRequests.mockReturnValue({
+    data: [],
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  });
   mockUseTripBookings.mockReturnValue({
     data: { pages: [{ items: [] }], pageParams: [undefined] },
     isLoading: false,

@@ -1,9 +1,14 @@
-// Число в кнопке «Заявки пассажиров (N)» на панели водителя.
+// Панель водителя в деталях поездки: заявки и подтверждённые пассажиры
+// показываются ПРЯМО ЗДЕСЬ, а не второй шторкой.
 //
-// Бэкенд отдаёт по 50 строк на страницу, а пагинация с экрана не
-// подгружается (кнопка ведёт на /trips/my/:id/requests). Точный источник —
-// серверный pendingRequestsCount, который уже приезжает в trip (детали
-// поездки загружены), нового запроса не требуется.
+// Было: кнопка «Заявки пассажиров (N)» вела на route-backed модалку
+// (/trips/my/:id/requests) поверх деталей — две модалки друг на друге,
+// два закрытия подряд, accept/decline в третьем месте. Стало: те же Cell'ы
+// из карточки поездки (DriverTripRequests) + список подтверждённых.
+//
+// Счётчик остался СЕРВЕРНЫЙ (pendingRequestsCount): строки приходят
+// постранично по 50, и при 73 заявках подпись «Ожидают решения (73)» должна
+// показывать 73, а не 50.
 import { describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
@@ -11,20 +16,27 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 
 const {
   mockUseTripBookings,
+  mockUseDriverRequests,
   mockUseCancelTrip,
   mockUseCompleteTrip,
 } = vi.hoisted(() => ({
   mockUseTripBookings: vi.fn(),
+  mockUseDriverRequests: vi.fn(),
   mockUseCancelTrip: vi.fn(),
   mockUseCompleteTrip: vi.fn(),
 }));
 
 vi.mock("@/queries/useBookingsQuery", () => ({
   useTripBookingsQuery: mockUseTripBookings,
+  useDriverRequestsQuery: mockUseDriverRequests,
+  useUpdateBookingStatusMutation: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+    variables: undefined,
+  }),
   useCancelBookingMutation: vi.fn(),
-  useUpdateBookingStatusMutation: vi.fn(),
   useMyBookingsQuery: vi.fn(),
-  useDriverRequestsQuery: vi.fn(),
 }));
 
 vi.mock("@/queries/useTripsQuery", () => ({
@@ -45,7 +57,7 @@ function mutationState() {
 }
 
 /** Ответ /bookings/trip/:id: страницы по 50 строк. */
-function tripBookings(pages: Array<{ items: Array<{ status: string }> }>) {
+function tripBookings(pages: Array<{ items: Array<Record<string, unknown>> }>) {
   return {
     data: { pages, pageParams: pages.map(() => undefined) },
     isLoading: false,
@@ -55,6 +67,49 @@ function tripBookings(pages: Array<{ items: Array<{ status: string }> }>) {
     hasNextPage: false,
     fetchNextPage: vi.fn(),
     isFetchingNextPage: false,
+  };
+}
+
+/** Заявка водителя из общего запроса (кэш Главной). */
+function requestRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "b-1",
+    status: "pending",
+    seat: 1,
+    trip: { id: "t-1" },
+    passenger: {
+      id: "u-pass",
+      name: "Анна Пассажирова",
+      avatar: "https://t.me/a.png",
+      rating: 4.8,
+      reviewsCount: 3,
+    },
+    ...overrides,
+  };
+}
+
+function driverRequests(rows: Array<Record<string, unknown>>) {
+  return {
+    data: rows,
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  };
+}
+
+function confirmedRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "b-c",
+    status: "confirmed",
+    seat: 2,
+    passenger: {
+      id: "u-conf",
+      name: "Пётр Попутчиков",
+      avatar: "https://t.me/c.png",
+      rating: 5,
+      reviewsCount: 1,
+    },
+    ...overrides,
   };
 }
 
@@ -81,10 +136,14 @@ function makeTrip(overrides: Record<string, unknown> = {}) {
 
 function renderPanel(
   trip: Record<string, unknown>,
-  bookings: ReturnType<typeof tripBookings>,
-  departed = false,
+  bookings: ReturnType<typeof tripBookings> | Record<string, unknown>,
+  options: {
+    requests?: ReturnType<typeof driverRequests>;
+    departed?: boolean;
+  } = {},
 ): string {
   mockUseTripBookings.mockReturnValue(bookings);
+  mockUseDriverRequests.mockReturnValue(options.requests ?? driverRequests([]));
   mockUseCancelTrip.mockReturnValue(mutationState());
   mockUseCompleteTrip.mockReturnValue(mutationState());
   return renderToString(
@@ -95,8 +154,8 @@ function renderPanel(
             tripId="t-1"
             status="active"
             isActive
-            canCompleteTrip={departed}
-            departed={departed}
+            canCompleteTrip={options.departed ?? false}
+            departed={options.departed ?? false}
             editing={false}
             onToggleEdit={vi.fn()}
             trip={trip as never}
@@ -107,111 +166,99 @@ function renderPanel(
   );
 }
 
-describe("DriverPanel: счётчик заявок точный за пределами страницы", () => {
-  it("happy: число из pendingRequestsCount, а не из загруженных строк", () => {
-    // Первая страница забита полностью — 50 строк, реальных заявок 73.
-    const full = Array.from({ length: 50 }, () => ({
-      id: "b",
-      status: "pending",
-    }));
+describe("DriverPanel: заявки прямо в деталях, без второй шторки", () => {
+  it("строка заявки — на месте, кнопки-перехода больше нет", () => {
     const html = renderPanel(
-      makeTrip({ pendingRequestsCount: 73 }),
-      tripBookings([{ items: full }]),
+      makeTrip({ pendingRequestsCount: 1 }),
+      tripBookings([{ items: [] }]),
+      { requests: driverRequests([requestRow()]) },
     );
 
-    // SSR разделяет соседние текстовые узлы маркером <!-- -->, поэтому
-    // сравниваем части, а не склейку.
-    expect(html).toContain("Заявки пассажиров");
+    // Та же Cell'а, что в карточке поездки: имя, место, комментарий.
+    expect(html).toContain("Анна Пассажирова");
+    expect(html).toContain("место №1");
+    // Группа подписана числом с сервера.
+    expect(html).toContain("Ожидают решения");
+    expect(html).toContain("(1)");
+    // Второй модалки в дереве нет — кнопка-переход удалена.
+    expect(html).not.toContain("Заявки пассажиров");
+  });
+
+  it("счётчик группы — серверный pendingRequestsCount, а не загруженные строки", () => {
+    // 50 строк на странице, реальных заявок 73.
+    const html = renderPanel(
+      makeTrip({ pendingRequestsCount: 73 }),
+      tripBookings([{ items: [] }]),
+      { requests: driverRequests([requestRow()]) },
+    );
+
     expect(html).toContain("(73)");
     expect(html).not.toContain("(50)");
   });
 
-  it("edge: без pendingRequestsCount — подсчёт по загруженным страницам", () => {
-    // Контракт делает поле опциональным: при его отсутствии не показываем
-    // ноль, а откатываемся на прежнее поведение.
+  it("подтверждённые пассажиры — списком «В поездке», только чтение", () => {
     const html = renderPanel(
-      makeTrip(),
-      tripBookings([
-        { items: [{ status: "pending" }, { status: "confirmed" }] },
-        { items: [{ status: "pending" }] },
-      ]),
+      makeTrip({ pendingRequestsCount: 0 }),
+      tripBookings([{ items: [confirmedRow()] }]),
     );
 
-    expect(html).toContain("Заявки пассажиров");
-    expect(html).toContain("(2)");
+    expect(html).toContain("В поездке");
+    expect(html).toContain("Пётр Попутчиков");
+    expect(html).toContain("место №2");
+    // Действий по подтверждённой брони в панели нет.
+    expect(html).not.toContain("Отклонить заявку Пётр");
   });
 
-  it("edge: счётчик pending равным нулю совпадает с посчитанным", () => {
+  it("нет заявок — честное пустое состояние вместо пустого блока", () => {
     const html = renderPanel(
       makeTrip({ pendingRequestsCount: 0 }),
       tripBookings([{ items: [] }]),
     );
-
-    expect(html).toContain("Заявки пассажиров");
-    expect(html).toContain("(0)");
+    expect(html).toContain("Заявок пока нет");
   });
 
-  it("edge: пока данные не пришли, число не выдумывается", () => {
-    mockUseTripBookings.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-      error: null,
-      refetch: vi.fn(),
-      hasNextPage: false,
-      fetchNextPage: vi.fn(),
-      isFetchingNextPage: false,
-    });
-    mockUseCancelTrip.mockReturnValue(mutationState());
-    mockUseCompleteTrip.mockReturnValue(mutationState());
-
-    const html = renderToString(
-      <AppRoot platform="base">
-        <MemoryRouter initialEntries={["/trips/t-1"]}>
-          <ToastProvider>
-            <DriverPanel
-              tripId="t-1"
-              status="active"
-              isActive
-              departed={false}
-              canCompleteTrip={false}
-              editing={false}
-              onToggleEdit={vi.fn()}
-              trip={makeTrip({ pendingRequestsCount: 12 }) as never}
-            />
-          </ToastProvider>
-        </MemoryRouter>
-      </AppRoot>,
+  it("пока данные не пришли, «Заявок пока нет» не выдумывается", () => {
+    const html = renderPanel(
+      makeTrip({ pendingRequestsCount: 12 }),
+      {
+        data: undefined,
+        isLoading: true,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+        hasNextPage: false,
+        fetchNextPage: vi.fn(),
+        isFetchingNextPage: false,
+      },
     );
 
-    // Пока данные не пришли, число не выдумывается — как и раньше.
-    expect(html).toContain("Заявки пассажиров");
-    expect(html).not.toContain("(12)");
-    expect(html).not.toContain("Повторить");
+    expect(html).not.toContain("Заявок пока нет");
+    // Число из trip видно сразу — оно не зависит от первой страницы.
+    expect(html).toContain("(12)");
   });
 });
 
 describe("DriverPanel: уехавшую поездку отменить нельзя", () => {
   // Регресс: `/trips/:id/cancel` проверял только status === "active", а
-  // автоархив наступает через 24ч после отправления. В это окно водитель
+  // автоархив наступает лишь через 24ч после отправления. В это окно водитель
   // видел живую «Отменить поездку» для рейса, который уже в пути, и
   // отмена сносила confirmed-брони пассажиров ПОСЛЕ поездки.
   const emptyBookings = tripBookings([{ items: [] }]);
 
   it("скрывает отмену после отправления", () => {
-    const html = renderPanel({}, emptyBookings, true);
+    const html = renderPanel({}, emptyBookings, { departed: true });
     expect(html).not.toContain("Отменить поездку");
     expect(html).toContain("Отмена недоступна после отправления");
   });
 
   it("оставляет завершение доступным после отправления", () => {
-    const html = renderPanel({}, emptyBookings, true);
+    const html = renderPanel({}, emptyBookings, { departed: true });
     expect(html).toContain("Завершить поездку");
     expect(html).not.toContain("Завершение станет доступно");
   });
 
   it("показывает отмену, пока поездка ещё не уехала", () => {
-    const html = renderPanel({}, emptyBookings, false);
+    const html = renderPanel({}, emptyBookings, { departed: false });
     expect(html).toContain("Отменить поездку");
     expect(html).toContain("Завершить поездку");
   });

@@ -95,10 +95,16 @@ describe("выбор места: сетка в строку", () => {
 });
 
 describe("действия водителя: одна главная кнопка", () => {
-  it("заявки — primary, редактирование — outline", () => {
-    expect(driverTsx).toMatch(
-      /<Button\s+variant="primary"[\s\S]*?Заявки пассажиров/,
-    );
+  it("вторая шторка не открывается — заявки встроены в детали", () => {
+    // Раньше кнопка вела на /trips/my/:id/requests: две модалки друг на
+    // друге. Теперь список — часть этой же шторки.
+    expect(driverTsx).not.toContain("/trips/my/");
+    expect(driverTsx).toContain("TripPassengers");
+    // Кнопки-перехода нет (упоминание в комментарии не в счёт).
+    expect(driverTsx).not.toMatch(/<Button[^>]*>[^<]*Заявки пассажиров/);
+  });
+
+  it("редактирование — outline", () => {
     expect(driverTsx).toMatch(/<Button stretched variant="outline"/);
   });
 

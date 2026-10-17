@@ -50,6 +50,21 @@ vi.mock("@/queries/useBookingsQuery", () => ({
   useTripBookingsQuery: mockUseTripBookings,
   useCreateBookingMutation: mockUseCreateBooking,
   useCancelBookingMutation: mockUseCancelBooking,
+  // Панель водителя показывает заявки списком прямо в деталях
+  // (TripPassengers → DriverTripRequests): общий кэш заявок и мутация
+  // решения обязаны существовать в моке.
+  useDriverRequestsQuery: () => ({
+    data: [],
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useUpdateBookingStatusMutation: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+    variables: undefined,
+  }),
 }));
 
 vi.mock("@/store/useAuthStore", () => ({
