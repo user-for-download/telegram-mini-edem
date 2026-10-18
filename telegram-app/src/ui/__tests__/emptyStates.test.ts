@@ -24,6 +24,7 @@ describe("EMPTY_STATES: словарь зафиксирован 1:1", () => {
       [
         "genericEmpty",
         "loadError",
+        "myTripsNoResults",
         "notificationsDriverEmpty",
         "notificationsEmpty",
         "notificationsPassengerEmpty",
@@ -72,6 +73,16 @@ describe("EMPTY_STATES: словарь зафиксирован 1:1", () => {
     expect(EMPTY_STATES.searchNoResults.description).toBe(
       "Попробуйте изменить города или выбрать другие даты отправления",
     );
+  });
+
+  it("поиск по своим поездкам не зовёт к датам, которых нет", () => {
+    // Фильтр экрана /bookings — один текстовый запрос по городам. Прежний
+    // текст (searchNoResults) советовал «выбрать другие даты отправления».
+    expect(EMPTY_STATES.myTripsNoResults.header).toBe("Поездок не найдено");
+    expect(EMPTY_STATES.myTripsNoResults.description).toBe(
+      "Фильтр ищет города «откуда» и «куда» — проверьте написание.",
+    );
+    expect(EMPTY_STATES.myTripsNoResults.description).not.toMatch(/даты|дата/);
   });
 
   it("канон деталей поездки", () => {

@@ -69,7 +69,11 @@ export function TripDetailsPage() {
           action={
             <>
               {!isNotFound && (
-                <Button stretched onClick={() => void trip.refetch()}>
+                <Button
+                  stretched
+                  variant="primary"
+                  onClick={() => void trip.refetch()}
+                >
                   Повторить
                 </Button>
               )}

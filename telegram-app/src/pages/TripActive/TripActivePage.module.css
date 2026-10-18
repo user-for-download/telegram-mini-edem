@@ -13,21 +13,19 @@
   min-width: 0;
 }
 
-/* Поле поиска залито серым (у кита инпут прозрачный — не видно).
- * Внешняя обёртка FormInput на base красит белый фон и бока 22px
- * (tgui-8ca5…) — гасим, иначе поле не во всю ширину. Хэш из
- * @telegram-apps/telegram-ui@2.1.13 (pinned) — при bump сверить
- * в dist/styles.css. Неслойный модуль бьёт слой tgui без !important. */
+/* Поле поиска — компактная пилюля: у кита инпут прозрачный (на фоне
+ * секции его не видно), поэтому заливку и скругление держит наш класс
+ * на китовом <label>. Резерв кита под header (20px сверху + 16 снизу)
+ * снимает `FIELD_COMPACT` на строке (реестр #40) — прежнее правило
+ * адресовало корень FormInput ХЕШ-классом кита (`tgui-8ca5…`, pinned
+ * 2.1.13) ПОТОМКОМ `.searchField`, а хеш висит на родителе этого label:
+ * селектор не матчил ничего, и поле резервировало 84px вместо 48.
+ * Неслойный модуль бьёт слой tgui без !important. */
 .searchField.searchField {
   width: 100%;
   box-sizing: border-box;
   background: var(--tgui--tertiary_bg_color);
   border-radius: var(--app-radius-pill);
-}
-
-.searchField.searchField :global(.tgui-8ca550c2fc85eff5) {
-  background: transparent;
-  padding: 0;
 }
 
 /* Стили пилюль-переключателя живут в ui/Switcher.module.css.

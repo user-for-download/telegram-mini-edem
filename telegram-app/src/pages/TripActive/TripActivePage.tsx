@@ -5,7 +5,7 @@ import { Button } from "@/ui/Button";
 import { Switcher, type SwitcherOption } from "@/ui/Switcher";
 import { Page } from "@/ui/Page";
 import { Input, VisuallyHidden } from "@telegram-apps/telegram-ui";
-import { Search as SearchIcon } from "lucide-react";
+import { Plus, Search as SearchIcon } from "lucide-react";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { TripCard } from "@/components/Trip/TripCard";
@@ -15,6 +15,7 @@ import { Stack } from "@/ui/Stack";
 import { TripCardsSkeleton, TripCardSkeleton } from "@/components/Skeletons";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
+import { FIELD_COMPACT } from "@/ui/classes";
 import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { listBlockingError } from "@/helpers/listBlockingError";
@@ -218,11 +219,29 @@ export function TripActivePage() {
   ].sort((a, b) => a.time - b.time);
 
   const emptyHeader = searching
-    ? EMPTY_STATES.searchNoResults.header
+    ? EMPTY_STATES.myTripsNoResults.header
     : undefined;
   const emptyText = searching
-    ? EMPTY_STATES.searchNoResults.description
+    ? EMPTY_STATES.myTripsNoResults.description
     : EMPTY_STATES.tripActive.description;
+  // Действие пустого состояния. При активном поиске единственный выход —
+  // снять фильтр (прежде кнопки не было вовсе, а описание звало менять
+  // «даты отправления», которых на экране не существует: строка поиска —
+  // один текстовый запрос). Одна кнопка на все три ветки: тройная копия
+  // разъезжалась бы при любой правке.
+  const emptyAction = (
+    <Button
+      size="m"
+      variant="primary"
+      onClick={() => {
+        haptic.light();
+        if (searching) setQuery("");
+        else navigate("/profile/history");
+      }}
+    >
+      {searching ? "Сбросить поиск" : "История поездок"}
+    </Button>
+  );
 
   return (
     <Page>
@@ -234,7 +253,7 @@ export function TripActivePage() {
           {bookingErrorMessage(mutationError)}
         </Notice>
       )}
-      <div className={styles.searchRow}>
+      <div className={`${styles.searchRow} ${FIELD_COMPACT}`}>
         <Input
           id="bookings-search"
           value={query}
@@ -259,19 +278,7 @@ export function TripActivePage() {
           empty={activeBookings.length === 0}
           emptyHeader={emptyHeader}
           emptyText={emptyText}
-          emptyAction={
-            !searching ? (
-              <Button
-                size="m"
-                onClick={() => {
-                  haptic.light();
-                  navigate("/profile/history");
-                }}
-              >
-                История поездок
-              </Button>
-            ) : undefined
-          }
+          emptyAction={emptyAction}
           skeleton={<TripCardsSkeleton />}
           onRetry={() => {
             void bookings.refetch();
@@ -286,19 +293,7 @@ export function TripActivePage() {
           empty={driverList.length === 0}
           emptyHeader={emptyHeader}
           emptyText={emptyText}
-          emptyAction={
-            !searching ? (
-              <Button
-                size="m"
-                onClick={() => {
-                  haptic.light();
-                  navigate("/profile/history");
-                }}
-              >
-                История поездок
-              </Button>
-            ) : undefined
-          }
+          emptyAction={emptyAction}
           skeleton={<TripCardsSkeleton />}
           onRetry={() => {
             void driverActive.refetch();
@@ -326,19 +321,7 @@ export function TripActivePage() {
           empty={allCards.length === 0}
           emptyHeader={emptyHeader}
           emptyText={emptyText}
-          emptyAction={
-            !searching ? (
-              <Button
-                size="m"
-                onClick={() => {
-                  haptic.light();
-                  navigate("/profile/history");
-                }}
-              >
-                История поездок
-              </Button>
-            ) : undefined
-          }
+          emptyAction={emptyAction}
           skeleton={<TripCardsSkeleton />}
           onRetry={() => {
             void driverActive.refetch();
@@ -358,11 +341,27 @@ export function TripActivePage() {
               placeholder={<TripCardSkeleton />}
               placeholderLabel="Загрузка ещё поездок"
             />
-            <Button size="l" onClick={() => navigate("/trips")}>
+            {/* «Найти поездку» — primary: ровно это действие залито на
+                главной (`TripSearchSection`) и на поиске («Найти») — реестр
+                #6: одно действие не может быть на одном экране залитым, а
+                на другом приглушённым. «Создать поездку» — secondary: два
+                залитых действия подряд спорили бы друг с другом.
+                Иконки — lucide слотом `before`, а не «+» в подписи:
+                пиктограмма оформлена одинаково во всём приложении. */}
+            <Button
+              size="l"
+              variant="primary"
+              before={<SearchIcon size={18} />}
+              onClick={() => navigate("/trips")}
+            >
               Найти поездку
             </Button>
-            <Button size="l" onClick={() => navigate("/trips/my/new")}>
-              + Создать поездку
+            <Button
+              size="l"
+              before={<Plus size={18} />}
+              onClick={() => navigate("/trips/my/new")}
+            >
+              Создать поездку
             </Button>
           </Stack>
         </QueryState>

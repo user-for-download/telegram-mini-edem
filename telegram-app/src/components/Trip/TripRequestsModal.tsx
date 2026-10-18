@@ -288,7 +288,11 @@ export const TripRequestsBody = memo(function TripRequestsBody({
           action={
             <>
               {!forbidden && (
-                <Button stretched onClick={() => void requests.refetch()}>
+                <Button
+                  stretched
+                  variant="primary"
+                  onClick={() => void requests.refetch()}
+                >
                   Повторить
                 </Button>
               )}

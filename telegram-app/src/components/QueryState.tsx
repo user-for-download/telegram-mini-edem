@@ -14,6 +14,11 @@ import { Loading } from "@/ui/Loading";
  * экрана), кнопка retry — всегда `ui/Button size="m"` через слот `action`
  * (до U1 кнопка лежала в `children` Placeholder — это слот визуала,
  * а не действия).
+ *
+ * `variant="primary"` у retry: на экране ошибки это ЕДИНСТВЕННОЕ действие,
+ * то есть главное (реестр #6). Без варианта кнопка была secondary —
+ * «Повторить» на ошибке списка выглядело приглушённым, а то же «Повторить»
+ * на терминальном экране (`AccountStatePage.RetryAction`) — залитым.
  */
 export function QueryState({
   loading,
@@ -49,7 +54,7 @@ export function QueryState({
         header={EMPTY_STATES.loadError.header}
         description={EMPTY_STATES.loadError.description}
         action={
-          <Button size="m" onClick={onRetry}>
+          <Button size="m" variant="primary" onClick={onRetry}>
             Повторить
           </Button>
         }

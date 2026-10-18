@@ -17,6 +17,18 @@ export const CARD_SURFACE = styles.card;
 /** Паддинг карточки 16 (default). */
 export const CARD_PAD = styles.cardDefault;
 
+/**
+ * Компактное поле БЕЗ `ui/Field`: снимает резерв кита под его header
+ * (`FormInput` несёт `padding: 20px 22px 16px` всегда — реестр #40).
+ *
+ * Правило — то же, что у `ui/Field compact` (`.fieldCompact > div`), но
+ * вешается на СВОЮ обёртку потребителя, у которой корень `FormInput` —
+ * прямой потомок. Исключение того же рода, что `CARD_SURFACE`:
+ * нестандартный контейнер не может взять компонент — у строки поиска
+ * (`/bookings`) видимого заголовка нет, а `Field` подпись требует.
+ */
+export const FIELD_COMPACT = styles.fieldCompact;
+
 /* ── Текст (ui/text): одна роль — одно правило ────────────────────────
  * Расслабленный абзац, подпись-подсказка, центрирование. Заменяют
  * копии .prose/.hint/.iconHint (см. ui/text.module.css). */

@@ -44,6 +44,12 @@ export function AccountStatePage({
   );
 }
 
+/**
+ * Единственное действие терминального экрана — вход/повтор: primary, без
+ * варианта по умолчанию. `secondary` (bezeled) обесценивал его: залитое
+ * действие на экране ровно одно (реестр #6), рядом нет ничего, с чем его
+ * можно спутать, — тот же выбор, что у «Опубликовать» и «Я согласен».
+ */
 export function RetryAction({
   label,
   disabled,
@@ -55,6 +61,7 @@ export function RetryAction({
 }) {
   return (
     <Button
+      variant="primary"
       size="l"
       stretched
       disabled={disabled}
