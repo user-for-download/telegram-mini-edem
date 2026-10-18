@@ -98,6 +98,16 @@ describe("поиск: сегменты даты в одну строку", () =>
     expect(ruleBody(switcherCss, ".stretch > *")).toMatch(/padding-left:\s*0/);
     expect(ruleBody(switcherCss, ".stretch")).toMatch(/gap:\s*2px/);
   });
+
+  it("подпись сегмента центрирована внутри пункта", () => {
+    // Подпись кита — блок `flex: 1 1 0` во всю ширину пункта с
+    // `text-align: start`: в равном сегменте текст стоял у левого края, и
+    // «Все даты» смотрелись сдвинутыми. `justify-content` кнопки не
+    // помогает — ребёнок растянут, выравнивать надо текст.
+    expect(ruleBody(switcherCss, ".stretch > * *")).toMatch(
+      /text-align:\s*center/,
+    );
+  });
 });
 
 describe("поиск: своп городов — полноценный тап-таргет", () => {
