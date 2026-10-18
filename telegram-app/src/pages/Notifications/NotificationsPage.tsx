@@ -1,10 +1,6 @@
 import { useMemo, type KeyboardEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  Badge,
-  Info,
-  VisuallyHidden,
-} from "@telegram-apps/telegram-ui";
+import { Badge, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Switcher, type SwitcherOption } from "@/ui/Switcher";
 import { Section } from "@/ui/Section";
 import { Cell } from "@/ui/Cell";
@@ -13,18 +9,22 @@ import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { FetchMore } from "@/ui/FetchMore";
 import { Notice } from "@/ui/Notice";
+import { ICON_TARGET } from "@/ui/classes";
 
-import { CheckCheck, ChevronRight } from "lucide-react";
+import { CheckCheck } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
-import { moscowDateLabel, moscowDayContext, moscowTimeLabel } from "@/utils/date";
+import {
+  moscowDateLabel,
+  moscowDayContext,
+  moscowTimeLabel,
+} from "@/utils/date";
 import {
   NotificationCardSkeleton,
   NotificationCardsSkeleton,
 } from "@/components/Skeletons";
 import { Page } from "@/ui/Page";
-import { SectionBody } from "@/ui/SectionBody";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { ApiError } from "@/api/client";
@@ -150,9 +150,8 @@ export function formatNotificationWho(
  * заявок на бронирование). Сегодня — только время, иначе день
  * полностью. Пустые части пропускаются, всё пустое — null.
  */
-export function formatTripDetail(input: {
-  from?: string | null;
-  to?: string | null;
+/** Когда и сколько: «19 окт., 06:00 · 400 ₽» (сегодня — только время). */
+export function formatTripMeta(input: {
   price?: number | null;
   departureAt?: string | null;
 }): string | null {
@@ -175,8 +174,33 @@ export function formatTripDetail(input: {
   if (typeof input.price === "number") {
     parts.push(`${input.price} ₽`);
   }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/** Маршрут снапшота: «Вологда → Череповец». */
+export function formatTripRoute(input: {
+  from?: string | null;
+  to?: string | null;
+}): string | null {
   const route = [input.from, input.to].filter(Boolean).join(" → ");
-  if (route) parts.push(route);
+  return route || null;
+}
+
+/**
+ * Третья строка ячейки одной строкой: «дата, время • цена • маршрут».
+ * Экспорт — контракт текста (тесты и aria-label); В РАЗМЕТКЕ мета и
+ * маршрут стоят двумя строками (formatTripMeta / formatTripRoute), иначе
+ * маршрут рвался посередине — «Вологда →» / «Сокол».
+ */
+export function formatTripDetail(input: {
+  from?: string | null;
+  to?: string | null;
+  price?: number | null;
+  departureAt?: string | null;
+}): string | null {
+  const meta = formatTripMeta(input);
+  const route = formatTripRoute(input);
+  const parts = [meta, route].filter(Boolean);
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
@@ -238,6 +262,14 @@ function NotificationCell({
   // Строка 2 — «ФИО • действие» в одну строку; строка 3 — снапшот
   // поездки («дата, время • цена • маршрут»). Пустые скрываются.
   const whoLine = formatNotificationWho(notification.actorName, actionLabel);
+  const metaLine = formatTripMeta({
+    price: notification.tripPrice,
+    departureAt: notification.tripDepartureAt,
+  });
+  const routeLine = formatTripRoute({
+    from: notification.tripFrom,
+    to: notification.tripTo,
+  });
   const detailLine = formatTripDetail({
     from: notification.tripFrom,
     to: notification.tripTo,
@@ -276,13 +308,19 @@ function NotificationCell({
     .filter((part): part is string => typeof part === "string")
     .join(". ");
 
-  // Строка — ровно три смысловые строки: событие (title),
-  // «ФИО • действие» (whoLine), «дата, время • цена • маршрут»
-  // (detailLine); всё однострочное с обрезкой (без multiline).
-  // Пустые строки скрываются (легаси-записи без кода).
-  // Аватара нет, статуса «Важное» нет — только три строки.
-  // Правая колонка — штатный двустрочный Info кита: шеврон сверху,
-  // время диммером снизу.
+  // Строка — три смысловые строки: событие (title), «ФИО • действие»
+  // (whoLine), «дата, время • цена • маршрут» (detailLine). Пустые строки
+  // скрываются (легаси-записи без кода).
+  //
+  // Правая колонка — ВРЕМЯ уведомления сверху (по линии заголовка) и точка
+  // непрочитанного снизу: язык чат-листа. Было наоборот — шеврон сверху и
+  // дата под ним; дата висела по центру пустой колонки, шеврон читался как
+  // «открыть» у каждой строки, а маршрут в третьей строке обрезался на
+  // «Вологда → Чере…» из-за узкой колонки текста.
+  //
+  // Непрочитанное видно ещё и подложкой строки (data-unread в
+  // NotificationsPage.module.css): после «Прочитать все» лента обязана
+  // заметно измениться, а одна точка 6px этого не даёт.
   return (
     <Cell
       // Здесь div + role="button" + tabIndex СОЗНАТЕЛЬНО: ниже стоит СВОЙ
@@ -291,26 +329,33 @@ function NotificationCell({
       // кнопку возможен только вместе с удалением собственного handleKeyDown.
       {...(interactive ? { type: "button" as const } : {})}
       className={styles.cell}
-      titleBadge={
-        !notification.isRead ? (
-          <Badge
-            type="dot"
-            data-testid={`notification-unread-${notification.id}`}
-          />
+      data-unread={!notification.isRead ? "true" : undefined}
+      subtitle={
+        whoLine ? <span className={styles.who}>{whoLine}</span> : undefined
+      }
+      description={
+        metaLine || routeLine ? (
+          <span className={styles.detail}>
+            {metaLine ? <span className={styles.meta}>{metaLine}</span> : null}
+            {routeLine ? (
+              <span className={styles.route}>{routeLine}</span>
+            ) : null}
+          </span>
         ) : undefined
       }
-      subtitle={whoLine ?? undefined}
-      description={detailLine ?? undefined}
       after={
-        <Info
-          type="text"
-          className={styles.info}
-          subtitle={formatNotifTime(notification.createdAt)}
-        >
-          {route ? (
-            <ChevronRight size={16} className={styles.chevron} aria-hidden />
+        <div className={styles.side}>
+          <span className={styles.time}>
+            {formatNotifTime(notification.createdAt)}
+          </span>
+          {!notification.isRead ? (
+            <Badge
+              type="dot"
+              className={styles.unread}
+              data-testid={`notification-unread-${notification.id}`}
+            />
           ) : null}
-        </Info>
+        </div>
       }
       onClick={interactive ? activate : undefined}
       onKeyDown={interactive ? handleKeyDown : undefined}
@@ -319,7 +364,7 @@ function NotificationCell({
       aria-label={interactive ? label : undefined}
       data-testid={`notification-cell-${notification.id}`}
     >
-      {notification.title}
+      <span className={styles.title}>{notification.title}</span>
     </Cell>
   );
 }
@@ -436,7 +481,11 @@ export function NotificationsPage() {
           {counter.isError ? (
             <Notice tone="danger" variant="banner">
               Не удалось загрузить счётчик непрочитанных — «Прочитать все»{" "}
-              <button type="button" className={styles.retry} onClick={() => void counter.refetch()}>
+              <button
+                type="button"
+                className={styles.retry}
+                onClick={() => void counter.refetch()}
+              >
                 Повторить
               </button>
             </Notice>
@@ -448,15 +497,22 @@ export function NotificationsPage() {
             между строками (hairline-разделители, как в TripHistory).
             Пустое состояние — текст сегмента в теле Section. */}
           <div className={styles.chipRow}>
-            <Switcher
-              options={FILTERS}
-              value={segment}
-              onChange={selectSegment}
-              ariaLabel="Фильтр уведомлений"
-              idPrefix="notif-segment"
-            />
+            <div className={styles.segments}>
+              <Switcher
+                options={FILTERS}
+                value={segment}
+                onChange={selectSegment}
+                ariaLabel="Фильтр уведомлений"
+                idPrefix="notif-segment"
+                stretch
+              />
+            </div>
             <div aria-live="polite">
               <IconButton
+                // Круг 44×44 (ICON_TARGET, WCAG 2.5.5): кнопка стоит одна в
+                // шапке и решает массовое действие, а родные 36×36 — меньше
+                // пальца (тот же порог, что у иконок в строках заявок).
+                className={ICON_TARGET}
                 aria-label={
                   unreadCount === 0
                     ? "Все уведомления прочитаны"
@@ -476,14 +532,14 @@ export function NotificationsPage() {
           </div>
 
           {items.length === 0 ? (
-            <Section>
-              <SectionBody>
-                <EmptyState
-                  header={emptyState.header}
-                  description={emptyState.description}
-                />
-              </SectionBody>
-            </Section>
+            /* Пустое состояние — прямо на фоне страницы, как на поиске.
+               Было в SectionBody: Placeholder занимает 174px, а поверхность
+               секции кончается на 306px — ниже пустоты шёл видимый шов
+               (край поверхности), и экран выглядел обрезанным блоком. */
+            <EmptyState
+              header={emptyState.header}
+              description={emptyState.description}
+            />
           ) : (
             <Section>
               {items.map((notification) => (
