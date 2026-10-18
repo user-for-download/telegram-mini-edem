@@ -113,9 +113,10 @@ describe("SearchPage results", () => {
       infiniteState([makeTrip(), makeTrip({ id: "t-2", price: 300 })]),
     );
     const html = render(<SearchPage />);
-    // SSR разбивает текст комментариями: «Найдено поездок: <!-- -->2».
-    expect(html).toContain("Найдено поездок:");
-    expect(html).toMatch(/Найдено поездок: <!-- -->2/);
+    // Сводка — число + склонённое слово (SSR разбивает текст комментариями:
+    // «2<!-- --> <!-- -->поездки»), а не «Найдено поездок: 2»: метка со
+    // значением читалась как форма, а не как факт.
+    expect(html).toMatch(/2<!-- --> <!-- -->поездки/);
     expect(html).toContain("Вологда");
     expect(html).toContain("Череповец");
   });
@@ -123,7 +124,8 @@ describe("SearchPage results", () => {
   it("пустой результат — плейсхолдер со сбросом фильтров", () => {
     mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
     const html = render(<SearchPage />);
-    expect(html).toMatch(/Найдено поездок: <!-- -->0/);
+    // При нуле сводки нет: «0 поездок» над «Поездок не найдено» — дубль.
+    expect(html).not.toContain("0<!-- --> <!-- -->поездок");
     expect(html).toContain("Поездок не найдено");
     expect(html).toContain("Сбросить фильтры");
   });

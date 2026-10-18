@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import { Cell as TguiCell } from "@telegram-apps/telegram-ui";
 
-import { AS_BUTTON } from "@/ui/classes";
+import { AS_BUTTON_FLAT } from "@/ui/classes";
 
 /**
  * Единая строка-интерактив приложения: обёртка над китовым `Cell`.
@@ -9,8 +9,10 @@ import { AS_BUTTON } from "@/ui/classes";
  * Интерактивная строка обязана быть нативной кнопкой — `Component="button"`
  * документирован китом (Cell.d.ts) и даёт фокус, Enter/Space и роль кнопки.
  * Кит при этом не сбрасывает UA-стили кнопки, поэтому вид (шрифт, цвет,
- * `appearance`, `box-sizing`) держит сброс `AS_BUTTON` (расхождения и
- * rationale — в `buttonReset.module.css`).
+ * `appearance`, `box-sizing`) держит сброс `AS_BUTTON_FLAT` (расхождения и
+ * rationale — в `buttonReset.module.css`). Именно FLAT, а не `AS_BUTTON`:
+ * у строки нет собственной поверхности, и UA-фон кнопки надо погасить —
+ * а у чипа (`ui/Chip`) та же строка сброса убила бы китовую плашку.
  *
  * Сброс одинаков для обоих корней (button и div), иначе строки считались бы
  * по-разному. Паддинг и раскладку не трогаем — они принадлежат киту.
@@ -22,7 +24,9 @@ export type CellProps = ComponentProps<typeof TguiCell>;
 export function Cell({ className, ...restProps }: CellProps) {
   return (
     <TguiCell
-      className={[AS_BUTTON, className].filter(Boolean).join(" ") || undefined}
+      className={
+        [AS_BUTTON_FLAT, className].filter(Boolean).join(" ") || undefined
+      }
       {...restProps}
     />
   );

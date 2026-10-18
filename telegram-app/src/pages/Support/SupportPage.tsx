@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
 import { Accordion, Caption, Info, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Section } from "@/ui/Section";
-import { AS_BUTTON } from "@/ui/classes";
+import { AS_BUTTON_FLAT } from "@/ui/classes";
 import { PROSE } from "@/ui/classes";
 import { Cell } from "@/ui/Cell";
 import { EmptyState } from "@/ui/EmptyState";
@@ -217,7 +217,7 @@ export function SupportPage() {
                       setOpenedFaqId(expanded ? item.id : null)
                     }
                   >
-                    <Accordion.Summary Component="button" className={AS_BUTTON}>
+                    <Accordion.Summary Component="button" className={AS_BUTTON_FLAT}>
                       {item.question}
                     </Accordion.Summary>
                     <Accordion.Content>

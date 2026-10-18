@@ -313,8 +313,9 @@ describe("HomePage", () => {
     expect(html).toContain("Куда");
     // Нативный <select> с опциями справочника (placeholder — disabled-опция).
     expect(html.match(/<select/g)?.length).toBe(2);
-    expect(html).toContain("Город или село отправления");
-    expect(html).toContain("Город или село назначения");
+    // Плейсхолдер короткий: длинный («Город или село отправления») резался
+    // многоточием в половине ширины селекта.
+    expect(html.match(/Выберите город/g)?.length).toBe(2);
   });
 
   it("профиль-бар — тап ведёт в профиль", () => {

@@ -210,7 +210,7 @@ describe("каркас: заголовок секции центрирован �
   }
 });
 
-describe("каркас: рецепт выбранного тега (ui/Chip tone=accent)", () => {
+describe("каркас: рецепт нажатого чипа (ui/Chip, aria-pressed=true)", () => {
   // Реестр отклонений #7, тон переведён на --app-* в #38. Ловим текстом:
   // jsdom не каскадит CSS-модули, а по DOM «горит ли тег» не проверить —
   // aria-pressed ставит потребитель, не кит.
@@ -218,21 +218,24 @@ describe("каркас: рецепт выбранного тега (ui/Chip tone
   // ПИН ИМЕННО --app-*: сырой --tgui--button_color давал 4.02:1 в светлой
   // теме и 3.72:1 в тёмной (белым текстом на светлевшем фоне кит-тон темнее
   // не становится), и пин на «кит-токен» держал именно дефект.
-  it(".accent[aria-pressed=\"true\"] переопределяет фон кита", () => {
-    expect(chipCss).toContain('.accent[aria-pressed="true"]');
+  // Правило общее для любого нажатого чипа, а не только tone="accent":
+  // «включено» в приложении обязано выглядеть одинаково (открытые
+  // «Фильтры» на поиске — тот же язык, что выбранный тег). Реестр #42.
+  it('.chip[aria-pressed="true"] переопределяет фон кита', () => {
+    expect(chipCss).toContain('.chip[aria-pressed="true"]');
     expect(chipCss).toContain("var(--app-info-bg");
   });
 
-  it("фон выбранного тега — тон приложения, а не литерал", () => {
-    const rule = ruleBody(chipCss, '.accent[aria-pressed="true"]');
+  it("фон нажатого чипа — тон приложения, а не литерал", () => {
+    const rule = ruleBody(chipCss, '.chip[aria-pressed="true"]');
     expect(rule).toContain("background: var(--app-info-bg");
     expect(rule).not.toContain("--tgui--");
   });
 
-  it("подпись выбранного тега — тон приложения, а не китовый текст", () => {
+  it("подпись нажатого чипа — тон приложения, а не китовый текст", () => {
     // Белым по кит-тону — и есть F9; числовую границу считает
     // e2e/ui-contrast.mjs, здесь закреплён ТОКЕН.
-    const colorRule = ruleBody(chipCss, '.accent[aria-pressed="true"] *');
+    const colorRule = ruleBody(chipCss, '.chip[aria-pressed="true"] *');
     expect(colorRule).toContain("color: var(--app-info)");
     expect(colorRule).not.toContain("--tgui--");
   });

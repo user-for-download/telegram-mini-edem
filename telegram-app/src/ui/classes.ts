@@ -88,6 +88,21 @@ export const ICON_TARGET = textStyles.iconTarget;
 export const AS_BUTTON = buttonResetStyles.asButton;
 
 /**
+ * Тот же сброс + гашение поверхности (`background: transparent`).
+ *
+ * Для компонентов, у которых поверхности нет ПО КИТУ (Cell-строка,
+ * Accordion.Summary): там UA-фон кнопки — единственное, что нужно убрать.
+ * Чипу (ui/Chip) этот класс НЕ подходит: `background: transparent`
+ * перебивает китовую плашку (`mono`/`elevated`) — наш модуль неслойный, —
+ * и все невыбранные чипы становились простым текстом. Правило: сброс UA —
+ * общий (`AS_BUTTON`), снятие поверхности — адресное (этот класс).
+ */
+export const AS_BUTTON_FLAT = [
+  buttonResetStyles.asButton,
+  buttonResetStyles.flatButton,
+].join(" ");
+
+/**
  * Статичная строка-информация: клетка без обработчика.
  *
  * Кит внутри `Cell` всегда тянет `Tappable` (`cursor:pointer` + hover-подложка)

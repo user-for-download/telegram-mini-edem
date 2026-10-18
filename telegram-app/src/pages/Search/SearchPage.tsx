@@ -1,21 +1,16 @@
 import { useMemo, useState } from "react";
-import { Slider, Caption } from "@telegram-apps/telegram-ui";
+import { Slider, Caption, VisuallyHidden } from "@telegram-apps/telegram-ui";
 
 import { Button } from "@/ui/Button";
-import { Section } from "@/ui/Section";
 import { Switcher } from "@/ui/Switcher";
 import { Chip } from "@/ui/Chip";
 import { IconButton } from "@/ui/IconButton";
 import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { FetchMore } from "@/ui/FetchMore";
-import { BTN_ROW_WRAP, INFO } from "@/ui/classes";
+import { BTN_ROW_WRAP, ICON_TARGET, INFO } from "@/ui/classes";
 
-import {
-  ArrowRightLeft,
-  Filter,
-  Search as SearchIcon,
-} from "lucide-react";
+import { ArrowRightLeft, Filter, Search as SearchIcon } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { mergeUniqueById } from "@/helpers/mergeUniqueById";
 import { listBlockingError } from "@/helpers/listBlockingError";
@@ -25,7 +20,8 @@ import { TripStandardCard } from "@/components/Section/TripStandardCard";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { feedPerson, feedSeats } from "@/components/Trip/feedCardProps";
 import { Page } from "@/ui/Page";
-import { SectionBody } from "@/ui/SectionBody";
+import { Card } from "@/ui/Card";
+import { GroupLabel } from "@/ui/GroupLabel";
 import { Stack } from "@/ui/Stack";
 import { TRIP_TAGS } from "@/consts/tags";
 import {
@@ -42,6 +38,7 @@ import {
   type SearchFormState,
 } from "@/helpers/searchFilters";
 import { groupTripsByDay } from "@/helpers/tripGroups";
+import { plural } from "@/utils/plural";
 import { useModalBack } from "@/utils/modalBack";
 import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
@@ -119,10 +116,7 @@ export function SearchPage() {
   // каждом рендере и useMemo ниже пересчитывал бы группы вхолостую.
   // mergeUniqueById, а не flatMap: /trips — offset-пагинация по живому списку,
   // новая поездка в начале сдвигает окно и повторяет граничную строку.
-  const items = useMemo(
-    () => mergeUniqueById(trips.data?.pages),
-    [trips.data],
-  );
+  const items = useMemo(() => mergeUniqueById(trips.data?.pages), [trips.data]);
   // Группы дат для пилюль-заголовков: чисто видовая группировка уже
   // отсортированной выдачи (бэк: departureAt asc).
   const groups = useMemo(() => groupTripsByDay(items), [items]);
@@ -208,143 +202,174 @@ export function SearchPage() {
   // пустого состояния пропадал.
   // Можно ли сбросить хоть что-то — по применённому набору, а не по форме.
   const canReset = hasAnySearchFilter(submitted);
+  // Счётчик на чипе «Фильтры» — только ДОПОЛНИТЕЛЬНЫЕ фильтры (цена, теги):
+  // города и дата и так видны в форме выше, дублировать их числом незачем.
+  const extraFiltersCount = (form.maxPrice !== null ? 1 : 0) + form.tags.length;
+  // total — точный счётчик сервера с тем же where; длина загруженных items
+  // врёт на первой странице (limit 20) и на нуле.
+  const found = trips.data?.pages[0]?.pagination?.total ?? items.length;
 
   return (
     <>
       <Page>
-        {/* Фильтр: поверхность — Section, заголовок — нативный.
-            Чипы-действия — первой строкой тела (рядом с заголовком
-            им не место: header принимает только текст). */}
-        <Section header="Поиск попутных поездок" headingLevel="h1">
-          <SectionBody>
-            {/* «Ищу попутку» уехала сюда: это пассажирский сценарий, ему на
-                главной отдельный блок-CTA рядом с «Создать поездку».
-                Экран поиска отвечает за поиск поездки, а не за заявку. */}
-            <div className={styles.chipRow}>
-              <Chip
-                variant={showFilters ? "active" : "quiet"}
-                Component="button"
-                onClick={() => {
-                  haptic.selection();
-                  setShowFilters(!showFilters);
-                }}
-                before={<Filter size={13} />}
-                className={styles.chip}
-                aria-pressed={showFilters}
-              >
-                Фильтры
-              </Chip>
-            </div>
+        {/* Имя экрана — здесь, а не в заголовке секции (реестр #15/#23):
+            NavHeader помечен aria-hidden, а видимая синяя подпись
+            «Поиск попутных поездок» дословно повторяла название вкладки. */}
+        <VisuallyHidden Component="h1">Поиск</VisuallyHidden>
 
-            <div className={styles.cityFields}>
-              {/* Выбор города — тот же CitySelectField, что на главной и в
-                  форме создания: выбор даёт id, уходит `fromCityId`. */}
-              <CitySelectField
-                id="search-from"
-                label="Откуда"
-                valueId={form.fromCityId}
-                cities={cities.data}
-                placeholder="Город или село отправления"
-                onChange={(next) => set("fromCityId", next)}
-                excludeId={form.toCityId}
-              />
-              <IconButton
-                type="button"
-                size="s"
-                onClick={swapCities}
-                aria-label="Поменять направление"
-                className={styles.swap}
-              >
-                <ArrowRightLeft size={14} className={INFO} />
-              </IconButton>
-              <CitySelectField
-                id="search-to"
-                label="Куда"
-                valueId={form.toCityId}
-                cities={cities.data}
-                placeholder="Город или село назначения"
-                onChange={(next) => set("toCityId", next)}
-                excludeId={form.fromCityId}
-              />
-            </div>
-
-            <Switcher
-              options={DATE_SEGMENTS}
-              value={form.dateSegment}
-              onChange={applyDateSegment}
-              ariaLabel="Дата поездки"
-              idPrefix="search-date"
+        {/* Фильтр — карточка, как поиск на главной: одна поверхность, одна
+            внутренняя полоса 16px. Было: полноэкранная Section без радиуса,
+            у которой заголовок стоял на 22px, тело на 16px, а поля кита ещё
+            на 22px внутри контрола — три вертикали в одном блоке. */}
+        <Card className={styles.searchCard}>
+          <div className={styles.cityFields}>
+            <CitySelectField
+              id="search-from"
+              label="Откуда"
+              valueId={form.fromCityId}
+              cities={cities.data}
+              placeholder="Выберите город"
+              onChange={(next) => set("fromCityId", next)}
+              excludeId={form.toCityId}
+              compact
             />
+            {/* Своп — своя колонка сетки на всю высоту пары полей: DOM
+                «откуда → поменять → куда» (таб-порядок логичный), кнопка
+                не лежит поверх селекта и не спорит с его шевроном. */}
+            <IconButton
+              type="button"
+              variant="gray"
+              onClick={swapCities}
+              aria-label="Поменять направление"
+              className={`${styles.swap} ${ICON_TARGET}`}
+            >
+              <ArrowRightLeft size={16} className={INFO} />
+            </IconButton>
+            <CitySelectField
+              id="search-to"
+              label="Куда"
+              valueId={form.toCityId}
+              cities={cities.data}
+              placeholder="Выберите город"
+              onChange={(next) => set("toCityId", next)}
+              excludeId={form.fromCityId}
+              compact
+            />
+          </div>
 
-            {showFilters && (
-              <div className={styles.filtersPanel}>
-                <div>
-                  <div className={styles.priceHead}>
+          {/* Четыре сегмента по содержимому не влезали и переносились,
+              оставляя «Выходные» одну на второй строке — stretch делит
+              ширину поровну, и набор всегда в одну строку. */}
+          <Switcher
+            options={DATE_SEGMENTS}
+            value={form.dateSegment}
+            onChange={applyDateSegment}
+            ariaLabel="Дата поездки"
+            idPrefix="search-date"
+            stretch
+          />
+
+          {/* «Фильтры» — уточнение поверх маршрута и даты: место ей после
+              них, а не первой строкой экрана (там она попадала в глаз
+              раньше главного — выбора городов). Счётчик — только по
+              дополнительным фильтрам (цена, теги), города и дата видны
+              и без раскрытия панели. */}
+          <div className={styles.chipRow}>
+            <Chip
+              variant={showFilters ? "active" : "quiet"}
+              Component="button"
+              onClick={() => {
+                haptic.selection();
+                setShowFilters(!showFilters);
+              }}
+              before={<Filter size={14} />}
+              aria-pressed={showFilters}
+            >
+              {extraFiltersCount > 0
+                ? `Фильтры · ${extraFiltersCount}`
+                : "Фильтры"}
+            </Chip>
+          </div>
+
+          {showFilters && (
+            <div className={styles.filtersPanel}>
+              <div>
+                <div className={styles.priceHead}>
+                  <GroupLabel Component="span">
                     <span id="search-max-price-label">Цена не выше</span>
-                    <Caption Component="span" aria-hidden="true">
-                      {formatMaxPriceLabel(form.maxPrice)}
-                    </Caption>
-                  </div>
-                  <Slider
-                    min={PRICE_SLIDER_MIN}
-                    max={PRICE_SLIDER_MAX}
-                    step={PRICE_SLIDER_STEP}
-                    value={form.maxPrice ?? PRICE_SLIDER_MAX}
-                    onChange={(value) =>
-                      set("maxPrice", value >= PRICE_SLIDER_MAX ? null : value)
-                    }
-                    aria-labelledby="search-max-price-label"
-                    getAriaValueText={(value) =>
-                      value >= PRICE_SLIDER_MAX
-                        ? "Любая цена"
-                        : formatMaxPriceLabel(value)
-                    }
-                  />
-                </div>
-                <div className={styles.tagsCol}>
-                  <Caption
-                    weight="2"
-                    Component="span"
-                    className={styles.tagsHead}
-                  >
-                    Условия поездки
+                  </GroupLabel>
+                  <Caption Component="span" aria-hidden="true">
+                    {formatMaxPriceLabel(form.maxPrice)}
                   </Caption>
-                  <div className={BTN_ROW_WRAP}>
-                    {TRIP_TAGS.map((tag) => (
-                      <Chip
-                        key={tag}
-                        tone="accent"
-                        variant={form.tags.includes(tag) ? "active" : "quiet"}
-                        Component="button"
-                        aria-pressed={form.tags.includes(tag)}
-                        onClick={() => {
-                          haptic.selection();
-                          toggleTag(tag);
-                        }}
-                      >
-                        {tag}
-                      </Chip>
-                    ))}
-                  </div>
+                </div>
+                <Slider
+                  min={PRICE_SLIDER_MIN}
+                  max={PRICE_SLIDER_MAX}
+                  step={PRICE_SLIDER_STEP}
+                  value={form.maxPrice ?? PRICE_SLIDER_MAX}
+                  onChange={(value) =>
+                    set("maxPrice", value >= PRICE_SLIDER_MAX ? null : value)
+                  }
+                  aria-labelledby="search-max-price-label"
+                  getAriaValueText={(value) =>
+                    value >= PRICE_SLIDER_MAX
+                      ? "Любая цена"
+                      : formatMaxPriceLabel(value)
+                  }
+                />
+              </div>
+              <div className={styles.tagsCol}>
+                <GroupLabel Component="span">Условия поездки</GroupLabel>
+                <div className={BTN_ROW_WRAP}>
+                  {TRIP_TAGS.map((tag) => (
+                    <Chip
+                      key={tag}
+                      tone="accent"
+                      variant={form.tags.includes(tag) ? "active" : "quiet"}
+                      Component="button"
+                      aria-pressed={form.tags.includes(tag)}
+                      onClick={() => {
+                        haptic.selection();
+                        toggleTag(tag);
+                      }}
+                    >
+                      {tag}
+                    </Chip>
+                  ))}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            <Button
-              size="l"
-              stretched
-              before={<SearchIcon size={18} />}
-              onClick={submit}
-            >
-              Найти
-            </Button>
-          </SectionBody>
-        </Section>
+          {/* Главное действие экрана — primary, как «Найти поездку» на
+              главной: то же действие не может быть на одном экране
+              залитым, а на другом — приглушённым (было secondary). */}
+          <Button
+            className={styles.submit}
+            size="l"
+            variant="primary"
+            before={<SearchIcon size={18} />}
+            onClick={submit}
+          >
+            Найти
+          </Button>
+        </Card>
 
-        <div className={styles.resultsBar}>
-          <Caption weight="2">Найдено поездок: {trips.data?.pages[0]?.pagination?.total ?? items.length}</Caption>
-          <Caption Component="span">Цены без комиссии</Caption>
-        </div>
+        {/* Сводка выдачи: число + пояснение. «Найдено поездок: 26» (метка:
+            значение) — канцелярит на мобильном; «26 поездок» читается как
+            факт и склоняется. При нуле строку не рисуем: пустое состояние
+            ниже говорит то же самое («Поездок не найдено»), а «0 поездок»
+            над ним — дубль. */}
+        {found > 0 && (
+          <div className={styles.resultsBar}>
+            <span className={styles.resultsCount}>
+              {found} {plural(found, "поездка", "поездки", "поездок")}
+            </span>
+            <Caption Component="span" className={styles.resultsHint}>
+              Цены без комиссии
+            </Caption>
+          </div>
+        )}
 
         <QueryState
           loading={trips.isLoading}
@@ -360,6 +385,7 @@ export function SearchPage() {
               description={EMPTY_STATES.searchNoResults.description}
               action={
                 <Button
+                  variant="primary"
                   size="m"
                   onClick={reset}
                   disabled={!canReset}
@@ -389,7 +415,9 @@ export function SearchPage() {
                         departureAt={trip.departureAt}
                         price={trip.price}
                         headerStatus={
-                          <StatusPill tone={seats.tone}>{seats.label}</StatusPill>
+                          <StatusPill tone={seats.tone}>
+                            {seats.label}
+                          </StatusPill>
                         }
                         person={feedPerson(trip)}
                         onOpen={(id) => {

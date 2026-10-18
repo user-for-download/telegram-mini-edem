@@ -1,56 +1,62 @@
 /* Поиск (SearchPage): раскладка без Tailwind (миграция
  * папка/компонент). Цвета только --tgui--* / --app-*.
- * Каркас экрана — универсальный: корень Page, тело секции SectionBody,
+ * Каркас экрана — универсальный: корень Page, поверхность — ui/Card,
  * внутренние стеки Stack (src/ui/ui.module.css). Здесь остались только
- * локальные роли ниже уровня секции. */
+ * локальные роли ниже уровня карточки. */
 
-/* Строка «Найдено / Цены без комиссии» — тонкая колонка с бока 4px. */
-.resultsBar {
+/* Фильтр — карточка: шаг между блоками формы и паддинг карточки.
+ * Паддинг и поверхность даёт ui/Card (--app-card-pad, radius 16, рамка,
+ * тень) — тот же рецепт, что у поиска на главной, поэтому две формы
+ * приложения выглядят одинаково. */
+.searchCard.searchCard {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--app-space-2xs);
+  flex-direction: column;
+  gap: var(--app-space-sm);
 }
 
-/* Чипы-действия («Ищу попутку», «Фильтры»). */
+/* Города + колонка свопа.
+ *
+ * Сетка: поле, кнопка в своей колонке на всю высоту пары, поле. Кнопка не
+ * лежит поверх селекта (иначе её 44px накрывали шеврон и нижний угол поля)
+ * и не съезжает, когда под одним из полей появляется ошибка валидации.
+ *
+ * Было: 26×26 в потоке на отрицательных отступах (−16px) — иконка
+ * прижималась к подписи «Куда», тап-таргет был меньше пальца, а поле
+ * теряло 52px ширины при длинном плейсхолдере. */
+.cityFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  column-gap: var(--app-space-xs);
+  row-gap: var(--app-space-xs);
+}
+
+.cityFields > div:first-of-type {
+  grid-area: 1 / 1;
+}
+
+.cityFields > div:last-of-type {
+  grid-area: 2 / 1;
+}
+
+/* Своп — серая круглая кнопка 44×44 (ICON_TARGET, WCAG 2.5.5) в своей
+ * колонке, по центру пары полей. */
+.swap.swap {
+  grid-area: 1 / 2 / 3 / 3;
+  align-self: center;
+}
+
+/* «Фильтры» — уточнение поверх маршрута и даты: строка в потоке карточки,
+ * чип по содержимому. */
 .chipRow {
   display: flex;
   align-items: center;
-  gap: 6px;
 }
 
-/* Города + кнопка swap на зазоре между инпутами. */
-.cityFields {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* Кнопка swap на зазоре между полями города: тень как у карточек
- * (elevation-паттерн), но это НЕ карточка — ui/Card здесь не применим:
- * контейнер кнопка (IconButton), поверхность исключена из правила
- * «карточка = ui/Card» осознанно.
- *
- * Кнопка идёт в ПОТОКЕ между полями (в DOM — тоже между ними: таб-порядок
- * «откуда → swap → куда»), а не absolute на top: 50% контейнера: центр
- * контейнера совпадает с зазором, только пока поля одинаковой высоты, —
- * ошибка валидации под одним полем сдвигала кнопку на другое поле.
- * Отрицательные отступы (±16px при кнопке 26px и зазоре 6px) гасят
- * собственную высоту кнопки: она висит на зазоре при любых высотах полей.
- * z-index работает: flex-элементам позиционирование для него не нужно. */
-.swap.swap {
-  align-self: flex-end;
-  /* Отрицательные отступы — осознанный приём (token-lint их пропускает),
-     вертикальный 8px — токен шкалы, как требует гейт. */
-  margin: -16px var(--app-space-xs) -16px 0;
-  z-index: var(--app-z-local);
-  background: var(--tgui--section_bg_color);
-  box-shadow: var(--app-card-shadow);
-}
-
-/* Панель открытых фильтров: цена + теги. */
+/* Панель открытых фильтров: цена + теги. Отделена от контролов линией —
+ * это раскрывающаяся часть той же карточки, а не ещё один блок. */
 .filtersPanel {
-  padding-top: var(--app-space-xs);
+  padding-top: var(--app-space-sm);
   border-top: 1px solid var(--tgui--outline);
   display: flex;
   flex-direction: column;
@@ -63,24 +69,36 @@
   justify-content: space-between;
 }
 
-.tagsHead {
-  color: var(--tgui--text_color);
-}
-
 .tagsCol {
   display: flex;
   flex-direction: column;
   gap: var(--app-space-xs);
 }
 
-/* Обёртка догрузки: вертикальная колонка болванок. */
-
-/* Чипы-действия: компактный кегль 12px. Неслойный module.css бьёт
- * tgui-слой без Tailwind-суффиксов ! (удвоение на случай кита).
- * selected/mono-состояния — нативные режимы Chip. */
-.chip.chip {
-  font-size: 12px;
+/* Главное действие — во всю ширину карточки. */
+.submit {
+  width: 100%;
 }
+
+/* Сводка выдачи: число слева, пояснение справа. Без бокового инсета —
+ * строка стоит на той же полосе, что и карточки (16px страницы). */
+.resultsBar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+}
+
+.resultsCount {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tgui--text_color);
+}
+
+.resultsHint {
+  color: var(--app-muted);
+}
+
 .loadingMore {
   display: flex;
   flex-direction: column;
@@ -108,4 +126,3 @@
 
 /* Якорь автодогрузки: скрыт от скринридера, фиксированная высота
  * (48px) держит скролл от прыжков. */
-

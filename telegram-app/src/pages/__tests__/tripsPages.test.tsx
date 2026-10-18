@@ -235,8 +235,7 @@ describe("SearchPage parity", () => {
     mockUseInfiniteTrips.mockReturnValue(infiniteState([]));
     const html = render(<SearchPage />);
     // Плейсхолдер селекта (город выбирается из справочника).
-    expect(html).toContain("Город или село отправления");
-    expect(html).toContain("Город или село назначения");
+    expect(html.match(/Выберите город/g)?.length).toBe(2);
     expect(html).toContain("Все даты");
     expect(html).toContain("Сегодня");
     expect(html).toContain("Завтра");
@@ -245,7 +244,8 @@ describe("SearchPage parity", () => {
     // отвечает за поиск поездки, а не за заявку на попутку.
     expect(html).not.toContain("Ищу попутку");
     expect(html).toContain("Найти");
-    expect(html).toContain("Найдено поездок");
+    // Пустая выдача — пустое состояние, а не сводка «Найдено поездок: 0».
+    expect(html).toContain("Поездок не найдено");
   });
 
   it("applies a city preset from the URL", () => {

@@ -53,7 +53,7 @@ export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
               label="Откуда"
               valueId={fromCityId}
               cities={cities.data}
-              placeholder="Город или село отправления"
+              placeholder="Выберите город"
               onChange={setFromCityId}
               excludeId={toCityId}
               compact
@@ -63,7 +63,7 @@ export function TripSearchSection({ onSearch }: TripSearchSectionProps) {
               label="Куда"
               valueId={toCityId}
               cities={cities.data}
-              placeholder="Город или село назначения"
+              placeholder="Выберите город"
               onChange={setToCityId}
               excludeId={fromCityId}
               compact

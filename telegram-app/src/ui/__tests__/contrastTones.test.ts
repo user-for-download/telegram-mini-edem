@@ -1,5 +1,5 @@
 // ПИН ТОНА ТРЁХ ФАСАДНЫХ ПРАВИЛ, которые обходили систему `--app-*`:
-//   ui/Chip.module.css      `.accent[aria-pressed="true"]`  (F9)
+//   ui/Chip.module.css      `.chip[aria-pressed="true"]`    (F9)
 //   ui/Switcher.module.css  `.active`                       (F10)
 //   ui/Section.module.css   `.header`                       (F11)
 //
@@ -118,9 +118,9 @@ function themeBlock(marker: string): string {
  */
 const CONTRACT = [
   {
-    name: "F9 — ui/Chip.module.css .accent[aria-pressed=\"true\"]",
+    name: "F9 — ui/Chip.module.css .chip[aria-pressed=\"true\"]",
     file: "Chip.module.css",
-    selectors: ['.accent[aria-pressed="true"]', '.accent[aria-pressed="true"] *'],
+    selectors: ['.chip[aria-pressed="true"]', '.chip[aria-pressed="true"] *'],
     textToken: "--app-info",
     plateToken: "--app-info-bg",
     worstLight: 4.58,
