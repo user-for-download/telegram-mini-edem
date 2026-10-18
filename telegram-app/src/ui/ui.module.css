@@ -109,21 +109,20 @@
     var(--app-sheet-pad-bottom);
 }
 
-/* Фокус-правила общие для ВСЕХ тел: `SheetContent` ставит `tabIndex=-1` и при
- * открытии переносит фокус на тело в ЛЮБОМ варианте, включая `static` — это
- * точка входа для клавиатуры и скринридера. Кольцо — только для клавиатуры
- * (:focus-visible, канон WCAG 2.4.7): программный фокус мышью/тачем невидим. */
-.sheetBody:focus:not(:focus-visible),
-.sheetBodyEdge:focus:not(:focus-visible),
-.sheetBodyStatic:focus:not(:focus-visible) {
+/* Фокус тела шторки — ВСЕГДА программный и невидимый.
+ * `SheetContent` ставит `tabIndex=-1` и при открытии переносит фокус на тело
+ * в любом варианте (включая `static`) — это точка входа для скринридера, а не
+ * контрол: в таб-порядок тело не входит, следующий Tab уходит на первый
+ * элемент внутри. Кольцо поэтому не обслуживало никого: оно рисовалось РОВНО
+ * один раз — при открытии. Chromium считает программный фокус на
+ * скролл-регионе «клавиатурным» (`:focus-visible` матчится), и вокруг всей
+ * шторки вспыхивал синий кадр по `outline-offset: -2px`, обрезанный по краям
+ * вьюпорта. Гасим фокус тела во всех состояниях; у настоящих контролов внутри
+ * шторки кольцо остаётся — единый рецепт (реестр #39). */
+.sheetBody:focus,
+.sheetBodyEdge:focus,
+.sheetBodyStatic:focus {
   outline: none;
-}
-
-.sheetBody:focus-visible,
-.sheetBodyEdge:focus-visible,
-.sheetBodyStatic:focus-visible {
-  outline: var(--app-focus-width) solid var(--app-info);
-  outline-offset: -2px;
 }
 
 /* Стек: тот же ритм 12 из токена, что у тела секции и sheet.

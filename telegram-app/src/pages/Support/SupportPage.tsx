@@ -1,5 +1,10 @@
 import { memo, useState } from "react";
-import { Accordion, Caption, Info, VisuallyHidden } from "@telegram-apps/telegram-ui";
+import {
+  Accordion,
+  Caption,
+  Info,
+  VisuallyHidden,
+} from "@telegram-apps/telegram-ui";
 import { Section } from "@/ui/Section";
 import { AS_BUTTON_FLAT } from "@/ui/classes";
 import { PROSE } from "@/ui/classes";
@@ -217,7 +222,11 @@ export function SupportPage() {
                       setOpenedFaqId(expanded ? item.id : null)
                     }
                   >
-                    <Accordion.Summary Component="button" className={AS_BUTTON_FLAT}>
+                    <Accordion.Summary
+                      multiline
+                      Component="button"
+                      className={AS_BUTTON_FLAT}
+                    >
                       {item.question}
                     </Accordion.Summary>
                     <Accordion.Content>
@@ -264,6 +273,7 @@ export function SupportPage() {
             <Button
               stretched
               size="m"
+              variant="primary"
               before={<PlusCircle size={16} />}
               onClick={() => {
                 haptic.light();

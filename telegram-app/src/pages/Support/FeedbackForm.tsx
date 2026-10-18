@@ -126,6 +126,7 @@ export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
       <Button
         stretched
         size="l"
+        variant="primary"
         before={<Send size={16} />}
         loading={create.isPending}
         disabled={!canSubmit}

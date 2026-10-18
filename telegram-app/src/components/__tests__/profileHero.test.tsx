@@ -25,7 +25,7 @@ describe("ProfileHero", () => {
     const html = render(<ProfileHero user={USER} />);
     expect(html).toContain("Александр Иванов");
     expect(html).toContain("https://cdn.example.com/a.png");
-    expect(html).toContain("поездок: 34");
+    expect(html).toContain("34 поездки");
     expect(html).toContain("4.9");
     // Склонение для 12 — «отзывов».
     expect(html).toContain("12 отзывов");
@@ -41,6 +41,20 @@ describe("ProfileHero", () => {
     expect(
       render(<ProfileHero user={{ ...USER, reviewsCount: 5 }} />),
     ).toContain("5 отзывов");
+  });
+
+  it("склонение поездок: 1 поездка / 2 поездки / 5 поездок", () => {
+    // Метрика читается одним рядом с отзывами («2 поездки · ★ 4.9 · 12
+    // отзывов»): канцелярит «поездок: 2» выбивался из строя и не склонялся.
+    expect(
+      render(<ProfileHero user={{ ...USER, tripsCount: 1 }} />),
+    ).toContain("1 поездка");
+    expect(
+      render(<ProfileHero user={{ ...USER, tripsCount: 2 }} />),
+    ).toContain("2 поездки");
+    expect(
+      render(<ProfileHero user={{ ...USER, tripsCount: 5 }} />),
+    ).toContain("5 поездок");
   });
 
   it("без отзывов рейтинг — прочерк, и рядом стоит «0 отзывов»", () => {

@@ -31,7 +31,11 @@ const {
   mockUseProfileUpdate: vi.fn(),
   mockUseDeleteAccount: vi.fn(),
   mockUseUserReviews: vi.fn(),
-  mockUseNotifSettings: vi.fn(() => ({ mutate: vi.fn(), isPending: false, error: null })),
+  mockUseNotifSettings: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+  })),
 }));
 
 vi.mock("@/queries/profile", () => ({
@@ -42,14 +46,19 @@ vi.mock("@/queries/profile", () => ({
 }));
 
 vi.mock("@/queries/useReviewsQuery", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/queries/useReviewsQuery")>();
+  const original =
+    await importOriginal<typeof import("@/queries/useReviewsQuery")>();
   return {
     ...original,
     useUserReviewsInfiniteQuery: mockUseUserReviews,
   };
 });
 
-import { ACCOUNT_DELETED_CODE, ACCOUNT_DELETED_MESSAGE, ApiError } from "@/api/client";
+import {
+  ACCOUNT_DELETED_CODE,
+  ACCOUNT_DELETED_MESSAGE,
+  ApiError,
+} from "@/api/client";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -65,7 +74,10 @@ function queryState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function infiniteState(items: unknown[], overrides: Record<string, unknown> = {}) {
+function infiniteState(
+  items: unknown[],
+  overrides: Record<string, unknown> = {},
+) {
   return {
     ...queryState(),
     data: { pages: [{ items, pagination: { hasMore: false } }] },
@@ -130,7 +142,7 @@ describe("ProfilePage header", () => {
     expect(html).not.toContain("4.9 (12)");
     // Плитки статистики убраны: те же три числа стоят строкой метрик в
     // шапке, дубль на одном экране читался как четыре показателя.
-    expect(html).toContain("поездок: 42");
+    expect(html).toContain("42 поездки");
     expect(html).not.toContain("Поездок");
     expect(html).toContain("Редактировать профиль");
   });
@@ -139,12 +151,12 @@ describe("ProfilePage header", () => {
     mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
     const html = render(<ProfilePage />);
     // Дубль отслеживаем по ярлыкам плиток: в шапке подписи строчные
-    // («поездок: N», «N отзывов»), у плиток они были отдельными
+    // («N поездок», «N отзывов»), у плиток они были отдельными
     // заголовками «Поездок» / «Отзывов». Считать сами числа нельзя —
     // они встречаются и в других секциях экрана.
     expect(html).not.toContain("Поездок");
     expect(html).not.toContain("Отзывов");
-    expect(html).toContain("поездок: 42");
+    expect(html).toContain("42 поездки");
     expect(html).toContain("12 отзывов");
   });
 
@@ -157,7 +169,7 @@ describe("ProfilePage header", () => {
     const html = render(<ProfilePage />);
 
     expect(html).toContain("+7 900 123-45-67");
-    expect(html).toContain("поездок: 42");
+    expect(html).toContain("42 поездки");
     expect(html).toContain("отзывов");
     expect(html).toContain("Редактировать профиль");
   });
@@ -289,7 +301,7 @@ describe("ProfilePage: отзывы уехали в отдельную стра�
     const html = render(<ProfilePage />);
 
     expect(html).toContain("Отзывы");
-    expect(html).toContain("Мои отзывы и отзывы обо мне");
+    expect(html).toContain("Мои отзывы и обо мне");
   });
 
   it("пункт ведёт на /reviews (исходник: SSR не рендерит onClick)", () => {

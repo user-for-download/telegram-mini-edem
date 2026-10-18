@@ -201,7 +201,7 @@ export function ProfilePage() {
                     </IconContainer>
                   }
                   title="История поездок"
-                  subtitle="Завершённые и отменённые поездки"
+                  subtitle="Завершённые и отменённые"
                   onClick={() => {
                     haptic.light();
                     navigate("/profile/history");
@@ -235,14 +235,14 @@ export function ProfilePage() {
                     </IconContainer>
                   }
                   title="Отзывы"
-                  subtitle={`Мои отзывы и отзывы обо мне · ${profile.data.reviewsCount}`}
+                  subtitle={`Мои отзывы и обо мне · ${profile.data.reviewsCount}`}
                   onClick={() => {
                     haptic.light();
                     navigate("/reviews");
                   }}
                 />
               </Section>
-              <Section header="Мой автомобиль (для поездок)">
+              <Section header="Мой автомобиль">
                 <MenuRow
                   label={
                     profile.data.car ? "Автомобиль" : "Добавить автомобиль"
@@ -258,7 +258,7 @@ export function ProfilePage() {
                   subtitle={
                     profile.data.car
                       ? `${profile.data.car.model} · ${profile.data.car.color}`
-                      : "Добавьте автомобиль, чтобы создавать поездки"
+                      : "Нужен для создания поездок"
                   }
                   onClick={() => navigate("/vehicle")}
                 />
@@ -327,7 +327,7 @@ export function ProfilePage() {
                     </IconContainer>
                   }
                   title="Служба поддержки"
-                  subtitle="Вопросы и обращения — ответим в течение нескольких минут"
+                  subtitle="Вопросы и обращения"
                   onClick={() => {
                     // Страница /profile/support — единственный экран
                     // поддержки: FAQ, форма обращения и мои обращения.
@@ -345,7 +345,7 @@ export function ProfilePage() {
                     </IconContainer>
                   }
                   title="Жалобы"
-                  subtitle="Сообщить о проблеме с пользователем"
+                  subtitle="На пользователя или бронь"
                   onClick={() => navigate("/profile/reports")}
                 />
               </Section>

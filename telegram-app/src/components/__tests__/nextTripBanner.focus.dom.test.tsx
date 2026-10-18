@@ -26,7 +26,10 @@ import { NextTripBanner } from "@/components/Section/NextTripBanner";
 // «The URL must be of scheme file». vitest запускается из telegram-app.
 const require = createRequire(join(process.cwd(), "package.json"));
 const kitPkgPath = require.resolve("@telegram-apps/telegram-ui/package.json");
-const kitCss = readFileSync(join(dirname(kitPkgPath), "dist/styles.css"), "utf8");
+const kitCss = readFileSync(
+  join(dirname(kitPkgPath), "dist/styles.css"),
+  "utf8",
+);
 
 // Пути строим от process.cwd(), а НЕ от import.meta.url: в jsdom-окружении
 // import.meta.url — http(s)-URL, и fileURLToPath на нём падает с
@@ -39,10 +42,7 @@ const cardCss = readFileSync(
   join(process.cwd(), "src/components/Section/TripStandardCard.module.css"),
   "utf8",
 );
-const uiCss = readFileSync(
-  join(process.cwd(), "src/ui/ui.module.css"),
-  "utf8",
-);
+const uiCss = readFileSync(join(process.cwd(), "src/ui/ui.module.css"), "utf8");
 
 const { mockUseMyBookings, mockUseInfiniteMyTrips } = vi.hoisted(() => ({
   mockUseMyBookings: vi.fn(),
@@ -215,38 +215,45 @@ describe("NextTripBanner: видимый индикатор фокуса (стр
   });
 
   it("не конфликтует с общим сбросом outline в ui/ui.module.css", () => {
-    // Сброс есть только у тел sheet и только для :focus:not(:focus-visible) —
-    // то есть фокус мышью/тачем. Правило баннера оба раза не задевает:
-    // оно рисует кольцо, а не гасит его, и не является плоским :focus.
+    // Сброс есть только у тел sheet (`.sheetBody*:focus { outline: none }`) —
+    // фокус тела шторки всегда программный, поэтому невидим и при
+    // :focus-visible (реестр #46). Правило баннера его не задевает: оно рисует
+    // кольцо, а не гасит его, и живёт на своём классе.
     const resets = [
       ...stripComments(uiCss).matchAll(
-        /([^{}]*):focus:not\(:focus-visible\)\s*\{[^}]*\}/g,
+        /([^{}]*\.sheetBody[^{}]*:focus[^{}]*)\{([^}]*)\}/g,
       ),
-    ];
+    ].filter((match) => /outline\s*:\s*none/.test(match[2] ?? ""));
     expect(resets.length, "общий сброс outline не найден").toBeGreaterThan(0);
     for (const match of resets) {
-      // Список селекторов в CSS значит «ЛЮБОЙ из них», а `:focus` висит
-      // только на последнем: `.a, .b:focus:not(...)` гасит кольцо лишь у .b.
-      // Поэтому проверяем, что ВСЕ селекторы списка — из семейства
-      // .sheetBody*, а не то, что каждый из них несёт :focus. Суть проверки:
-      // сброс физически не может достать баннер.
+      // Список селекторов в CSS значит «ЛЮБОЙ из них»: проверяем, что ВСЕ
+      // селекторы списка — из семейства .sheetBody* и несут `:focus`. Суть
+      // проверки: сброс физически не может достать баннер.
       for (const selector of (match[1] ?? "").split(",")) {
-        expect(selector.trim()).toMatch(
-          /^\.sheetBody(Edge|Static)?(:focus:not\(:focus-visible\))?$/,
-        );
+        expect(selector.trim()).toMatch(/^\.sheetBody(Edge|Static)?:focus$/);
       }
       expect(match[0]).toContain("outline: none");
     }
     expect(uiCss).not.toMatch(/\.banner[^{}]*:focus/);
   });
 
+  it("тело шторки кольца не рисует — фокус туда всегда программный", () => {
+    // Реестр #46: позитивное правило :focus-visible на теле шторки вспыхивало
+    // при каждом открытии (Chromium матчит его для программного фокуса на
+    // скролл-регионе) и читалось синей рамкой вокруг всей шторки.
+    expect(stripComments(uiCss)).not.toMatch(
+      /\.sheetBody(Edge|Static)?:focus-visible[^{}]*\{[^}]*outline/,
+    );
+  });
+
   it("кит сам баннер не покрывает — правило действительно нужно наше", () => {
     // Если при bump версии кит заведёт :focus-visible для Banner, пин
     // упадёт — это сигнал пересмотреть дублирование, а не повод молчать.
     const kitRules = [...kitCss.matchAll(/[^{}]*:focus-visible\s*\{[^}]*\}/g)];
-    expect(kitRules.length, "у кита неожиданно много правил фокуса").toBeLessThan(
-      3,
-    );
+    expect(
+      kitRules.length,
+      "у кита неожиданно много правил фокуса",
+    ).toBeLessThan(3);
     for (const match of kitRules) {
       expect(match[0]).not.toMatch(/tgui-c3d21871b48e0ba3/);
     }

@@ -172,7 +172,7 @@ describe("UserProfileSheet: содержимое", () => {
 
     // Имя есть и в заголовке шторки, и в шапке — сверяем наличие, не число.
     expect(screen.getAllByText("Александр Иванов").length).toBeGreaterThan(0);
-    expect(screen.getByText("поездок: 34")).toBeTruthy();
+    expect(screen.getByText("34 поездки")).toBeTruthy();
     expect(screen.getByText("12 отзывов")).toBeTruthy();
     expect(screen.getByText("За рулём 7 лет")).toBeTruthy();
     expect(screen.getByText("Lada Vesta · белый")).toBeTruthy();

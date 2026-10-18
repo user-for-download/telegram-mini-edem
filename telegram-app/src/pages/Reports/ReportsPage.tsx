@@ -185,6 +185,7 @@ export function ReportsPage() {
             <Button
               stretched
               size="m"
+              variant="primary"
               before={<Flag size={16} />}
               onClick={() => {
                 haptic.light();

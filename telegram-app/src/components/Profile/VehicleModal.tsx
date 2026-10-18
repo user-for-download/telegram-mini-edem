@@ -104,9 +104,7 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
     vehicleQuery.error.status === 403
   ) {
     return (
-      <VehicleTerminal
-        deleted={isAccountDeletedError(vehicleQuery.error)}
-      />
+      <VehicleTerminal deleted={isAccountDeletedError(vehicleQuery.error)} />
     );
   }
   return (
@@ -136,7 +134,11 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
               а useClosingConfirmation сравнивал поля с пустым автомобилем и
               спрашивал «отменить изменения?» при ВЫХОДЕ из приложения.
               Тот же приём, что key={profile.data?.id} в EditProfileModal. */}
-          <VehicleForm key={vehicle ? "has-vehicle" : "no-vehicle"} vehicle={vehicle} onDone={onDone} />
+          <VehicleForm
+            key={vehicle ? "has-vehicle" : "no-vehicle"}
+            vehicle={vehicle}
+            onDone={onDone}
+          />
           {vehicle && (
             <>
               <ConfirmPopup
@@ -212,7 +214,11 @@ function VehicleForm({
   };
   return (
     <>
-      <Field label="Модель" id="vehicle-model" error={errorFor("vehicle-model")}>
+      <Field
+        label="Модель"
+        id="vehicle-model"
+        error={errorFor("vehicle-model")}
+      >
         {(field) => (
           <Input
             {...field}
@@ -242,7 +248,11 @@ function VehicleForm({
           />
         )}
       </Field>
-      <Field label="Номер (необязательно)" id="vehicle-plate" error={errorFor("vehicle-plate")}>
+      <Field
+        label="Номер (необязательно)"
+        id="vehicle-plate"
+        error={errorFor("vehicle-plate")}
+      >
         {(field) => (
           <Input
             {...field}
@@ -271,6 +281,7 @@ function VehicleForm({
       <Button
         stretched
         size="l"
+        variant="primary"
         loading={upsert.isPending}
         // Кит у `loading` только вешает класс и спиннер — кнопка остаётся
         // и фокусируемой, и активной. Гасим её явно, иначе состояние

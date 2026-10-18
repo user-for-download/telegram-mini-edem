@@ -39,6 +39,7 @@ export function RideRequestHistoryPage() {
             <Button
               stretched
               size="m"
+              variant="primary"
               before={<PlusCircle size={16} />}
               onClick={() => {
                 haptic.light();

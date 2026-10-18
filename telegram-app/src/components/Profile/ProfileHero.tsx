@@ -78,9 +78,15 @@ export function ProfileHero({
       </Headline>
       {phone ? <Caption className={styles.heroPhone}>{phone}</Caption> : null}
       <div className={styles.heroMeta}>
-        <Caption>{`поездок: ${user.tripsCount}`}</Caption>
+        <Caption>{`${user.tripsCount} ${plural(
+          user.tripsCount,
+          "поездка",
+          "поездки",
+          "поездок",
+        )}`}</Caption>
         <Caption aria-hidden="true">·</Caption>
         <RatingPill value={user.rating} reviewsCount={user.reviewsCount} />
+        <Caption aria-hidden="true">·</Caption>
         <Caption>{`${user.reviewsCount} ${plural(
           user.reviewsCount,
           "отзыв",

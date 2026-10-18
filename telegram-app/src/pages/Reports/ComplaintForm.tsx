@@ -256,6 +256,7 @@ export function ComplaintForm({
       <Button
         stretched
         size="l"
+        variant="primary"
         loading={create.isPending}
         disabled={!canSubmit}
         onClick={submit}

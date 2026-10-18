@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Caption,
-  IconContainer,
-  Text,
-} from "@telegram-apps/telegram-ui";
+import { Caption, IconContainer, Text } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { PROSE, ROW_BETWEEN } from "@/ui/classes";
 
@@ -40,11 +36,7 @@ export function SettingsModal({
   // Имя диалога для скринридера + видимый заголовок на base-платформе
   // (tgui Modal.Header рисует текст только на iOS).
   return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title="Настройки"
-    >
+    <Sheet open={open} onClose={onClose} title="Настройки">
       <SettingsBody />
     </Sheet>
   );
@@ -116,11 +108,11 @@ export function SettingsBody() {
         emptyText={EMPTY_STATES.settingsEmpty.description}
         onRetry={() => void profile.refetch()}
       >
+        {/* Тело окна прямо на фоне шторки, без Card: карточка внутри шторки —
+            вложенная поверхность, которой нет ни в одном другом окне (жалоба,
+            обращение, правка профиля, «Ищу попутку»). Раскладку даёт ui/Stack —
+            локальный .card был его копией. */}
         <Stack className={styles.stackSettings}>
-          // Тело окна прямо на фоне шторки, без Card: карточка внутри шторки —
-          // вложенная поверхность, которой нет ни в одном другом окне (жалоба,
-          // обращение, правка профиля, «Ищу попутку»). Раскладку даёт ui/Stack —
-          // локальный .card был его копией.
           <Stack>
             <div className={ROW_BETWEEN}>
               <IconContainer>
@@ -142,11 +134,7 @@ export function SettingsBody() {
               {enabled ? "Выключить некритичные" : "Включить уведомления"}
             </Button>
             {showSaved && (
-              <Text
-                Component="p"
-                className={styles.link}
-                role="status"
-              >
+              <Text Component="p" className={styles.link} role="status">
                 Настройки сохранены
               </Text>
             )}

@@ -219,6 +219,7 @@ export const EditProfileBody = memo(function EditProfileBody({
           <Button
             stretched
             size="l"
+            variant="primary"
             loading={update.isPending}
             disabled={update.isPending}
             onClick={save}
