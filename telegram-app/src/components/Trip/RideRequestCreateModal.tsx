@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { tripIdFromPath, useOpenTrip } from "@/hooks/useOpenTrip";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { Sheet } from "@/ui/Sheet";
 import { RideRequestCreateForm } from "./RideRequestCreateForm";
@@ -34,6 +35,7 @@ export function RideRequestCreateModal({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const openTrip = useOpenTrip();
 
   // Фокус, Esc и Tab-trap — нативные (Radix FocusScope + onOpenChange);
   // свой role=dialog не добавляем — vaul уже рендерит dialog (двойной анонс).
@@ -45,6 +47,14 @@ export function RideRequestCreateModal({
       <RideRequestCreateForm
         onNavigate={(route) => {
           onClose();
+          // Найденная поездка — тоже шторка поверх текущего экрана:
+          // иначе под ней отрисовывался бы «Поиск» и переход выглядел
+          // как прыжок на чужую вкладку.
+          const tripId = tripIdFromPath(route);
+          if (tripId) {
+            openTrip(tripId);
+            return;
+          }
           navigate(route);
         }}
       />

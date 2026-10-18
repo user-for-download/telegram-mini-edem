@@ -1,0 +1,107 @@
+// Route-шторка деталей поездки: ФОН — экран, откуда пришли.
+//
+// Раньше `/trips/:tripId` всегда рисовал фоном «Поиск». Тап по уведомлению
+// выглядел так: сначала на долю секунды появлялся «Поиск» с подсвеченной
+// чужой вкладкой, и только потом выезжали детали. Навигация внутри
+// приложения теперь кладёт в state `backgroundLocation` (useOpenTrip), и
+// роутер рисует по этому адресу прежний экран, а шторку — поверх него.
+//
+// Тест интеграционный по роутеру, но страницы-участники замоканы: проверяем
+// именно выбор фона и подсветку таба, а не содержимое экранов.
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { MemoryRouter, type InitialEntry } from "react-router-dom";
+import { AppRoot } from "@telegram-apps/telegram-ui";
+
+// tma-sdk вне Telegram: backButton бросает при прямом вызове, launchParams
+// пустые (тот же приём, что в остальных DOM-тестах роутера).
+vi.mock("@tma.js/sdk-react", () => ({
+  useLaunchParams: () => ({}),
+  backButton: {
+    onClick: { ifAvailable: () => {} },
+    offClick: { ifAvailable: () => {} },
+    show: { ifAvailable: () => {} },
+    hide: { ifAvailable: () => {} },
+  },
+}));
+
+vi.mock("@/hooks/useSettingsButton", () => ({
+  useSettingsButton: () => {},
+}));
+
+vi.mock("@/queries/useNotificationsQuery", () => ({
+  useUnreadCountQuery: () => ({ data: 0 }),
+}));
+
+// Провайдер шторки чужого профиля тянет react-query; здесь он не нужен —
+// проверяем выбор фона, а не шторку профиля.
+vi.mock("@/components/Profile/UserProfileProvider", () => ({
+  UserProfileProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
+
+vi.mock("@/pages/Notifications/NotificationsPage", () => ({
+  NotificationsPage: () => <div data-testid="notifications-page" />,
+}));
+
+vi.mock("@/components/Trip/TripDetailsModal", () => ({
+  TripDetailsRoute: () => <div data-testid="trip-deeplink" />,
+  TripDetailsSheet: () => <div data-testid="trip-sheet" />,
+}));
+
+import { RoutesWithBackground } from "@/router/AppRouter";
+
+afterEach(cleanup);
+
+/** Локация-фон в том виде, в каком её кладёт useOpenTrip. */
+function renderAt(entry: InitialEntry) {
+  return render(
+    <AppRoot platform="base">
+      <MemoryRouter initialEntries={[entry]}>
+        <RoutesWithBackground />
+      </MemoryRouter>
+    </AppRoot>,
+  );
+}
+
+function background(pathname: string, search = "") {
+  return { pathname, search, hash: "", state: null, key: "bg" };
+}
+
+describe("route-шторка деталей поездки: фон — откуда пришли", () => {
+  it("из уведомлений: под шторкой остаются уведомления, а не поиск", () => {
+    renderAt({
+      pathname: "/trips/t-1",
+      state: { backgroundLocation: background("/notifications") },
+    });
+
+    expect(screen.getByTestId("notifications-page")).toBeTruthy();
+    expect(screen.getByTestId("trip-sheet")).toBeTruthy();
+    // «Поиск» — прежний жёсткий фон — не должен появиться вовсе.
+    expect(screen.queryByTestId("trip-deeplink")).toBeNull();
+  });
+
+  it("вкладка остаётся той, откуда открыли", () => {
+    renderAt({
+      pathname: "/trips/t-1",
+      state: { backgroundLocation: background("/notifications") },
+    });
+
+    // Активный таб помечен `aria-current="page"`. Раньше адрес /trips/:id
+    // давал подсвеченный «Поиск» — «перекинуло на другую вкладку».
+    const active = screen
+      .getAllByRole("button")
+      .filter((tab) => tab.getAttribute("aria-current") === "page");
+    expect(active).toHaveLength(1);
+    expect(active[0]?.textContent).toContain("Уведомления");
+  });
+
+  it("холодный deep link без state: фоном «Поиск» (прежний путь)", () => {
+    renderAt("/trips/t-1");
+
+    expect(screen.getByTestId("trip-deeplink")).toBeTruthy();
+    expect(screen.queryByTestId("notifications-page")).toBeNull();
+  });
+});

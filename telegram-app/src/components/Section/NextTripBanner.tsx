@@ -1,6 +1,6 @@
 import { Banner, IconContainer } from "@telegram-apps/telegram-ui";
 import { Armchair, Car } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useOpenTrip } from "@/hooks/useOpenTrip";
 import { useMyBookingsQuery } from "@/queries/useBookingsQuery";
 import { useInfiniteMyTripsQuery } from "@/queries/useTripsQuery";
 import { formatRelativeDeparture } from "@/utils/bookingSplit";
@@ -72,7 +72,7 @@ export function pickNextTrip(
  * null (прогрессивное улучшение, не скелетон).
  */
 export function NextTripBanner() {
-  const navigate = useNavigate();
+  const openTrip = useOpenTrip();
   const bookings = useMyBookingsQuery();
   const driverTrips = useInfiniteMyTripsQuery({ status: "active" });
 
@@ -100,7 +100,7 @@ export function NextTripBanner() {
 
   const go = () => {
     haptic.light();
-    navigate(`/trips/${next.tripId}`);
+    openTrip(next.tripId);
   };
 
   return (

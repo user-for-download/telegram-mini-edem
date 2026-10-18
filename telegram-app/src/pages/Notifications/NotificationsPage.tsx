@@ -15,6 +15,7 @@ import { CheckCheck } from "lucide-react";
 import { MutationError } from "@/components/MutationError";
 import { QueryState } from "@/components/QueryState";
 import { haptic } from "@/utils/haptics";
+import { tripIdFromPath, useOpenTrip } from "@/hooks/useOpenTrip";
 import {
   moscowDateLabel,
   moscowDayContext,
@@ -383,6 +384,7 @@ export function NotificationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const segment = normalizeNotifSegment(searchParams.get("segment"));
   const navigate = useNavigate();
+  const openTrip = useOpenTrip();
   const inbox = useNotificationsInboxQuery(20, segment);
   const markRead = useMarkNotificationReadMutation();
   const markAll = useMarkAllNotificationsReadMutation();
@@ -420,6 +422,22 @@ export function NotificationsPage() {
     { value: "driver", label: "Водитель" },
     { value: "passenger", label: "Пассажир" },
   ] as const satisfies ReadonlyArray<SwitcherOption<NotifSegment>>;
+
+  /**
+   * Тап по уведомлению. Детали поездки — шторка поверх ЭТОГО экрана:
+   * без backgroundLocation под шторкой успевал отрисоваться «Поиск»
+   * (роут /trips/:id), и переход выглядел как «сначала перекинуло на
+   * другую вкладку, потом открылись детали». Остальные цели — обычная
+   * навигация: они ведут на настоящие страницы.
+   */
+  const openTarget = (to: string) => {
+    const tripId = tripIdFromPath(to);
+    if (tripId) {
+      openTrip(tripId);
+      return;
+    }
+    navigate(to);
+  };
 
   /** Переключение сегмента: «Новые» — канонический чистый /notifications. */
   const selectSegment = (next: NotifSegment) => {
@@ -548,7 +566,7 @@ export function NotificationsPage() {
                   notification={notification}
                   marking={markingId === notification.id}
                   onMarkRead={(id) => markRead.mutate(id)}
-                  onOpen={(to) => navigate(to)}
+                  onOpen={openTarget}
                 />
               ))}
             </Section>

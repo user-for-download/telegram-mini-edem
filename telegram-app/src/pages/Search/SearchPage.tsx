@@ -11,7 +11,7 @@ import { FetchMore } from "@/ui/FetchMore";
 import { BTN_ROW_WRAP, ICON_TARGET, INFO } from "@/ui/classes";
 
 import { ArrowRightLeft, Filter, Search as SearchIcon } from "lucide-react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { mergeUniqueById } from "@/helpers/mergeUniqueById";
 import { listBlockingError } from "@/helpers/listBlockingError";
 import { QueryState } from "@/components/QueryState";
@@ -40,6 +40,7 @@ import {
 import { groupTripsByDay } from "@/helpers/tripGroups";
 import { plural } from "@/utils/plural";
 import { useModalBack } from "@/utils/modalBack";
+import { useOpenTrip } from "@/hooks/useOpenTrip";
 import { haptic } from "@/utils/haptics";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { useInfiniteTripsQuery } from "@/queries/useTripsQuery";
@@ -69,7 +70,7 @@ function presetFromParams(params: URLSearchParams): SearchFormState {
  */
 export function SearchPage() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const openTrip = useOpenTrip();
   const [form, setForm] = useState<SearchFormState>(() =>
     presetFromParams(searchParams),
   );
@@ -422,7 +423,7 @@ export function SearchPage() {
                         person={feedPerson(trip)}
                         onOpen={(id) => {
                           haptic.light();
-                          navigate(`/trips/${id}`);
+                          openTrip(id);
                         }}
                       />
                     );

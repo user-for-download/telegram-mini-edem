@@ -9,6 +9,7 @@ import { Cell } from "@/ui/Cell";
 import { Page } from "@/ui/Page";
 
 import { useNavigate } from "react-router-dom";
+import { useOpenTrip } from "@/hooks/useOpenTrip";
 import { CarFront, CircleUserRound } from "lucide-react";
 import { QueryState } from "@/components/QueryState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
@@ -89,6 +90,7 @@ function historyStatus(item: HistoryItem): {
  */
 export function TripHistoryPage() {
   const navigate = useNavigate();
+  const openTrip = useOpenTrip();
 
   const history = usePassengerHistoryQuery();
   const driverArchive = useInfiniteMyTripsQuery({ status: "archive" });
@@ -123,7 +125,7 @@ export function TripHistoryPage() {
 
   const open = (id: string) => {
     haptic.light();
-    navigate(`/trips/${id}`);
+    openTrip(id);
   };
 
   return (

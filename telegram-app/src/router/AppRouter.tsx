@@ -7,6 +7,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  type Location,
 } from "react-router-dom";
 import { backButton, useLaunchParams } from "@tma.js/sdk-react";
 import {
@@ -21,7 +22,10 @@ import { handleModalBack } from "@/utils/modalBack";
 import { ROUTE_FADE_CLASS } from "@/components/AppShell/AppShell";
 import { HomePage } from "@/pages/HomePage/HomePage";
 import { SearchPage } from "@/pages/Search/SearchPage";
-import { TripDetailsRoute } from "@/components/Trip/TripDetailsModal";
+import {
+  TripDetailsRoute,
+  TripDetailsSheet,
+} from "@/components/Trip/TripDetailsModal";
 import { CreateTripPage } from "@/pages/CreateTrip/CreateTripPage";
 import { NotificationsPage } from "@/pages/Notifications/NotificationsPage";
 import { VehicleRoute } from "@/components/Profile/VehicleModal";
@@ -77,18 +81,45 @@ const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
   [(p) => p.startsWith("/profile"), "Профиль"],
 ];
 
+/** Состояние навигации, которым route-шторка помечает свой фон. */
+interface BackgroundState {
+  /**
+   * Экран, с которого открыли шторку. Кладёт `useOpenTrip` (детали поездки);
+   * роутер рисует по этому адресу прежнюю страницу, а шторку — поверх.
+   */
+  backgroundLocation?: Location;
+}
+
+/**
+ * Адрес ЭКРАНА под шторкой: при открытой route-модалке это фон, иначе
+ * текущий адрес. От него зависят активный таб, заголовок и ключ анимации —
+ * иначе, открыв детали поездки из «Уведомлений», пользователь видел бы
+ * подсвеченной чужую вкладку.
+ */
+function screenLocation(location: Location): Location {
+  return (
+    (location.state as BackgroundState | null)?.backgroundLocation ?? location
+  );
+}
+
 export function Shell() {
   const location = useLocation();
   const navigate = useNavigate();
   const didHandleStartParam = useRef(false);
   const launchParams = useLaunchParams(true);
   const startParam = launchParams.tgWebAppStartParam;
+  // Нативная кнопка «назад» и её видимость — по РЕАЛЬНОМУ адресу: пока
+  // открыта шторка, Back обязан её закрыть, а не считаться «корнем».
   const isRoot = ROOT_ROUTES.has(location.pathname);
+  const screen = screenLocation(location);
 
   // P2 list-perf: скролл списка по ключу маршрута — Back из route-модалки
   // возвращает на место списка. State-модалки (handleModalBack ниже)
   // локацию не меняют, хук их не трогает.
-  useScrollRestore(routeScrollKey(location.pathname, location.search));
+  //
+  // Ключ — адрес ЭКРАНА (фон под шторкой): иначе открытие деталей считалось
+  // бы переходом на другую страницу и сбрасывало скролл фонового списка.
+  useScrollRestore(routeScrollKey(screen.pathname, screen.search));
 
   // Нижний бар — всегда табы. Контекстных CTA в баре больше нет:
   // «Опубликовать» и «Забронировать» живут инлайн в своих формах.
@@ -164,14 +195,14 @@ export function Shell() {
   }, [navigate, startParam]);
 
   const activeTab: AppTabId =
-    location.pathname === "/"
+    screen.pathname === "/"
       ? "home"
-      : location.pathname.startsWith("/bookings") ||
-          location.pathname.startsWith("/trips/my")
+      : screen.pathname.startsWith("/bookings") ||
+          screen.pathname.startsWith("/trips/my")
         ? "trips"
-        : location.pathname.startsWith("/notifications")
+        : screen.pathname.startsWith("/notifications")
           ? "notifications"
-          : location.pathname.startsWith("/trips")
+          : screen.pathname.startsWith("/trips")
             ? "search"
             : "profile";
 
@@ -180,7 +211,7 @@ export function Shell() {
   };
 
   const headerTitle = HEADER_TITLE_RULES.find(([match]) =>
-    match(location.pathname),
+    match(screen.pathname),
   )?.[1];
 
   return (
@@ -203,7 +234,7 @@ export function Shell() {
             не должна перемонтировать страницу (скелетоны, потеря
             скролла). Уважение reduced-motion — класс route-fade
             (AppShell.module.css). */}
-        <div key={location.pathname} className={ROUTE_FADE_CLASS}>
+        <div key={screen.pathname} className={ROUTE_FADE_CLASS}>
           <Outlet />
         </div>
       </UserProfileProvider>
@@ -211,44 +242,84 @@ export function Shell() {
   );
 }
 
+/**
+ * Таблица экранов приложения — одна на два прохода роутера.
+ *
+ * `<Routes location>` умеет рендерить маршрут по ЧУЖОМУ адресу; этим
+ * пользуется route-шторка: основной проход рисует экран-фон, второй —
+ * саму шторку. Разметка одна, поэтому экраны не дублируются.
+ */
+function AppRoutes({ location }: { location?: Location }) {
+  return (
+    <Routes location={location}>
+      <Route element={<Shell />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/trips" element={<SearchPage />} />
+        <Route path="/trips/:tripId" element={<TripDetailsRoute />} />
+        <Route path="/trips/my" element={<Navigate to="/bookings" replace />} />
+        <Route
+          path="/trips/my/:tripId/requests"
+          element={<TripRequestsRoute />}
+        />
+        <Route path="/trips/my/new" element={<CreateTripPage />} />
+        <Route path="/bookings" element={<TripPage />} />
+        <Route
+          path="/bookings/history"
+          element={<Navigate to="/profile/history" replace />}
+        />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/history" element={<TripHistoryPage />} />
+        <Route
+          path="/profile/ride-requests"
+          element={<RideRequestHistoryPage />}
+        />
+        <Route path="/profile/edit" element={<EditProfileRoute />} />
+        <Route path="/reviews" element={<ReviewsPage />} />
+        <Route path="/settings" element={<SettingsRoute />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/profile/support" element={<SupportPage />} />
+        <Route path="/profile/reports" element={<ReportsPage />} />
+        <Route path="/vehicle" element={<VehicleRoute />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  );
+}
+
+/**
+ * Роутер приложения.
+ *
+ * Два прохода, а не один: если адрес пришёл со `state.backgroundLocation`
+ * (так делает `useOpenTrip`), первый проход рисует экран-ФОН по прошлому
+ * адресу, второй — шторку деталей поверх него. Без этого фоном всегда
+ * оказывался «Поиск», и тап по уведомлению сначала показывал чужой экран,
+ * а уже потом выезжали детали.
+ *
+ * Cold start по ссылке `/trips/:id` (state нет) идёт прежним путём:
+ * `TripDetailsRoute` рисует фоном «Поиск» — другой страницы у пользователя
+ * в этот момент не существует.
+ */
 export function AppRouter() {
   return (
     <HashRouter>
-      <Routes>
-        <Route element={<Shell />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/trips" element={<SearchPage />} />
-          <Route path="/trips/:tripId" element={<TripDetailsRoute />} />
-          <Route
-            path="/trips/my"
-            element={<Navigate to="/bookings" replace />}
-          />
-          <Route
-            path="/trips/my/:tripId/requests"
-            element={<TripRequestsRoute />}
-          />
-          <Route path="/trips/my/new" element={<CreateTripPage />} />
-          <Route path="/bookings" element={<TripPage />} />
-          <Route
-            path="/bookings/history"
-            element={<Navigate to="/profile/history" replace />}
-          />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/profile/history" element={<TripHistoryPage />} />
-          <Route
-            path="/profile/ride-requests"
-            element={<RideRequestHistoryPage />}
-          />
-          <Route path="/profile/edit" element={<EditProfileRoute />} />
-          <Route path="/reviews" element={<ReviewsPage />} />
-          <Route path="/settings" element={<SettingsRoute />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/profile/support" element={<SupportPage />} />
-          <Route path="/profile/reports" element={<ReportsPage />} />
-          <Route path="/vehicle" element={<VehicleRoute />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <RoutesWithBackground />
     </HashRouter>
+  );
+}
+
+export function RoutesWithBackground() {
+  const location = useLocation();
+  const background = (location.state as BackgroundState | null)
+    ?.backgroundLocation;
+
+  return (
+    <>
+      <AppRoutes location={background} />
+      {background ? (
+        <Routes location={location}>
+          <Route path="/trips/:tripId" element={<TripDetailsSheet />} />
+        </Routes>
+      ) : null}
+    </>
   );
 }

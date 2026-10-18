@@ -1,6 +1,6 @@
 import { IconButton } from "@/ui/IconButton";
 import { Share2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useOpenTrip } from "@/hooks/useOpenTrip";
 import {
   StatusPill,
   type StatusTone,
@@ -85,7 +85,7 @@ function isCancellable(trip: Trip, now: Date = new Date()): boolean {
  * В детали ведёт тап по самой карточке (onOpen) — отдельной кнопки нет.
  */
 export function TripCard({ variant }: { variant: TripCardVariant }) {
-  const navigate = useNavigate();
+  const openTrip = useOpenTrip();
   // Своя строка «Вы водитель» показывает собственный аватар: «ВЫ» из
   // первых двух букв имени читалось как ошибка инициалов. Хранилище может
   // быть пустым (SSR/тесты) — тогда аватар деградирует до акронима.
@@ -132,7 +132,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
         }}
         onOpen={(id) => {
           haptic.light();
-          navigate(`/trips/${id}`);
+          openTrip(id);
         }}
         footer={
           // Группа действий у правого края: поделиться + отмена.
@@ -204,7 +204,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
       }
       onOpen={(id) => {
         haptic.light();
-        navigate(`/trips/${id}`);
+        openTrip(id);
       }}
       footer={
         // Группа действий у правого края: поделиться + отмена.
