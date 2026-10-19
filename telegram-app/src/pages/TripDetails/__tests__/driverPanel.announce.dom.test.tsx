@@ -8,7 +8,7 @@
 //
 // Проверяем DOM-структуру, а не пропсы: роль обязана стоять на узле, который
 // НЕСЁТ ТЕКСТ. Роль на пустой обёртке — это ровно тот баг, что закреплён в
-// MEMORY.md:485 и запинен ToastProvider.test.tsx.
+// MEMORY.md §18 и запинен ToastProvider.test.tsx.
 //
 // Отдельно закреплено разделение успеха и неудачи (BookingPanel — образец):
 // успех объявляется вежливо (role="status", aria-live="polite"), неудача —
@@ -191,7 +191,7 @@ describe("DriverPanel: исход завершения/отмены объявл
       (n) => n.getAttribute("role") === "status",
     );
     expect(status.length).toBeGreaterThan(0);
-    // Роль на текст-несущем узле, а не на пустом соседе (суть MEMORY.md:485).
+    // Роль на текст-несущем узле, а не на пустом соседе (суть MEMORY.md §18).
     const text = status.map((n) => n.textContent ?? "").join(" ");
     expect(text).toContain("Поездка завершена");
     expect(text.trim()).not.toBe("");

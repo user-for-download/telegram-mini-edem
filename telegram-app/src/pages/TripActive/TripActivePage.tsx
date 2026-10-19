@@ -198,7 +198,7 @@ export function TripActivePage() {
     isFetchingNextPage: driverActive.isFetchingNextPage,
     // Упавшая догрузка не сбрасывает hasNextPage, а плейсхолдер сентинел
     // возвращает во вьюпорт — без глушения observer бьёт по кругу
-    // (MEMORY.md:511). Стоп до явного повтора пользователем.
+    // (MEMORY.md §18). Стоп до явного повтора пользователем.
     disabled: driverActive.isFetchNextPageError,
     fetchNextPage: () => {
       void driverActive.fetchNextPage();

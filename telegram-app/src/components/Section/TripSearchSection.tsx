@@ -24,7 +24,7 @@ interface TripSearchSectionProps {
  * пустые, и кнопка отдавала бы поиск без маршрута (неотфильтрованную
  * выдачу) — то есть человек вводил фильтр, которого не применили. То же
  * касается ошибки сети: она НЕ ошибка валидации, поэтому терминальный
- * `QueryState` с «Повторить», а не пустые поля (MEMORY.md:487, тот же
+ * `QueryState` с «Повторить», а не пустые поля (MEMORY.md §18, тот же
  * приём в CreateTripPage).
  */
 export function TripSearchSection({ onSearch }: TripSearchSectionProps) {

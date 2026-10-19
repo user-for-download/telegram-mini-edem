@@ -112,7 +112,7 @@ export function TripHistoryPage() {
     hasNextPage: driverArchive.hasNextPage,
     isFetchingNextPage: driverArchive.isFetchingNextPage,
     // После сбоя страницы N+1 hasNextPage остаётся истинным — сентинел без
-    // глушения зацикливал бы запросы вслед за плейсхолдером (MEMORY.md:511).
+    // глушения зацикливал бы запросы вслед за плейсхолдером (MEMORY.md §18).
     disabled: driverArchive.isFetchNextPageError,
     fetchNextPage: () => {
       void driverArchive.fetchNextPage();

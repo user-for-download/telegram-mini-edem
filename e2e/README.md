@@ -56,7 +56,8 @@ CSS, а не результат: правило может быть коррек
   `telegram-app` vite dev server)
 - Backend running on `http://localhost:3011`
 - Dev DB running (docker container `E2E_DB_CONTAINER`, default `edem-db-dev`)
-- `ALLOW_DEV_AUTH=true` in backend `.env`
+- `ALLOW_DEV_AUTH=true` in backend `.env` **and** the dev user's Telegram id in
+  `DEV_AUTH_USER_ALLOWLIST` (the bypass only works for allowlisted ids)
 - Admin token in `E2E_ADMIN_TOKEN` (default `dev-admin-token-12345`, must match
   backend `ADMIN_TOKEN`) for review approve + feedback reply steps
 - Playwright browsers installed: `npx playwright install chromium`
@@ -94,6 +95,8 @@ node e2e/ui-demand-static.mjs
 | `E2E_VERBOSE` | unset (`1` = verbose) | Log screenshot-helper failures instead of failing the step |
 | `E2E_API_URL` | `http://localhost:3011/api/v1` | Backend API base |
 | `E2E_ADMIN_TOKEN` | `dev-admin-token-12345` | Admin API (must match backend `ADMIN_TOKEN`) |
+| `E2E_CONTRAST_VERBOSE` | unset (`1` = verbose) | Print every contrast measurement in `ui-contrast.mjs` |
+| `TG_BASE_URL` | `http://localhost:3011` | Backend base for `telegram-realtime.mjs` |
 
 Rate budget: `/auth/telegram` is IP-limited (default 5/5min, shared by UI
 bootstraps and API logins). The script uses exactly one login per identity
@@ -113,7 +116,7 @@ raise `TG_AUTH_RATE_MAX` on the dev backend.
   (pass or fail). **Cleanup failure fails the run**, so residue never leaks
   into the next run silently.
 - `pageerror` **and** `unhandledrejection` fail the run (non-zero exit even
-  at 16/16). Rejections are collected per page via an init script and
+  at 17/17). Rejections are collected per page via an init script and
   reported in `results-tg.json`.
 - Cold-start warm-up: one non-counted `goto /` + 120s content wait right after
   browser launch absorbs fresh-vite compile latency.
@@ -128,25 +131,29 @@ raise `TG_AUTH_RATE_MAX` on the dev backend.
 - Multiselect option clicks use `force: true`: tgui covers option rows with
   its own state-layer (`absolute inset-0`, real taps bubble fine), which
   Playwright's strict hit-target check rejects.
+- After the run `restoreDevStand()` reseeds the dev stand: the delete-profile
+  step wipes the dev user's notifications, and `reviveDevUser()` alone would
+  leave it with 0 instead of 9.
 
-## Test Flow (`telegram-parity.mjs` runSteps in order)
+## Test Flow (`telegram-parity.mjs` runSteps in order, 17)
 
 1. Prereq: TG frontend serves the app (with cold-start warm-up)
 2. Auth: dev login, `Dev Telegram` profile (onboarding accepted once)
-3. Setup: driver car (psql upsert), directory cities, API counterparty
-4. Driver creates trip in UI (unique price, datalist cities) → `/trips/:id`
-5. Counterparty books seat 1 via API
-6. Driver approves (`Принять` → `Подтверждён`) in UI
-7. Inbox shows `booking_created`; mark-read works
-8. Reload on requests page → confirmed state resyncs from server
-9. Offline → `Нет подключения` banner; online → `Соединение восстановлено`
-10. Time-travel departure to past (docker psql) → UI complete → `Завершена`
-11. Counterparty review via API → admin approve → visible in UI `/reviews`
-12. Support ticket in UI → admin reply via API → `Ответ поддержки` in UI
-13. Settings toggle round-trip (`Настройки сохранены`)
-14. Malformed hash route falls back to search (`/trips`)
-15. 390px viewport resize: search finds counterparty trip card
-16. UI account deletion → `Профиль удалён` screen (tombstone)
+3. Prereq: notifications enabled for the dev user
+4. Setup: driver car (psql upsert), directory cities, API counterparty
+5. Driver creates trip in UI (unique price, datalist cities) → `/trips/:id`
+6. Counterparty books seat 1 via API
+7. Driver approves (`Принять` → `Подтверждён`) in UI
+8. Inbox shows `booking_created`; mark-read works
+9. Reload on requests page → confirmed state resyncs from server
+10. Offline → `Нет подключения` banner; online → `Соединение восстановлено`
+11. Time-travel departure to past (docker psql) → UI complete → `Завершена`
+12. Counterparty review via API → admin approve → visible in UI `/reviews`
+13. Support ticket in UI → admin reply via API → `Ответ поддержки` in UI
+14. Settings toggle round-trip (`Настройки сохранены`)
+15. Malformed hash route falls back to the home page (`/`)
+16. 390px viewport: search finds the counterparty trip card
+17. UI account deletion → `Профиль удалён` screen (tombstone)
 
 ## Artifacts
 

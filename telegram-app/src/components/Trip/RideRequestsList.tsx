@@ -93,7 +93,7 @@ export const RideRequestsList = memo(function RideRequestsList() {
     // Пятый вызов хука в приложении: те же четыре ленты уже передают
     // `disabled`, эта — нет. После сбоя страницы N+1 hasNextPage остаётся
     // истинным, а плейсхолдер возвращает сентинел во вьюпорт — observer
-    // бил бы по кругу (MEMORY.md:511).
+    // бил бы по кругу (MEMORY.md §18).
     disabled: requests.isFetchNextPageError,
     fetchNextPage: () => {
       void requests.fetchNextPage();

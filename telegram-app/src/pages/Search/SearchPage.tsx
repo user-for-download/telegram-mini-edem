@@ -129,7 +129,7 @@ export function SearchPage() {
     isFetchingNextPage: trips.isFetchingNextPage,
     // После сбоя страницы N+1 hasNextPage остаётся истинным, а плейсхолдер
     // догрузки встаёт/убирается и сдвигает сентинел обратно во вьюпорт —
-    // observer перестреливал бы бесконечно (MEMORY.md:511). На ошибке
+    // observer перестреливал бы бесконечно (MEMORY.md §18). На ошибке
     // следующей страницы наблюдение глохнет до явного «Повторить».
     disabled: trips.isFetchNextPageError,
     fetchNextPage: () => {

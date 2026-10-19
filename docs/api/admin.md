@@ -365,6 +365,19 @@ trim + lower-case) → `409`.
 | 404 | `NOT_FOUND` | ID не найден |
 | 409 | `CONFLICT` | `tripsCount > 0`; в `message` — количество поездок |
 
+### POST /api/v1/admin/cities/recompute-trips-count
+
+Полный пересчёт `City.tripsCount` по ground truth: количество **не отменённых**
+поездок, ссылающихся на город через `fromCityId`/`toCityId` (логика —
+`recomputeCityTripsCount`, `backend/src/cities/counters.ts`). Чинит дрейф
+счётчика после ручных правок в консоли, прямого удаления `Trip` в обход API или
+сида без синхронизированных счётчиков. Идемпотентен — безопасно вызывать
+многократно.
+
+| Код | Ответ | Описание |
+|-----|-------|----------|
+| 200 | `{ "updated": N }` | `N` — сколько городов получило новое значение |
+
 ### GET /api/v1/admin/settings
 
 Read-only снимок текущих rate-limit'ов и флагов из env (записи нет,

@@ -67,7 +67,7 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
   // пустые, и любой submit падал бы в buildRideRequestDraft(values,
   // undefined) с «Выберите города из справочника» — то есть СЕТЕВОЙ СБОЙ
   // справочника показывался как ошибка валидации, вина пользователя
-  // (MEMORY.md:487). Поэтому loading — спиннер, ошибка — терминальный
+  // (MEMORY.md §18). Поэтому loading — спиннер, ошибка — терминальный
   // `QueryState` с «Повторить»; тот же приём в CreateTripPage.
   if (cities.isLoading || cities.isError) {
     return (

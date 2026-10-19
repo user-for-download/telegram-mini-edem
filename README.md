@@ -24,7 +24,7 @@
 │   │   ├── components/          # Компоненты интерфейса (+ ErrorBoundary, Onboarding, OfflineBanner)
 │   │   ├── ui/                  # ФАСАД над telegram-ui: вид и a11y в одном месте
 │   │   ├── hooks/               # Кастомные React-хуки
-│   │   ├── pages/               # Страницы (поиск, поездки, брони, профиль, отзывы, поддержка)
+│   │   ├── pages/               # Страницы (поиск, поездки, брони, профиль, отзывы, поддержка, жалобы, настройки)
 │   │   ├── providers/           # WebSocket-провайдер
 │   │   ├── queries/             # TanStack Query-хуки
 │   │   ├── router/              # Роутинг (react-router) + deep-links (startapp)
@@ -84,7 +84,7 @@
 │       │   └── __tests__/       # Юнит-тесты контрактов (Vitest)
 │
 ├── scripts/                     # prod-rebuild.sh, smoke, bundle/format/token-check
-├── docs/                        # API-справочник (docs/api), ADR (docs/adr), деплой (docs/deployment)
+├── docs/                        # API-справочник (docs/api) и ADR (docs/adr)
 └── package.json                 # Корневой package.json (npm workspaces)
 ```
 
@@ -226,6 +226,7 @@ npm run lint             # алиас typecheck (typecheck всех ворксп
 npm run lint:eslint      # ESLint всего репо (TS + react-hooks + jsx-a11y)
 npm run lint:eslint:backend  # только backend (аналогично :tg-app, :webapp, :contracts)
 npm run format:check     # базовая проверка текстовых файлов и JSON без перезаписи
+npm run token:check      # токены дизайна: нет литералов вне токенов
 npm run bundle:check     # gzip-бюджет бандлов (telegram-app + webapp)
 npm run build            # contracts → backend → telegram-app → webapp
 node e2e/telegram-parity.mjs  # E2E parity (см. e2e/README.md; нужны backend :3011, TG-front :3012, dev-БД)
@@ -260,7 +261,8 @@ LOG_LEVEL=debug
 Все числовые настройки должны быть положительными целыми числами. Ноль,
 отрицательные, дробные и частично числовые значения останавливают запуск с
 ошибкой конфигурации; отсутствующие переменные используют значения по умолчанию
-из `backend/src/env.ts`.
+из `backend/src/env.ts`. Полный список групп (auth, лимитеры, Bot API, outbox
+уведомлений, client errors, метрики) с дефолтами — [`backend/ENVIRONMENT.md`](backend/ENVIRONMENT.md).
 
 Для тестов — `backend/.env.test` с `DATABASE_URL`, указывающим на `edem_test`. Файл отслеживается в git и содержит только локальные тестовые значения; реальные секреты в него добавлять нельзя. Корневой `.env.example` предназначен для Docker Compose, а `backend/.env.example` — для локального backend.
 
@@ -286,8 +288,10 @@ LOG_LEVEL=debug
 | PATCH | `/api/v1/bookings/:id/cancel` | Отмена брони пассажиром |
 | GET | `/api/v1/bookings/my` | Мои брони (пассажир) |
 | GET | `/api/v1/bookings/history` | История броней |
+| GET | `/api/v1/bookings/driver` | Активные поездки водителя вместе с заявками (экран «Водитель») |
 | GET | `/api/v1/bookings/trip/:tripId` | Заявки по поездке (водитель) |
 | GET | `/api/v1/notifications/my?cursor=&limit=` | Уведомления (курсорная пагинация, `unreadCount`) |
+| GET | `/api/v1/notifications/unread-count` | Только счётчик непрочитанных (для бейджа таб-бара) |
 | PATCH | `/api/v1/notifications/:id/read` | Отметить прочитанным |
 | PATCH | `/api/v1/notifications/read-all` | Отметить все прочитанными |
 | POST | `/api/v1/reviews` | Отзыв после поездки (пассажир → водитель или водитель → подтверждённый пассажир); создаётся `pending` — публикуется после одобрения модерацией, текст ≤ 150 символов |
@@ -296,7 +300,9 @@ LOG_LEVEL=debug
 | GET | `/api/v1/reviews/user/:userId` | Публичный список отзывов о пользователе (только опубликованные) |
 | GET | `/api/v1/users/me` | Текущий пользователь |
 | PATCH | `/api/v1/users/me` | Обновление профиля |
-| PATCH | `/api/v1/users/me/car` | Управление авто |
+| POST | `/api/v1/users/me/car` | Добавить автомобиль (та же логика, что у PATCH: upsert) |
+| PATCH | `/api/v1/users/me/car` | Изменить автомобиль |
+| DELETE | `/api/v1/users/me/car` | Удалить автомобиль (409 `ACCOUNT_HAS_ACTIVE_OBLIGATIONS`, пока есть активная поездка) |
 | PATCH | `/api/v1/users/me/notification-settings` | Настройки уведомлений |
 | POST | `/api/v1/users/me/onboarding` | Завершение онбординга: сохраняет версию (`{version}` — строка 1..50 символов) |
 | GET | `/api/v1/users/:id` | Публичный профиль |
@@ -314,7 +320,7 @@ LOG_LEVEL=debug
 | POST | `/api/v1/reports` | Создать жалобу на связанного пользователя, поездку или бронь (окно: с начала поездки и 7 дней после её окончания; лимит: 1 жалоба навсегда на связку автор+объект — повтор → `409`) |
 | GET | `/api/v1/reports` | Мои жалобы |
 | GET | `/api/v1/reports/targets` | Объекты, доступные для жалобы (поездки, брони, люди с общей бронью в окне жалобы) — список для формы подачи |
-| DELETE | `/api/v1/users/me` | Soft-delete и анонимизация профиля; активные обязательства блокируют операцию |
+| DELETE | `/api/v1/users/me` | Soft-delete и анонимизация профиля; операция каскадная (завершает свои поездки, отменяет будущие брони), отдельного гейта «есть обязательства» больше нет |
 | POST | `/api/v1/admin/auth/login` | Вход админ-панели по `ADMIN_TOKEN` (5 req/5 мин, `ADMIN_LOGIN_RATE_*`); ставит httpOnly cookie `edem_admin_jwt` |
 | GET | `/api/v1/admin/auth/session` | Состояние админ-сессии (всегда 200; httpOnly cookie недоступен JS) |
 | POST | `/api/v1/admin/auth/logout` | Выход из админ-панели (очистка cookie) |
@@ -344,6 +350,7 @@ LOG_LEVEL=debug
 | POST | `/api/v1/admin/cities` | Создать точку (409 на дубликат имени) |
 | PATCH | `/api/v1/admin/cities/:id` | Переименовать точку (409 на дубликат имени) |
 | DELETE | `/api/v1/admin/cities/:id` | Удалить точку (409, если `tripsCount > 0`) |
+| POST | `/api/v1/admin/cities/recompute-trips-count` | Полный пересчёт `City.tripsCount` по FK и статусу поездок; идемпотентно, чинит дрейф счётчика. Возвращает `{ updated }` |
 | GET | `/api/v1/admin/settings` | Read-only снимок rate-limit'ов и флагов env |
 | POST | `/bot/webhook/:secret` | Webhook Telegram-бота: `/start`/`/stop` → согласие на Bot API-рассылку (`tgChatJoinedAt`); секрет в path, IP-лимит `BOT_WEBHOOK_RATE_*` |
 | GET | `/metrics` | Prometheus-метрики: Bearer `METRICS_TOKEN`, если задан; без токена в production — `404`, вне production открыт |
@@ -355,7 +362,7 @@ LOG_LEVEL=debug
 ## 🔒 Безопасность
 
 - **Sanitization**: все мутации проходят через `getSanitizedBody` (isomorphic-dompurify, без HTML-тегов) — защита от XSS.
-- **Telegram-auth**: initData проверяется HMAC-SHA256 по `TELEGRAM_BOT_TOKEN` + TTL (`TG_INIT_DATA_TTL_SECONDS`); dev-bypass `hash=dev-hash` — только вне production при `ALLOW_DEV_AUTH`. Подпись/форма вне TTL → 401, ненастроенный роут → 503.
+- **Telegram-auth**: initData проверяется HMAC-SHA256 по `TELEGRAM_BOT_TOKEN` + TTL (`TG_INIT_DATA_TTL_SECONDS`); dev-bypass `hash=dev-hash` — только вне production при `ALLOW_DEV_AUTH` **и** только для id из `DEV_AUTH_USER_ALLOWLIST` (пустой список = dev-механизмы выключены). Подпись/форма вне TTL → 401, ненастроенный роут → 503.
 - **Refresh-токены**: хранятся в БД хэшированными (SHA-256), одноразовые — при каждом `/refresh` старый отзывается, выдаётся новый (`rotateRefreshToken`, атомарный UPDATE с предикатом `revokedAt IS NULL` — из параллельных ротаций одного токена succeeds ровно одна). **Reuse detection**: предъявление уже ротированного токена отзывает ВСЕ активные токены пользователя (token family revocation); повторный `/logout` тем же токеном семью не отзывает.
 - **Rate limiting**: раздельные лимитеры для `/auth/telegram`, `/auth/refresh` (`TG_AUTH_RATE_*`, `REFRESH_RATE_*`), логина админ-панели (`ADMIN_LOGIN_RATE_*`, анти-брутфорс), публичного чтения и мутаций (IP-based) и «дорогих» действий по аккаунту (user-based) — все настраиваются через ENV. Вебхук бота (`POST /bot/webhook/:secret`) лимитируется по IP (`BOT_WEBHOOK_RATE_WINDOW_MS`/`BOT_WEBHOOK_RATE_MAX`, дефолт 120/мин) — против флуда неверными секретами; секрет сравнивается timing-safe, неверный → `404` (не раскрываем существование эндпоинта). За reverse proxy обязательны `TRUST_PROXY=true` + перезапись `X-Real-IP`, иначе все клиенты делят один IP-бакет.
 - **Админ-панель**: вход по статичному `ADMIN_TOKEN` (timing-safe сравнение); сессия — httpOnly cookie `edem_admin_jwt` с JWT (`type=admin-access`, `sub=admin`, TTL 12 ч): токен недоступен JS (защита от XSS), user-токены `type=access` админским guard'ом отклоняются. Панель закрыта по умолчанию: без `ADMIN_TOKEN` все запросы получают 403 в любой среде. Забаненные пользователи (`bannedAt`) получают 403 на всех аутентифицированных endpoint'ах; бан также применяется при логине в `/auth/telegram` (403 `{ code: "FORBIDDEN", banReason }` — токены не выдаются, активные refresh-токены отзываются), в `/auth/refresh` (403 + отзыв активных refresh-токенов), в `optionalAuth` (забаненный считается гостем) и в WebSocket-аутентификации (соединение закрывается с 4403), а при бане через админку открытые WS-соединения пользователя закрываются сразу. Mini-app при 403 `FORBIDDEN` показывает экран «Аккаунт заблокирован» с причиной бана (или «Причина не указана» для старых банов) и кнопкой «Обратная связь»: обращение уходит через публичный `POST /api/v1/feedback/appeal` (личность — по подписи initData, без выдачи токенов, лимит 5/час на IP) и видно в админке.
@@ -421,6 +428,13 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 - Клиент передаёт initData ровно как её отдал Telegram (без пересортировки/перекодировки), иначе HMAC не сойдётся.
 - Фоновая рассылка Bot API **реализована и включена по умолчанию**: гейт — `TELEGRAM_DELIVERY_ENABLED` (дефолт `true`), наличие `TELEGRAM_BOT_TOKEN` и согласие пользователя; мгновенное выключение — `TELEGRAM_DELIVERY_ENABLED=false`. Правила согласия, лимиты и backoff: `docs/adr/telegram-notification-delivery.md`.
 
+### Preflight (перед выкатом)
+
+1. Бэкап или проверенная точка восстановления PostgreSQL.
+2. `docker compose config --quiet` — не печатать интерполированный вывод: в нём секреты.
+3. `BACKEND_BIND_ADDR` и `WEBAPP_BIND_ADDR` — `127.0.0.1`, если reverse proxy на том же хосте. Если `0.0.0.0` — закройте порты 3000/3014 firewall-правилами, кроме адреса прокси.
+4. `npm audit --omit=dev --audit-level=high`. Текущие транзитивные зависимости Prisma дают high; `npm audit fix --force` на выкате не запускать — он откатывает Prisma и требует отдельного изменения зависимостей.
+
 ### Шаги деплоя
 
 1. **Собрать**:
@@ -443,7 +457,7 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
    ```
    Или через Docker: `docker compose up -d --build` (backend на :3000, админ-панель webapp на :3014, миграции применяются при старте). Для повторного деплоя — `sh scripts/prod-rebuild.sh` (см. «Запуск в Docker»).
 
-Порядок выката: миграция и бэкенд — до клиента (обратный порядок ломает экраны с поездками); откат — в обратном порядке.
+Порядок: миграции → бэкенд → клиент (обратный порядок ломает экраны с поездками). Миграции Prisma **forward-only**: откат кода не откатывает схему. Откат релиза — вернуть предыдущий образ/коммит; схему чинить новой миграцией. `prisma migrate resolve --rolled-back` и ручной DROP в проде не применять.
 
 ### Переменные окружения (production)
 
@@ -457,7 +471,12 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 | `CORS_ORIGINS` | ✅ | Разрешённые origin (same-origin через прокси) |
 | `NODE_ENV` | ✅ | `production` |
 | `PORT` | — | По умолчанию 3000 |
+| `TRUST_PROXY` | — | `true` за reverse proxy, который перезаписывает `X-Real-IP`/`X-Forwarded-For` |
 | `SENTRY_DSN` | — | Мониторинг ошибок |
+| `METRICS_TOKEN` | — | Bearer для `/metrics`; без токена в production `/metrics` отвечает 404 |
+| `TELEGRAM_WEBAPP_URL` | — | Ссылка для кнопки «Открыть» в сообщениях бота; пусто — сообщение без кнопки |
+| `TELEGRAM_API_PROXY` | — | SOCKS5-прокси для исходящих вызовов Bot API (в production обычно пусто) |
+| `TELEGRAM_DELIVERY_ENABLED` | — | Kill-switch Bot API-рассылки (по умолчанию `true`) |
 | `ALLOW_DEV_AUTH` | — | В production принудительно `false` |
 | `ADMIN_TOKEN` | — | Статичный токен админ-панели; пусто — панель выключена. Задайте длинный случайный секрет |
 | `ADMIN_JWT_TTL_SECONDS` | — | TTL админ-сессии (по умолчанию 43200 = 12 ч) |

@@ -10,7 +10,7 @@
 // Плюс согласованность имени с состоянием: `aria-label` заменяет доступное
 // имя целиком, поэтому «непрочитанных: N» не должен пересекаться с
 // объявлением текущего раздела, а счётчик не должен называться, когда его
-// нет (MEMORY.md:491 — неизвестное число не ноль).
+// нет (MEMORY.md §18 — неизвестное число не ноль).
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
@@ -111,7 +111,7 @@ describe("TabsBar: состояние раздела для скринридер
   it("имя раздела с бейджем не выдаёт состояние и не называет счётчик, когда его нет", () => {
     const { unmount } = render(<Stands unreadCount={3} />);
     const notifications = screen.getByRole("button", { name: /^Уведомления/ });
-    // Имя начинается с видимой подписи (MEMORY.md:490), счётчик дописан в конец.
+    // Имя начинается с видимой подписи (MEMORY.md §18), счётчик дописан в конец.
     expect(notifications.getAttribute("aria-label")).toBe(
       "Уведомления, непрочитанных: 3",
     );

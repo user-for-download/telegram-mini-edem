@@ -8,9 +8,11 @@
 > Source of truth for kit props is the installed
 > `node_modules/@telegram-apps/telegram-ui/dist/**/*.d.ts` (not the docs, not training data).
 
-**Status:** tests **1344** (161 files), backend **721** (79), contracts **314** (25), e2e-parity **17/17**, contrast under
-the numeric guard `e2e/ui-contrast.mjs`. The registry of deviations from the kit is
-`src/ui/README.md`: **read it before changing UI/forms**.
+**Status (2026-10-19):** telegram-app **199 files / 1653 tests**, green; the rest of the
+workspaces — `npm run test` (contracts + backend + telegram-app + webapp). e2e-parity —
+**17 steps** (`e2e/telegram-parity.mjs`), contrast — `e2e/ui-contrast.mjs`. The registry
+of deviations from the kit is `src/ui/README.md` (#1–#59): **read it before changing
+UI/forms**.
 
 ---
 
@@ -32,13 +34,14 @@ no PWA, `base: './'`.
 | Telegram SDK | `@tma.js/sdk-react` | **3.0.23 (pin)** | the `@tma.js/*` scope is historical (renamed to `@telegram-apps/sdk-react`); code and tests uniformly sit on `@tma.js@3.0.23`; migrating is separate work, not a defect (see §17) |
 | Framework | React | 19.0.1 | `StrictMode` (double-mount is accounted for everywhere) |
 | Router | react-router-dom | 7.x | **HashRouter** — mandatory for WebView/deep links |
-| Build | Vite | 8.x (Rolldown) | `codeSplitting.groups` instead of `manualChunks`; `base: './'` |
-| TS | typescript | 5.8 | `strict` + `noUncheckedIndexedAccess` + `isolatedModules` |
-| Server state | `@tanstack/react-query` | 5.x | one `QueryClient` in `AppConfig.tsx` |
+| Build | Vite | 8.2 (Rolldown) | root devDependency; `codeSplitting.groups` instead of `manualChunks`; `base: './'` |
+| TS | typescript | 5.8 | root devDependency; `strict` + `noUncheckedIndexedAccess` + `isolatedModules` |
+| Server state | `@tanstack/react-query` | 5.102 | one `QueryClient` in `AppConfig.tsx` |
 | Client state | `zustand` | 5.x | only `useAuthStore` (and small ones) |
-| Validation | `zod` | 4.x | API and WS responses via `@edem/contracts` |
-| Icons | `lucide-react` | | sizes 28/30px, `strokeWidth={2}` |
-| Tests | `vitest` + `@testing-library/react` + `jsdom` | | **no setup file** — mock config per-file |
+| Validation | `zod` | 4.5 | API and WS responses via `@edem/contracts` |
+| Icons | `lucide-react` | 1.44 | sizes 28/30px, `strokeWidth={2}` |
+| Tests | `vitest` 4.1 + `@testing-library/react` + `jsdom` | | **no setup file** — mock config per-file |
+| Runtime | Node | 22 | `engines: ">=22"`, `npm ci` by `package-lock.json` |
 | Tailwind | — | | **not used**; only tgui + CSS modules |
 
 ## 3. Commands
@@ -49,7 +52,8 @@ npm run dev                       # build:contracts + db:generate + backend:3011
 npm run dev:tg                    # telegram-app only (Vite :3012)
 npm run build:tg                  # production build of telegram-app
 npm run typecheck --workspace=telegram-app
-npm run test --workspace=telegram-app
+npm run test --workspace=telegram-app   # vitest run: 199 files / 1653 tests
+npm run test                            # all workspaces (--workspaces --if-present)
 npm run lint:eslint:tg-app
 npm run bundle:check              # bundle budget (scripts/check-bundle.mjs)
 npm run token:check               # forbids literal colors/paddings (scripts/token-lint.mjs)
@@ -137,13 +141,14 @@ The full registry of deviations — `src/ui/README.md`. In brief:
   — `src/__tests__/cssClassReach.test.ts`; cascade in the browser —
   `e2e/ui-cascade.mjs`. Write-up — `src/ui/README.md`, "A rule that does not
   apply".
-- **The `ui/` facade is 18 components.** Kit wrappers (the facade holds the look):
+- **The `ui/` facade is 22 components.** Kit wrappers (the facade holds the look):
   `Page`←`List`, `Button`, `IconButton`, `Chip`, `Card`, `Sheet`←`Modal`,
   `Field`+`FieldError`←`Input`/`Textarea`/`Select`, `EmptyState`←`Placeholder`,
   `Loading`←`Spinner`+`Placeholder`, `FetchMore`←`Button`, `Cell`,
-  `Section`, `Switcher`←`SegmentedControl`/`Chip` ("one of N"
-  switch, `radiogroup`/`tabs` semantics inside the facade). Own
-  (own markup on tokens): `Notice`, `Stack`, `SectionBody`, `CharCounter`.
+  `Section`+`SectionBody`, `Switcher`←`SegmentedControl`/`Chip` ("one of N"
+  switch, `radiogroup`/`tabs` semantics inside the facade), `MenuRow`,
+  `SwitchRow`. Own markup on tokens: `Notice`, `Stack`, `Blockquote`,
+  `CharCounter`, `GroupLabel`.
   ESLint forbids importing the kit directly for `Button`, `IconButton`, `Card`,
   `Cell`, `Section`, `List`, `SegmentedControl`.
 - **`ui/Cell`.** An interactive row must be a native
@@ -272,7 +277,7 @@ The ws.v1 contract was removed from the tree — see git (formerly
    "as in Telegram" from the UI is impossible. The way
    back, if needed: a 3-state cycle (auto → light → dark → auto).
    Pin: `pages/Profile/__tests__/switchRow.test.ts`.
-- **The transport is split: `WebSocketProvider.tsx` = 502 lines + `TelegramRealtimeListener.tsx` = 213 lines.**
+- **The transport is split: `WebSocketProvider.tsx` = 562 lines + `TelegramRealtimeListener.tsx` = 258 lines.**
   Domain subscriptions have already been moved to `providers/TelegramRealtimeListener.tsx`;
   the provider keeps the transport (WsProvider) + the 4403 classifier (see §17).
 
@@ -342,7 +347,7 @@ under `useRideRequestFeedQuery` — a separate key, not `all`.
 - `src/__tests__/layoutCss.test.ts` — the cascade pin (the tgui layer is beaten by non-layered modules).
 - `AppConfig.test.tsx` — contrast of the theme palettes.
 - The tests `init.mockMacOS.test.ts`, `toSnakeThemeParams.test.ts` — behavior of the macOS mocks.
-- **1269 tests** (156 files). SSR files (`renderToString`) do not
+- **1653 tests** (199 files; 2026-10-19). SSR files (`renderToString`) do not
   see effects, so everything that lives in an effect is checked by a **DOM file
   with `@vitest-environment jsdom`**: `useScrollRestore.dom`, `useTripActions.tick`,
   `SearchPage.reset`, `tripStandardCard.a11y`, `tripCountersSection`,
@@ -402,24 +407,26 @@ under `useRideRequestFeedQuery` — a separate key, not `all`.
 
 ## 16. Skills (load via the skill tool)
 
-Project skills relevant to `telegram-app/` (`.opencode/skills/`):
+Project skills live in `.opencode/skills/` (11):
 
 | Skill | When |
 |---|---|
-| `telegram-mini-app` | TWA, init data auth, TG WebView, mockEnv, dev through a tunnel |
-| `telegram-ui` | tgui props/gotchas, replacing custom UI, debugging rendering in the WebView |
-| `ui-ux-pro-max`, `frontend-design` | design of new screens/components, visual direction |
-| `vercel-react-best-practices` | React refactoring, bundle, waterfalls, re-renders (70 rules) |
-| `typescript-advanced-types` | complex typing, generic components, type-safe API |
 | `a11y` | WCAG 2.2 AA audit before merge (focus, live regions, contrast, tap targets) |
-| `security-audit` | auth/dev-auth, validation, rate-limit, WS, error shape |
-| `code-review-and-quality` | review of a diff/PR on 5 axes, change size, dead code |
+| `admin-webapp` | `webapp/` conventions (React 19 + shadcn + TanStack), admin feature work |
+| `backend-conventions` | Hono + Prisma 7 routes, transactions, serializers, workers |
+| `contracts-dto` | shared Zod schemas/DTOs in `packages/contracts` |
+| `context7` | current library docs for API/config |
+| `frontend-design` | visual direction of new screens/components |
+| `notifications-realtime` | inbox → outbox → WS fan-out, cache invalidation |
 | `playwright-e2e` | e2e (`e2e/telegram-*.mjs`), stability, reseed-safe |
-| `ponytail` | minimalism: stdlib/native solutions before code; YAGNI |
-| `context7` / `find-docs` | current library docs for API/config |
-| `prisma-cli`, `prisma-database-setup` | backend schema/migrations (important with contracts) |
-| `hono-api-scaffolder` | backend API routes (endpoints, Zod, error JSON) |
+| `security-audit` | auth/dev-auth, validation, rate-limit, WS, error shape |
 | `task-management` | splitting a feature into subtasks, dependencies |
+| `telegram-ui` | tgui props/gotchas, rendering in the Telegram WebView |
+
+The environment also exposes `telegram-mini-app`, `code-review-and-quality`,
+`ponytail`, `prisma-client-api`, `prisma-driver-adapter-implementation`,
+`tailwind-4-docs`, `tanstack-query-best-practices`, `vite`, `vitest` — load them
+by name when the task matches.
 
 Key rules from them that apply here:
 - **Correctness first**: tests cover behavior, not implementation; edge/error paths.
@@ -437,11 +444,11 @@ Key rules from them that apply here:
 requiring a product decision or future work (closed ones were removed
 from the table — their state lives in code and tests).
 
-| Severity | File:line | What | Direction |
+| Severity | File | What | Direction |
 |---|---|---|---|
 | medium | `useAuthStore.ts` (`bootstrapPromise`) | no timeout on bootstrap itself: an unsettled promise blocks all future `bootstrap()` | covered by the 15s timeout of `apiClient`; an explicit one will be needed if the transport changes |
 | low | `AppConfig.tsx` | duplicate list `THEME_VAR_NAMES`/palettes | acceptable, covered by the contrast test |
-| low | `backend/src/admin/index.ts:654` | unban does **not** reopen the WS: after a ban the client holds `terminalTokenRef` and will log out until the app restarts | lift terminal via an HTTP bounce or document "restart the app" |
+| low | `backend/src/admin/index.ts` (unban) | unban does **not** reopen the WS: after a ban the client holds `terminalTokenRef` and will log out until the app restarts | lift terminal via an HTTP bounce or document "restart the app" |
 
 The Bot API notification channel is **implemented and enabled by default**
 (`TELEGRAM_DELIVERY_ENABLED`, default `true`): flag + token + consent.
@@ -460,7 +467,7 @@ Covered by `backend/tests/e2e/botApiSend.test.ts`.
   `Component="button"` with rich children gives `button > div`. Registry #12.
 - **`settingsButton` — only on root routes** (see §12).
 
-e2e-parity 17/17. The stand's `ADMIN_TOKEN` is set explicitly in `ecosystem.config.cjs`
+e2e-parity — 17 steps. The stand's `ADMIN_TOKEN` is set explicitly in `ecosystem.config.cjs`
 (`backend/src/env.ts` calls `dotenv.config()` without `override`, so
 shell variables win over `backend/.env`; `override: true` is not an option —
 it would give priority to the gitignored `.env` over the production environment).
@@ -510,14 +517,14 @@ it would give priority to the gitignored `.env` over the production environment)
 | **`useTripActions`: the "now" time advances once, at the departure boundary.** A snapshot of `Date.now()` on mount froze `canCompleteTrip` (a purely client-side gate). An interval does not fit — an open page would re-render in vain; the timer is limited to int32, otherwise "in a month" overflows and fires immediately | `pages/TripDetails/useTripActions.ts`, pin `__tests__/useTripActions.tick.test.tsx` |
 | **Load more pages only when the server said the data is insufficient** (`total > loaded`) **and** stopping on `isFetchNextPageError`. Without a guard on the error — an infinite request loop, because `hasNextPage` stays `true` | `TripCountersSection.tsx` |
 | **The history of ride requests and their creation are different entities:** the list is on the page `/profile/ride-requests` (a profile menu item next to "Trip history"), creation is in the popup window `RideRequestCreateModal` (`Sheet`, local state + `useModalBack`, not a route). The old route-backed sheet `/ride-requests`, where the list shared the body with the form, was removed: it mixed managing an entity with a quick action. `useClosingConfirmation` lives in the list (confirmation of leaving during unfinished inline editing). The `deepLink` of requests in the backend allowlist is `/profile/ride-requests` (`telegramNotifications.ts`) | `components/Trip/RideRequestsList.tsx`, `RideRequestCreateForm.tsx`, `pages/RideRequestHistory/` |
-| **The home page shows demand, not static destinations:** the section "Who is looking for a ride" = `GET /ride-requests/feed`, which returns **a per-route summarizer**, not a list of requests: `{ fromCity, toCity, people, seats, nextAt }`. It replaced "Popular destinations" (a city list hardcoded in the code). `people` is **distinct** people (`Set` by userId: up to three active requests, two on a route ≠ two people), `seats` is the sum of seats; the numbers differ, so the row shows both ("1 person looking · 3 seats"). Sorting is by demand (`seats desc`), then by the nearest window. A request is created by the **passenger**, hence the title "who is looking for a ride", and NOT "who is being looked for as a fellow traveler" (that one inverted the roles). The backend does not return the author — the feed is anonymous; own requests are excluded. Aggregation in JS over a pool of 500 (Prisma `groupBy` cannot do `count(distinct)`) — the boundary is documented, not hidden. The row is the **shared `ui/MenuRow`** (icon, title, caption, chevron): the showcase must read like the profile menu items, we do not introduce a second kind of row. The key point in `MenuRow` is `width: 100%`: without it the `Cell` button lives at the size of its content, and a long caption stretched the row beyond the section card (553px against a section of 356px on a 390 screen), and the caption wrapped to two lines and the chevron hung in the middle. Pin — `ui/__tests__/menuRow.test.tsx` (markup + `width: 100%` from the CSS). The caption: "2 people · 7 seats · Tomorrow, 08:00", without the words "looking"/"nearest". A tap leads to the search by route. Empty/loading/error → the section **hides** (like `NextTripBanner`) | `components/Section/RideRequestFeedSection.tsx`, `backend/src/rideRequests/index.ts` |
+| **The home page shows demand, not static destinations:** the section "Who is looking for a ride" = `GET /ride-requests/feed`, which returns **a per-route summarizer**, not a list of requests: `{ fromCity, toCity, people, seats, nextAt }`. It replaced "Popular destinations" (a city list hardcoded in the code). `people` is **distinct** people (`Set` by userId: up to three active requests, two on a route ≠ two people), `seats` is the sum of seats; the numbers differ, so the row shows both ("1 person looking · 3 seats"). Sorting is by demand (`seats desc`), then by the nearest window. A request is created by the **passenger**, hence the title "who is looking for a ride", and NOT "who is being looked for as a fellow traveler" (that one inverted the roles). The backend does not return the author — the feed is anonymous; own requests are excluded. Aggregation in JS over a pool of 500 (Prisma `groupBy` cannot do `count(distinct)`) — the boundary is documented, not hidden. The row is a **static `ui/Cell`** (`STATIC_CELL`: icon, route, caption, **no chevron**, no pointer, no hover) — the same three-line language as notifications/requests; it is a showcase, not a menu. The key point in the row markup is `width: 100%`: without it the row lives at the size of its content, and a long caption stretched it beyond the section card (553px against a section of 356px on a 390 screen), and the caption wrapped to two lines and the chevron hung in the middle. Pin — `ui/__tests__/menuRow.test.tsx` (for `MenuRow`), `components/Section/__tests__/rideRequestFeedSection.test.tsx`. The caption: "2 people · 7 seats · Tomorrow, 08:00", without the words "looking"/"nearest". Rows are **not clickable**: there is no next step to promise after the invite flow was removed; own requests live in the profile. Empty/loading/error → the section **hides** (like `NextTripBanner`) | `components/Section/RideRequestFeedSection.tsx`, `backend/src/rideRequests/index.ts` |
 | **The form is in a popup window, the list is on a page** (a single rule for support requests and complaints): `/profile/support` (FAQ → "My requests" → `[Create request]`, `FeedbackModal`) and `/profile/reports` (list → `[File a complaint]`, `ComplaintModal`). A fullscreen form took up the whole page. A host-managed window: `Sheet` + `OfflineBanner` (the portal overlays the global banner), Back via `useModalBack`, the list is passed into the form as a prop (the "already sent" hint). Success is a **toast**, not an inline `Notice`: the window closes, and the Notice would leave with it | `pages/Support/FeedbackModal.tsx`, `pages/Reports/ComplaintModal.tsx` |
 | **A complaint has a time window, and the client list must mirror the server rule.** `canReport` and `GET /reports/targets` share one predicate: the trip has started and no more than 7 days have passed since it ended (`departureAt + durationMinutes`). Out-of-window targets are neither listed nor accepted (`403`) — otherwise the form would offer an object that fails on submit. The lower bound also closes a former gap: a passenger could report a trip that had not started yet. Prisma cannot compute `departureAt + durationMinutes`, so the DB prefilter is `departureAt ∈ [now − window − maxDuration, now]` and the exact bound is finished in JS | `backend/src/reports/index.ts`, `docs/api/reports.md` |
 | **Support is one screen `/profile/support`:** the menu item leads to the page, and the request form is **in a popup window** (`FeedbackModal`, `Sheet` + local state + `useModalBack`), opened by the "Create request" button under "My requests". The page: FAQ → "My requests" → button. Therefore the e2e that measures the form (`telegram-parity`, `ui-contrast`) first opens the window — `ui-contrast` via `prepare: { click, waitFor }`, without it the step would fail with "found 0 carriers". The `FeedbackModal` sheet with a duplicate of the form was removed, and its "My requests" button was a shim to this very page. The ban appeal form lives only on the terminal screen (`AccountStatePage`/AuthGate) and in the 403 branch — not at the bottom of the page. Complaints about a user — only `/profile/reports` | `pages/Support/SupportPage.tsx`, `pages/Profile/ProfilePage.tsx` |
 | **"My requests" is a list of rows + a details popup — the same canon as reports.** The feedback row is a `Cell` (subject / start of text / status) with the date and a chevron on the right, and the full text + the support reply live in `FeedbackDetailsModal` (`Sheet`, free text in `ui/Blockquote`). Previously each request was an `Accordion`: `Accordion` renders **no DOM wrapper** (only a context Provider), so its `Summary` and `Content` became two children of `SectionBody`/`Stack` and the section rhythm split every row apart — the list "floated" with no separators, and the collapsed row hid the date and the "there is an answer" status. The FAQ keeps the `Accordion` but is wrapped in a `.list` (no gap) for the same reason. Pin the **section order** (FAQ before the requests) and that the row is a `button`, not the accordion markup | `pages/Support/SupportPage.tsx`, `FeedbackDetailsModal.tsx`, `feedbackPreview.ts`, `SupportPage.module.css` |
 | **In the trip history the status is its own third line, not a suffix of the date.** The row is a three-line `Cell` like notifications/reports: route → "date, time" → status with a tone (`Завершена` success / `Отменена` danger / `В архиве` muted), with the price (or the red "leave a review" badge) on the right. The status used to be glued into the `subtitle` ("date, time · status"), and the kit's one-line ellipsis truncated the key word to "Отмен…"/"Заверш…". The price needs `white-space: nowrap`, otherwise "500 ₽" breaks at the space into two lines ("500" / "₽"). The text itself is still single-sourced from `terminalTripStatusLabel` — only the tone is derived | `pages/TripHistory/TripHistoryPage.tsx`, `TripHistoryPage.module.css` |
 | **`::-moz-placeholder` — only as a separate rule, never in one list with `::placeholder`:** Chromium does not know it and discards the entire selector list together with the valid ones, because of which the placeholder tone silently stayed the kit's (2.02:1) across the whole WebView on Android. The pin reads the CSS: `ui/__tests__/placeholderTone.test.ts`; the defect is not visible in jsdom/SSR. The same class of mistakes — `page.evaluate` in e2e takes exactly one argument | `ui/ui.module.css`, `ui/README.md` 9c |
-| **Two CTAs on the home page are separate blocks, not two buttons in one:** "Driving a car?" → `Create trip` (driver), "Need a ride?" → `Looking for a ride` (passenger, leads to the route-backed sheet `/ride-requests`). The heading "Driving a car?" is about the driver, for the passenger it is a lie. The "Looking for a ride" chip was removed from the search screen — there is one entry point, and it is on the home page | `pages/HomePage/HomePage.tsx`, pin `__tests__/HomePage.rideRequests.test.tsx` |
+| **Two actions on the home page are separate rows of one `ui/MenuRow` section («Быстрые действия»), not two buttons in one:** «Создать поездку» (subtitle «Едете на машине?», driver) and «Ищу попутку» (subtitle «Нужна попутка?», opens `RideRequestCreateModal`). A long caption is cut at ~30 characters, so the caption is only the question; what happens next is learned on the form. The old `EmptyState` CTAs were a role error (an empty-state component for a call to action): two promo blocks took ~460px and read as "nothing here". The separate «Ищу попутку» chip on the search screen was removed — one entry point, on the home page | `components/Section/HomeActionsSection.tsx`, `pages/HomePage/HomePage.tsx`, pins `__tests__/HomePage.rideRequests.test.tsx`, `homeVisual.test.ts` |
 | **The date segment pill applies the filter immediately, without "Find":** `set("dateSegment", …)` changed only `form`, while the request goes from `submitted` — the pill responded visually, but the list stayed the same ("the filter doesn't work"). The whole form set is applied, not only the date. The other controls (cities, price, tags) stay on "Find" — explicit input is needed there. Consequence: the state "form neutral, request filtered" via the date pill is unreachable, the dead end with an extinguished reset reproduces only with cities/price/tags | `pages/Search/SearchPage.tsx`, pin `__tests__/SearchPage.dateSegment.test.tsx` |
 | **Before "Create request" we warn that a trip already exists — and this is not a block:** `RideRequestCreateForm` first queries the existing `GET /trips` (the same `fromCityId/toCityId/dateFrom/dateTo` as the search feed — we do not introduce an endpoint of our own for the check) and, if there are matches, shows an informing dialog. Consent — a transition to the trip card and the request is **not created**, refusal — the request is created as before. There will be no separate backend endpoint here, now or later: "what already exists" is the same read-model question, a second contract would mean two truths about one thing. Dates — `moscowDayKey`, because the backend parses `dateFrom/dateTo` as Moscow days. | `components/Trip/matchingTripsSearch.ts`, `useMatchingTripCheck.ts`, pin `__tests__/rideRequestCreateForm.preSubmit.test.tsx` |
 | **The defaults of trip options equal the previous behavior, and this is an irreversible requirement.** `Trip.autoComplete = false` → auto-completion by `PENDING_BOOKING_TTL_MS` (+24h, as before); `Trip.matchingEnabled = true` → unconditional matching (as before). In `createTripDtoSchema` both fields have `.default(...)`, so 25+ places of `db.trip.create` (seeds, e2e fixtures) do not set the new fields. **In the RESPONSE (`tripSchema`) the fields are required and WITHOUT a default** — "unknown" ≠ "off": with a default, a client on a stale response would decide that matching is off and show a false pin | `schema.prisma`, `dto/trip.dto.ts`, `schemas/trip.schema.ts`, pin `backend/tests/integration/trip-create-options.test.ts` |
@@ -531,124 +538,52 @@ it would give priority to the gitignored `.env` over the production environment)
 | **The trip day for grouping is taken from `departureAt` via `moscowDayKey`, NOT from `trip.date`:** the backend returns `trip.date` as a formatted caption ("Sat, 15 March" — `formatDateRu`, ru-RU + Europe/Moscow), not ISO — `dayLabel()` does not work on such a string and the "Today"/"Tomorrow" captions do not appear. The order is set by the backend (`orderBy: [{departureAt:"asc"},{id:"asc"}]`), so groups are accumulated into the **adjacent** one, not through a `Map` by key: a `Map` would collapse a day interrupted by another and reorder the cards. The pill is a static centered `h2` without a counter (a group cut by pages would be counted partially) | `helpers/tripGroups.ts`, `pages/Search/TripDateDivider.tsx` |
 | **A contract-shaped response is built by the single serializer and validates itself.** Hand-built `trip`/`booking` objects are forbidden: `GET /bookings/my` and `/bookings/history` assembled the nested `trip` inline and silently dropped the required `autoComplete`/`matchingEnabled`, so the client rejected the whole array with `INVALID_RESPONSE` ("Invalid server response") right after login. All booking/trip responses must go through `serializeTrip`/`serializeBooking` (`serializers/index.ts`) and `safeParse` their own payload (as `/bookings/driver` and `/bookings/trip/:id` do) — then a drift becomes a server 500 with a log, not a silent client-side rejection. Pinned by the runtime route sweep and `backend/tests/integration/telegram-parity.test.ts` | `backend/src/bookings/queries.ts`, `backend/src/serializers/index.ts` |
 
-| **Empty ≠ "off", and demand is INFORMATION, not a driver tool.** Two decisions of 2026-10-09: (1) the demand card is GONE from the trips list, together with the whole invite flow (`POST /ride-requests/:id/invite`, the `driver_invite` notification, `invitedByMe`, the «Invite» button) — the owner dropped the invite step as redundant: the passenger books themself anyway, so the driver gained nothing from asking; (2) what remains is the home feed «Кто ищет попутку» (`GET /ride-requests/feed`), rendered as **static rows** (no button, no chevron, `STATIC_CELL`), because a showcase must not promise a navigation whose next step no longer exists. The driver still sees the `matchingEnabled === false` note next to their own trip (strict `=== false` — unknown ≠ off), which is now the only place the flag surfaces: it explains why their route shows no demand at all. The per-trip demand read (`GET /trips/:id/requests`) and the `ride_request:new` WS hint still exist server-side but have NO client subscriber — parked, not forgotten | `pages/TripActive/TripActivePage.tsx`, `components/Section/RideRequestFeedSection.tsx`, `ui/classes.ts` (`STATIC_CELL`), pin `components/Section/__tests__/rideRequestFeedSection.test.tsx` |
+| **Empty ≠ "off", and demand is INFORMATION, not a driver tool.** Two decisions of 2026-10-09: (1) the demand card is GONE from the trips list, together with the whole invite flow (`POST /ride-requests/:id/invite`, the `driver_invite` notification, `invitedByMe`, the «Invite» button) — the owner dropped the invite step as redundant: the passenger books themself anyway, so the driver gained nothing from asking; (2) what remains is the home feed «Кто ищет попутку» (`GET /ride-requests/feed`), rendered as **static rows** (no button, no chevron, `STATIC_CELL`), because a showcase must not promise a navigation whose next step no longer exists. The flag `matchingEnabled` now surfaces only in the trip creation form (and `PATCH /trips/:id`): there is no driver-side demand screen and no note next to the trip in the list. The per-trip demand read (`GET /trips/:id/requests`) was removed together with the invite flow — the route does not exist. `ride_request_match` remains a backend notification type: the author of a request is notified when a matching trip appears | `pages/CreateTrip/CreateTripPage.tsx`, `components/Section/RideRequestFeedSection.tsx`, `ui/classes.ts` (`STATIC_CELL`), pin `components/Section/__tests__/rideRequestFeedSection.test.tsx` |
 | **Every floating window goes through `ui/Sheet`, and the visible title is why.** The kit's `ModalHeader` renders its children ONLY when `platform === 'ios'`, so a window assembled on a raw `Modal` opens on Android/desktop with no title at all — plus no focus transfer and ~20 lines of duplicated dialog-name wiring. `ReportDetailsModal` was the last such window (fixed 2026-10-13); the move was not a product decision but collateral of a body rewrite, and the original complaint (the body looked like one solid slab) was fixed separately with `ui/Blockquote`. Pinned by class, not by role: `getByRole('heading')` also finds the hidden `VisuallyHidden` h2 and passes on BOTH versions — see `__tests__/sheetCloseRetention.test.tsx` | `ui/Sheet.tsx`, `pages/Reports/ReportDetailsModal.tsx` |
 | **Content must survive the exit animation (`retained`), and it does survive `Sheet`.** vaul is a Radix Dialog wrapper, and Radix `Presence` keeps the node mounted until `animationend` (`mounted → unmount_suspended → unmounted`, `isPresent` true in the middle) — so zeroing the body together with its prop makes the window animate out EMPTY. Hold the last non-null `target`/`report` in STATE (adjusting state on props change; reading a ref during render is banned by `react-hooks/refs`, which is what a ref-based version tripped). Two consequences: the mechanism works on `Sheet` too (the earlier claim that it would not was wrong), and it is **untestable in jsdom/SSR**, where there is no animation and `animation-name: none` unmounts immediately — verify by pinning the retained state, not the animation | `ReportDetailsModal.tsx`, `FeedbackDetailsModal.tsx`, `components/Profile/UserProfileSheet.tsx`, `ui/Sheet.tsx` |
 | **Free text written by a person goes through `ui/Blockquote`.** Complaint text, the moderation reply, «О себе» in the profile sheet. The wrapper exists for two shared rules: `pre-wrap` + `overflow-wrap` (typed line breaks must not collapse; a long word without spaces must not escape the plate) and the left-bar tone from `--app-*` instead of the kit's always-`link_color` — a «rejected» answer and a «no violations found» answer are different outcomes and the bar shows it. `type="other"` on purpose: the kit's `type="text"` wraps children in its own `Subheadline` and imposes its type size on descendants. Rules live in `ui/`, not in consumers' modules | `ui/Blockquote.tsx`, `ui/ui.module.css` (`.quote`), registry #35 in `ui/README.md` |
 
 ## 19. Where to look next
 
-- `README.md` (root) — product, deployment, env.
-- The former `docs/migration/*`, deployment reports and release checklists were removed from the tree — see git.
-- `docs/adr/telegram-notification-delivery.md` — notification delivery (inbox + WS + Bot API).
-- `e2e/telegram-parity.mjs`, `e2e/telegram-realtime.mjs` — scenarios.
+- `README.md` (root) — product, commands, deployment, env, API table.
+- `src/ui/README.md` — the registry of deviations from the kit (#1–#59):
+  **read it before a UI change**.
+- `backend/ENVIRONMENT.md` — env groups with defaults (rate limits, Telegram
+  delivery, metrics, logging).
+- `docs/api/` — account, reports, reviews, ride-requests, feedback, admin.
+- `docs/adr/` — client error reporting and Telegram notification delivery
+  (both accepted).
+- `e2e/README.md` — scenarios, env, determinism rules.
 - `packages/contracts/src/index.ts` — Zod schemas/DTOs shared with the backend.
-- `webapp/` — the admin panel (shadcn-style), a separate layer; do not confuse with the mini-app.
-- `.tmp/sessions/2026-10-01-notifications-fix/context.md` — context of the notifications plan.
-- `.tmp/sessions/2026-10-01-tg-bugfix-audit/context.md` — context of the audit (B1–B12).
-- `.tmp/sessions/2026-10-05-tg-bugfix-audit-2/context.md` + `.tmp/tasks/tg-bugfix-audit-2/
-  — context and subtasks of the audit (all closed). Before a new change
-  **read the registry `src/ui/README.md`** — the current deviations
-  from the kit are recorded there.
+- `webapp/` — the admin panel (shadcn-style), a separate layer; do not confuse
+  with the mini-app.
+- `.opencode/skills/` — project skills (see §16).
 
-## 2026-10-08 — Audit of tg-app logic: 10 fixes
+## History of audits (compressed)
 
-Found by review (typecheck/eslint/tests were green — the defects were not covered by tests):
-
-1. EditTripForm — `durationMinutes` was rounded to hours on save (110→120, 125→120). The original minutes are now preserved, conversion only if the field was edited.
-2. RideRequestCreateForm — there was no gate on the time of the pre-check `checkTrip`: a double tap created two requests. Added `submittingRef` (reset in `onSettled`/on refusal).
-3. WebSocketProvider — 4403 with an unknown reason returned the ban screen even after a successful `bootstrap` (authenticated). `authenticated/banned/deleted` are authoritative; the default "banned" — only for an undetermined outcome.
-4. searchFilters.dateSegmentToRange — date segments were computed by the device zone, while the backend cuts `dateFrom/dateTo` by Moscow (`moscowDateBoundary`). Switched to `moscowDayKey`.
-5. date.ts — added `moscowDayLabel`; tripGroups/RideRequestFeedSection no longer compute "Today/Tomorrow" by the local zone.
-6. HomePage.closeVehicle — the closure saw `vehicle=null` and extinguished `pendingCreate` (the scenario "added a car → to the creation form"). It reads the store at the moment of closing.
-7. WebSocketProvider — the single `lastMessage` slot lost frames on a series of deliveries. Direct delivery via `subscribeEvent`.
-8. useAuthStore.applyDeleted — did not clear the launch params cache. Added `purgeLaunchParamsCache()`.
-9. telegram-adapter.getRawInitData — an empty string was not normalized to `undefined`. Now `|| undefined`.
-10. WebSocketProvider — unmount with an active session did not close the socket. Added a separate unmount effect (token rotation does not tear the socket down).
-
-Regression tests: `date.test`, `searchFilters.moscow.tz.test` (new), `telegram-adapter.test`, `rideRequestCreateForm.submit.test`, `WebSocketProvider.test`.
-Result: tsc/eslint clean; 133 files / 1059 tests green.
-
-## 2026-10-09 — Contract drift after login (`/bookings/my` + `/history`): 4 fixes
-
-Found by a live runtime probe (Playwright against `:3012` with the dev login) — tsc/eslint/tests were green, because no test crossed the client parser with a real payload.
-
-1. **Backend `GET /bookings/my` and `/bookings/history` hand-built the nested `trip` and omitted the required `autoComplete`/`matchingEnabled`.** The client's Zod parser rejected the whole array → `ApiError("Invalid server response", INVALID_RESPONSE, 502)`. This is what "broke login": the auth request itself returned 200, but the Home summary, `/bookings` (Все/Пассажир) and `/profile/history` immediately rendered errors. Regression from the trip-options feature: the response schema made both fields required, only these two hand-built serializers were not updated. Fixed by routing through `serializeTrip` (single source) + `safeParse` of the response, like the sibling routes. Invariant added to §18.
-2. `bookingErrorMessage` — `INVALID_RESPONSE` was absent from `CODE_MESSAGES`, so the raw English `ApiError.message` leaked into the `Notice`. Added a Russian message.
-3. `TripHero` — hardcoded `"{n} отзывов"` → `plural()`.
-4. **Own ride-requests list was silently capped at 20:** `rideRequestsApi.list` discarded `pagination` (`.transform(({items}) => items)`) while the backend defaults to `limit=20`. Converted to an infinite query (`useInfiniteQuery` under `[...RIDE_REQUEST_KEYS.all, "mine", "infinite"]`, so prefix invalidation still works) + `FetchMore`/sentinel in `RideRequestsList`.
-
-Regression tests updated: `rideRequestsList.test.tsx`, `RideRequestHistoryPage.test.tsx` (infinite-query shape).
-Verification: typecheck (both workspaces) clean; telegram-app 1059/1059, backend 721/721; eslint + format:check clean; live route sweep all-routes `ZOD: none`.
-
-## 2026-10-13 — UI review against the official Telegram docs: 4 fixes
-
-Read the UI comments and cross-checked every claim against `core.telegram.org/bots/webapps.md`
-(fetched as markdown over the proxy) and the installed packages (`@telegram-apps/telegram-ui`,
-`@xelene/vaul-with-scroll-fix`, `@tma.js`). The layer is unusually well-grounded — nearly all
-comments survive; 4 items did not.
-
-1. **The keyboard could cover the bottom of forms.** `index.html` had `viewport-fit=cover` but no
-   `interactive-widget`, and there is no `visualViewport`/`hideKeyboard` handling either. Added
-   `interactive-widget=resizes-content` (the Android WebView then shrinks the layout viewport when
-   the keyboard opens; iOS ignores the hint and keeps its own auto-scroll). Doc: `hideKeyboard()`,
-   Bot API 9.1 (`webapps.md`).
-2. **`swapCities` sent the wrong haptic.** It fired `haptic.selection()`, but the doc is explicit —
-   `selectionChanged()`: *"Do not use this feedback when the user makes or confirms a selection;
-   use it only when the selection changes."* A direction swap is a command → `impactOccurred(light)`.
-   The other `selection()` sites (tags, seats, date segments, filters, `Switcher.pick`) are genuine
-   selection changes and stay.
-3. **The safe-area comment contradicted the hook.** `index.css` claimed `max(env(…), SDK(…))` insures
-   against a zero client inset; `useTelegramChromiumFallback` states `env(safe-area-inset-top)` is
-   **always 0** inside the TG webview, so it cannot — the real insurance is the `--tg-safe-area-top-min`
-   floor. The comment was reworded to scope `env()` to outside-Telegram only (§8).
-4. **`Toast.module.css` said the `.snackbar.snackbar` doubling was unnecessary** while the selector
-   (and its pins) kept it. Reworded: the doubling is the project-wide technique (§7), kept and pinned.
-   The selector was **not** stripped — that is exactly the mistake §7 warns about.
-
-Result: `interactive-widget` is the only behavioural change; the rest are comment/haptic accuracy.
-tsc/eslint/format:check/token:check clean; **161 files / 1344 tests** green; `vite build` OK.
-
-Documents cross-checked and confirmed as accurate (no change): `--tg-viewport-height` as `min-height`
-only (never bottom-pinning, per doc), `--tg-viewport-stable-height` deliberately undeclared, the SDK
-binds `--tg-viewport-safe-area-inset-*`/`--tg-viewport-content-safe-area-inset-*` (namespaced, so the
-app's own `--tg-safe-area-inset-*` does not collide), `setHeaderColor(hex)` for fullscreen status-bar
-contrast, `THEME_VAR_NAMES` = exactly the 13 `--tg-theme-*` the kit consumes (the kit does not read
-`section-separator-color`/`bottom-bar-bg-color`, so leaving them to the client is correct), the vaul
-`[vaul-drawer]` reduced-motion override, and the `Snackbar` `role`/`aria-live` on the node itself.
-
-## 2026-10-13 — Audit of the `@ui` facade: 3 latent logic bugs + contract drift
-
-Full read of `src/ui/` (21 components, 8 CSS modules, the contract README, 19 test files),
-cross-checked against the installed kit (`@telegram-apps/telegram-ui` 2.1.13) and every
-consumer. tsc/eslint/tests were green — all three bugs live in branches no test reached
-(verified by rendering before the fix).
-
-1. **`ui/Chip` — the "interactive ⇒ `<button>`" guarantee could be silently defeated.**
-   `{...restProps}` was spread AFTER the computed `Component`/`type`, so an explicitly
-   passed `Component={undefined}` (the pattern `Component={href ? "a" : undefined}`)
-   overwrote the computed `"button"` back to `undefined` → the kit fell back to `div`, and
-   a chip with `onClick` lost keyboard access. `Component`/`type` are now destructured out
-   of `restProps` before the spread. Regression pin in `primitives.test.tsx`.
-2. **`ui/Switcher` — the roving-tabindex group could lose its tabbable / swallow keys.**
-   If `value` was not among `options`, `findIndex` gave `-1`, every item got `tabIndex={-1}`
-   and the group became unreachable by Tab; with an empty `options`, `(index ± 1) % length`
-   gave `NaN`, `NaN < 0` is false, and Arrow keys went to `preventDefault()` as a no-op.
-   Added `hasValue` + first-item fallback and an `options.length === 0` guard. Pins in
-   `Switcher.test.tsx` (SSR) and `switcherKeyboard.test.tsx` (jsdom).
-3. **`ui/Sheet` — the CSS comment claimed `variant="static"` does not take focus, but the
-   component focuses the body for every variant.** `.sheetBodyStatic` was missing from the
-   `:focus`/`:focus-visible` rules → a static sheet would take focus with no outline reset.
-   The rules now cover all three bodies (`static`/`edge` are currently unused, so it was
-   latent). Pin in `sheet.test.tsx`.
-
-Contract drift in `ui/README.md` (the module's spec), all corrected: `Button | gray` was
-listed as an unreachable kit mode while `ui/Button` maps and uses it (`ConfirmSheet`,
-`ProfilePage`); the ESLint ban list omitted `SegmentedControl`; #15 named
-`ui/useTguiPlatform` when the code reads `usePlatformOrBase` (`@/hooks/usePlatform`);
-`Switcher` was described as rendering a `tabpanel` (it only sets `aria-controls`); #23 sat
-between #28/#29 (moved into numeric order) and its `<VisuallyHidden>` had lost its leading
-`<`; rows #33–#37 were fenced off by blank lines, so they did not render as part of the
-registry table.
-
-Result: tsc/eslint/format:check clean; telegram-app **162 files / 1352 tests** green.
+- **2026-10-08 — logic audit, 10 fixes.** `durationMinutes` rounding; double
+  submit in `RideRequestCreateForm`; 4403 classifier with an unknown reason;
+  Moscow date segments; `moscowDayLabel` in trip groups/feed; `closeVehicle`
+  reading the store at close time; WS frame loss on a series (`subscribeEvent`);
+  launch-params purge on deletion; `getRawInitData` empty → `undefined`; socket
+  closed on unmount.
+- **2026-10-09 — contract drift after login, 4 fixes.** `GET /bookings/my` and
+  `/history` built the nested trip by hand and dropped required
+  `autoComplete`/`matchingEnabled` → `INVALID_RESPONSE`; every booking/trip
+  response now goes through `serializeTrip`/`serializeBooking` + `safeParse`.
+  Also a Russian `INVALID_RESPONSE` message, `plural()` in `TripHero`, and the
+  own ride-request list became an infinite query (was silently capped at 20).
+- **2026-10-13 — UI review against the official Telegram docs, 4 fixes.**
+  `interactive-widget=resizes-content`; `swapCities` haptic
+  (`impactOccurred(light)`, not `selection`); safe-area comment scoped to
+  outside Telegram; `Toast` doubling comment restored (the selector was kept).
+- **2026-10-13 — facade audit, 3 latent bugs.** `ui/Chip` spread could overwrite
+  `Component="button"`; `ui/Switcher` lost its tabbable item with an unknown
+  value / empty options; `ui/Sheet` static body lacked focus rules. Contract
+  drift in `ui/README.md` corrected (gray `Button`, ban list, `#15`, `#23`,
+  rows `#33–#37`).
+- **2026-10-19 — UI pass.** One `Switcher` look (no `stretch` option); screen
+  pass (44×44 swap, primary empty-state action, header by the open sheet);
+  two-line clamp for report/support titles, route without the «Маршрут: »
+  label, 44px profile edit button, «Отзыв о водителе: Имя» wording. Registry
+  #57–#59.
