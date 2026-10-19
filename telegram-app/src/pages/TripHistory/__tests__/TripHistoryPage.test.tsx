@@ -158,6 +158,26 @@ describe("TripHistoryPage: строки истории", () => {
     expect(html).toContain("Оставьте отзыв.");
   });
 
+  it("строка истории — на всю ширину, чтобы цена стояла у правого края", () => {
+    const raw = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "..", "TripHistoryPage.tsx"),
+      "utf8",
+    );
+    const css = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "TripHistoryPage.module.css",
+      ),
+      "utf8",
+    );
+    // Кнопка Cell сжимается по контенту: без width:100% `after` (цена)
+    // начинается там, где кончился заголовок, и её позиция «плавает» от
+    // строки к строке.
+    expect(css).toMatch(/\.cell\s*\{[^}]*width:\s*100%/);
+    expect(raw).toContain("className={styles.cell}");
+  });
+
   it("числового Badge в строке истории нет вовсе (source-пин)", () => {
     const raw = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), "..", "TripHistoryPage.tsx"),

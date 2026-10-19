@@ -155,6 +155,7 @@ export function TripHistoryPage() {
               return (
                 <Cell
                   key={item.key}
+                  className={styles.cell}
                   Component="button"
                   type="button"
                   before={
