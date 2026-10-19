@@ -133,7 +133,7 @@ raise `TG_AUTH_RATE_MAX` on the dev backend.
   Playwright's strict hit-target check rejects.
 - After the run `restoreDevStand()` reseeds the dev stand: the delete-profile
   step wipes the dev user's notifications, and `reviveDevUser()` alone would
-  leave it with 0 instead of 9.
+  leave it with 0 instead of the seeded inbox.
 
 ## Test Flow (`telegram-parity.mjs` runSteps in order, 17)
 

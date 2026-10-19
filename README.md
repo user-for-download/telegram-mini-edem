@@ -115,10 +115,7 @@ docker compose up -d --build   # сборка и запуск db + backend (:300
 docker compose -f docker-compose.local.yml up -d # локальный PostgreSQL (:5433)
 docker compose stop backend    # остановить контейнер бэкенда (оставить БД)
 ```
-Требуется корневой `.env` с переменными `POSTGRES_PASSWORD`, `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_HOSTS`, `CORS_ORIGINS` (образец — `.env.example`). Миграции применяются автоматически при старте контейнера. Reseed внутри контейнера:
-```bash
-docker compose exec -T backend npx tsx prisma/seed.ts   # сбрасывает ВСЕ таблицы
-```
+Требуется корневой `.env` с переменными `POSTGRES_PASSWORD`, `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_HOSTS`, `CORS_ORIGINS` (образец — `.env.example`). Миграции применяются автоматически при старте контейнера. Полный `seed.ts` в контейнере **не запустится**: образ работает с `NODE_ENV=production`, а скрипт сбрасывает все таблицы и требует явного `ALLOW_PRODUCTION_SEED=true`. Для dev-данных используйте `npm run db:seed`; для прода — только безопасные `db:seed:cities` / `db:seed:user` (ниже).
 > У контейнера своя БД — сервис `db`. Хостовый dev-бэкенд (`npm run dev:backend` на :3011, которым кормится приложение на :3012) ходит в другую, `db-dev` на :5433. Данные, засеянные в контейнере, в приложении на :3012 не появятся — и наоборот.
 
 #### Прод-сид вокруг конкретного пользователя
