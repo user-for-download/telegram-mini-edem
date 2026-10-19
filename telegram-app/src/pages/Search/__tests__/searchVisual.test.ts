@@ -77,26 +77,25 @@ describe("поиск: один экран, одна поверхность", () 
   });
 });
 
-describe("поиск: сегменты даты в одну строку", () => {
-  it("Switcher умеет stretch и включает равные сегменты", () => {
-    expect(switcherTsx).toMatch(/stretch\?: boolean/);
-    expect(switcherTsx).toMatch(
-      /stretch \? `\$\{styles\.row\} \$\{styles\.stretch\}`/,
-    );
-    expect(pageTsx).toMatch(/<Switcher[\s\S]{0,400}?stretch/);
+describe("поиск: сегменты даты в одну строку, как везде", () => {
+  it("фасад даёт один вид: равные сегменты, опции вида нет", () => {
+    // «Облако пилюль» по содержимому снято вместе с опцией. Двумя причинами:
+    // на четырёх пунктах даты оно переносилось, оставляя «Выходные» одну на
+    // второй строке (реестр #43), а на трёхпунктовых фильтрах тем же фасадом
+    // читалось третьим контролом (реестр #53).
+    expect(switcherTsx).not.toMatch(/stretch/);
+    expect(pageTsx).not.toMatch(/<Switcher[\s\S]{0,400}?stretch/);
     // Перенос строки давал «Выходные» одну на второй строке.
-    expect(ruleBody(switcherCss, ".stretch")).toMatch(/flex-wrap:\s*nowrap/);
-    expect(ruleBody(switcherCss, ".stretch > *")).toMatch(/flex:\s*1 1 0/);
+    expect(ruleBody(switcherCss, ".row")).toMatch(/flex-wrap:\s*nowrap/);
+    expect(ruleBody(switcherCss, ".row > *")).toMatch(/flex:\s*1 1 0/);
   });
 
   it("кегль сегмента — 12px: на 320px иначе не влезают «Выходные»", () => {
     // Ширину сегмента делит контейнер (320px → 62px на пункт), кит режет
     // подпись многоточием — «Выходн…». Проверено в Chromium на 320/360/390.
-    expect(ruleBody(switcherCss, ".stretch > * *")).toMatch(
-      /font-size:\s*12px/,
-    );
-    expect(ruleBody(switcherCss, ".stretch > *")).toMatch(/padding-left:\s*0/);
-    expect(ruleBody(switcherCss, ".stretch")).toMatch(/gap:\s*2px/);
+    expect(ruleBody(switcherCss, ".row > * *")).toMatch(/font-size:\s*12px/);
+    expect(ruleBody(switcherCss, ".row > *")).toMatch(/padding-left:\s*0/);
+    expect(ruleBody(switcherCss, ".row")).toMatch(/gap:\s*2px/);
   });
 
   it("подпись сегмента центрирована внутри пункта", () => {
@@ -104,7 +103,7 @@ describe("поиск: сегменты даты в одну строку", () =>
     // `text-align: start`: в равном сегменте текст стоял у левого края, и
     // «Все даты» смотрелись сдвинутыми. `justify-content` кнопки не
     // помогает — ребёнок растянут, выравнивать надо текст.
-    expect(ruleBody(switcherCss, ".stretch > * *")).toMatch(
+    expect(ruleBody(switcherCss, ".row > * *")).toMatch(
       /text-align:\s*center/,
     );
   });

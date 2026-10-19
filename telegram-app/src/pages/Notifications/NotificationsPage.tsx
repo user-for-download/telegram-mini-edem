@@ -522,7 +522,6 @@ export function NotificationsPage() {
                 onChange={selectSegment}
                 ariaLabel="Фильтр уведомлений"
                 idPrefix="notif-segment"
-                stretch
               />
             </div>
             <div aria-live="polite">

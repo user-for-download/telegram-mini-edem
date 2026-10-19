@@ -35,17 +35,6 @@ export interface SwitcherProps<T extends string> {
   semantics?: SwitcherSemantics;
   /** id панели, которой управляет выбранная вкладка (только `tabs`). */
   panelId?: string;
-  /**
-   * Пункты равной ширины на всю строку (сегментный контрол) вместо
-   * «облака пилюль» по содержимому.
-   *
-   * Нужен фильтрам с фиксированным набором из 4+ пунктов: «Все даты /
-   * Сегодня / Завтра / Выходные» по содержимому не влезали в 324px и
-   * переносились, оставляя последнюю пилюлю одну на второй строке —
-   * раскладка читалась как сломанная. Равные сегменты влезают всегда:
-   * ширину делит контейнер, а не текст.
-   */
-  stretch?: boolean;
 }
 
 /**
@@ -59,6 +48,14 @@ export interface SwitcherProps<T extends string> {
  * Хаптика — здесь: `selectionChanged` на смену значения, одинаково
  * на всех экранах.
  *
+ * Вид один на всех экранах и опций вида не имеет: ряд равных сегментов на
+ * всю ширину (`.row` в `Switcher.module.css`). «Облако пилюль» по
+ * содержимому снято. Двумя причинами сразу: на четырёх пунктах даты оно
+ * не влезало и переносилось, оставляя последний пункт один на второй
+ * строке (реестр #43), а на трёхпунктовых фильтрах тем же фасадом
+ * выглядело третьим, «недоделанным» контролом — 51/95/99px при 16px
+ * против 100/100/100 при 12px у соседнего экрана (реестр #53).
+ *
  * Панель не рендерит: её держит владелец экрана, обязанный дать ей id из
  * `panelId`.
  */
@@ -70,7 +67,6 @@ export function Switcher<T extends string>({
   idPrefix,
   semantics = "radiogroup",
   panelId,
-  stretch = false,
 }: SwitcherProps<T>) {
   const asTabs = semantics === "tabs";
   // Есть ли value среди пунктов. Если нет (value вне options) — группа обязана
@@ -115,7 +111,7 @@ export function Switcher<T extends string>({
     <div
       role={asTabs ? "tablist" : "radiogroup"}
       aria-label={ariaLabel}
-      className={stretch ? `${styles.row} ${styles.stretch}` : styles.row}
+      className={styles.row}
       onKeyDown={onKeyDown}
     >
       {options.map((option, optionIndex) => {

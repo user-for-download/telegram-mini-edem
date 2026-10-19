@@ -112,33 +112,27 @@ describe("поездки: действия — как на остальных э
   });
 });
 
-describe("сегмент «Все / Водитель / Пассажир» — как остальные фильтры", () => {
-  // Один и тот же фасад (`ui/Switcher`) на трёх экранах фильтров не может
-  // выглядеть по-разному. Замер в Chromium на 390px до правки: «Поездки» —
-  // облако по содержимому 51/95/99px, шрифт 16px, gap 6, перенос;
-  // «Уведомления» — 100/100/100, 12px, gap 2, nowrap. Причина — забытая
-  // опция `stretch` (реестр #43), а не осознанный выбор: подпись «Все»
-  // шириной в слово рядом с «Пассажир» читалась как недоделанный контрол.
-  it("все три фильтра вызывают Switcher со stretch", () => {
-    for (const [file, src] of [
-      ["pages/TripActive/TripActivePage.tsx", pageTsx],
-      [
-        "pages/Notifications/NotificationsPage.tsx",
-        code(readSrc("pages/Notifications/NotificationsPage.tsx")),
-      ],
-      ["pages/Search/SearchPage.tsx", code(readSrc("pages/Search/SearchPage.tsx"))],
-    ] as const) {
-      expect(src, file).toMatch(/<Switcher[\s\S]{0,400}?stretch/);
+describe("сегмент — тот же переключатель, что на остальных экранах", () => {
+  // До 2026-10-19 сегмент «Все / Водитель / Пассажир» был «облаком пилюль»
+  // по содержимому, пока фильтры уведомлений и дат были равными сегментами:
+  // замер в Chromium на 390px — 51/95/99px при 16px против 100/100/100 при
+  // 12px. Причина — забытая опция `stretch` (реестр #43), а не выбор: «Все»
+  // шириной в слово рядом с «Пассажир» читалось как недоделанный контрол
+  // (реестр #53). Опция снята вместе с «облаком»: вид у фасада один, и
+  // забыть его на новом экране больше нельзя.
+  it("вид задаёт фасад, а не экран: `stretch` не осталось нигде", () => {
+    expect(code(readSrc("ui/Switcher.tsx"))).not.toMatch(/stretch/);
+    for (const file of [
+      "pages/TripActive/TripActivePage.tsx",
+      "pages/Notifications/NotificationsPage.tsx",
+      "pages/Search/SearchPage.tsx",
+      "pages/Reviews/ReviewsPage.tsx",
+    ]) {
+      // Ловим и вернувшуюся опцию, и самодельную раскладку поверх фасада.
+      expect(code(readSrc(file)), file).not.toMatch(
+        /<Switcher[\s\S]{0,400}?stretch/,
+      );
     }
-  });
-
-  it("stretch — равные сегменты, 12px и без переноса (реестр #43)", () => {
-    const switcherCss = readSrc("ui/Switcher.module.css");
-    expect(ruleBody(switcherCss, ".stretch")).toMatch(/flex-wrap:\s*nowrap/);
-    expect(ruleBody(switcherCss, ".stretch > *")).toMatch(/flex:\s*1 1 0/);
-    expect(ruleBody(switcherCss, ".stretch > * *")).toMatch(
-      /font-size:\s*12px/,
-    );
   });
 });
 
