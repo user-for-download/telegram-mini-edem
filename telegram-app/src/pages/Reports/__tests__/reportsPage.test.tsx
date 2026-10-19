@@ -1,10 +1,15 @@
 // Рендер-тесты ReportsPage — паттерн reviewsPage.test.tsx (renderToString,
 // моки хуков через vi.hoisted, MemoryRouter для PageHeader).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { ApiError } from "@/api/client";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 const { mockUseMine, mockUseCreate } = vi.hoisted(() => ({
   mockUseMine: vi.fn(),
@@ -176,5 +181,27 @@ describe("ReportsPage: состояния запроса", () => {
     });
 
     expect(renderPage()).toContain("Аккаунт заблокирован");
+  });
+});
+
+// Заголовок строки переносится, а не обрезается: на одну строку в раскладке
+// с датой приходится 193px (~21 знак), и системная подпись «Оскорбления ·
+// Пользователь» (222px) читалась как «Оскорбления · Пользо…». Кит ставит
+// заголовку `nowrap` всегда — значит, перенос это наше правило, и его легко
+// снести, не заметив (в HTML класс хэширован, поэтому ловим текстом CSS —
+// прецедент `notificationsVisual.test.ts`). Класс спана китный: живость
+// хэша в ките стережёт kitContract, оба правила — здесь (реестр #57).
+describe("строка жалобы: заголовок в две строки, описание и статус — в одну", () => {
+  it("CSS: заголовку снят nowrap и поставлен line-clamp: 2", () => {
+    const css = readFileSync(
+      join(here, "..", "ReportsPage.module.css"),
+      "utf8",
+    );
+    const rule = css.match(
+      /\.cell\.cell :global\(\.tgui-1c6d7865a76a19bc\)\s*\{([^}]*)\}/,
+    )?.[1];
+    expect(rule, "правило переноса заголовка пропало").toBeTruthy();
+    expect(rule).toContain("-webkit-line-clamp: 2");
+    expect(rule).toContain("white-space: normal");
   });
 });

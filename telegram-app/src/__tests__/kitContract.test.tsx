@@ -394,6 +394,12 @@ const KIT_HASH_USAGE: ReadonlyArray<{
     meaning: "обёртка поля поиска — снимаем фон и паддинг",
     reliesOn: "background:var(--tgui--bg_color)",
   },
+  {
+    hash: "tgui-1c6d7865a76a19bc",
+    where: "ReportsPage, SupportPage",
+    meaning: "спан заголовка строки Cell — снимаем nowrap, заголовок в 2 строки",
+    reliesOn: "white-space:nowrap",
+  },
 ];
 
 describe("хеш-классы кита, на которые ссылается CSS проекта", () => {

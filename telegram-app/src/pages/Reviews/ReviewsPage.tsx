@@ -240,6 +240,14 @@ export const ReviewsBody = memo(function ReviewsBody({
       null)
     : (selectedTrip?.driver ?? null);
 
+  // Подпись формы. Предлог «о» требует падежа, а имя мы не склоняем:
+  // «Отзыв о Марина Ковалёва» ломало согласование (реестр #59). Роль стоит
+  // в нужной форме сама, имя — в постпозиции после двоеточия; без
+  // выбранной цели строка остаётся прежним «Отзыв о водителе».
+  const aboutLine = `Отзыв о ${isDriverTrip ? "пассажире" : "водителе"}${
+    targetUser ? `: ${targetUser.name}` : ""
+  }`;
+
   const aboutItems = useMemo(
     () => about.data?.pages.flatMap((page) => page.items) ?? [],
     [about.data],
@@ -494,7 +502,7 @@ export const ReviewsBody = memo(function ReviewsBody({
                   </>
                 ) : (
                   <Text weight="2" Component="p">
-                    Отзыв о {targetUser?.name ?? "водителе"}
+                    {aboutLine}
                   </Text>
                 )}
 

@@ -6,8 +6,13 @@
 // не является — оборачивать Card в кнопку было бы вложенной разметкой без
 // смысла.
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 const openUserProfile = vi.fn();
 vi.mock("@/components/Profile/UserProfileProvider", () => ({
@@ -82,9 +87,29 @@ describe("ReviewCard: профиль автора", () => {
   it("текст и маршрут отзыва остались на месте", () => {
     renderCard();
     expect(screen.getByText("Всё отлично, поехал бы снова")).toBeTruthy();
-    // Маршрут отрисован как «Маршрут: <значение>» двумя узлами, поэтому
-    // сверяем по подписи, а не по самому значению.
-    expect(screen.getByText(/Маршрут:/)).toBeTruthy();
-    expect(screen.getByText(/Череповец/)).toBeTruthy();
+    // Маршрут — без подписи «Маршрут: »: 66px надписи стоили ровно того,
+    // что «Вологда → Череповец» (205px) в 204px доступных обрезался на
+    // последней букве. Формат тот же, что у строки уведомлений, — адрес
+    // сам говорит, что он адрес (реестр #57).
+    expect(screen.queryByText(/Маршрут:/)).toBeNull();
+    expect(screen.getByText("Вологда → Череповец")).toBeTruthy();
+  });
+});
+
+// Маршрут — до двух строк, а не одна обрезанная: длинный адрес
+// («Ленинградская область → Санкт-Петербург») переносится, короткий
+// остаётся строкой. Статус справа не сжимается, поэтому ширину делит
+// маршрут (реестр #57).
+describe("подвал карточки: маршрут переносится", () => {
+  it("CSS: маршрут клампится в две строки", () => {
+    const css = readFileSync(
+      join(here, "..", "ReviewCard", "ReviewCard.module.css"),
+      "utf8",
+    );
+    const rule = css.match(/\.route\s*\{([^}]*)\}/)?.[1];
+    expect(rule, "правило маршрута пропало").toBeTruthy();
+    expect(rule).toContain("-webkit-line-clamp: 2");
+    // Однострочный `nowrap` — ровно то, что обрезало «Череповец».
+    expect(rule).not.toContain("white-space: nowrap");
   });
 });

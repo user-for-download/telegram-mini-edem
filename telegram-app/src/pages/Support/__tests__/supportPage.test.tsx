@@ -1,10 +1,15 @@
 // Рендер-тесты SupportPage — паттерн reviewsPage.test.tsx (renderToString,
 // моки хуков через vi.hoisted, MemoryRouter для PageHeader).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { ApiError } from "@/api/client";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 const { mockUseMine, mockUseCreate, mockUseAppeal } = vi.hoisted(() => ({
   mockUseMine: vi.fn(),
@@ -199,5 +204,25 @@ describe("SupportPage: состояния запроса", () => {
 
     expect(html).toContain("Не удалось загрузить данные");
     expect(html).not.toContain("Аккаунт заблокирован");
+  });
+});
+
+// Тема обращения — текст человека (до 100 знаков из контракта), и в одну
+// строку (193px ≈ 21 знак) от «Не приходит уведомление о подтверждении
+// брони» оставалось «Не приходит уведомл…»: терялось ровно то, по чему
+// строку и узнаёшь. Две строки у заголовка, одна у описания и статуса —
+// полный текст всё равно в попапе (реестр #57).
+describe("строка обращения: тема в две строки, описание и статус — в одну", () => {
+  it("CSS: теме снят nowrap и поставлен line-clamp: 2", () => {
+    const css = readFileSync(
+      join(here, "..", "SupportPage.module.css"),
+      "utf8",
+    );
+    const rule = css.match(
+      /\.cell\.cell :global\(\.tgui-1c6d7865a76a19bc\)\s*\{([^}]*)\}/,
+    )?.[1];
+    expect(rule, "правило переноса темы пропало").toBeTruthy();
+    expect(rule).toContain("-webkit-line-clamp: 2");
+    expect(rule).toContain("white-space: normal");
   });
 });

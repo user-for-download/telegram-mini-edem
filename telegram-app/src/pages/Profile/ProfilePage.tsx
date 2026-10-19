@@ -127,10 +127,13 @@ export function ProfilePage() {
                   action={
                     // Не stretched: кнопка правки не основное действие
                     // экрана, по центру она читается как вторичная.
+                    // Но тап-таргет — 44px, как у остальных триггеров
+                    // size="s": родные 36px были единственной кнопкой
+                    // действия в приложении ниже политики (реестр #58).
                     <Button
                       size="s"
                       variant="gray"
-                      className={styles.heroEdit}
+                      className={`${MIN_TARGET} ${styles.heroEdit}`}
                       before={<Edit3 size={15} />}
                       onClick={() => {
                         haptic.light();

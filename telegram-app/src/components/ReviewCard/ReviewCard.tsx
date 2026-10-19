@@ -101,7 +101,10 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
         {review.text}
       </Text>
       <Caption Component="div" className={styles.foot}>
-        <span className={styles.route}>Маршрут: {review.tripRoute}</span>
+        {/* Без подписи «Маршрут: »: её нет и в строке уведомлений (тот же
+            адрес — «Вологда → Череповец»), а 66px надписи стоили ровно
+            того, что маршрут обрезался на последней букве. */}
+        <span className={styles.route}>{review.tripRoute}</span>
         {badge ? (
           <StatusPill tone={badge.tone} className={SHRINK}>
             {badge.label}

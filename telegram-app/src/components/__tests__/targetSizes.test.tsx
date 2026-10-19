@@ -84,6 +84,20 @@ describe("таргеты ConfirmPopup size=s держат 44px через MIN_TA
     });
   }
 
+  it("ProfilePage: кнопка «Редактировать профиль» — тоже 44", () => {
+    // Единственная кнопка-действие приложения ниже политики: китовые
+    // size="s" — 36px, и жили они только здесь (реестр #58). Класс ищем по
+    // `styles.heroEdit`: текста кнопки в чанке нет — `jsxUsages` обрывает
+    // его на `/>` вложенной иконки.
+    const usage = jsxUsages(
+      readSrc("pages/Profile/ProfilePage.tsx"),
+      "Button",
+    ).find((chunk) => chunk.includes("heroEdit"));
+    expect(usage, "кнопка правки профиля пропала из исходника").toBeDefined();
+    expect(usage).toContain("MIN_TARGET");
+    expect(usage).toContain('size="s"');
+  });
+
   it("TripRequestsModal: прецедент Accept/Decline в BTN_ROW на месте", () => {
     // Два stretched size="s" в одном BTN_ROW уже живут с MIN_TARGET —
     // доказательство, что min-height не ломает ряд кнопок.
