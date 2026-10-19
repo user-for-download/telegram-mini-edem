@@ -13,6 +13,9 @@
 //     в подписи вместо иконки слотом `before`;
 //  4. действие пустого состояния было secondary, а канон — primary
 //     (SearchPage «Сбросить фильтры», реестр #6).
+//  5. (2026-10-19) сегмент «Все / Водитель / Пассажир» оставался «облаком
+//     пилюль» по содержимому и на 16px, пока два других фильтра приложения
+//     (уведомления, даты в поиске) — равные сегменты 12px.
 //
 // Пины текстовые: jsdom не каскадит CSS-модули и не считает layout
 // (прецедент homeVisual.test.ts/searchVisual.test.ts). Реальные размеры
@@ -106,6 +109,36 @@ describe("поездки: действия — как на остальных э
     );
     // Экрана дат здесь нет — описание экрана поиска было бы враньём.
     expect(pageTsx).not.toMatch(/searching[\s\S]{0,60}searchNoResults/);
+  });
+});
+
+describe("сегмент «Все / Водитель / Пассажир» — как остальные фильтры", () => {
+  // Один и тот же фасад (`ui/Switcher`) на трёх экранах фильтров не может
+  // выглядеть по-разному. Замер в Chromium на 390px до правки: «Поездки» —
+  // облако по содержимому 51/95/99px, шрифт 16px, gap 6, перенос;
+  // «Уведомления» — 100/100/100, 12px, gap 2, nowrap. Причина — забытая
+  // опция `stretch` (реестр #43), а не осознанный выбор: подпись «Все»
+  // шириной в слово рядом с «Пассажир» читалась как недоделанный контрол.
+  it("все три фильтра вызывают Switcher со stretch", () => {
+    for (const [file, src] of [
+      ["pages/TripActive/TripActivePage.tsx", pageTsx],
+      [
+        "pages/Notifications/NotificationsPage.tsx",
+        code(readSrc("pages/Notifications/NotificationsPage.tsx")),
+      ],
+      ["pages/Search/SearchPage.tsx", code(readSrc("pages/Search/SearchPage.tsx"))],
+    ] as const) {
+      expect(src, file).toMatch(/<Switcher[\s\S]{0,400}?stretch/);
+    }
+  });
+
+  it("stretch — равные сегменты, 12px и без переноса (реестр #43)", () => {
+    const switcherCss = readSrc("ui/Switcher.module.css");
+    expect(ruleBody(switcherCss, ".stretch")).toMatch(/flex-wrap:\s*nowrap/);
+    expect(ruleBody(switcherCss, ".stretch > *")).toMatch(/flex:\s*1 1 0/);
+    expect(ruleBody(switcherCss, ".stretch > * *")).toMatch(
+      /font-size:\s*12px/,
+    );
   });
 });
 

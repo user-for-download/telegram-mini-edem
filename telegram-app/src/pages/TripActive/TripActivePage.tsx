@@ -264,12 +264,19 @@ export function TripActivePage() {
           className={styles.searchField}
         />
       </div>
+      {/* `stretch` — равные сегменты 12px, как у двух других фильтров
+          приложения: «Новые/Водитель/Пассажир» в уведомлениях и даты в
+          поиске. Здесь тот же контрол оставался «облаком пилюль» по
+          содержимому и на 16px — замер на 390px: 51/95/99px против
+          100/100/100, плюс перенос и «Все» шириной в слово. Один контрол
+          не может выглядеть по-разному на трёх экранах (реестр #43/#53). */}
       <Switcher
         options={SEGMENTS}
         value={segment}
         onChange={selectSegment}
         ariaLabel="Сегмент поездок"
         idPrefix="booking-segment"
+        stretch
       />
       {segment === "passenger" ? (
         <QueryState
