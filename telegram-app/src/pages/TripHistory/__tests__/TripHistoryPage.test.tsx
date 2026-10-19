@@ -5,6 +5,9 @@
 // Паттерн tripsPages.test.tsx (SSR, без testing-library).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -127,6 +130,45 @@ describe("TripHistoryPage: строки истории", () => {
     // в subtitle его обрезало в «Заверш…».
     expect(html).toContain('data-testid="history-status-b-h-1"');
     expect(html).toContain('data-testid="history-status-b-h-2"');
+  });
+
+  it("нужен отзыв: подсказка словами рядом со статусом, цена на месте", () => {
+    mockUseHistory.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "r-1",
+            seat: 1,
+            status: "confirmed",
+            historyCategory: "completed",
+            canReview: true,
+            trip: makeTrip({ id: "t-r1", price: 500 }),
+          },
+        ],
+      }),
+    );
+    const html = render(<TripHistoryPage />);
+    // Подсказка — словами в строке статуса. Красный числовой бейдж в after
+    // читался счётчиком непрочитанного (роль бейджа-счётчика одна — док
+    // таббара) и ЗАМЕЩАЛ цену: «1» вместо «500 ₽» (реестр #50).
+    expect(html).toContain("Оставьте отзыв");
+    expect(html).toContain('data-testid="history-review-b-r-1"');
+    expect(html).toContain("500");
+    // Имя строки несёт то же слово, что видно (WCAG 2.5.3, label in name).
+    expect(html).toContain("Оставьте отзыв.");
+  });
+
+  it("числового Badge в строке истории нет вовсе (source-пин)", () => {
+    const raw = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "..", "TripHistoryPage.tsx"),
+      "utf8",
+    );
+    // Без комментариев: объяснение дефекта само называет снятый компонент.
+    const source = raw
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+    expect(source).not.toContain("Badge");
+    expect(source).toContain("styles.reviewHint");
   });
 
   it("архив водителя merged в историю простыми строками", () => {

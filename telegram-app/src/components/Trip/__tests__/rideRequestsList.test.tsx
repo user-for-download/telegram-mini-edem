@@ -131,7 +131,7 @@ describe("RideRequestsList: карточки и действия", () => {
 
     expect(html).toContain("Москва → Тула");
     expect(html).toContain("Активен");
-    expect(html).toContain("Поставить на паузу");
+    expect(html).toContain("На паузу");
     expect(html).toContain("Редактировать");
     expect(html).toContain("Отменить запрос");
   });
@@ -142,7 +142,7 @@ describe("RideRequestsList: карточки и действия", () => {
     const html = renderList();
 
     expect(html).toContain("Возобновить");
-    expect(html).not.toContain("Поставить на паузу");
+    expect(html).not.toContain("На паузу");
   });
 
   it("завершённый запрос: без действий пауза/редактирование/отмена", () => {
@@ -151,7 +151,7 @@ describe("RideRequestsList: карточки и действия", () => {
     const html = renderList();
 
     expect(html).toContain("Москва → Тула");
-    expect(html).not.toContain("Поставить на паузу");
+    expect(html).not.toContain("На паузу");
     expect(html).not.toContain("Возобновить");
     expect(html).not.toContain("Редактировать");
     expect(html).not.toContain("Отменить запрос");
@@ -220,7 +220,7 @@ describe("RideRequestsList: просроченная заявка", () => {
       data: [makeRequest({ status: "active", expiresAt: expiredAt })],
     });
     const html = renderList();
-    expect(html).not.toContain("Поставить на паузу");
+    expect(html).not.toContain("На паузу");
     expect(html).not.toContain("Редактировать");
     expect(html).toContain("Срок действия истёк");
   });

@@ -222,6 +222,26 @@ describe("ProfilePage header", () => {
     expect(html).toContain("Звуковые эффекты");
   });
 
+  it("настройка уведомлений одна: строка-переход, а не второй тумблер", () => {
+    mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
+    const html = render(<ProfilePage />);
+    expect(html).toContain("Настройки уведомлений");
+    // Подпись — короче 30 знаков: `MenuRow` режет хвост многоточием
+    // (реестр #29), а обрезанное «Брони, статусы поездок, отв…» обещало
+    // ровно то, чего пользователь уже не прочитает.
+    expect(html).toContain("Брони и статусы поездок");
+    // Переключателей на странице ровно два — тема и звук: уведомления уехали
+    // в шторку /settings, потому что до 2026-10-19 одна и та же серверная
+    // настройка показывалась ДВУМЯ контролами (реестр #52).
+    expect(html.match(/role="switch"/g) ?? []).toHaveLength(2);
+    const raw = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "..", "ProfilePage.tsx"),
+      "utf8",
+    );
+    expect(raw).not.toContain("useProfileNotificationSettingsMutation");
+    expect(raw).toContain('navigate("/settings")');
+  });
+
   it("без авто — CTA добавления", () => {
     mockUseProfile.mockReturnValue(
       queryState({ data: makeProfile({ car: null }) }),

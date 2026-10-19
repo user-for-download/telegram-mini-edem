@@ -4,7 +4,7 @@ import { Caption, Input, Text } from "@telegram-apps/telegram-ui";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { QueryState } from "@/components/QueryState";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
-import { BTN_ROW, BTN_ROW_WRAP, MIN_TARGET, TRUNCATE } from "@/ui/classes";
+import { BTN_ROW, MIN_TARGET, TRUNCATE } from "@/ui/classes";
 import { Button } from "@/ui/Button";
 import { Card } from "@/ui/Card";
 import { EMPTY_STATES } from "@/ui/emptyStates";
@@ -209,6 +209,9 @@ export const RideRequestsList = memo(function RideRequestsList() {
             const shownStatus: RideRequestStatus = expired
               ? "expired"
               : request.status;
+            // Управление (пауза/возобновление, правка, отмена) есть только у
+            // живой заявки; истёкшая покажет подсказку вместо кнопок.
+            const live = shownStatus === "active" || shownStatus === "paused";
             return (
               <Card key={request.id} className={styles.card}>
                 <div className={styles.cardHead}>
@@ -314,72 +317,91 @@ export const RideRequestsList = memo(function RideRequestsList() {
                     </div>
                   </>
                 ) : (
-                  <div className={BTN_ROW_WRAP}>
-                    {request.status === "active" && !expired && (
-                      <Button
-                        size="s"
-                        stretched
-                        className={MIN_TARGET}
-                        loading={
-                          status.isPending &&
-                          status.variables?.id === request.id
-                        }
-                        disabled={status.isPending || cancel.isPending}
-                        onClick={() =>
-                          status.mutate({ id: request.id, status: "paused" })
-                        }
-                      >
-                        Поставить на паузу
-                      </Button>
-                    )}
-                    {request.status === "paused" && !expired && (
-                      <Button
-                        size="s"
-                        stretched
-                        className={MIN_TARGET}
-                        loading={
-                          status.isPending &&
-                          status.variables?.id === request.id
-                        }
-                        disabled={status.isPending || cancel.isPending}
-                        onClick={() =>
-                          status.mutate({ id: request.id, status: "active" })
-                        }
-                      >
-                        Возобновить
-                      </Button>
-                    )}
-                    {(request.status === "active" ||
-                      request.status === "paused") &&
-                      !expired && (
-                        <>
+                  <>
+                    {/* Действия живой заявки: состояние («На паузу» /
+                        «Возобновить») и правка — ПАРА равных кнопок в одну
+                        строку, отмена — тихим красным текстом под ними
+                        (`ConfirmPopup mode="plain" destructive`, тот же приём,
+                        что у «Удалить профиль»). Деструктив не должен весить
+                        столько же, сколько правка.
+                        Почему подписи короткие: в прежней раскладке
+                        (`BTN_ROW_WRAP` + `stretched`) три кнопки разъезжались
+                        в три ПОЛНЫЕ строки по 290×44 — «ряд» был обманом, —
+                        а в честном ряду из двух длинная подпись не влезает:
+                        «Поставить на паузу» и «Отменить запрос» требовали
+                        ~150px каждая при доступных 141 (замер: подпись
+                        обрезалась многоточием). */}
+                    {live && (
+                      <div className={BTN_ROW}>
+                        {request.status === "active" && (
                           <Button
                             size="s"
                             stretched
                             className={MIN_TARGET}
+                            loading={
+                              status.isPending &&
+                              status.variables?.id === request.id
+                            }
                             disabled={status.isPending || cancel.isPending}
-                            onClick={() => startEdit(request)}
+                            onClick={() =>
+                              status.mutate({
+                                id: request.id,
+                                status: "paused",
+                              })
+                            }
                           >
-                            Редактировать
+                            На паузу
                           </Button>
-                          <span className={styles.contentsBtn}>
-                            <ConfirmPopup
-                              label="Отменить запрос"
-                              confirmLabel="Отменить запрос"
-                              description="Запрос будет снят с публикации."
-                              pending={cancel.isPending}
-                              destructive
-                              onConfirm={() => cancel.mutate(request.id)}
-                            />
-                          </span>
-                        </>
-                      )}
+                        )}
+                        {request.status === "paused" && (
+                          <Button
+                            size="s"
+                            stretched
+                            className={MIN_TARGET}
+                            loading={
+                              status.isPending &&
+                              status.variables?.id === request.id
+                            }
+                            disabled={status.isPending || cancel.isPending}
+                            onClick={() =>
+                              status.mutate({
+                                id: request.id,
+                                status: "active",
+                              })
+                            }
+                          >
+                            Возобновить
+                          </Button>
+                        )}
+                        <Button
+                          size="s"
+                          stretched
+                          className={MIN_TARGET}
+                          disabled={status.isPending || cancel.isPending}
+                          onClick={() => startEdit(request)}
+                        >
+                          Редактировать
+                        </Button>
+                      </div>
+                    )}
+                    {live && (
+                      <ConfirmPopup
+                        label="Отменить запрос"
+                        confirmLabel="Отменить запрос"
+                        description="Запрос будет снят с публикации."
+                        pending={cancel.isPending}
+                        mode="plain"
+                        destructive
+                        className={MIN_TARGET}
+                        onConfirm={() => cancel.mutate(request.id)}
+                      />
+                    )}
                     {expired && (
                       <Caption Component="div">
                         Срок действия истёк — создайте новый запрос.
                       </Caption>
                     )}
-                  </div>
+                  </>
                 )}
               </Card>
             );

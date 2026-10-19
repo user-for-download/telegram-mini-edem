@@ -1,4 +1,3 @@
-import { useRef, useState } from "react";
 import { IconContainer, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { Button } from "@/ui/Button";
 import { Blockquote } from "@/ui/Blockquote";
@@ -33,7 +32,6 @@ import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
 import { isAccountDeletedError, ApiError } from "@/api/client";
 import {
   useDeleteAccountMutation,
-  useProfileNotificationSettingsMutation,
   useProfileQuery,
 } from "@/queries/profile";
 import {
@@ -75,44 +73,11 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const profile = useProfileQuery();
   const remove = useDeleteAccountMutation();
-  const saveNotifications = useProfileNotificationSettingsMutation();
   const { themeOverride, soundEnabled } = useAppSettings();
   const tgDark = useSignal(miniApp.isDark);
   const dark = themeOverride ? themeOverride === "dark" : tgDark;
-  const [notifEnabled, setNotifEnabled] = useState<boolean | null>(null);
-  const notifChecked =
-    notifEnabled ?? profile.data?.notificationsEnabled ?? true;
-
-  // Один флаг бэкенда на оба канала: тогглы in-app и Telegram — зеркала.
-  // Синхронный гейт (ref), а не isPending: два быстрых тапа до ре-рендера
-  // оба проходили проверку state и слали два PATCH. Тот же приём, что в
-  // остальных формах приложения.
-  const notifSavingRef = useRef(false);
-  const toggleNotifications = (next: boolean) => {
-    if (notifSavingRef.current) return;
-    const previous = notifChecked;
-    haptic.light();
-    setNotifEnabled(next);
-    notifSavingRef.current = true;
-    saveNotifications.mutate(next, {
-      onSettled: () => {
-        notifSavingRef.current = false;
-      },
-      onSuccess: () => {
-        haptic.success();
-        // Локальный оверрайд — только на время запроса. Не сбросив его,
-        // тоггл навсегда переставал следить за profile.data.notificationsEnabled
-        // и показывал своё (один раз заданное) значение: серверное изменение —
-        // с другого устройства, от модерации, из соседнего useProfileUpdate —
-        // игнорировалось без возможности пересинхронизироваться.
-        setNotifEnabled(null);
-      },
-      onError: () => {
-        haptic.error();
-        setNotifEnabled(previous);
-      },
-    });
-  };
+  // Уведомления — не состояние этой страницы: настройка живёт в шторке
+  // «Настройки» (/settings), сюда едет только строка-переход.
   // Удаление — через ConfirmPopup (нативный алерт клиента):
   // нативный window.confirm ненадёжен в Telegram WebView.
 
@@ -285,22 +250,28 @@ export function ProfilePage() {
                 />
               </Section>
               <Section header="Уведомления и звуки">
-                {/* Ошибка сохранения настроек — видимая, через MutationError. */}
-                <MutationError
-                  error={saveNotifications.error}
-                  fallback="Не удалось сохранить настройки уведомлений"
-                />
-                <SwitchRow
-                  label="Уведомления"
+                {/* Уведомления — строка-ПЕРЕХОД, а не тумблер: сама
+                    настройка живёт в шторке «Настройки» (`/settings` — тот же
+                    маршрут, что у диплинка START_PARAM_ROUTES, и та же
+                    шторка, что у «Автомобиля» рядом). До 2026-10-19 контролов
+                    было ДВА — тумблер здесь и кнопка-команда в шторке: одна
+                    серверная настройка в двух разных обличьях и с двумя
+                    поверхностями ошибки, и оба писали PATCH наперегонки.
+                    Правило реестра #30 («настройка вкл/выкл — это switch»)
+                    оставлено за шторкой, где контрол один. */}
+                <MenuRow
+                  label="Настройки уведомлений"
                   icon={
                     <IconContainer>
                       <Bell size={18} />
                     </IconContainer>
                   }
-                  title="Уведомления"
-                  subtitle="Брони, статусы поездок, ответы поддержки"
-                  checked={notifChecked}
-                  onChange={toggleNotifications}
+                  title="Настройки уведомлений"
+                  subtitle="Брони и статусы поездок"
+                  onClick={() => {
+                    haptic.light();
+                    navigate("/settings");
+                  }}
                 />
                 <SwitchRow
                   label="Звуковые эффекты"

@@ -20,7 +20,8 @@ import styles from "./ProfileModals.module.css";
 /**
  * Настройки уведомлений — route-backed шторка поверх «Профиля»; роут
  * /settings остаётся источником правды ради диплинков START_PARAM_ROUTES и
- * точки входа из ProfilePage — тот же navigate("/settings")).
+ * точки входа из ProfilePage (строка «Настройки уведомлений» →
+ * navigate("/settings")).
  *
  * a11y: telegram-ui Modal даёт role=dialog, Esc-закрытие (onOpenChange) и
  * focus-trap; интерактив в теле — таргеты ≥44px (min-h), статусы — через
@@ -36,7 +37,7 @@ export function SettingsModal({
   // Имя диалога для скринридера + видимый заголовок на base-платформе
   // (tgui Modal.Header рисует текст только на iOS).
   return (
-    <Sheet open={open} onClose={onClose} title="Настройки">
+    <Sheet open={open} onClose={onClose} title="Настройки уведомлений">
       <SettingsBody />
     </Sheet>
   );

@@ -1,8 +1,4 @@
-import {
-  Badge,
-  IconContainer,
-  VisuallyHidden,
-} from "@telegram-apps/telegram-ui";
+import { IconContainer, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import { FetchMore } from "@/ui/FetchMore";
 import { Section } from "@/ui/Section";
 import { Cell } from "@/ui/Cell";
@@ -151,8 +147,8 @@ export function TripHistoryPage() {
             {historyItems.map((item) => {
               const trip =
                 item.kind === "driving" ? item.trip : item.booking.trip;
-              // Отзыв нужен только пассажиру с canReview — красный counter,
-              // иначе серый бейдж с ценой.
+              // Отзыв нужен только пассажиру с canReview — подсказка СЛОВАМИ
+              // в строке статуса, а не числовым бейджем в after.
               const needReview =
                 item.kind === "booking" && item.booking.canReview === true;
               const status = historyStatus(item);
@@ -174,28 +170,36 @@ export function TripHistoryPage() {
                   /* Строка 3 — статус тоном: та же трёхстрочная раскладка, что у
                      уведомлений и жалоб. Раньше статус был приклеен к дате
                      (`subtitle`) и обрезался в «Отме…»/«Заверш…» — ключевое
-                     слово не читалось. */
+                     слово не читалось. Подсказка отзыва — здесь же, словами:
+                     в `after` она стояла числовым бейджем «1»
+                     (`Badge mode="critical"`), который читался счётчиком
+                     непрочитанного (такая роль в приложении одна — бейдж
+                     таббара), и заодно ВЫТЕСНЯЛА цену поездки. */
                   description={
-                    <span
-                      className={styles.status}
-                      data-tone={status.tone ?? undefined}
-                      data-testid={`history-status-${item.key}`}
-                    >
-                      {status.label}
-                    </span>
+                    <>
+                      <span
+                        className={styles.status}
+                        data-tone={status.tone ?? undefined}
+                        data-testid={`history-status-${item.key}`}
+                      >
+                        {status.label}
+                      </span>
+                      {needReview && (
+                        <span
+                          className={styles.reviewHint}
+                          data-testid={`history-review-${item.key}`}
+                        >
+                          {"· Оставьте отзыв"}
+                        </span>
+                      )}
+                    </>
                   }
                   after={
-                    needReview ? (
-                      <Badge type="number" mode="critical">
-                        1
-                      </Badge>
-                    ) : (
-                      <span className={styles.price}>{`${trip.price} ₽`}</span>
-                    )
+                    <span className={styles.price}>{`${trip.price} ₽`}</span>
                   }
-                  // needReview ведёт на /reviews, а не в карточку: красный
-                  // бейдж и aria-label обещали «оставьте отзыв», а карточка
-                  // поездки кнопки отзыва не содержит — обещание было
+                  // needReview ведёт на /reviews, а не в карточку: подсказка и
+                  // aria-label обещают «Оставьте отзыв», а карточка поездки
+                  // кнопки отзыва не содержит — обещание было бы
                   // неисполнимым, и единственный путь к отзыву оставался
                   // недостижимым с этой подсказки.
                   onClick={() =>
@@ -204,14 +208,15 @@ export function TripHistoryPage() {
                   aria-label={
                     // Имя строки = все её видимые части, как в ui/MenuRow:66
                     // (`${label}. ${subtitle}`). aria-label ЗАМЕНЯет доступное
-                    // имя, поэтому дата-время (subtitle) и цена/бейдж (after)
-                    // иначе были недостижимы: скринридер не мог сказать, КОГДА
-                    // поездка и СКОЛЬКО стоила.
+                    // имя, поэтому дата-время (subtitle) и цена (after) иначе
+                    // были недостижимы: скринридер не мог сказать, КОГДА
+                    // поездка и СКОЛЬКО стоила. Текст подсказки отзыва совпадает
+                    // с видимым — WCAG 2.5.3 (label in name).
                     `Поездка ${trip.fromCity} — ${trip.toCity}. ${relativeMoscowDay(
                       trip.departureAt,
                     )}, ${trip.time}. ${status.label}. ${
-                      needReview ? "Оставьте отзыв" : `${trip.price} ₽`
-                    }`
+                      needReview ? "Оставьте отзыв. " : ""
+                    }${trip.price} ₽`
                   }
                 >
                   {trip.fromCity} → {trip.toCity}

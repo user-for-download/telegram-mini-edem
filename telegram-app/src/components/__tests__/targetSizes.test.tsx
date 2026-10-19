@@ -13,9 +13,11 @@
 // текстом»). Механизм (MIN_TARGET → data-tap-target/min-height и
 // className-сквозняк IconButton кита) проверен DOM-рендером ниже.
 //
-// Отмена запроса в RideRequestsList — восьмой ConfirmPopup: высоту ей даёт
-// не проп, а CSS `.contentsBtn button { min-height: 44px }` (обёртка
-// display:contents не участвует в BTN_ROW-раскладке) — пин ниже.
+// Отмена запроса в RideRequestsList — восьмой ConfirmPopup, и тоже через
+// MIN_TARGET: раньше высоту ей давал CSS-костыль `.contentsBtn`
+// (обёртка display:contents для BTN_ROW-раскладки), теперь триггер стоит
+// соседом обычного действия в BTN_ROW — как Accept/Decline в
+// TripRequestsModal.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -68,6 +70,9 @@ describe("таргеты ConfirmPopup size=s держат 44px через MIN_TA
     { file: "pages/Profile/ProfilePage.tsx", count: 1 },
     { file: "pages/TripDetails/DriverPanel.tsx", count: 2 },
     { file: "components/Trip/TripCard.tsx", count: 2 },
+    // Восьмой триггер: отмена запроса на попутку — до 2026-10-19 держалась
+    // CSS-костылём `.contentsBtn` вместо MIN_TARGET.
+    { file: "components/Trip/RideRequestsList.tsx", count: 1 },
   ];
   for (const { file, count } of cases) {
     it(`${file}: все ${count} триггера с MIN_TARGET`, () => {
@@ -92,10 +97,22 @@ describe("таргеты ConfirmPopup size=s держат 44px через MIN_TA
     }
   });
 
-  it("RideRequestsList: отмена держит 44px через .contentsBtn (без BTN_ROW-поломки)", () => {
+  it("RideRequestsList: отмена — тихий деструктив в BTN_ROW, костыль .contentsBtn снят", () => {
+    const raw = readSrc("components/Trip/RideRequestsList.tsx");
+    // Без комментариев: объяснение дефекта само называет снятый класс.
+    const source = raw
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+    const usages = jsxUsages(source, "ConfirmPopup");
+    expect(usages).toHaveLength(1);
+    // 44px — пропом, а не правилом по потомку: `.contentsBtn` был обходом
+    // того, что stretched-кнопки в BTN_ROW_WRAP разъезжались в три строки.
+    expect(usages[0]).toContain("MIN_TARGET");
+    expect(usages[0]).toContain('mode="plain"');
+    expect(usages[0]).toContain("destructive");
+    expect(source).not.toContain("BTN_ROW_WRAP");
     const css = readSrc("components/Trip/TripModals.module.css");
-    expect(css).toMatch(/\.contentsBtn\s*\{[^}]*display:\s*contents/);
-    expect(css).toMatch(/\.contentsBtn button\s*\{[^}]*min-height:\s*44px/);
+    expect(css).not.toContain(".contentsBtn");
   });
 });
 

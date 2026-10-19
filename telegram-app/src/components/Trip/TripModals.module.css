@@ -72,16 +72,6 @@
   gap: var(--app-space-sm);
 }
 
-/* Обёртка ConfirmPopup: сама не участвует в раскладке (было contents),
- * но её кнопка обязана держать ту же высоту, что соседние (44px). */
-.contentsBtn {
-  display: contents;
-}
-
-.contentsBtn button {
-  min-height: 44px;
-}
-
 /* Досье пассажира (PassengerRequestModal): фон тела — secondary
  * (было style={{ background }} на List, U3). */
 .dossierList {
