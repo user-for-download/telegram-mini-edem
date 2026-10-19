@@ -262,3 +262,50 @@ describe("механизм: MIN_TARGET доходит до DOM", () => {
     expect(html).toContain(ICON_TARGET);
   });
 });
+
+describe("своп городов — 44×44 в своей колонке на обеих формах", () => {
+  // Один и тот же контрол стоит в «Поиске» и в «Создании поездки», поэтому
+  // рецепт (сетка + ICON_TARGET + variant="gray") обязан совпадать: в
+  // «Создании поездки» он до 2026-10-19 оставался на старом приёме —
+  // 26×26 в потоке на margin: -16px, поверх поля (реестр #54, #17).
+  const forms = [
+    ["pages/Search/SearchPage.tsx", "pages/Search/SearchPage.module.css"],
+    [
+      "pages/CreateTrip/CreateTripPage.tsx",
+      "pages/CreateTrip/CreateTripPage.module.css",
+    ],
+  ] as const;
+
+  /** Тело CSS-правила по селектору (`.swap.swap`) без комментариев. */
+  const ruleBody = (css: string, selector: string): string => {
+    const clean = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    const at = clean.indexOf(`${selector} {`);
+    if (at === -1) return "";
+    return clean.slice(at, clean.indexOf("}", at));
+  };
+
+  for (const [tsxFile, cssFile] of forms) {
+    it(`${tsxFile}: своп с ICON_TARGET, без size="s"`, () => {
+      const blocks = jsxBlocks(readSrc(tsxFile), "IconButton");
+      const swap = blocks.find((block) =>
+        block.includes("Поменять направление"),
+      );
+      expect(swap).toBeDefined();
+      // 44×44 круг — ICON_TARGET (min-width + min-height), а не MIN_TARGET:
+      // высота без ширины на border-radius:50% даёт овал.
+      expect(swap).toContain("ICON_TARGET");
+      expect(swap).toContain('variant="gray"');
+      expect(swap).not.toContain('size="s"');
+    });
+
+    it(`${cssFile}: своп — колонка сетки, без минус-отступов`, () => {
+      const body = ruleBody(readSrc(cssFile), ".swap.swap");
+      expect(body).toContain("grid-area: 1 / 2 / 3 / 3");
+      expect(body).not.toContain("margin");
+      // Поля — по своей колонке, кнопка занимает обе строки.
+      const fields = readSrc(cssFile);
+      expect(fields).toContain("grid-template-columns: minmax(0, 1fr) auto");
+      expect(fields).toContain(".cityFields > div:first-of-type");
+    });
+  }
+});

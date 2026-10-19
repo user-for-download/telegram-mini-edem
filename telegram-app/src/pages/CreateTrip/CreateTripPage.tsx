@@ -9,7 +9,7 @@ import {
 import { Notice } from "@/ui/Notice";
 import { Section } from "@/ui/Section";
 import { SwitchRow } from "@/ui/SwitchRow";
-import { BTN_ROW_WRAP, HINT, INFO, PROSE } from "@/ui/classes";
+import { BTN_ROW_WRAP, HINT, ICON_TARGET, INFO, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { QueryState } from "@/components/QueryState";
 import { Button } from "@/ui/Button";
@@ -365,14 +365,18 @@ export function CreateTripForm({
                 setField("fromCityId", next);
               }}
             />
+            {/* Своп — своя колонка сетки на всю высоту пары полей (тот же
+                приём, что на поиске): DOM «откуда → поменять → куда»
+                (таб-порядок логичный), кнопка не лежит поверх селекта и не
+                спорит с его шевроном. */}
             <IconButton
               type="button"
-              size="s"
+              variant="gray"
               onClick={swapCities}
               aria-label="Поменять направление"
-              className={styles.swap}
+              className={`${styles.swap} ${ICON_TARGET}`}
             >
-              <ArrowRightLeft size={14} className={INFO} />
+              <ArrowRightLeft size={16} className={INFO} />
             </IconButton>
             <CitySelectField
               id="create-to"

@@ -60,6 +60,11 @@ const ROOT_ROUTES = new Set([
 const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
   [(p) => p === "/", "Главная"],
   [(p) => p === "/trips/my/new", "Создание поездки"],
+  // Шторка «Заявки пассажиров» (роут /trips/my/:tripId/requests) — как
+  // «Автомобиль» и «Настройки уведомлений» ниже: на холодном входе
+  // (deep-link из уведомления) фоном встаёт «Поездки», и заголовок обязан
+  // называть ШТОРКУ, а не алиас «Мои поездки», которого на экране нет.
+  [(p) => /^\/trips\/my\/[^/]+\/requests$/.test(p), "Заявки пассажиров"],
   [(p) => p.startsWith("/trips/my"), "Мои поездки"],
   [(p) => p.startsWith("/bookings"), "Поездки"],
   [(p) => p.startsWith("/trips/"), "Поездка"],
@@ -67,7 +72,11 @@ const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
   [(p) => p.startsWith("/notifications"), "Уведомления"],
   [(p) => p.startsWith("/profile/history"), "История поездок"],
   [(p) => p.startsWith("/profile/ride-requests"), "История запросов"],
-  [(p) => p.startsWith("/profile/edit"), "Редактирование профиля"],
+  // Имя — как у строки профиля, которая открывает шторку («Редактировать
+  // профиль»), и как у заголовка самой шторки: правило то же, что у
+  // /settings (реестр #52). «Редактирование профиля» было третьим
+  // написанием одного экрана.
+  [(p) => p.startsWith("/profile/edit"), "Редактировать профиль"],
   [(p) => p.startsWith("/profile/support"), "Поддержка"],
   [(p) => p.startsWith("/profile/reports"), "Жалобы"],
   // Шторки поверх профиля, открываемые с экрана профиля. Обе — deep-link

@@ -380,7 +380,11 @@ export const ReviewsBody = memo(function ReviewsBody({
                 header={EMPTY_STATES.reviewsMineEmpty.header}
                 description={EMPTY_STATES.reviewsMineEmpty.description}
                 action={
-                  <Button size="m" onClick={() => pickTab("new")}>
+                  <Button
+                    size="m"
+                    variant="primary"
+                    onClick={() => pickTab("new")}
+                  >
                     Оставить отзыв
                   </Button>
                 }

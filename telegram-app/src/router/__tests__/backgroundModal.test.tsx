@@ -10,6 +10,9 @@
 // именно выбор фона и подсветку таба, а не содержимое экранов.
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, type InitialEntry } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -103,5 +106,49 @@ describe("route-шторка деталей поездки: фон — отку�
 
     expect(screen.getByTestId("trip-deeplink")).toBeTruthy();
     expect(screen.queryByTestId("notifications-page")).toBeNull();
+  });
+});
+
+// Заголовок шапки на холодном входе = имя ТОГО экрана, который открылся
+// (реестр #52: «имя экрана совпадает со строкой, которая его открывает»).
+// Карта `HEADER_TITLE_RULES` — модульная константа и не экспортирована,
+// поэтому пин читает исходник: правило и текст шторки обязаны совпадать,
+// иначе на deep-link из уведомления шапка называет третье (реестр #56).
+describe("заголовок шапки называет открытую шторку, а не алиас", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const routerSrc = readFileSync(join(here, "..", "AppRouter.tsx"), "utf8");
+  const rulesStart = routerSrc.indexOf("HEADER_TITLE_RULES");
+  const rules = routerSrc.slice(
+    rulesStart,
+    routerSrc.indexOf("];", rulesStart),
+  );
+  // Без комментариев: объяснение дефекта само называет прежнее написание.
+  const code = rules.replace(/^[ \t]*\/\/.*$/gm, "");
+
+  const pairs: Array<{ rule: string; modalFile: string; title: string }> = [
+    {
+      rule: "requests",
+      modalFile: "components/Trip/TripRequestsModal.tsx",
+      title: "Заявки пассажиров",
+    },
+    {
+      rule: "/profile/edit",
+      modalFile: "components/Profile/EditProfileModal.tsx",
+      title: "Редактировать профиль",
+    },
+  ];
+
+  for (const { rule, modalFile, title } of pairs) {
+    it(`${rule} → «${title}», как в шторке`, () => {
+      const line = code.split("\n").find((row) => row.includes(rule));
+      expect(line).toBeTruthy();
+      expect(line).toContain(`"${title}"`);
+      const modal = readFileSync(join(here, "..", "..", modalFile), "utf8");
+      expect(modal).toContain(`title="${title}"`);
+    });
+  }
+
+  it("«Редактирование профиля» — третьего написания одного экрана нет", () => {
+    expect(code).not.toContain("Редактирование профиля");
   });
 });

@@ -4,10 +4,15 @@
 // Файл переехал из components/Profile/__tests__/reviewsModal.test.tsx,
 // когда /reviews стал страницей вместо edge-шторки (ReviewsModal).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { REVIEW_STATUS, REVIEW_TEXT_MAX_LENGTH } from "@edem/contracts";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 const {
   mockUseMyReviews,
@@ -359,5 +364,21 @@ describe("selectReviewablePassengers: отзыв не предлагается �
       reviewed,
     );
     expect(result).toEqual([]);
+  });
+});
+
+// Действие пустого состояния — текстом исходника: вариант кнопки в HTML не
+// виден (кит кладёт `mode` в хэшированный класс), а правило одно на всё
+// приложение — реестр #48 («действие пустого состояния — primary, как
+// „Сбросить фильтры“ на поиске»). Пустое «Мои» было единственным в
+// приложении с приглушённой кнопкой (реестр #55).
+describe("пустое состояние «Мои»", () => {
+  it("действие — primary", () => {
+    const src = readFileSync(join(here, "..", "ReviewsPage.tsx"), "utf8");
+    const action = src.match(
+      /<Button[\s\S]{0,200}?Оставить отзыв[\s\S]{0,40}?<\/Button>/,
+    )?.[0];
+    expect(action).toBeTruthy();
+    expect(action).toContain('variant="primary"');
   });
 });
