@@ -13,11 +13,10 @@
 // текстом»). Механизм (MIN_TARGET → data-tap-target/min-height и
 // className-сквозняк IconButton кита) проверен DOM-рендером ниже.
 //
-// Отмена запроса в RideRequestsList — восьмой ConfirmPopup, и тоже через
-// MIN_TARGET: раньше высоту ей давал CSS-костыль `.contentsBtn`
+// Удаление запроса в RideRequestDetailsModal — восьмой ConfirmPopup, и тоже
+// через MIN_TARGET: раньше высоту ей давал CSS-костыль `.contentsBtn`
 // (обёртка display:contents для BTN_ROW-раскладки), теперь триггер стоит
-// соседом обычного действия в BTN_ROW — как Accept/Decline в
-// TripRequestsModal.
+// отдельной кнопкой шторки управления.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -70,9 +69,9 @@ describe("таргеты ConfirmPopup size=s держат 44px через MIN_TA
     { file: "pages/Profile/ProfilePage.tsx", count: 1 },
     { file: "pages/TripDetails/DriverPanel.tsx", count: 2 },
     { file: "components/Trip/TripCard.tsx", count: 2 },
-    // Восьмой триггер: отмена запроса на попутку — до 2026-10-19 держалась
+    // Восьмой триггер: удаление запроса на попутку — до 2026-10-19 держалось
     // CSS-костылём `.contentsBtn` вместо MIN_TARGET.
-    { file: "components/Trip/RideRequestsList.tsx", count: 1 },
+    { file: "components/Trip/RideRequestDetailsModal.tsx", count: 1 },
   ];
   for (const { file, count } of cases) {
     it(`${file}: все ${count} триггера с MIN_TARGET`, () => {
@@ -111,8 +110,8 @@ describe("таргеты ConfirmPopup size=s держат 44px через MIN_TA
     }
   });
 
-  it("RideRequestsList: отмена — тихий деструктив в BTN_ROW, костыль .contentsBtn снят", () => {
-    const raw = readSrc("components/Trip/RideRequestsList.tsx");
+  it("RideRequestDetailsModal: удаление — тихий деструктив, костыль .contentsBtn снят", () => {
+    const raw = readSrc("components/Trip/RideRequestDetailsModal.tsx");
     // Без комментариев: объяснение дефекта само называет снятый класс.
     const source = raw
       .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -124,6 +123,9 @@ describe("таргеты ConfirmPopup size=s держат 44px через MIN_TA
     expect(usages[0]).toContain("MIN_TARGET");
     expect(usages[0]).toContain('mode="plain"');
     expect(usages[0]).toContain("destructive");
+    // Триггер теперь внутри открытой шторки — подтверждение обязано быть
+    // вложенным корнем (иначе второй Drawer.Root).
+    expect(usages[0]).toContain("nested");
     expect(source).not.toContain("BTN_ROW_WRAP");
     const css = readSrc("components/Trip/TripModals.module.css");
     expect(css).not.toContain(".contentsBtn");

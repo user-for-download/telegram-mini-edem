@@ -127,7 +127,7 @@ describe("RideRequestHistoryPage", () => {
     const html = renderPage();
 
     expect(html).toContain("Москва → Тула");
-    expect(html).toContain("На паузу");
+    expect(html).toContain("Активен");
   });
 
   it("форма создания не встроена в страницу — она в портальном окне", () => {

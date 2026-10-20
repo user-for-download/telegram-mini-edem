@@ -2,8 +2,10 @@
 // /profile/ride-requests). Паттерн notificationsModal.test.tsx (SSR, моки
 // хуков через vi.hoisted, без testing-library).
 //
-// Список вынесен из бывшей шторки «Ищу попутку» без изменений поведения:
-// те же статусы, те же кнопки паузы/редактирования/отмены.
+// Список — только строки Cell: управление (пауза/редактирование/удаление)
+// живёт в шторке RideRequestDetailsModal, поэтому в закрытом состоянии его
+// кнопок в SSR-разметке быть не должно. Само содержимое шторки проверяет
+// rideRequestDetails.test.tsx.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -123,38 +125,45 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("RideRequestsList: карточки и действия", () => {
-  it("активный запрос: маршрут, бейдж «Активен», пауза/редактирование/отмена", () => {
+describe("RideRequestsList: строки Cell", () => {
+  it("активный запрос: маршрут, статус, окно и места", () => {
     setMocks({ data: [makeRequest()] });
 
     const html = renderList();
 
     expect(html).toContain("Москва → Тула");
     expect(html).toContain("Активен");
-    expect(html).toContain("На паузу");
-    expect(html).toContain("Редактировать");
-    expect(html).toContain("Отменить запрос");
+    expect(html).toContain("2 января, 13:00 — 17:00");
+    expect(html).toContain("2 места");
+    expect(html).toContain(
+      'data-testid="ride-request-cell-11111111-1111-4111-8111-111111111111"',
+    );
+    // Управление переехало в шторку — в списке его кнопок быть не должно.
+    expect(html).not.toContain("На паузу");
+    expect(html).not.toContain("Редактировать");
+    expect(html).not.toContain("Удалить запрос");
   });
 
-  it("приостановленный запрос: кнопка «Возобновить» вместо паузы", () => {
+  it("приостановленный запрос: в строке «На паузе», без кнопки «Возобновить»", () => {
     setMocks({ data: [makeRequest({ status: "paused" })] });
 
     const html = renderList();
 
-    expect(html).toContain("Возобновить");
-    expect(html).not.toContain("На паузу");
+    expect(html).toContain("На паузе");
+    expect(html).not.toContain("Возобновить");
   });
 
-  it("завершённый запрос: без действий пауза/редактирование/отмена", () => {
+  it("завершённый запрос: статус виден, действий нет", () => {
     setMocks({ data: [makeRequest({ status: "fulfilled" })] });
 
     const html = renderList();
 
     expect(html).toContain("Москва → Тула");
+    expect(html).toContain("Выполнен");
     expect(html).not.toContain("На паузу");
     expect(html).not.toContain("Возобновить");
     expect(html).not.toContain("Редактировать");
-    expect(html).not.toContain("Отменить запрос");
+    expect(html).not.toContain("Удалить запрос");
   });
 
   it("список не содержит формы создания: окно и страница разделены", () => {
@@ -184,54 +193,54 @@ describe("RideRequestsList: состояния", () => {
     expect(html).toContain("Повторить");
   });
 
-  it("тап-таргеты ≥44px", () => {
+  it("строка — нативная кнопка с доступным именем", () => {
     setMocks({ data: [makeRequest()] });
 
-    expect(renderList()).toContain('data-tap-target="44"');
+    const html = renderList();
+
+    expect(html).toContain("<button");
+    expect(html).toContain("Открыть управление");
   });
 });
 
 // Регресс H3: статус `expired` не пишет никто, кроме сида. Просроченная
 // заявка навсегда остаётся active/paused, но сервер возврат в active
-// отклоняет (409 CONFLICT). UI обещал «Возобновить», который всегда падал,
-// и заявка становилась недоступна через интерфейс навсегда.
+// отклоняет (409 CONFLICT). Строка обязана честно сказать «Истёк», а
+// шторка — не предлагать действия, которые сервер отклонит.
 describe("RideRequestsList: просроченная заявка", () => {
   const expiredAt = "2020-01-01T00:00:00.000Z";
 
-  it("скрывает «Возобновить» у paused с истёкшим сроком", () => {
-    setMocks({
-      data: [makeRequest({ status: "paused", expiresAt: expiredAt })],
-    });
-    const html = renderList();
-    expect(html).not.toContain("Возобновить");
-  });
-
-  it("подпись не врёт: вместо «На паузе» — «Истёк»", () => {
+  it("у paused с истёкшим сроком — «Истёк», без «Возобновить»", () => {
     setMocks({
       data: [makeRequest({ status: "paused", expiresAt: expiredAt })],
     });
     const html = renderList();
     expect(html).toContain("Истёк");
     expect(html).not.toContain("На паузе");
+    expect(html).not.toContain("Возобновить");
   });
 
-  it("скрывает паузу и правку у active с истёкшим сроком", () => {
+  it("у active с истёкшим сроком нет паузы и правки", () => {
     setMocks({
       data: [makeRequest({ status: "active", expiresAt: expiredAt })],
     });
     const html = renderList();
+    expect(html).toContain("Истёк");
     expect(html).not.toContain("На паузу");
     expect(html).not.toContain("Редактировать");
-    expect(html).toContain("Срок действия истёк");
   });
 
-  it("действующая заявка сохраняет все действия", () => {
+  it("действующая paused-заявка остаётся «На паузе»", () => {
     setMocks({
-      data: [makeRequest({ status: "paused", expiresAt: "2030-01-02T10:00:00.000Z" })],
+      data: [
+        makeRequest({
+          status: "paused",
+          expiresAt: "2030-01-02T10:00:00.000Z",
+        }),
+      ],
     });
     const html = renderList();
-    expect(html).toContain("Возобновить");
     expect(html).toContain("На паузе");
-    expect(html).not.toContain("Срок действия истёк");
+    expect(html).not.toContain("Истёк");
   });
 });

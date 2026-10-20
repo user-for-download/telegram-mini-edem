@@ -1,7 +1,7 @@
 // Лимит мест в поездке — константа контракта MAX_SEATS, а не литерал.
 //
-// Зачем вообще пин: RideRequestsList (форма правки заявки) держал `max="3"`
-// литералом, тогда как RideRequestFields и EditTripForm оба брали
+// Зачем вообще пин: RideRequestDetailsModal (форма правки заявки) держал
+// `max="3"` литералом, тогда как RideRequestFields и EditTripForm оба брали
 // MAX_SEATS. Смена MAX_SEATS в контракте тихо оставила бы форму правки на
 // старом лимите — и zod отбил бы значение, которое поле само же разрешило
 // ввести.
@@ -26,7 +26,7 @@ import { MAX_SEATS } from "@edem/contracts";
 const SEAT_FORMS = [
   "src/components/Trip/RideRequestFields.tsx",
   "src/components/Trip/EditTripForm.tsx",
-  "src/components/Trip/RideRequestsList.tsx",
+  "src/components/Trip/RideRequestDetailsModal.tsx",
 ] as const;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");

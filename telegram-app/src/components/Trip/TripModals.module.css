@@ -72,6 +72,81 @@
   gap: var(--app-space-sm);
 }
 
+/* ── «Мои заявки» на /profile/ride-requests: список Cell + шторка ──────
+ * Строки идут сплошняком, как в уведомлениях/жалобах. Обёртка нужна
+ * из-за QueryState: пустое состояние и лента — разные ветки. */
+.requestsList {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Последняя строка — Cell кита даёт свой нижний паддинг; в списке без
+ * рамок он накапливается. Обрезаем только у самой нижней. */
+.requestsList > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Строка заявки — на всю ширину ленты. Без `width: 100%` кнопка Cell
+ * сжимается по контенту, и колонка `after` (шеврон) встаёт сразу после
+ * текста, а не у правого края (та же особенность, что в истории поездок). */
+.requestCell {
+  width: 100%;
+  gap: var(--app-space-md);
+}
+
+/* Статус в третьей строке: текст + тон, как в истории поездок и жалобах.
+ * Цвет — подсказка, смысл всегда в словах (a11y: color + text). */
+.requestStatus {
+  color: var(--app-muted);
+}
+
+.requestStatus[data-tone="warning"] {
+  color: var(--app-warning);
+}
+
+.requestStatus[data-tone="info"] {
+  color: var(--app-info);
+}
+
+.requestStatus[data-tone="success"] {
+  color: var(--app-success);
+}
+
+.requestStatus[data-tone="danger"] {
+  color: var(--app-danger);
+}
+
+/* Места — приглушённой справкой рядом со статусом, а не вторым акцентом. */
+.requestSeats {
+  color: var(--app-muted);
+}
+
+/* Шеврон открытия шторки — декоративен, намекает на переход. */
+.requestChevron {
+  color: var(--app-muted);
+}
+
+/* Шапка шторки: маршрут слева, статус-пилюля справа. */
+.detailsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+}
+
+/* Длинный маршрут переносится, а не выдавливает пилюлю за край:
+ * min-width: 0 разрешает flex-элементу сжаться ниже своего содержимого. */
+.detailsSubject {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Справочные строки (окно, места, срок) — приглушённые, чтобы не спорить
+ * с маршрутом и статусом. */
+.detailsMeta {
+  color: var(--app-muted);
+}
+
 /* Досье пассажира (PassengerRequestModal): фон тела — secondary
  * (было style={{ background }} на List, U3). */
 .dossierList {

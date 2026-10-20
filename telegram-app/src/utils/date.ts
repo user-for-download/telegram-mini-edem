@@ -351,6 +351,15 @@ export function moscowDayContext(
   };
 }
 
+/** Московское время «ЧЧ:ММ» — общая часть одиночной даты и диапазона. */
+function moscowClock(date: Date): string {
+  return new Intl.DateTimeFormat("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: MOSCOW_TZ,
+  }).format(date);
+}
+
 /**
  * ISO-момент → «30 сентября, 18:30» в московском времени. Невалидный
  * ввод — «—». Для сущностей без своих date/time-полей (запросы попуток):
@@ -366,10 +375,28 @@ export function formatMoscowDateTime(value: string | undefined): string {
     month: "long",
     timeZone: MOSCOW_TZ,
   }).format(date);
-  const clock = new Intl.DateTimeFormat("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: MOSCOW_TZ,
-  }).format(date);
-  return `${day}, ${clock}`;
+  return `${day}, ${moscowClock(date)}`;
+}
+
+/**
+ * Окно «30 сентября, 18:30 — 21:00» с одной датой, если начало и конец
+ * приходятся на московский день. В строке списка повтор даты съедал
+ * подпись до «21 октября, 07:38 — 21 о…»; в шторке — читался как шум.
+ * Разные дни/годы остаются полными, чтобы граница окна была однозначной.
+ */
+export function formatMoscowDateTimeRange(
+  start: string | undefined,
+  end: string | undefined,
+): string {
+  const startTime = start ? Date.parse(start) : Number.NaN;
+  const endTime = end ? Date.parse(end) : Number.NaN;
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
+    return `${formatMoscowDateTime(start)} — ${formatMoscowDateTime(end)}`;
+  }
+  const startDate = new Date(startTime);
+  const endDate = new Date(endTime);
+  if (moscowDayKey(startDate) === moscowDayKey(endDate)) {
+    return `${formatMoscowDateTime(start)} — ${moscowClock(endDate)}`;
+  }
+  return `${formatMoscowDateTime(start)} — ${formatMoscowDateTime(end)}`;
 }

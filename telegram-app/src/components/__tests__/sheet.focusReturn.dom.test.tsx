@@ -272,10 +272,10 @@ describe("F23: подтверждение поверх шторки — влож
   });
 
   it("подтверждение на странице остаётся обычным корнем", async () => {
-    // Вложенным может быть только то, что нарисовано В шторке: пять
-    // ConfirmPopup на страницах (ProfilePage, DriverPanel ×2, TripCard ×2,
-    // BookingPanel, RideRequestsList) живут вне Drawer.Content, и для них
-    // NestedRoot взял бы контекст-заглушку.
+    // Вложенным может быть только то, что нарисовано В шторке: ConfirmPopup
+    // на страницах (ProfilePage, DriverPanel ×2, TripCard ×2, BookingPanel)
+    // живут вне Drawer.Content, и для них NestedRoot взял бы
+    // контекст-заглушку.
     render(
       <AppRoot platform="base">
         <ConfirmPopup
@@ -313,9 +313,11 @@ describe("F23: флаг nested стоит ровно на ConfirmPopup внут�
       .map((chunk) => chunk.slice(0, chunk.indexOf("/>")));
 
   const cases: Array<{ file: string; count: number }> = [
-    // Содержимое шторок: удаление машины и приём/отклонение заявки.
+    // Содержимое шторок: удаление машины, приём/отклонение заявки и
+    // удаление запроса на попутку.
     { file: "components/Profile/VehicleModal.tsx", count: 1 },
     { file: "components/Trip/TripRequestsModal.tsx", count: 2 },
+    { file: "components/Trip/RideRequestDetailsModal.tsx", count: 1 },
   ];
   for (const { file, count } of cases) {
     it(`${file}: все ${count} ConfirmPopup помечены nested`, () => {
@@ -329,7 +331,6 @@ describe("F23: флаг nested стоит ровно на ConfirmPopup внут�
 
   const flat: string[] = [
     "components/Trip/TripCard.tsx",
-    "components/Trip/RideRequestsList.tsx",
     "pages/TripDetails/BookingPanel.tsx",
     "pages/TripDetails/DriverPanel.tsx",
     "pages/Profile/ProfilePage.tsx",

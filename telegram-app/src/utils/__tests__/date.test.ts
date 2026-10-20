@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, formatArrivalTime, formatDuration, formatMoscowDateTime, fromMoscowDateTimeInput, relativeMoscowDay, moscowDayKey, moscowDayLabel, moscowTimeLabel, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
+import { dayLabel, formatArrivalTime, formatDuration, formatMoscowDateTime, formatMoscowDateTimeRange, fromMoscowDateTimeInput, relativeMoscowDay, moscowDayKey, moscowDayLabel, moscowTimeLabel, toIsoDate, toLocalDateTimeInputValue } from "@/utils/date";
 
 const NOW = new Date(2026, 8, 10, 15, 0, 0); // четверг 2026-09-10
 
@@ -121,6 +121,31 @@ describe("formatMoscowDateTime", () => {
   it("returns a dash for missing or invalid input", () => {
     expect(formatMoscowDateTime(undefined)).toBe("—");
     expect(formatMoscowDateTime("не дата")).toBe("—");
+  });
+});
+
+describe("formatMoscowDateTimeRange", () => {
+  it("one date when both ends are on the same Moscow day", () => {
+    // 07:00Z и 10:00Z = 10:00 и 13:00 МСК того же дня.
+    expect(
+      formatMoscowDateTimeRange(
+        "2026-10-21T07:00:00.000Z",
+        "2026-10-21T10:00:00.000Z",
+      ),
+    ).toBe("21 октября, 10:00 — 13:00");
+  });
+
+  it("keeps both dates when the window crosses midnight", () => {
+    expect(
+      formatMoscowDateTimeRange(
+        "2026-10-21T20:00:00.000Z",
+        "2026-10-22T04:00:00.000Z",
+      ),
+    ).toBe("21 октября, 23:00 — 22 октября, 07:00");
+  });
+
+  it("missing/invalid input does not crash the row", () => {
+    expect(formatMoscowDateTimeRange(undefined, "не дата")).toBe("— — —");
   });
 });
 
