@@ -52,7 +52,11 @@ function report(overrides: Record<string, unknown> = {}) {
 
 function setMocks(mine: Record<string, unknown> = {}) {
   mockUseMine.mockReturnValue(queryState({ data: [], ...mine }));
-  mockUseCreate.mockReturnValue({ mutate: vi.fn(), isPending: false, error: null });
+  mockUseCreate.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+  });
 }
 
 function renderPage(): string {
@@ -93,6 +97,21 @@ describe("ReportsPage: форма — во всплывающем окне", () 
     expect(html.indexOf("Мои жалобы")).toBeLessThan(
       html.indexOf("Подать жалобу"),
     );
+  });
+
+  it("лента жалоб не обёрнута в SectionBody — один гуттер, как у уведомлений", () => {
+    // Регресс: SectionBody добавляет 16px к 16px гуттера Page. Кнопка
+    // создания остаётся в собственной секции с SectionBody — проверяем ровно
+    // участок между заголовком ленты и кнопкой.
+    const source = readFileSync(join(here, "..", "ReportsPage.tsx"), "utf8");
+    const start = source.indexOf('header="Мои жалобы"');
+    const end = source.indexOf("</QueryState>", start);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+
+    const feed = source.slice(start, end);
+    expect(feed).not.toContain("<SectionBody>");
+    expect(feed).not.toContain("styles.list");
   });
 });
 
@@ -160,7 +179,6 @@ describe("ReportsPage: мои жалобы", () => {
     // Дата в строке есть — правая колонка Info, как у уведомлений.
     expect(html).toContain("09.09.2026");
   });
-
 });
 
 describe("ReportsPage: состояния запроса", () => {

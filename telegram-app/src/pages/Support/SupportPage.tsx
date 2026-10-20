@@ -241,35 +241,39 @@ export function SupportPage() {
           </SectionBody>
         </Section>
 
-        <Section header="Мои обращения">
+        <QueryState
+          loading={myFeedbacks.isLoading}
+          error={myFeedbacks.error}
+          // Пустое состояние рисуем сами, а не веткой QueryState: заголовок
+          // «Мои обращения» должен остаться и на пустом списке. Строки —
+          // прямые дети Section (как уведомления), без SectionBody: тело
+          // секции добавляло второй 16px-гуттер.
+          empty={false}
+          emptyText=""
+          onRetry={() => void myFeedbacks.refetch()}
+        >
+          <Section header="Мои обращения">
+            {myFeedbacks.data?.map((feedback) => (
+              <FeedbackCell
+                key={feedback.id}
+                feedback={feedback}
+                onOpen={setSelectedId}
+              />
+            ))}
+          </Section>
+          {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
+            <EmptyState
+              header={EMPTY_STATES.supportEmpty.header}
+              description={EMPTY_STATES.supportEmpty.description}
+            />
+          ) : null}
+        </QueryState>
+        {/* Написать новое обращение — из окна: сама страница отвечает за
+            FAQ и историю, а форма на весь экран занимала бы его
+            целиком. Своя секция с телом, а не SectionBody вокруг списка:
+            у кнопки остаётся карточка, у ленты — один гуттер Page. */}
+        <Section>
           <SectionBody>
-            <QueryState
-              loading={myFeedbacks.isLoading}
-              error={myFeedbacks.error}
-              empty={false}
-              emptyText=""
-              onRetry={() => void myFeedbacks.refetch()}
-            >
-              {!myFeedbacks.data || myFeedbacks.data.length === 0 ? (
-                <EmptyState
-                  header={EMPTY_STATES.supportEmpty.header}
-                  description={EMPTY_STATES.supportEmpty.description}
-                />
-              ) : (
-                <div className={styles.list}>
-                  {myFeedbacks.data.map((feedback) => (
-                    <FeedbackCell
-                      key={feedback.id}
-                      feedback={feedback}
-                      onOpen={setSelectedId}
-                    />
-                  ))}
-                </div>
-              )}
-            </QueryState>
-            {/* Написать новое обращение — из окна: сама страница отвечает за
-                FAQ и историю, а форма на весь экран занимала бы его
-                целиком. */}
             <Button
               stretched
               size="m"

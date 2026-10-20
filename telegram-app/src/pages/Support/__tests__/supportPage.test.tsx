@@ -50,8 +50,16 @@ function feedback(overrides: Record<string, unknown> = {}) {
 
 function setMocks(mine: Record<string, unknown> = {}) {
   mockUseMine.mockReturnValue(queryState({ data: [], ...mine }));
-  mockUseCreate.mockReturnValue({ mutate: vi.fn(), isPending: false, error: null });
-  mockUseAppeal.mockReturnValue({ mutate: vi.fn(), isPending: false, error: null });
+  mockUseCreate.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+  });
+  mockUseAppeal.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+  });
 }
 
 function renderPage(): string {
@@ -121,7 +129,11 @@ describe("SupportPage: мои обращения", () => {
     setMocks({
       data: [
         feedback({ id: "f-1", reply: "Разобрались, уведомление доставлено" }),
-        feedback({ id: "f-2", subject: "Второй вопрос", text: "Текст второго" }),
+        feedback({
+          id: "f-2",
+          subject: "Второй вопрос",
+          text: "Текст второго",
+        }),
       ],
     });
 
@@ -159,6 +171,22 @@ describe("SupportPage: структура экрана", () => {
     expect(html.indexOf("Мои обращения")).toBeLessThan(
       html.indexOf("Создать обращение"),
     );
+  });
+
+  it("лента обращений не обёрнута в SectionBody — один гуттер, как у уведомлений", () => {
+    // Регресс: SectionBody добавляет 16px к 16px гуттера Page, и строки
+    // становятся заметно уже остальных лент. FAQ и кнопка создания остаются
+    // в SectionBody — проверяем ровно участок между заголовком ленты и
+    // кнопкой.
+    const source = readFileSync(join(here, "..", "SupportPage.tsx"), "utf8");
+    const start = source.indexOf('header="Мои обращения"');
+    const end = source.indexOf("</QueryState>", start);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+
+    const feed = source.slice(start, end);
+    expect(feed).not.toContain("<SectionBody>");
+    expect(feed).not.toContain("styles.list");
   });
 
   it("в обычном состоянии нет формы обжалования блокировки", () => {

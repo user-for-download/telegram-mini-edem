@@ -6,6 +6,8 @@
 // создания живёт в портальном окне (в renderToString не попадает), список —
 // на странице.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -113,12 +115,38 @@ afterEach(() => {
 });
 
 describe("RideRequestHistoryPage", () => {
-  it("имя экрана скрытым h1, кнопка создания и заголовок списка", () => {
+  it("имя экрана, заголовок списка и CTA только в пустом состоянии", () => {
     const html = renderPage();
 
     expect(html).toContain("История запросов");
-    expect(html).toContain("Создать запрос");
     expect(html).toContain("Мои заявки");
+    expect(html).toContain("Пока пусто");
+    expect(html).toContain("Создать запрос");
+    expect(html.indexOf("Мои заявки")).toBeLessThan(
+      html.indexOf("Создать запрос"),
+    );
+  });
+
+  it("в истории нет отдельной секции создания — только окно по CTA", () => {
+    // Регресс: секция «Нужен попутчик» дублировала главную и отодвигала
+    // историю. Создание живёт на главной, на странице истории — только
+    // действие пустого состояния.
+    const source = readFileSync(
+      fileURLToPath(new URL("../RideRequestHistoryPage.tsx", import.meta.url)),
+      "utf8",
+    );
+    expect(source).not.toContain("Нужен попутчик");
+    expect(source).not.toContain("<SectionBody>");
+    expect(source).toContain("<RideRequestsList onCreate={openCreate} />");
+  });
+
+  it("при наличии заявок кнопки создания нет — это только история", () => {
+    mockUseRequests.mockReturnValue(infiniteState([makeRequest()]));
+
+    const html = renderPage();
+
+    expect(html).toContain("Москва → Тула");
+    expect(html).not.toContain("Создать запрос");
   });
 
   it("список заявок выводится на странице", () => {

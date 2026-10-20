@@ -4,9 +4,12 @@ import { ChevronRight, Route } from "lucide-react";
 import type { RideRequest } from "@edem/contracts";
 
 import { QueryState } from "@/components/QueryState";
+import { Button } from "@/ui/Button";
 import { Cell } from "@/ui/Cell";
 import { EMPTY_STATES } from "@/ui/emptyStates";
+import { EmptyState } from "@/ui/EmptyState";
 import { FetchMore } from "@/ui/FetchMore";
+import { Section } from "@/ui/Section";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
 import { useRideRequestsQuery } from "@/queries/useRideRequestsQuery";
 import { mergeUniqueById } from "@/helpers/mergeUniqueById";
@@ -61,11 +64,7 @@ const RideRequestCell = memo(function RideRequestCell({
         </>
       }
       after={
-        <ChevronRight
-          size={16}
-          className={styles.requestChevron}
-          aria-hidden
-        />
+        <ChevronRight size={16} className={styles.requestChevron} aria-hidden />
       }
       aria-label={`Запрос ${request.fromCity.name} — ${request.toCity.name}. ${window}. ${statusLabel}. ${seats}. Открыть управление`}
       data-testid={`ride-request-cell-${request.id}`}
@@ -88,10 +87,24 @@ const RideRequestCell = memo(function RideRequestCell({
  * в шторке `RideRequestDetailsModal`. Раньше действия были встроены в
  * карточки и занимали три строки на каждую заявку.
  *
+ * Раскладка — как у уведомлений: `Section` — прямой ребёнок `Page`, строки —
+ * прямые дети `Section`. Обёртка `SectionBody` давала второй горизонтальный
+ * паддинг (16 страницы + 16 тела), поэтому лента была заметно уже остальных
+ * экранов; китовый `Section` сам вставляет `Divider` между строками.
+ *
  * Back закрывает шторку через `useModalBack`: окно state-модальное, у него
  * нет собственного роута.
+ *
+ * `onCreate` — единственное действие создания на странице истории: оно
+ * показывается только в пустом состоянии. Так экран без заявок не тупик, а
+ * лента не начинается с дублирующей primary-кнопки (создание живёт на
+ * главной, «Ищу попутку»).
  */
-export const RideRequestsList = memo(function RideRequestsList() {
+export const RideRequestsList = memo(function RideRequestsList({
+  onCreate,
+}: {
+  onCreate: () => void;
+}) {
   const requests = useRideRequestsQuery();
   // Бесконечная лента: свои заявки копятся (терминальные остаются в
   // истории), поэтому список обязан уметь догружать страницы — раньше
@@ -101,6 +114,7 @@ export const RideRequestsList = memo(function RideRequestsList() {
   // окно, поэтому граничная строка приезжала второй раз и карточка
   // дублировалась (React ругался на повторный key).
   const items = mergeUniqueById(requests.data?.pages);
+  const isEmpty = items.length === 0;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Держим id, а не объект: после мутации инвалидация обновит страницы, и
   // шторка перерисуется по свежим данным, а не по устаревшей копии.
@@ -126,11 +140,14 @@ export const RideRequestsList = memo(function RideRequestsList() {
       <QueryState
         loading={requests.isLoading}
         error={listBlockingError(requests)}
-        empty={items.length === 0}
-        emptyText={EMPTY_STATES.rideRequestsEmpty.description}
+        // Пустое состояние рисуем сами, а не веткой QueryState: заголовок
+        // «Мои заявки» должен остаться и на пустом списке, а ветка empty
+        // вернула бы только EmptyState без секции.
+        empty={false}
+        emptyText=""
         onRetry={() => void requests.refetch()}
       >
-        <div className={styles.requestsList}>
+        <Section header="Мои заявки">
           {items.map((request) => (
             <RideRequestCell
               key={request.id}
@@ -138,14 +155,26 @@ export const RideRequestsList = memo(function RideRequestsList() {
               onOpen={setSelectedId}
             />
           ))}
-        </div>
-        <FetchMore
-          hasNextPage={requests.hasNextPage}
-          isFetchingNextPage={requests.isFetchingNextPage}
-          fetchNextPage={() => void requests.fetchNextPage()}
-          error={requests.isFetchNextPageError ? requests.error : null}
-          sentinelRef={sentinelRef}
-        />
+        </Section>
+        {isEmpty ? (
+          <EmptyState
+            header={EMPTY_STATES.rideRequestsEmpty.header}
+            description={EMPTY_STATES.rideRequestsEmpty.description}
+            action={
+              <Button size="m" variant="primary" onClick={onCreate}>
+                Создать запрос
+              </Button>
+            }
+          />
+        ) : (
+          <FetchMore
+            hasNextPage={requests.hasNextPage}
+            isFetchingNextPage={requests.isFetchingNextPage}
+            fetchNextPage={() => void requests.fetchNextPage()}
+            error={requests.isFetchNextPageError ? requests.error : null}
+            sentinelRef={sentinelRef}
+          />
+        )}
       </QueryState>
       <RideRequestDetailsModal
         request={selected}

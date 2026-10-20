@@ -151,37 +151,40 @@ export function ReportsPage() {
             страницах»), а секции фасад отдаёт как h2 — имя экрана даёт
             скрытый h1. */}
         <VisuallyHidden Component="h1">Жалобы</VisuallyHidden>
-        <Section header="Мои жалобы">
+        <QueryState
+          loading={myReports.isLoading}
+          error={myReports.error}
+          // Пустое состояние рисуем сами, а не веткой QueryState: заголовок
+          // «Мои жалобы» должен остаться и на пустом списке. Строки — прямые
+          // дети Section (как уведомления), без SectionBody: тело секции
+          // добавляло второй 16px-гуттер и лента была уже остальных экранов.
+          empty={false}
+          emptyText=""
+          onRetry={() => void myReports.refetch()}
+        >
+          <Section header="Мои жалобы">
+            {myReports.data?.map((report) => (
+              <ReportCell
+                key={report.id}
+                report={report}
+                onOpen={setSelectedId}
+              />
+            ))}
+          </Section>
+          {!myReports.data || myReports.data.length === 0 ? (
+            <EmptyState
+              header={EMPTY_STATES.reportsEmpty.header}
+              description={EMPTY_STATES.reportsEmpty.description}
+            />
+          ) : null}
+        </QueryState>
+        {/* Подать жалобу — из окна: страница отвечает за список и ответы
+            модерации, а полноэкранная форма занимала её целиком. Тот же
+            приём, что у обращения в поддержку. Своя секция с телом, а не
+            SectionBody вокруг списка: у кнопки остаётся карточка, у ленты —
+            один гуттер Page. */}
+        <Section>
           <SectionBody>
-            <QueryState
-              loading={myReports.isLoading}
-              error={myReports.error}
-              empty={false}
-              emptyText=""
-              onRetry={() => void myReports.refetch()}
-            >
-              {!myReports.data || myReports.data.length === 0 ? (
-                <EmptyState
-                  header={EMPTY_STATES.reportsEmpty.header}
-                  description={EMPTY_STATES.reportsEmpty.description}
-                />
-              ) : (
-                /* Лента — прямые Cell внутри Section: кит сам вставляет
-                   Divider между строками (паттерн NotificationsPage). */
-                <div className={styles.list}>
-                  {myReports.data.map((report) => (
-                    <ReportCell
-                      key={report.id}
-                      report={report}
-                      onOpen={setSelectedId}
-                    />
-                  ))}
-                </div>
-              )}
-            </QueryState>
-            {/* Подать жалобу — из окна: страница отвечает за список и ответы
-                модерации, а полноэкранная форма занимала её целиком. Тот же
-                приём, что у обращения в поддержку. */}
             <Button
               stretched
               size="m"

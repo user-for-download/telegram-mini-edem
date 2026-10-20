@@ -10,17 +10,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 
-const {
-  mockUseRequests,
-  mockUseUpdate,
-  mockUseStatus,
-  mockUseCancel,
-} = vi.hoisted(() => ({
-  mockUseRequests: vi.fn(),
-  mockUseUpdate: vi.fn(),
-  mockUseStatus: vi.fn(),
-  mockUseCancel: vi.fn(),
-}));
+const { mockUseRequests, mockUseUpdate, mockUseStatus, mockUseCancel } =
+  vi.hoisted(() => ({
+    mockUseRequests: vi.fn(),
+    mockUseUpdate: vi.fn(),
+    mockUseStatus: vi.fn(),
+    mockUseCancel: vi.fn(),
+  }));
 
 vi.mock("@/queries/useRideRequestsQuery", async (importOriginal) => {
   const original =
@@ -112,7 +108,7 @@ function setMocks(requests: Record<string, unknown> = {}) {
 function renderList(): string {
   return renderToString(
     <AppRoot platform="base">
-      <RideRequestsList />
+      <RideRequestsList onCreate={vi.fn()} />
     </AppRoot>,
   );
 }
