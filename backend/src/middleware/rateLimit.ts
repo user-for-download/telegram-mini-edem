@@ -331,6 +331,17 @@ export const bookingsReadLimiter = createUserRateLimiter({
 });
 
 /**
+ * Пользователь: список своих поездок (GET /trips/my), 200 в минуту.
+ * Лимит user-based, а не IP: /trips/my отдаёт персональные данные и
+ * тянет тяжёлый findMany с водителем/машиной/счётчиками.
+ */
+export const tripsMyReadLimiter = createUserRateLimiter({
+  windowMs: env.TRIPS_MY_READ_RATE_WINDOW_MS,
+  max: env.TRIPS_MY_READ_RATE_MAX,
+  keyPrefix: "user-trips-my-read",
+});
+
+/**
  * Пользователь: создание обращения (POST /feedback), 10 в час.
  *
  * Регрессия F7: у POST /feedback стоял только общий `mutationLimiter`,

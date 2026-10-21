@@ -20,7 +20,7 @@ import {
 } from "../middleware/rateLimit.js";
 import { ERROR_CODES } from "../errors.js";
 import { devRateMax } from "../env.js";
-import { adminGuard } from "../admin/guard.js";
+import { adminCsrfGuard, adminGuard } from "../admin/guard.js";
 import { serializeAdminReport, serializeReport } from "./serializers.js";
 
 const reportLimiter = createUserRateLimiter({
@@ -334,6 +334,7 @@ reportsRouter.post("/", mutationLimiter, reportLimiter, async (c) => {
 
 export const adminReportsRouter = new Hono();
 adminReportsRouter.use("*", adminGuard);
+adminReportsRouter.use("*", adminCsrfGuard);
 adminReportsRouter.get("/", adminReadLimiter, async (c) => {
   const parsed = adminReportsQuerySchema.safeParse(
     sanitizeValue(c.req.query()),

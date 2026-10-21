@@ -46,8 +46,9 @@ import {
   adminReadLimiter,
 } from "../middleware/rateLimit.js";
 import {
-  signAdminAccessToken,
-  verifyAdminAccessToken,
+  createAdminAccessSession,
+  revokeAdminSessionByToken,
+  verifyAdminSession,
 } from "../auth/tokens.js";
 import { wsManager } from "../ws/manager.js";
 import { tokensEqual } from "../utils/timingSafeEqual.js";
@@ -61,7 +62,7 @@ import {
 import { getTelegramDeliveryMetrics } from "../services/telegramMetrics.js";
 import { logBusinessEvent } from "../logger/business.js";
 import { logger } from "../logger.js";
-import { ADMIN_COOKIE_NAME, adminGuard } from "./guard.js";
+import { ADMIN_COOKIE_NAME, adminCsrfGuard, adminGuard } from "./guard.js";
 import {
   serializeAdminBooking,
   serializeAdminFeedback,
@@ -91,15 +92,19 @@ export const adminRouter = new Hono();
  * логин по HTTP. Чужую сессию это не затрагивает.
  */
 function resolveCookieSecure(c: Context): boolean {
+  // В production Secure обязателен всегда: доверять X-Forwarded-Proto
+  // нельзя (его может прислать клиент), иначе `http` снимает Secure.
+  if (env.isProduction) return true;
+
+  // Вне production разрешаем https-прокси (Vite/локальный TLS), а http —
+  // только без Secure; иначе логин на localhost перестанет работать.
   const proto = c.req
     .header("x-forwarded-proto")
     ?.split(",")[0]
     ?.trim()
     .toLowerCase();
 
-  if (proto === "https") return true;
-  if (proto === "http") return false;
-  return env.isProduction;
+  return proto === "https";
 }
 
 /**
@@ -119,7 +124,7 @@ const adminLoginLimiter = createRateLimiter({
  * и expiresAt в теле. Ошибка токена — 401; ADMIN_TOKEN не задан — 403
  * (панель выключена по умолчанию).
  */
-adminRouter.post("/auth/login", adminLoginLimiter, async (c) => {
+adminRouter.post("/auth/login", adminCsrfGuard, adminLoginLimiter, async (c) => {
   if (!env.ADMIN_TOKEN) {
     return c.json(
       { code: ERROR_CODES.FORBIDDEN, message: "Admin access disabled" },
@@ -143,11 +148,13 @@ adminRouter.post("/auth/login", adminLoginLimiter, async (c) => {
     );
   }
 
-  const { token, expiresAt } = await signAdminAccessToken();
+  const { token, expiresAt } = await createAdminAccessSession();
 
   setCookie(c, ADMIN_COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: "Lax",
+    // Strict: админ-панель и API живут на одном origin; cross-site
+    // top-level переходы cookie не получают — это дополнительный CSRF-слой.
+    sameSite: "Strict",
     secure: resolveCookieSecure(c),
     path: "/",
     maxAge: env.ADMIN_JWT_TTL_SECONDS,
@@ -179,7 +186,7 @@ adminRouter.get("/auth/session", adminReadLimiter, async (c) => {
   }
 
   try {
-    const claims = await verifyAdminAccessToken(token);
+    const claims = await verifyAdminSession(token);
     const payload: AdminSessionResponse = {
       authenticated: true,
       expiresAt: claims.expiresAt,
@@ -191,15 +198,21 @@ adminRouter.get("/auth/session", adminReadLimiter, async (c) => {
 });
 
 /**
- * POST /auth/logout — очистка cookie. Идемпотентно: без cookie тоже ок.
- * JWT stateless — серверного отзыва нет, доступ прекращается удалением cookie.
+ * POST /auth/logout — серверный отзыв сессии + очистка cookie.
+ * Идемпотентно: без/битой cookie тоже 200. JWT сам по себе stateless,
+ * поэтому доступ прекращается только после revokedAt в AdminSession.
  */
-adminRouter.post("/auth/logout", mutationLimiter, async (c) => {
+adminRouter.post("/auth/logout", adminCsrfGuard, mutationLimiter, async (c) => {
+  const token = getCookie(c, ADMIN_COOKIE_NAME);
+  if (token) {
+    await revokeAdminSessionByToken(token);
+  }
   deleteCookie(c, ADMIN_COOKIE_NAME, { path: "/" });
   return c.json({ ok: true });
 });
 
 adminRouter.use("*", adminGuard);
+adminRouter.use("*", adminCsrfGuard);
 
 /**
  * getSanitizedBody читает только JSON-тело и для GET не подходит:

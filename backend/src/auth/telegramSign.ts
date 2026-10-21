@@ -47,6 +47,16 @@ export interface TelegramAuthResult {
 // в значении другого параметра.
 const DEV_HASH = "dev-hash";
 
+/**
+ * Допустимое расхождение часов для auth_date в будущем.
+ *
+ * Библиотека проверяет только «не старше expiresIn», но не верхнюю границу.
+ * Подписанный initData с auth_date далеко в будущем иначе жил бы дольше
+ * заданного TTL (анти-replay-окно разъезжается). 60 секунд — запас на
+ * рассинхронизацию часов клиента/сервера.
+ */
+const AUTH_DATE_MAX_FUTURE_SKEW_SECONDS = 60;
+
 function extractUser(userJson: string | null): TelegramInitUser | null {
   if (!userJson) return null;
   try {
@@ -166,6 +176,26 @@ export function verifyTelegramInitData(
         "[Auth] Telegram initData validation failed unexpectedly",
       );
     }
+    return { isValid: false };
+  }
+
+  // validate() проверяет подпись и «не старше TTL», но не будущую дату.
+  // Будущий auth_date расширял бы окно replay: отклоняем fail-closed.
+  // Дубли auth_date запрещены: разные парсеры могут взять разные значения.
+  const authDateValues = new URLSearchParams(rawInitData).getAll("auth_date");
+  const authDateRaw = authDateValues.length === 1 ? authDateValues[0] : null;
+  const authDate = Number(authDateRaw);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (
+    !authDateRaw ||
+    !Number.isSafeInteger(authDate) ||
+    authDate <= 0 ||
+    authDate > nowSeconds + AUTH_DATE_MAX_FUTURE_SKEW_SECONDS
+  ) {
+    logger.warn(
+      { env: env.NODE_ENV },
+      "[Auth] Telegram initData auth_date is missing or in the future",
+    );
     return { isValid: false };
   }
 

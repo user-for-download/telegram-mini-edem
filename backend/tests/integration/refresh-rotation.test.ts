@@ -10,7 +10,8 @@ vi.hoisted(() => {
 
 const { app } = await import("../../src/app.js");
 const { db } = await import("../../src/db.js");
-const { signRefreshToken, hashToken, rotateRefreshToken } = await import("../../src/auth/tokens.js");
+const { signRefreshToken, hashToken, rotateRefreshToken, RefreshTokenRevokedError } =
+  await import("../../src/auth/tokens.js");
 
 /**
  * Ротация refresh-токенов: атомарность и reuse detection.
@@ -107,10 +108,10 @@ describe("refresh token rotation", () => {
       });
       expect(oldRow?.revokedAt).not.toBeNull();
 
-      // Никогда не больше одного активного токена. Если запросы
-      // сериализуются, проигравший попадает в reuse detection и отзывает
-      // семью (тогда 0); если перекрываются — остаётся токен победителя (1).
-      expect(await countActiveTokens(userId)).toBeLessThanOrEqual(1);
+      // Проигравший обязан попасть в reuse detection и отозвать семью:
+      // после H2 rotateRefreshToken бросает RefreshTokenRevokedError и на
+      // конкурентной ротации, поэтому активных токенов остаётся 0.
+      expect(await countActiveTokens(userId)).toBe(0);
 
       // Следующий раунд стартует с единственным активным токеном.
       await db.refreshToken.deleteMany({ where: { userId } });
@@ -186,8 +187,12 @@ describe("refresh token rotation", () => {
     const token = await signRefreshToken(userA);
     const jti = getJti(token);
 
-    // Act / Assert — предикат (tokenHash, userId) не сошёлся: count === 0
-    await expect(rotateRefreshToken(jti, userB)).rejects.toThrow("Token already used");
+    // Act / Assert — предикат (tokenHash, userId) не сошёлся: count === 0.
+    // Прямой вызов не ловит ошибку, поэтому отзыва нет; в роуте /refresh
+    // этот класс означает reuse и отзывает семью.
+    await expect(rotateRefreshToken(jti, userB)).rejects.toBeInstanceOf(
+      RefreshTokenRevokedError,
+    );
 
     const oldRow = await db.refreshToken.findUnique({
       where: { tokenHash: hashToken(jti) },

@@ -200,7 +200,9 @@ export async function verifyAccessTokenClaims(token: string): Promise<AccessToke
     }
   }
 
-  const { payload } = await jwtVerify(token, getJwtSecret());
+  const { payload } = await jwtVerify(token, getJwtSecret(), {
+    algorithms: ["HS256"],
+  });
 
   if (payload.type !== "access") {
     throw new Error("Invalid token type");
@@ -229,26 +231,106 @@ export async function verifyAccessToken(token: string): Promise<string> {
 
 export interface AdminTokenClaims {
   expiresAt: number;
+  jti: string;
 }
 
 /**
- * Подписывает JWT админ-панели. Возвращает токен и момент истечения (epoch ms).
+ * Подписывает JWT админ-панели. Возвращает токен, момент истечения (epoch ms)
+ * и jti — по нему создаётся серверная AdminSession.
  */
 export async function signAdminAccessToken(): Promise<{
   token: string;
   expiresAt: number;
+  jti: string;
 }> {
   const iat = Math.floor(Date.now() / 1000);
   const exp = iat + env.ADMIN_JWT_TTL_SECONDS;
+  const jti = randomUUID();
 
-  const token = await new SignJWT({ type: "admin-access", jti: randomUUID() })
+  const token = await new SignJWT({ type: "admin-access", jti })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject("admin")
     .setIssuedAt(iat)
     .setExpirationTime(exp)
     .sign(getJwtSecret());
 
-  return { token, expiresAt: exp * 1000 };
+  return { token, expiresAt: exp * 1000, jti };
+}
+
+/**
+ * Логин админки: подписывает JWT и создаёт серверную сессию.
+ * Если запись в БД не создалась — логин падает, cookie не выставляется.
+ */
+export async function createAdminAccessSession(): Promise<{
+  token: string;
+  expiresAt: number;
+}> {
+  const { token, expiresAt, jti } = await signAdminAccessToken();
+
+  await db.adminSession.create({
+    data: {
+      jti,
+      // Привязка к текущему ADMIN_TOKEN: его ротация инвалидирует старые
+      // сессии даже до истечения JWT.
+      adminTokenHash: hashToken(env.ADMIN_TOKEN),
+      expiresAt: new Date(expiresAt),
+    },
+  });
+
+  return { token, expiresAt };
+}
+
+/**
+ * Проверяет JWT и серверную сессию: токен должен быть не отозван, не истёк
+ * и выпущен при текущем ADMIN_TOKEN.
+ */
+export async function verifyAdminSession(
+  token: string,
+): Promise<AdminTokenClaims> {
+  const claims = await verifyAdminAccessToken(token);
+
+  const session = await db.adminSession.findFirst({
+    where: {
+      jti: claims.jti,
+      adminTokenHash: hashToken(env.ADMIN_TOKEN),
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: { id: true },
+  });
+
+  if (!session) {
+    throw new Error("Admin session revoked");
+  }
+
+  return claims;
+}
+
+/** Немедленный logout: отзывает конкретную сессию по jti. */
+export async function revokeAdminSession(jti: string): Promise<void> {
+  await db.adminSession.updateMany({
+    where: { jti, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+/**
+ * Отзывает сессию по cookie. Ошибки (битый/чужой JWT) проглатываются:
+ * logout должен быть идемпотентным.
+ */
+export async function revokeAdminSessionByToken(token: string): Promise<void> {
+  let claims: AdminTokenClaims;
+  try {
+    claims = await verifyAdminAccessToken(token);
+  } catch {
+    // Невалидный/чужой токен уже не даёт доступа — logout идемпотентен.
+    return;
+  }
+
+  // Ошибку БД не проглатываем: иначе logout вернёт 200, а украденная
+  // cookie останется валидной до exp. Пусть роут отдаст 500 и клиент
+  // повторит.
+  await revokeAdminSession(claims.jti);
 }
 
 /**
@@ -256,7 +338,9 @@ export async function signAdminAccessToken(): Promise<{
  * Бросает ошибку при любой невалидности — вызывающий код трактует как 401.
  */
 export async function verifyAdminAccessToken(token: string): Promise<AdminTokenClaims> {
-  const { payload } = await jwtVerify(token, getJwtSecret());
+  const { payload } = await jwtVerify(token, getJwtSecret(), {
+    algorithms: ["HS256"],
+  });
 
   if (payload.type !== "admin-access") {
     throw new Error("Invalid token type");
@@ -270,7 +354,11 @@ export async function verifyAdminAccessToken(token: string): Promise<AdminTokenC
     throw new Error("Invalid token expiration");
   }
 
-  return { expiresAt: payload.exp * 1000 };
+  if (typeof payload.jti !== "string" || payload.jti.length === 0) {
+    throw new Error("Invalid token jti");
+  }
+
+  return { expiresAt: payload.exp * 1000, jti: payload.jti };
 }
 
 /**
@@ -369,7 +457,9 @@ export async function verifyRefreshToken(
   // маскировался бы под 401 «Invalid refresh token».
   let payload: JWTPayload;
   try {
-    payload = (await jwtVerify(token, getJwtSecret())).payload;
+    payload = (
+      await jwtVerify(token, getJwtSecret(), { algorithms: ["HS256"] })
+    ).payload;
   } catch (error) {
     throw new TokenValidationError("Invalid or expired token", {
       cause: error,
@@ -416,7 +506,8 @@ export async function verifyRefreshToken(
  * Committed конкурирующий UPDATE после ожидания блокировки строки перечитывает
  * её свежую версию (EvalPlanQual) и видит `revokedAt` — поэтому из двух
  * параллельных ротаций одного токена ровно одна получит count === 1, а вторая
- * count === 0 и упадёт с "Token already used". Двойная выдача невозможна.
+ * count === 0 и бросит RefreshTokenRevokedError (reuse). Двойная выдача
+ * невозможна.
  */
 export async function rotateRefreshToken(
   oldJti: string,
@@ -431,9 +522,11 @@ export async function rotateRefreshToken(
     });
 
     if (revoked.count !== 1) {
-      // Конкурентная ротация уже использовала этот токен — вина клиента
-      // (повторное предъявление), классифицируем как 401, а не 500.
-      throw new TokenValidationError("Token already used");
+      // Конкурентная ротация уже использовала этот токен. Это не просто
+      // «плохой токен», а признак повторного предъявления: отдаём
+      // RefreshTokenRevokedError, чтобы /auth/refresh отозвал всю семью.
+      // Иначе победитель гонки оставлял бы активный токен у атакующего.
+      throw new RefreshTokenRevokedError(userId);
     }
 
     const newJti = randomUUID();

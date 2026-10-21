@@ -83,6 +83,20 @@ model RefreshToken {
   @@index([userId])
 }
 
+// Серверная сессия админ-панели: jti из JWT + отпечаток ADMIN_TOKEN.
+// Нужна для немедленного logout/revoke (stateless JWT иначе живёт до exp)
+// и для инвалидации всех сессий при ротации ADMIN_TOKEN.
+model AdminSession {
+  id             String    @id @default(uuid())
+  jti            String    @unique
+  adminTokenHash String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
 model Notification {
   id        String   @id @default(uuid())
   userId    String

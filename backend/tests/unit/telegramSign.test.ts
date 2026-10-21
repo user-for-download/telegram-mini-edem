@@ -122,6 +122,12 @@ describe("verifyTelegramInitData: реальная валидация", () => {
     expect(verifyTelegramInitData(initData).isValid).toBe(false);
   });
 
+  it("отклоняет auth_date далеко в будущем (расширение replay-окна)", () => {
+    const future = new Date(Date.now() + 10 * 60 * 1000);
+    const initData = signedInitData({ id: 1, first_name: "X" }, future);
+    expect(verifyTelegramInitData(initData).isValid).toBe(false);
+  });
+
   it("отклоняет чужой токен (подпись другим ключом)", () => {
     const otherSigned = sign(
       { user: JSON.stringify({ id: 1, first_name: "X" }) },

@@ -186,7 +186,7 @@ function secretEnv(name: string): string {
   const value = process.env[name];
 
   if (value) {
-    if (isProduction && name === "JWT_SECRET" && value.length < 32) {
+    if (isProduction && value.length < 32) {
       throw new Error(
         `[env] ${name} must be at least 32 characters long in production.`
       );
@@ -204,6 +204,31 @@ function secretEnv(name: string): string {
   );
 
   return randomBytes(32).toString("hex");
+}
+
+/**
+ * Опциональный секрет: пусто — фича выключена, но если значение задано
+ * в production, оно должно быть достаточно длинным. Иначе короткий
+ * ADMIN_TOKEN/METRICS_TOKEN/BOT_TOKEN превращается в слабую точку входа.
+ */
+function optionalSecretEnv(name: string, minLength: number): string {
+  const value = process.env[name] ?? "";
+  if (isProduction && value && value.length < minLength) {
+    throw new Error(
+      `[env] ${name} must be at least ${minLength} characters long in production.`
+    );
+  }
+  return value;
+}
+
+// Аудит H3: значение из env может отключить анти-брутфорс Telegram-auth.
+// В production ограничиваем верхнюю границу; 100000 фактически = без лимита.
+const tgAuthRateMax = positiveIntEnv("TG_AUTH_RATE_MAX", devRateMax(5));
+if (isProduction && tgAuthRateMax > 1000) {
+  throw new Error(
+    "[env] TG_AUTH_RATE_MAX is too high for production (max 1000); " +
+      "lower it to a rate-limit value (default 5).",
+  );
 }
 
 export const env = {
@@ -237,7 +262,7 @@ export const env = {
    * не коммитить. Намеренно НЕ secretEnv: эфемерный токен бессмыслен,
    * роут должен быть закрыт, пока токен не задан (как ADMIN_TOKEN).
    */
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || "",
+  TELEGRAM_BOT_TOKEN: optionalSecretEnv("TELEGRAM_BOT_TOKEN", 20),
 
   /**
    * TTL initData в секундах: сколько подписанная Telegram строка считается
@@ -251,7 +276,7 @@ export const env = {
    * Rate limit Telegram-auth.
    */
   TG_AUTH_RATE_WINDOW_MS: positiveIntEnv("TG_AUTH_RATE_WINDOW_MS", 5 * 60 * 1000),
-  TG_AUTH_RATE_MAX: positiveIntEnv("TG_AUTH_RATE_MAX", devRateMax(5)),
+  TG_AUTH_RATE_MAX: tgAuthRateMax,
 
   /**
    * Хосты Telegram-фронта (comma-separated): запросы со Host из
@@ -531,6 +556,8 @@ export const env = {
   FEEDBACK_READ_RATE_MAX: positiveIntEnv("FEEDBACK_READ_RATE_MAX", devRateMax(100)),
   BOOKINGS_READ_RATE_WINDOW_MS: positiveIntEnv("BOOKINGS_READ_RATE_WINDOW_MS", 60 * 1000),
   BOOKINGS_READ_RATE_MAX: positiveIntEnv("BOOKINGS_READ_RATE_MAX", devRateMax(200)),
+  TRIPS_MY_READ_RATE_WINDOW_MS: positiveIntEnv("TRIPS_MY_READ_RATE_WINDOW_MS", 60 * 1000),
+  TRIPS_MY_READ_RATE_MAX: positiveIntEnv("TRIPS_MY_READ_RATE_MAX", devRateMax(200)),
   FEEDBACK_CREATE_RATE_WINDOW_MS: positiveIntEnv("FEEDBACK_CREATE_RATE_WINDOW_MS", 60 * 60 * 1000),
   FEEDBACK_CREATE_RATE_MAX: positiveIntEnv("FEEDBACK_CREATE_RATE_MAX", devRateMax(10)),
 
@@ -544,7 +571,7 @@ export const env = {
    * Bearer-токен для служебного endpoint /metrics.
    * В production отсутствие токена не открывает endpoint публично.
    */
-  METRICS_TOKEN: process.env.METRICS_TOKEN || "",
+  METRICS_TOKEN: optionalSecretEnv("METRICS_TOKEN", 32),
 
   /**
    * Статичный токен админ-панели (тело POST /api/v1/admin/auth/login).
@@ -552,7 +579,7 @@ export const env = {
    * Намеренно НЕ secretEnv: эфемерный dev-секрет недопустим,
    * панель закрыта по умолчанию в любой среде, пока токен не задан.
    */
-  ADMIN_TOKEN: process.env.ADMIN_TOKEN || "",
+  ADMIN_TOKEN: optionalSecretEnv("ADMIN_TOKEN", 32),
 
   /**
    * TTL JWT админ-панели (httpOnly cookie edem_admin_jwt).

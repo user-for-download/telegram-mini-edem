@@ -71,7 +71,7 @@ describe("admin auth: login", () => {
     const setCookieHeader = response.headers.get("set-cookie") ?? "";
     expect(setCookieHeader).toContain("edem_admin_jwt=");
     expect(setCookieHeader).toContain("HttpOnly");
-    expect(setCookieHeader).toContain("SameSite=Lax");
+    expect(setCookieHeader).toContain("SameSite=Strict");
     expect(setCookieHeader).toContain("Path=/");
   });
 
@@ -122,6 +122,91 @@ describe("admin auth: Secure-флаг cookie (X-Forwarded-Proto)", () => {
   it("несколько хопов 'https, http' -> берётся первый (https)", async () => {
     const setCookieHeader = await loginWithProto("https, http");
     expect(setCookieHeader).toContain("Secure");
+  });
+
+  it("production: X-Forwarded-Proto http не снимает Secure", async () => {
+    const original = env.isProduction;
+    env.isProduction = true;
+    try {
+      const setCookieHeader = await loginWithProto("http");
+      expect(setCookieHeader).toContain("Secure");
+      expect(setCookieHeader).toContain("SameSite=Strict");
+    } finally {
+      env.isProduction = original;
+    }
+  });
+});
+
+describe("admin auth: CSRF guard", () => {
+  it("cross-site Origin на login -> 403", async () => {
+    const response = await app.request("/api/v1/admin/auth/login", {
+      method: "POST",
+      headers: {
+        ...JSON_HEADERS,
+        Origin: "https://evil.example",
+      },
+      body: JSON.stringify({ token: ADMIN_TOKEN }),
+    });
+    expect(response.status).toBe(403);
+    expect((await response.json()).code).toBe("FORBIDDEN");
+  });
+
+  it("Sec-Fetch-Site: cross-site на login -> 403", async () => {
+    const response = await app.request("/api/v1/admin/auth/login", {
+      method: "POST",
+      headers: {
+        ...JSON_HEADERS,
+        "Sec-Fetch-Site": "cross-site",
+      },
+      body: JSON.stringify({ token: ADMIN_TOKEN }),
+    });
+    expect(response.status).toBe(403);
+  });
+
+  it("form content-type на login -> 403", async () => {
+    const response = await app.request("/api/v1/admin/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "token=test-admin-token-123",
+    });
+    expect(response.status).toBe(403);
+  });
+
+  it("Origin из CORS_ORIGINS на login -> 200", async () => {
+    const response = await app.request("/api/v1/admin/auth/login", {
+      method: "POST",
+      headers: {
+        ...JSON_HEADERS,
+        Origin: "http://localhost:3000",
+      },
+      body: JSON.stringify({ token: ADMIN_TOKEN }),
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("same-origin Sec-Fetch-Site проходит при расхождении Origin/Host (Vite proxy)", async () => {
+    const response = await app.request("/api/v1/admin/auth/login", {
+      method: "POST",
+      headers: {
+        ...JSON_HEADERS,
+        Origin: "http://localhost:3013",
+        "Sec-Fetch-Site": "same-origin",
+      },
+      body: JSON.stringify({ token: ADMIN_TOKEN }),
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("cross-site logout с валидной cookie -> 403", async () => {
+    const cookie = await loginAndGetCookie();
+    const response = await app.request("/api/v1/admin/auth/logout", {
+      method: "POST",
+      headers: {
+        Cookie: `edem_admin_jwt=${cookie}`,
+        Origin: "https://evil.example",
+      },
+    });
+    expect(response.status).toBe(403);
   });
 });
 
@@ -219,5 +304,41 @@ describe("admin auth: logout", () => {
     const second = await app.request("/api/v1/admin/auth/logout", { method: "POST" });
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
+  });
+
+  it("logout отзывает сессию на сервере: старая cookie больше не работает", async () => {
+    const cookie = await loginAndGetCookie();
+    const logout = await app.request("/api/v1/admin/auth/logout", {
+      method: "POST",
+      headers: { Cookie: `edem_admin_jwt=${cookie}` },
+    });
+    expect(logout.status).toBe(200);
+
+    const dashboard = await app.request("/api/v1/admin/dashboard", {
+      headers: { Cookie: `edem_admin_jwt=${cookie}` },
+    });
+    expect(dashboard.status).toBe(401);
+
+    const session = await app.request("/api/v1/admin/auth/session", {
+      headers: { Cookie: `edem_admin_jwt=${cookie}` },
+    });
+    expect(await session.json()).toEqual({
+      authenticated: false,
+      expiresAt: null,
+    });
+  });
+
+  it("ротация ADMIN_TOKEN инвалидирует старые сессии", async () => {
+    const cookie = await loginAndGetCookie();
+    const original = env.ADMIN_TOKEN;
+    try {
+      env.ADMIN_TOKEN = "rotated-admin-token-456";
+      const response = await app.request("/api/v1/admin/dashboard", {
+        headers: { Cookie: `edem_admin_jwt=${cookie}` },
+      });
+      expect(response.status).toBe(401);
+    } finally {
+      env.ADMIN_TOKEN = original;
+    }
   });
 });

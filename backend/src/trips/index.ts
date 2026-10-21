@@ -18,6 +18,7 @@ import { serializeTrip, serializeTripPassenger } from "../serializers/index.js";
 import {
   publicReadLimiter,
   mutationLimiter,
+  tripsMyReadLimiter,
   createTripLimiter,
   cancelTripLimiter,
   completeTripLimiter,
@@ -362,7 +363,7 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
  * Поездки текущего пользователя как водителя.
  * Важно: маршрут должен быть объявлен до /:id.
  */
-tripsRouter.get("/my", requireUser, async (c) => {
+tripsRouter.get("/my", requireUser, tripsMyReadLimiter, async (c) => {
   const user = c.get("user")!;
   const pageParam = c.req.query("page");
   const limitParam = c.req.query("limit");
