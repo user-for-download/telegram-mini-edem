@@ -100,6 +100,24 @@ describe("F1: driver phone visibility", () => {
     expect(body.driver.phone).toBeUndefined();
   });
 
+  it("публичный водитель не отдаёт preference/onboarding/timestamp-поля", async () => {
+    await db.user.update({
+      where: { id: driverId },
+      data: {
+        notificationsEnabled: false,
+        onboardingVersion: "v2",
+        verifiedAt: new Date(),
+      },
+    });
+    const stranger = await createUser("PublicDriverFields");
+    const body = await getTrip(stranger.id);
+    const driver = body.driver as Record<string, unknown>;
+
+    expect(driver.notificationsEnabled).toBeUndefined();
+    expect(driver.onboardingVersion).toBeUndefined();
+    expect(driver.verifiedAt).toBeUndefined();
+  });
+
   it("без номера у водителя — поле отсутствует даже для confirmed", async () => {
     await db.user.update({ where: { id: driverId }, data: { phone: null } });
     const pax = await createUser("PaxNoPhone");

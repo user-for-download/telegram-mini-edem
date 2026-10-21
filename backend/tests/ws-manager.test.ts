@@ -190,14 +190,40 @@ describe("GET /metrics", () => {
     expect(res.status).toBe(404);
   });
 
+  it("ставит security headers на 404 (middleware до next)", async () => {
+    const res = await app.request("/definitely-not-a-route");
+    expect(res.status).toBe(404);
+    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(res.headers.get("Content-Security-Policy")).toContain(
+      "default-src 'self'",
+    );
+  });
+
   it("adds a production-ready CSP for Telegram-only framing", async () => {
     const res = await app.request("/health/live");
     const csp = res.headers.get("Content-Security-Policy");
 
     expect(csp).toContain("default-src 'self'");
-    expect(csp).toContain("connect-src 'self' ws: wss:");
-    expect(csp).toContain("img-src 'self' data: blob: https:");
+    // connect-src — только явные origins из CORS_ORIGINS/TELEGRAM_WEBAPP_URL,
+    // без глобальных ws:/wss:.
+    expect(csp).toContain(
+      "connect-src 'self' http://localhost:3000 ws://localhost:3000",
+    );
+    expect(csp).not.toContain("ws: wss:");
+    // img-src — только Telegram CDN, без глобального https:.
+    expect(csp).toContain(
+      "img-src 'self' data: blob: https://t.me https://telegram.org https://*.telegram.org https://*.telegram-cdn.org",
+    );
     expect(csp).toContain("frame-ancestors 'self'");
     expect(csp).toContain("object-src 'none'");
+  });
+});
+
+describe("WS Origin guard", () => {
+  it("отклоняет upgrade с чужим Origin до handshake", async () => {
+    const res = await app.request("/api/v1/ws", {
+      headers: { Origin: "https://evil.example" },
+    });
+    expect(res.status).toBe(403);
   });
 });

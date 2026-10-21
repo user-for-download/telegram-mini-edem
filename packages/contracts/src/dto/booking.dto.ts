@@ -3,7 +3,7 @@ import { driverBookingActionSchema } from "../schemas/booking.schema.js";
 import { MAX_SEATS } from "../schemas/trip.schema.js";
 
 export const createBookingDtoSchema = z.object({
-  tripId: z.string(),
+  tripId: z.string().trim().min(1).max(100),
   seat: z.number().int().min(1).max(MAX_SEATS),
   comment: z.string().max(300).optional(),
   /**
@@ -19,7 +19,7 @@ export const createBookingDtoSchema = z.object({
    * выполняет. Не uuid() — по той же причине, что и `tripId`: существование
    * и принадлежность проверяет БД.
    */
-  requestId: z.string().trim().min(1).optional(),
+  requestId: z.string().trim().min(1).max(100).optional(),
 }).strict();
 export type CreateBookingDto = z.infer<typeof createBookingDtoSchema>;
 

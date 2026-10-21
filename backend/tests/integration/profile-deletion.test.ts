@@ -54,6 +54,9 @@ describe("DELETE /api/v1/users/me", () => {
     ]);
     await db.booking.create({ data: { tripId: ownTrip.id, passengerId: paxPending.id, seat: 1, status: "pending" } });
     await db.booking.create({ data: { tripId: ownTrip.id, passengerId: paxConfirmed.id, seat: 2, status: "confirmed" } });
+    const originalName = (
+      await db.user.findUnique({ where: { id: userId }, select: { name: true } })
+    )?.name;
     try {
       const response = await app.request("/api/v1/users/me", { method: "DELETE", headers: { Authorization: `Bearer ${devMockAccessToken(userId)}` } });
       expect(response.status).toBe(200);
@@ -65,6 +68,12 @@ describe("DELETE /api/v1/users/me", () => {
       expect(bookings.find((b) => b.seat === 2)?.status).toBe("confirmed");
       const confirmedAfter = await db.user.findUnique({ where: { id: paxConfirmed.id } });
       expect(confirmedAfter?.tripsCount).toBe(1);
+      const notification = await db.notification.findFirst({
+        where: { userId: paxConfirmed.id, type: "trip_status_changed" },
+      });
+      // Имя фиксируется до обезличивания: иначе получатель увидел бы
+      // «Удалённый пользователь» вместо имени водителя.
+      expect(notification?.actorName).toBe(originalName);
       const tombstone = await db.user.findUnique({ where: { id: userId } });
       expect(tombstone?.deletedAt).not.toBeNull();
     } finally {

@@ -53,6 +53,18 @@ describe("sanitizeClientErrorText", () => {
     expect(clean).toContain("hash=[redacted]");
   });
 
+  it("вырезает email, телефон, user-параметры и длинные числовые id", () => {
+    const clean = sanitizeClientErrorText(
+      "user a@b.com +79991234567 userId=123456789 telegramUserId=987654321 id 123456789",
+    );
+    expect(clean).not.toContain("a@b.com");
+    expect(clean).not.toContain("+79991234567");
+    expect(clean).not.toContain("123456789");
+    expect(clean).toContain("[email]");
+    expect(clean).toContain("[phone]");
+    expect(clean).toContain("[number]");
+  });
+
   it("вырезает длинные hex-строки, но оставляет обычные слова", () => {
     expect(sanitizeClientErrorText(`token ${"a".repeat(40)} end`)).toContain(
       "[hex]",

@@ -23,7 +23,7 @@ import { notificationsRouter } from "./notifications/index.js";
 import { rideRequestsRouter } from "./rideRequests/index.js";
 import { reportsRouter, adminReportsRouter } from "./reports/index.js";
 import { botRouter } from "./bot/index.js";
-import { createWsHandler } from "./ws/index.js";
+import { createWsHandler, isWsOriginAllowed } from "./ws/index.js";
 
 import { env } from "./env.js";
 import { db } from "./db.js";
@@ -37,6 +37,7 @@ import {
   renderTelegramMetrics,
 } from "./services/telegramMetrics.js";
 import { tokensEqual } from "./utils/timingSafeEqual.js";
+import { redactSensitivePath } from "./utils/redact.js";
 import { registerNotificationSubscribers } from "./events/notificationSubscriber.js";
 
 export const app = new Hono();
@@ -78,8 +79,24 @@ const sentryOrigin = (() => {
   }
 })();
 
-const connectSources = ["'self'", "ws:", "wss:"];
-if (sentryOrigin) connectSources.push(sentryOrigin);
+// connect-src без глобальных ws:/wss:: разрешаем только same-origin,
+// Sentry и WS-схемы явно перечисленных origins (CORS_ORIGINS +
+// TELEGRAM_WEBAPP_URL). Иначе XSS мог exfiltrate данные на любой WSS.
+const connectSources = new Set<string>(["'self'"]);
+for (const origin of [...allowedOrigins, env.TELEGRAM_WEBAPP_URL]) {
+  if (!origin) continue;
+  try {
+    const parsed = new URL(origin);
+    connectSources.add(parsed.origin);
+    connectSources.add(
+      `${parsed.protocol === "https:" ? "wss:" : "ws:"}//${parsed.host}`,
+    );
+  } catch {
+    // Некорректный origin в env не должен ломать старт: он просто не
+    // попадает в CSP (fail-closed для подключения).
+  }
+}
+if (sentryOrigin) connectSources.add(sentryOrigin);
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -89,13 +106,29 @@ const contentSecurityPolicy = [
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
-  "img-src 'self' data: blob: https:",
+  // Аватары Telegram — только известные CDN-хосты, без глобального https:.
+  "img-src 'self' data: blob: https://t.me https://telegram.org https://*.telegram.org https://*.telegram-cdn.org",
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
-  `connect-src ${connectSources.join(" ")}`,
+  `connect-src ${[...connectSources].join(" ")}`,
   "manifest-src 'self'",
   "frame-ancestors 'self'",
 ].join("; ");
+
+function applySecurityHeaders(c: Context): void {
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("Content-Security-Policy", contentSecurityPolicy);
+  c.header("X-XSS-Protection", "0");
+  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+
+  if (env.isProduction) {
+    c.header(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload",
+    );
+  }
+}
 
 app.use(
   "*",
@@ -138,7 +171,7 @@ app.use("*", async (c, next) => {
     logger.info(
       {
         method: c.req.method,
-        path: c.req.path,
+        path: redactSensitivePath(c.req.path),
         status: errored ? undefined : c.res.status,
         errored,
         durationMs: Date.now() - startedAt,
@@ -157,19 +190,10 @@ app.use("*", async (c, next) => {
  * frame-ancestors ограничивает встраивание только собственным origin.
  */
 app.use("*", async (c, next) => {
+  // Заголовки ставим ДО next(): onError формирует ответ в обход этого
+  // middleware, а после next() на исключении код просто не выполнится.
+  applySecurityHeaders(c);
   await next();
-  c.header("X-Content-Type-Options", "nosniff");
-  c.header("Content-Security-Policy", contentSecurityPolicy);
-  c.header("X-XSS-Protection", "0");
-  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-
-  if (env.isProduction) {
-    c.header(
-      "Strict-Transport-Security",
-      "max-age=31536000; includeSubDomains; preload",
-    );
-  }
 });
 
 /**
@@ -263,7 +287,16 @@ app.route("/api/v1/admin/reports", adminReportsRouter);
 app.route("/api/v1/users", usersRouter);
 app.route("/api/v1/cities", citiesRouter);
 app.route("/api/v1/admin", adminRouter);
-app.get("/api/v1/ws", createWsHandler(upgradeWebSocket));
+app.get(
+  "/api/v1/ws",
+  async (c, next) => {
+    if (!isWsOriginAllowed(c)) {
+      return c.text("Forbidden", 403);
+    }
+    return next();
+  },
+  createWsHandler(upgradeWebSocket),
+);
 
 if (env.isProduction) {
   // Telegram-only SPA-раздача.
@@ -353,6 +386,10 @@ app.notFound((c) => {
  * эндпоинт kind "server" отклоняет — и это правильно).
  */
 export function handleUnhandledError(error: Error, c: Context) {
+  // onError не проходит через middleware заголовков — ставим их здесь,
+  // иначе 500/404/409 уходили без CSP/nosniff/HSTS.
+  applySecurityHeaders(c);
+
   // Известные Prisma-ошибки, доехавшие сюда необработанными (гонки
   // check-then-act: запись по строке, удалённой параллельно). Контракт
   // требует мапить их без 500 и без алертов: P2025 → 404, P2034 → 409
@@ -378,7 +415,7 @@ export function handleUnhandledError(error: Error, c: Context) {
     {
       err: error,
       method: c.req.method,
-      path: c.req.path,
+      path: redactSensitivePath(c.req.path),
     },
     "unhandled_error",
   );
@@ -388,7 +425,7 @@ export function handleUnhandledError(error: Error, c: Context) {
   }
 
   // Серверные 5xx — в тот же Telegram-канал, что клиентские ошибки.
-  reportServerError(error, c.req.method, c.req.path);
+  reportServerError(error, c.req.method, redactSensitivePath(c.req.path));
 
   return c.json(
     { code: ERROR_CODES.INTERNAL_ERROR, message: "Internal server error" },

@@ -24,6 +24,33 @@ function setConnId(ws: WSContext, connId: string): void {
 }
 
 /**
+ * Проверка Origin на WS-upgrade (CSWSH).
+ *
+ * Браузер всегда присылает Origin для WebSocket; cross-site страница
+ * иначе могла бы открыть сокет с украденным токеном. Разрешаем:
+ *  - отсутствие Origin (не-браузерный клиент; токен всё равно проверяется);
+ *  - Origin, совпадающий с Host (same-origin за прокси);
+ *  - Origin из CORS_ORIGINS (явный allowlist).
+ */
+export function isWsOriginAllowed(c: Context): boolean {
+  const origin = c.req.header("origin");
+  if (!origin) return true;
+
+  try {
+    const parsed = new URL(origin);
+    const host = c.req.header("host");
+    if (host && parsed.host === host) return true;
+
+    return env.CORS_ORIGINS.split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .includes(parsed.origin);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * IP клиента для WS-лимитов (per-IP cap + auth throttle).
  * Та же политика, что в middleware/rateLimit.ts resolveClientIp:
  * за доверенным прокси — из перезаписанных прокси заголовков,

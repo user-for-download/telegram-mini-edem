@@ -147,6 +147,84 @@ describe("utils/sentry", () => {
     expect(scrubbed.extra).toEqual({ userId: "1", safe: true });
   });
 
+  it("beforeSend рекурсивно чистит extra/contexts/tags/breadcrumbs/exception и webhook-путь", () => {
+    // Arrange
+    envMocks.SENTRY_DSN = TEST_DSN;
+    initSentry();
+    const beforeSend = sentryMocks.init.mock.calls[0][0].beforeSend as (
+      event: unknown
+    ) => unknown;
+    const event = {
+      request: {
+        url: "https://api.example/bot/webhook/super-secret?token=abc",
+        method: "POST",
+      },
+      message: "failed for a@b.com +79991234567",
+      extra: {
+        nested: {
+          password: "x",
+          userId: "1",
+          note: "call +79991234567",
+        },
+        url: "https://api.example/bot/webhook/another-secret",
+      },
+      contexts: {
+        user: { telegramUserId: 123456789, safe: "ok" },
+      },
+      tags: { token: "x", zone: "eu" },
+      breadcrumbs: [
+        {
+          message: "email a@b.com",
+          data: {
+            authorization: "Bearer abc",
+            path: "/bot/webhook/breadcrumb-secret",
+          },
+        },
+      ],
+      exception: {
+        values: [
+          {
+            type: "Error",
+            value: "email a@b.com token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig",
+          },
+        ],
+      },
+    } as unknown as Sentry.ErrorEvent;
+
+    // Act
+    const scrubbed = beforeSend(event) as {
+      request?: { url?: string };
+      message?: string;
+      extra?: Record<string, unknown>;
+      contexts?: Record<string, Record<string, unknown>>;
+      tags?: Record<string, string>;
+      breadcrumbs?: Array<{ message?: string; data?: Record<string, unknown> }>;
+      exception?: { values?: Array<{ value?: string }> };
+    };
+
+    // Assert
+    expect(scrubbed.request?.url).toBe(
+      "https://api.example/bot/webhook/[redacted]?[redacted]",
+    );
+    expect(scrubbed.message).not.toContain("a@b.com");
+    expect(scrubbed.message).not.toContain("+79991234567");
+    expect(scrubbed.extra).toEqual({
+      nested: { userId: "1", note: "call [phone]" },
+      url: "https://api.example/bot/webhook/[redacted]",
+    });
+    expect(scrubbed.contexts?.user).toEqual({
+      telegramUserId: "[number]",
+      safe: "ok",
+    });
+    expect(scrubbed.tags).toEqual({ zone: "eu" });
+    expect(scrubbed.breadcrumbs?.[0]?.message).not.toContain("a@b.com");
+    expect(scrubbed.breadcrumbs?.[0]?.data).toEqual({
+      path: "/bot/webhook/[redacted]",
+    });
+    expect(scrubbed.exception?.values?.[0]?.value).not.toContain("a@b.com");
+    expect(scrubbed.exception?.values?.[0]?.value).not.toContain("eyJ");
+  });
+
   it("beforeSend никогда не бросает (мусорный вход) и не трогает событие без PII", () => {
     // Arrange
     envMocks.SENTRY_DSN = TEST_DSN;

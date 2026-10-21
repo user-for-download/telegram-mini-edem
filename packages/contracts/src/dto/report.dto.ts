@@ -6,7 +6,7 @@ export const REPORT_DESCRIPTION_MAX_LENGTH = 2000;
 export const createReportDtoSchema = z.object({
   targetType: reportTargetTypeSchema,
   // IDs are opaque strings; legacy seeded records use values such as `t-1`.
-  targetId: z.string().trim().min(1),
+  targetId: z.string().trim().min(1).max(100),
   category: reportCategorySchema,
   description: z.string().trim().min(1).max(REPORT_DESCRIPTION_MAX_LENGTH),
 }).strict();

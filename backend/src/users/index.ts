@@ -66,6 +66,10 @@ export const usersRouter = new Hono<AuthEnv>();
 
 usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
   const user = c.get("user");
+  // Имя для уведомлений фиксируем до обезличивания: после транзакции
+  // user.name уже «Удалённый пользователь», и получатели теряли бы
+  // осмысленное «кто завершил поездку».
+  const actorName = user.name;
   const now = new Date();
   // Каскад вместо 409 ACCOUNT_HAS_ACTIVE_OBLIGATIONS: удаление завершает
   // активные поездки водителя (forced complete — departure-гейт пропущен,
@@ -244,7 +248,7 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
         // Тап открывает шторку деталей завершённой поездки.
         fragment: `/trips/${trip.id}`,
         // Вторая строка — «имя • действие», третья — снапшот поездки.
-        actorName: user.name,
+        actorName,
         action: "completed",
         tripSnapshot: tripSnapshotOf(trip),
         // Получатели — пассажиры завершённой поездки.
@@ -264,7 +268,7 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
         // Тап открывает шторку деталей завершённой поездки.
         fragment: `/trips/${trip.id}`,
         // Вторая строка — «имя • действие», третья — снапшот поездки.
-        actorName: user.name,
+        actorName,
         action: "completed",
         tripSnapshot: tripSnapshotOf(trip),
         // Получатели — пассажиры с отклонённой pending-заявкой.

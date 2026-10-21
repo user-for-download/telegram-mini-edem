@@ -6,8 +6,8 @@ export const REVIEW_TEXT_MAX_LENGTH = 150;
 
 // ─── CreateReviewDto ────────────────────────────────────────────────────────
 export const createReviewDtoSchema = z.object({
-  tripId: z.string(),
-  targetUserId: z.string(),
+  tripId: z.string().trim().min(1).max(100),
+  targetUserId: z.string().trim().min(1).max(100),
   rating: z.number().int().min(1).max(5),
   // .trim() — проверка (check) в zod 4: выполняется до min/max, поэтому
   // строки только из пробелов отклоняются, а лимиты применяются к обрезанному

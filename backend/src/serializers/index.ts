@@ -239,13 +239,16 @@ export function serializeTrip(
     price: trip.price,
     seatsTotal: trip.seatsTotal,
     seatsAvailable: trip.seatsAvailable,
-    driver: serializeUser(trip.driver, {
-      // Госномер — приватное поле поездки с тем же fail-closed дефолтом,
-      // что и адреса: без явного `includePlate: true` его в ответе нет
-      // (в /trips/:id его нет даже для участников — см. вызов роута).
-      includePlate: options?.includePlate === true,
-      includePhone: options?.includeDriverPhone,
-    }),
+    // Публичный профиль водителя по умолчанию: не отдаём preference/
+    // onboarding/timestamp-поля в поиске и чужих карточках. Приватные поля
+    // машины/телефона — только по явному opt-in участника (fail-closed).
+    driver:
+      options?.includePlate === true || options?.includeDriverPhone === true
+        ? serializeUser(trip.driver, {
+            includePlate: options?.includePlate === true,
+            includePhone: options?.includeDriverPhone,
+          })
+        : serializePublicUser(trip.driver),
     tags: trip.tags,
     comment: trip.comment ?? undefined,
     status: trip.status as TripStatus,

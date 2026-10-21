@@ -26,8 +26,21 @@ export function sanitizeClientErrorText(value: string): string {
   return value
     .replace(/tgWebAppData=[^\s&]*/g, `tgWebAppData=${REDACTED}`)
     .replace(/\bhash=[^\s&]*/g, `hash=${REDACTED}`)
+    .replace(
+      /\b(?:user|userId|user_id|telegramUserId|phone|email)=[^\s&]*/gi,
+      REDACTED,
+    )
     .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "[jwt]")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]")
     .replace(/\b[0-9a-fA-F]{32,}\b/g, "[hex]")
+    .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, "[email]")
+    .replace(
+      /(?:\+7|8)[\s-]?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}(?!\d)/g,
+      "[phone]",
+    )
+    // Telegram user id и прочие длинные числовые идентификаторы —
+    // это PII; короткие номера строк/цен не трогаем.
+    .replace(/\b\d{7,}\b/g, "[number]")
     .replace(/\?[\w%.~-]+=[^\s]*/g, `?${REDACTED}`);
 }
 

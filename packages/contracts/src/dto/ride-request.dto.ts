@@ -6,8 +6,8 @@ const dateTime = z.string().datetime();
 
 export const createRideRequestDtoSchema = z.object({
   // City IDs are opaque strings because legacy records do not use UUIDs.
-  fromCityId: z.string().trim().min(1),
-  toCityId: z.string().trim().min(1),
+  fromCityId: z.string().trim().min(1).max(100),
+  toCityId: z.string().trim().min(1).max(100),
   earliestAt: dateTime,
   latestAt: dateTime,
   seats: z.number().int().min(1).max(MAX_SEATS).default(1),
