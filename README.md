@@ -485,7 +485,7 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 
 ### Админ-панель (production)
 
-Входит в `docker-compose.yml`: сервис `webapp` (nginx со статикой `webapp/dist`, порт публикации **3014**, адрес — `WEBAPP_BIND_ADDR` из root `.env`, дефолт `127.0.0.1`). Встроенный nginx-конфиг (`webapp/nginx.conf`) отдаёт SPA с fallback на `index.html` и проксирует `/api` на `backend:3000` внутри docker-сети — httpOnly cookie `edem_admin_jwt` работает same-origin (`SameSite=Lax`, без `SameSite=None`).
+Входит в `docker-compose.yml`: сервис `webapp` (nginx со статикой `webapp/dist`, порт публикации **3014**, адрес — `WEBAPP_BIND_ADDR` из root `.env`, дефолт `127.0.0.1`). Встроенный nginx-конфиг (`webapp/nginx.conf`) отдаёт SPA с fallback на `index.html` и проксирует `/api` на `backend:3000` внутри docker-сети — httpOnly cookie `edem_admin_jwt` работает same-origin (`SameSite=Strict`, без `SameSite=None`).
 
 Деплой:
 
@@ -493,4 +493,4 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 2. `docker compose up -d --build` — образ webapp собирается сам (multi-stage: vite build → nginx).
 3. Внешний reverse proxy: домен админки (например, `admin.<your-domain>`) → `:3014`, проксировать **весь** трафик, включая `/api`.
 
-`Secure`-флаг cookie определяется по `X-Forwarded-Proto` (nginx пробраскивает его от вышестоящего прокси, иначе — по схеме соединения): по HTTPS cookie ставится с `Secure`, по HTTP — без него, логин работает в обоих случаях. В dev ту же роль выполняет Vite-прокси (`webapp/vite.config.ts`, порт 3013).
+В production cookie всегда ставится с `Secure`, независимо от `X-Forwarded-Proto` (клиентский заголовок больше не влияет на флаг); nginx пробрасывает `X-Forwarded-Proto: $scheme`, а не значение от клиента. В dev по HTTPS cookie тоже `Secure`, по HTTP — без него, чтобы логин на localhost работал. Дополнительно админские мутации требуют same-origin `Origin`/`Sec-Fetch-Site` и JSON body. В dev ту же роль выполняет Vite-прокси (`webapp/vite.config.ts`, порт 3013).

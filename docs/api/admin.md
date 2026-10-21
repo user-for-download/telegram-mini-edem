@@ -16,13 +16,17 @@ JWT в httpOnly cookie. Пользовательские роли не испо�
   `/api/v1/admin/*`, включая логин, в любой среде.
 - Сессия — cookie `edem_admin_jwt`: JWT (HS256, `JWT_SECRET`) с клеймами
   `type=admin-access`, `sub=admin`, `jti`, TTL = `ADMIN_JWT_TTL_SECONDS`
-  (по умолчанию 43200 = 12 часов). Атрибуты cookie: `HttpOnly; SameSite=Lax;
-  Path=/; Max-Age=<TTL>` (+ `Secure` в production). Refresh-токенов нет:
+  (по умолчанию 43200 = 12 часов). Атрибуты cookie: `HttpOnly; SameSite=Strict;
+  Path=/; Max-Age=<TTL>` (`Secure` в production всегда). Refresh-токенов нет:
   по истечении TTL — повторный логин.
-- Guard: нет cookie или JWT невалиден/просрочен/другого типа → `401`.
-  Пользовательский access-токен (`type=access`) админским не считается.
+- JWT привязан к серверной записи `AdminSession` (jti + отпечаток текущего
+  `ADMIN_TOKEN`). Logout и ротация `ADMIN_TOKEN` отзывают сессию немедленно,
+  не дожидаясь истечения TTL.
+- Guard: нет cookie, JWT невалиден/просрочен/другого типа или сессия отозвана
+  → `401`. Пользовательский access-токен (`type=access`) админским не считается.
 - Логин защищён IP-rate-limit'ом `ADMIN_LOGIN_RATE_*` (по умолчанию 5 попыток
-  за 5 минут) — анти-брутфорс.
+  за 5 минут) — анти-брутфорс. Браузерные мутации (включая login/logout)
+  требуют same-origin `Origin`/`Sec-Fetch-Site` и `Content-Type: application/json`.
 
 ### POST /api/v1/admin/auth/login
 
@@ -55,10 +59,10 @@ JWT в httpOnly cookie. Пользовательские роли не испо�
 
 ### POST /api/v1/admin/auth/logout
 
-Очистка cookie (`Set-Cookie: edem_admin_jwt=; Max-Age=0`). Идемпотентен.
-Ответ: `{ "ok": true }`. JWT stateless — серверного отзыва нет.
-Лимитируется общим `mutationLimiter` (как остальные мутации), чтобы
-logout не стал каналом флуда.
+Серверный отзыв сессии (`AdminSession.revokedAt`) + очистка cookie
+(`Set-Cookie: edem_admin_jwt=; Max-Age=0`). Идемпотентен: без/битой cookie
+тоже `200`. Ответ: `{ "ok": true }`. Лимитируется общим `mutationLimiter`
+(как остальные мутации), чтобы logout не стал каналом флуда.
 
 ## Защищённые endpoint'ы
 
