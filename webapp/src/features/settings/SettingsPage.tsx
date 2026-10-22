@@ -1,7 +1,13 @@
 import type { AdminSettingsDto } from "@edem/contracts";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -20,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { TelegramMetricsCard } from "./TelegramMetricsCard";
 import { useSettingsQuery } from "./queries";
 
 type RateLimitKey =
@@ -47,16 +54,13 @@ const FLAG_ROWS: ReadonlyArray<{ key: FlagKey; label: string }> = [
   { key: "trustProxy", label: "Доверенный прокси" },
 ];
 
-/** Read-only страница настроек: лимиты и флаги из env. */
+/**
+ * Read-only страница настроек: лимиты и флаги из env.
+ * Метрики Telegram живут отдельной карточкой со своим loading/error,
+ * поэтому сбой /settings не скрывает наблюдаемость доставки.
+ */
 export function SettingsPage() {
-  const query = useSettingsQuery();
-
-  if (query.isPending) {
-    return <SettingsLoading />;
-  }
-  if (query.isError) {
-    return <SettingsError message={query.error.message} />;
-  }
+  const { isPending, isError, error, data, refetch } = useSettingsQuery();
 
   return (
     <section className="space-y-6">
@@ -66,8 +70,17 @@ export function SettingsPage() {
           Только для чтения: значения управляются переменными окружения сервера.
         </p>
       </header>
-      <RateLimitsCard settings={query.data} />
-      <FlagsCard settings={query.data} />
+      <TelegramMetricsCard />
+      {isPending ? (
+        <SettingsLoading />
+      ) : isError ? (
+        <SettingsError message={error.message} onRetry={() => void refetch()} />
+      ) : (
+        <>
+          <RateLimitsCard settings={data} />
+          <FlagsCard settings={data} />
+        </>
+      )}
     </section>
   );
 }
@@ -75,18 +88,28 @@ export function SettingsPage() {
 function SettingsLoading() {
   return (
     <div aria-label="Загрузка настроек" className="space-y-6" role="status">
-      <Skeleton className="h-8 w-56" />
-      <Skeleton className="h-80 rounded-xl" />
+      <Skeleton className="h-64 rounded-xl" />
       <Skeleton className="h-48 rounded-xl" />
     </div>
   );
 }
 
-function SettingsError({ message }: { message: string }) {
+function SettingsError({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
   return (
     <Alert variant="destructive">
       <AlertTitle>Настройки недоступны</AlertTitle>
       <AlertDescription>{message}</AlertDescription>
+      <AlertAction>
+        <Button type="button" size="sm" variant="outline" onClick={onRetry}>
+          Повторить
+        </Button>
+      </AlertAction>
     </Alert>
   );
 }

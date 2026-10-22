@@ -1,24 +1,37 @@
 import { useState } from "react";
+import type { UpdateReportStatusDto } from "@edem/contracts";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime } from "@/lib/format";
+import { countPages } from "@/lib/page-clamp";
 import { useClampedPageIndex } from "@/lib/use-clamped-page";
+
+import { ReportDetailDialog } from "./ReportDetailDialog";
 import { useReportsQuery, useUpdateReportStatusMutation } from "./queries";
 import {
   REPORT_CATEGORY_LABELS,
   REPORT_STATUS_LABELS,
   REPORT_TARGET_TYPE_LABELS,
 } from "./labels";
-import type { UpdateReportStatusDto } from "@edem/contracts";
+
+const PAGE_SIZE = 20;
 
 type ReportStatusFilter = "pending" | "in_review" | "resolved" | "rejected";
+type ReportTargetTypeFilter = "user" | "trip" | "booking";
 
 const REPORT_STATUS_FILTERS: readonly ReportStatusFilter[] = [
   "pending",
   "in_review",
   "resolved",
   "rejected",
+];
+
+const REPORT_TARGET_TYPE_FILTERS: readonly ReportTargetTypeFilter[] = [
+  "user",
+  "trip",
+  "booking",
 ];
 
 /**
@@ -30,6 +43,12 @@ function isReportStatusFilter(value: string): value is ReportStatusFilter {
   return (REPORT_STATUS_FILTERS as readonly string[]).includes(value);
 }
 
+function isReportTargetTypeFilter(
+  value: string,
+): value is ReportTargetTypeFilter {
+  return (REPORT_TARGET_TYPE_FILTERS as readonly string[]).includes(value);
+}
+
 interface MutationFeedback {
   tone: "success" | "error";
   text: string;
@@ -39,8 +58,12 @@ export function ReportsPage() {
   const [status, setStatus] = useState<ReportStatusFilter | undefined>(
     "pending",
   );
+  const [targetType, setTargetType] = useState<
+    ReportTargetTypeFilter | undefined
+  >();
   const [page, setPage] = useState(1);
-  const query = useReportsQuery({ status, page, pageSize: 20 });
+  const [openId, setOpenId] = useState<string | null>(null);
+  const query = useReportsQuery({ status, targetType, page, pageSize: PAGE_SIZE });
   const mutation = useUpdateReportStatusMutation();
   const [note, setNote] = useState<Record<string, string>>({});
   // Обратная связь модерации: успех/сбой обязаны быть объявлены (audit:
@@ -48,11 +71,10 @@ export function ReportsPage() {
   const [feedback, setFeedback] = useState<MutationFeedback | null>(null);
   // Резолв жалобы на последней странице сжимает «pending»-выборку: индекс
   // страницы без прижимки уехал бы за totalPages (audit F8).
-  const currentPage = useClampedPageIndex(
-    page,
-    query.data?.pagination.totalPages,
-    setPage,
-  );
+  const totalPages = query.data
+    ? countPages(query.data.total, query.data.pageSize)
+    : undefined;
+  const currentPage = useClampedPageIndex(page, totalPages, setPage);
 
   const runStatusUpdate = (
     reportId: string,
@@ -77,34 +99,65 @@ export function ReportsPage() {
 
   return (
     <section className="grid gap-4" aria-labelledby="reports-heading">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 id="reports-heading" className="text-2xl font-semibold">
           Жалобы
         </h1>
-        <label
-          htmlFor="reports-status-filter"
-          className="text-sm text-muted-foreground"
-        >
-          Статус
-        </label>
-        <select
-          id="reports-status-filter"
-          aria-label="Фильтр жалоб по статусу"
-          className="rounded-md border bg-background px-3 py-2 text-sm"
-          value={status ?? "all"}
-          onChange={(event) => {
-            const next = event.target.value;
-            if (next !== "all" && !isReportStatusFilter(next)) return;
-            setPage(1);
-            setStatus(next === "all" ? undefined : next);
-          }}
-        >
-          <option value="all">Все</option>
-          <option value="pending">Новые</option>
-          <option value="in_review">В работе</option>
-          <option value="resolved">Решённые</option>
-          <option value="rejected">Отклонённые</option>
-        </select>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="reports-status-filter"
+              className="text-sm text-muted-foreground"
+            >
+              Статус
+            </label>
+            <select
+              id="reports-status-filter"
+              aria-label="Фильтр жалоб по статусу"
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+              value={status ?? "all"}
+              onChange={(event) => {
+                const next = event.target.value;
+                if (next !== "all" && !isReportStatusFilter(next)) return;
+                setPage(1);
+                setStatus(next === "all" ? undefined : next);
+              }}
+            >
+              <option value="all">Все</option>
+              <option value="pending">Новые</option>
+              <option value="in_review">В работе</option>
+              <option value="resolved">Решённые</option>
+              <option value="rejected">Отклонённые</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="reports-target-type-filter"
+              className="text-sm text-muted-foreground"
+            >
+              Объект
+            </label>
+            <select
+              id="reports-target-type-filter"
+              aria-label="Фильтр жалоб по типу объекта"
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+              value={targetType ?? "all"}
+              onChange={(event) => {
+                const next = event.target.value;
+                if (next !== "all" && !isReportTargetTypeFilter(next)) return;
+                setPage(1);
+                setTargetType(next === "all" ? undefined : next);
+              }}
+            >
+              <option value="all">Все</option>
+              <option value="user">{REPORT_TARGET_TYPE_LABELS.user}</option>
+              <option value="trip">{REPORT_TARGET_TYPE_LABELS.trip}</option>
+              <option value="booking">
+                {REPORT_TARGET_TYPE_LABELS.booking}
+              </option>
+            </select>
+          </div>
+        </div>
       </div>
       {feedback && (
         <p
@@ -133,17 +186,36 @@ export function ReportsPage() {
       <div className="grid gap-3">
         {query.data?.items.map((report) => (
           <article key={report.id} className="grid gap-3 rounded-lg border p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline">
-                {REPORT_STATUS_LABELS[report.status]}
-              </Badge>
-              <Badge variant="secondary">
-                {REPORT_CATEGORY_LABELS[report.category]}
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                {REPORT_TARGET_TYPE_LABELS[report.targetType]} ·{" "}
-                {report.reporterName} · {formatDateTime(report.createdAt)}
-              </span>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">
+                  {REPORT_STATUS_LABELS[report.status]}
+                </Badge>
+                <Badge variant="secondary">
+                  {REPORT_CATEGORY_LABELS[report.category]}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {REPORT_TARGET_TYPE_LABELS[report.targetType]} ·{" "}
+                  {report.reporterName} · {formatDateTime(report.createdAt)}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setOpenId(report.id)}
+              >
+                Открыть
+              </Button>
+            </div>
+            <div>
+              <p className="text-sm font-medium break-words">
+                {report.targetSummary?.label ?? report.targetLabel}
+              </p>
+              {report.targetSummary?.secondary && (
+                <p className="text-xs text-muted-foreground">
+                  {report.targetSummary.secondary}
+                </p>
+              )}
             </div>
             <p className="whitespace-pre-wrap text-sm">{report.description}</p>
             {report.status !== "resolved" && report.status !== "rejected" && (
@@ -211,7 +283,10 @@ export function ReportsPage() {
         ))}
       </div>
       {query.data && (
-        <nav aria-label="Пагинация жалоб" className="flex gap-2">
+        <nav
+          aria-label="Пагинация жалоб"
+          className="flex flex-wrap items-center gap-2"
+        >
           <Button
             variant="outline"
             aria-label="Предыдущая страница жалоб"
@@ -221,18 +296,24 @@ export function ReportsPage() {
             Назад
           </Button>
           <span role="status" className="px-2 py-2 text-sm">
-            Страница {currentPage} из {Math.max(1, query.data.pagination.totalPages)}
+            Страница {currentPage} из {totalPages ?? 1} · всего жалоб:{" "}
+            {query.data.total}
           </span>
           <Button
             variant="outline"
             aria-label="Следующая страница жалоб"
-            disabled={!query.data.pagination.hasMore}
+            disabled={currentPage >= (totalPages ?? 1)}
             onClick={() => setPage((current) => current + 1)}
           >
             Вперёд
           </Button>
         </nav>
       )}
+
+      <ReportDetailDialog
+        reportId={openId}
+        onClose={() => setOpenId(null)}
+      />
     </section>
   );
 }

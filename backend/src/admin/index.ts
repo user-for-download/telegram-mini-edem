@@ -10,6 +10,9 @@ import { Prisma } from "../generated/prisma/client.js";
 import { z } from "zod";
 import {
   ACTIVE_BOOKING_STATUSES,
+  ADMIN_TRIP_DETAIL_BOOKINGS_MAX,
+  ADMIN_USER_DETAIL_RECENT_MAX,
+  adminAuditQuerySchema,
   adminBookingStatusBodySchema,
   adminBookingsQuerySchema,
   adminCitiesQuerySchema,
@@ -21,19 +24,26 @@ import {
   banUserBodySchema,
   cityNameBodySchema,
   feedbackReplyBodySchema,
+  adminPaginatedAuditLogSchema,
   isActiveBookingStatus,
   paginatedCitiesResponseSchema,
+  recomputeCityTripsCountResponseSchema,
 } from "@edem/contracts";
 import type {
   AdminDashboardDto,
+  AdminBookingDetailDto,
   AdminLoginResponse,
   AdminPaginatedBookings,
   AdminPaginatedFeedback,
   AdminPaginatedReviews,
   AdminPaginatedTrips,
   AdminPaginatedUsers,
+  AdminReviewDetailDto,
   AdminSessionResponse,
   AdminSettingsDto,
+  AdminTelegramStopResponseDto,
+  AdminTripDetailDto,
+  AdminUserDetailDto,
 } from "@edem/contracts";
 import { WS_TERMINAL_REASON, cityNameNormalized } from "@edem/contracts";
 import { db } from "../db.js";
@@ -63,12 +73,17 @@ import { getTelegramDeliveryMetrics } from "../services/telegramMetrics.js";
 import { logBusinessEvent } from "../logger/business.js";
 import { logger } from "../logger.js";
 import { ADMIN_COOKIE_NAME, adminCsrfGuard, adminGuard } from "./guard.js";
+import { recordAdminAudit } from "./audit.js";
 import {
   serializeAdminBooking,
+  serializeAdminBookingDetail,
   serializeAdminFeedback,
   serializeAdminReview,
+  serializeAdminReviewDetail,
   serializeAdminTrip,
+  serializeAdminTripDetail,
   serializeAdminUser,
+  serializeAdminUserDetail,
 } from "./serializers.js";
 import { serializeAdminCity } from "../cities/serializers.js";
 import {
@@ -77,6 +92,9 @@ import {
 } from "../cities/counters.js";
 
 const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
+
+/** Signed PostgreSQL BIGINT upper bound (User.telegramUserId is BigInt). */
+const PG_BIGINT_MAX = 9_223_372_036_854_775_807n;
 
 export const adminRouter = new Hono();
 
@@ -243,6 +261,12 @@ function invalidQueryResponse(c: Context) {
 
 /**
  * Сводные метрики для дашборда.
+ *
+ * Кроме общих счётчиков отдаём actionable-очереди (что требует решения
+ * админа прямо сейчас): отзывы на модерации, открытые жалобы, обращения
+ * без ответа и состояние Telegram-outbox. Только числа — без PII.
+ * Все запросы идут одним batch'ем, чтобы дашборд не собирал данные
+ * последовательными round-trip'ами.
  */
 adminRouter.get("/dashboard", adminReadLimiter, async (c) => {
   const weekAgo = new Date(Date.now() - SEVEN_DAYS_MS);
@@ -254,6 +278,10 @@ adminRouter.get("/dashboard", adminReadLimiter, async (c) => {
     totalBookings,
     totalReviews,
     newUsersLast7Days,
+    pendingReviews,
+    openReports,
+    unansweredFeedback,
+    telegramMetrics,
   ] = await Promise.all([
     db.user.count(),
     db.trip.count(),
@@ -261,6 +289,14 @@ adminRouter.get("/dashboard", adminReadLimiter, async (c) => {
     db.booking.count(),
     db.review.count(),
     db.user.count({ where: { createdAt: { gte: weekAgo } } }),
+    db.review.count({ where: { status: "pending" } }),
+    // Терминальные статусы (resolved/rejected) закрывают жалобу; всё
+    // остальное ещё в работе у модератора.
+    db.report.count({ where: { status: { in: ["pending", "in_review"] } } }),
+    // Инвариант feedback-роутов: ответ есть ⇔ reply !== null
+    // (POST /feedback/:id/reply атомарно claim'ит именно reply: null).
+    db.feedback.count({ where: { reply: null } }),
+    getTelegramDeliveryMetrics(),
   ]);
 
   const payload: AdminDashboardDto = {
@@ -270,13 +306,22 @@ adminRouter.get("/dashboard", adminReadLimiter, async (c) => {
     totalBookings,
     totalReviews,
     newUsersLast7Days,
+    pendingReviews,
+    openReports,
+    unansweredFeedback,
+    telegramPending: telegramMetrics.pending,
+    telegramFailed: telegramMetrics.failed,
   };
 
   return c.json(payload);
 });
 
 /**
- * Список пользователей с поиском по имени и пагинацией.
+ * Список пользователей: подстрочный поиск по имени (`q`, с escapeLike) плюс
+ * точные фильтры id/telegramUserId/phone. Все активные условия объединяются
+ * через AND (поля одного Prisma-where). telegramUserId — BigInt: строка
+ * больше signed BIGINT max отвергается как невалидный query, иначе Prisma
+ * упал бы на конвертации.
  */
 adminRouter.get("/users", adminReadLimiter, async (c) => {
   const parseResult = adminUsersQuerySchema.safeParse(getSanitizedQuery(c));
@@ -285,9 +330,32 @@ adminRouter.get("/users", adminReadLimiter, async (c) => {
   }
 
   const query = parseResult.data;
-  const where: Prisma.UserWhereInput = query.q
-    ? { name: { contains: escapeLike(query.q), mode: "insensitive" } }
-    : {};
+
+  let telegramUserId: bigint | undefined;
+  if (query.telegramUserId !== undefined) {
+    try {
+      telegramUserId = BigInt(query.telegramUserId);
+    } catch {
+      return invalidQueryResponse(c);
+    }
+    if (telegramUserId > PG_BIGINT_MAX) {
+      return invalidQueryResponse(c);
+    }
+  }
+
+  const where: Prisma.UserWhereInput = {};
+  if (query.q) {
+    where.name = { contains: escapeLike(query.q), mode: "insensitive" };
+  }
+  if (query.id) {
+    where.id = query.id;
+  }
+  if (telegramUserId !== undefined) {
+    where.telegramUserId = telegramUserId;
+  }
+  if (query.phone) {
+    where.phone = query.phone;
+  }
 
   const [users, total] = await Promise.all([
     db.user.findMany({
@@ -310,7 +378,63 @@ adminRouter.get("/users", adminReadLimiter, async (c) => {
 });
 
 /**
- * Список поездок с фильтром по статусу и пагинацией.
+ * Детальная карточка пользователя: базовые поля плюс ограниченные списки
+ * последних поездок (как водитель), броней (как пассажир), жалоб (как
+ * автор) и обращений в поддержку. 404 для неизвестного id.
+ */
+adminRouter.get("/users/:id", adminReadLimiter, async (c) => {
+  const id = c.req.param("id");
+
+  const user = await db.user.findUnique({ where: { id } });
+  if (!user) {
+    return c.json(
+      { code: ERROR_CODES.NOT_FOUND, message: "User not found" },
+      404,
+    );
+  }
+
+  const [recentTrips, recentBookings, recentReports, recentFeedback] =
+    await Promise.all([
+      db.trip.findMany({
+        where: { driverId: id },
+        include: { driver: true },
+        orderBy: { createdAt: "desc" },
+        take: ADMIN_USER_DETAIL_RECENT_MAX,
+      }),
+      db.booking.findMany({
+        where: { passengerId: id },
+        include: { trip: true, passenger: true },
+        orderBy: { createdAt: "desc" },
+        take: ADMIN_USER_DETAIL_RECENT_MAX,
+      }),
+      db.report.findMany({
+        where: { reporterId: id },
+        orderBy: { createdAt: "desc" },
+        take: ADMIN_USER_DETAIL_RECENT_MAX,
+      }),
+      db.feedback.findMany({
+        where: { userId: id },
+        include: { user: true },
+        orderBy: { createdAt: "desc" },
+        take: ADMIN_USER_DETAIL_RECENT_MAX,
+      }),
+    ]);
+
+  const payload: AdminUserDetailDto = serializeAdminUserDetail({
+    user,
+    recentTrips,
+    recentBookings,
+    recentReports,
+    recentFeedback,
+  });
+
+  return c.json(payload);
+});
+
+/**
+ * Список поездок: точные фильтры по статусу/водителю/городу плюс подстрочный
+ * поиск `q` по маршруту, адресам и имени водителя. Все активные условия
+ * объединяются через AND; варианты `q` — группа OR внутри общего where.
  */
 adminRouter.get("/trips", adminReadLimiter, async (c) => {
   const parseResult = adminTripsQuerySchema.safeParse(getSanitizedQuery(c));
@@ -319,9 +443,32 @@ adminRouter.get("/trips", adminReadLimiter, async (c) => {
   }
 
   const query = parseResult.data;
-  const where: Prisma.TripWhereInput = query.status
-    ? { status: query.status }
-    : {};
+  const where: Prisma.TripWhereInput = {};
+
+  if (query.status) {
+    where.status = query.status;
+  }
+  if (query.driverId) {
+    where.driverId = query.driverId;
+  }
+  if (query.fromCity) {
+    where.fromCity = query.fromCity;
+  }
+  if (query.toCity) {
+    where.toCity = query.toCity;
+  }
+  if (query.q) {
+    // escapeLike обязателен: `%`/`_` из пользовательского ввода иначе
+    // превратились бы в wildcard и совпали со всеми поездками.
+    const q = escapeLike(query.q);
+    where.OR = [
+      { fromCity: { contains: q, mode: "insensitive" } },
+      { toCity: { contains: q, mode: "insensitive" } },
+      { fromAddress: { contains: q, mode: "insensitive" } },
+      { toAddress: { contains: q, mode: "insensitive" } },
+      { driver: { name: { contains: q, mode: "insensitive" } } },
+    ];
+  }
 
   const [trips, total] = await Promise.all([
     db.trip.findMany({
@@ -345,7 +492,43 @@ adminRouter.get("/trips", adminReadLimiter, async (c) => {
 });
 
 /**
- * Список бронирований с фильтром по статусу и пагинацией.
+ * Детальная карточка поездки: базовые поля плюс ограниченный список броней
+ * с пассажирами. Один запрос с include — без N+1. 404 для неизвестного id.
+ * Зарегистрирован после списка и до mutation-роутов `/trips/:id/*`, чтобы
+ * статический `/trips` не был перехвачен параметром.
+ */
+adminRouter.get("/trips/:id", adminReadLimiter, async (c) => {
+  const id = c.req.param("id");
+
+  const trip = await db.trip.findUnique({
+    where: { id },
+    include: {
+      driver: true,
+      bookings: {
+        include: { passenger: true },
+        orderBy: { createdAt: "desc" },
+        take: ADMIN_TRIP_DETAIL_BOOKINGS_MAX,
+      },
+    },
+  });
+
+  if (!trip) {
+    return c.json(
+      { code: ERROR_CODES.NOT_FOUND, message: "Trip not found" },
+      404,
+    );
+  }
+
+  const payload: AdminTripDetailDto = serializeAdminTripDetail(trip);
+  return c.json(payload);
+});
+
+/**
+ * Список бронирований: точные фильтры по статусу/пассажиру/поездке плюс
+ * подстрочный поиск `q` по имени пассажира, маршруту и адресам поездки.
+ * Все активные условия объединяются через AND; варианты `q` — группа OR
+ * внутри общего where. `escapeLike` обязателен: `%`/`_` из пользовательского
+ * ввода иначе стали бы wildcard и совпали со всеми бронями.
  */
 adminRouter.get("/bookings", adminReadLimiter, async (c) => {
   const parseResult = adminBookingsQuerySchema.safeParse(getSanitizedQuery(c));
@@ -354,9 +537,27 @@ adminRouter.get("/bookings", adminReadLimiter, async (c) => {
   }
 
   const query = parseResult.data;
-  const where: Prisma.BookingWhereInput = query.status
-    ? { status: query.status }
-    : {};
+  const where: Prisma.BookingWhereInput = {};
+
+  if (query.status) {
+    where.status = query.status;
+  }
+  if (query.passengerId) {
+    where.passengerId = query.passengerId;
+  }
+  if (query.tripId) {
+    where.tripId = query.tripId;
+  }
+  if (query.q) {
+    const q = escapeLike(query.q);
+    where.OR = [
+      { passenger: { name: { contains: q, mode: "insensitive" } } },
+      { trip: { fromCity: { contains: q, mode: "insensitive" } } },
+      { trip: { toCity: { contains: q, mode: "insensitive" } } },
+      { trip: { fromAddress: { contains: q, mode: "insensitive" } } },
+      { trip: { toAddress: { contains: q, mode: "insensitive" } } },
+    ];
+  }
 
   const [bookings, total] = await Promise.all([
     db.booking.findMany({
@@ -380,8 +581,41 @@ adminRouter.get("/bookings", adminReadLimiter, async (c) => {
 });
 
 /**
+ * Детальная карточка брони: базовые поля плюс контекст поездки (включая
+ * водителя) и пассажира. Один запрос с include — без N+1. 404 для
+ * неизвестного id. Зарегистрирован после списка и до mutation-роутов
+ * `/bookings/:id/status`, чтобы статический `/bookings` не перехватывался.
+ */
+adminRouter.get("/bookings/:id", adminReadLimiter, async (c) => {
+  const id = c.req.param("id");
+
+  const booking = await db.booking.findUnique({
+    where: { id },
+    include: {
+      trip: { include: { driver: true } },
+      passenger: true,
+    },
+  });
+
+  if (!booking) {
+    return c.json(
+      { code: ERROR_CODES.NOT_FOUND, message: "Booking not found" },
+      404,
+    );
+  }
+
+  const payload: AdminBookingDetailDto = serializeAdminBookingDetail(booking);
+  return c.json(payload);
+});
+
+/**
  * Список отзывов с пагинацией (автор и получатель).
- * Необязательный фильтр ?status=pending|published|rejected.
+ *
+ * Точные фильтры по статусу/автору/получателю плюс подстрочный поиск `q` по
+ * тексту, маршруту и именам участников. Все активные условия объединяются
+ * через AND; варианты `q` — группа OR внутри общего where. `escapeLike`
+ * обязателен: `%`/`_` из пользовательского ввода иначе стали бы wildcard и
+ * совпали со всеми отзывами.
  */
 adminRouter.get("/reviews", adminReadLimiter, async (c) => {
   const parseResult = adminReviewsQuerySchema.safeParse(getSanitizedQuery(c));
@@ -390,9 +624,26 @@ adminRouter.get("/reviews", adminReadLimiter, async (c) => {
   }
 
   const query = parseResult.data;
-  const where: Prisma.ReviewWhereInput = query.status
-    ? { status: query.status }
-    : {};
+  const where: Prisma.ReviewWhereInput = {};
+
+  if (query.status) {
+    where.status = query.status;
+  }
+  if (query.authorId) {
+    where.authorId = query.authorId;
+  }
+  if (query.targetUserId) {
+    where.targetUserId = query.targetUserId;
+  }
+  if (query.q) {
+    const q = escapeLike(query.q);
+    where.OR = [
+      { text: { contains: q, mode: "insensitive" } },
+      { tripRoute: { contains: q, mode: "insensitive" } },
+      { author: { name: { contains: q, mode: "insensitive" } } },
+      { targetUser: { name: { contains: q, mode: "insensitive" } } },
+    ];
+  }
 
   const [reviews, total] = await Promise.all([
     db.review.findMany({
@@ -416,8 +667,40 @@ adminRouter.get("/reviews", adminReadLimiter, async (c) => {
 });
 
 /**
+ * Детальная карточка отзыва: базовые поля модерации плюс сводки автора и
+ * получателя. Один запрос с include — без N+1. 404 для неизвестного id.
+ * Зарегистрирован после списка и до mutation-роутов `/reviews/:id/*`.
+ */
+adminRouter.get("/reviews/:id", adminReadLimiter, async (c) => {
+  const id = c.req.param("id");
+
+  const review = await db.review.findUnique({
+    where: { id },
+    include: { author: true, targetUser: true },
+  });
+
+  if (!review) {
+    return c.json(
+      { code: ERROR_CODES.NOT_FOUND, message: "Review not found" },
+      404,
+    );
+  }
+
+  const payload: AdminReviewDetailDto = serializeAdminReviewDetail(review);
+  return c.json(payload);
+});
+
+/**
  * GET /feedback — обращения пользователей в поддержку (offset-пагинация,
  * новые первыми). Read-only.
+ *
+ * Фильтры:
+ * - `answered` — наличие ответа админа: "true" ⇔ reply !== null,
+ *   "false" ⇔ reply === null (инвариант feedback-роутов);
+ * - `q` — подстрочный поиск по теме, тексту и имени автора; `escapeLike`
+ *   обязателен, иначе `%`/`_` из ввода стали бы wildcard.
+ * Активные условия живут в одном Prisma-where и объединяются через AND,
+ * а варианты `q` — группой OR внутри него.
  */
 adminRouter.get("/feedback", adminReadLimiter, async (c) => {
   const parseResult = adminFeedbackQuerySchema.safeParse(getSanitizedQuery(c));
@@ -426,15 +709,29 @@ adminRouter.get("/feedback", adminReadLimiter, async (c) => {
   }
 
   const query = parseResult.data;
+  const where: Prisma.FeedbackWhereInput = {};
+
+  if (query.answered) {
+    where.reply = query.answered === "true" ? { not: null } : null;
+  }
+  if (query.q) {
+    const q = escapeLike(query.q);
+    where.OR = [
+      { subject: { contains: q, mode: "insensitive" } },
+      { text: { contains: q, mode: "insensitive" } },
+      { user: { name: { contains: q, mode: "insensitive" } } },
+    ];
+  }
 
   const [feedbacks, total] = await Promise.all([
     db.feedback.findMany({
+      where,
       include: { user: true },
       orderBy: { createdAt: "desc" },
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),
-    db.feedback.count(),
+    db.feedback.count({ where }),
   ]);
 
   const payload: AdminPaginatedFeedback = {
@@ -510,12 +807,28 @@ adminRouter.post("/feedback/:id/reply", mutationLimiter, async (c) => {
   const now = new Date();
   // Атомарный claim (reply всё ещё NULL): гонка двух POST не должна
   // перезаписывать первый ответ и слать дубль-уведомление. Проверка выше —
-  // только для внятного сообщения об ошибке.
-  const claimed = await db.feedback.updateMany({
-    where: { id, reply: null },
-    data: { reply: parseResult.data.reply, repliedAt: now },
+  // только для внятного сообщения об ошибке. Аудит пишется в той же
+  // транзакции, поэтому неуспешный claim не оставляет следа.
+  const updated = await db.$transaction(async (tx) => {
+    const claimed = await tx.feedback.updateMany({
+      where: { id, reply: null },
+      data: { reply: parseResult.data.reply, repliedAt: now },
+    });
+    if (claimed.count === 0) return null;
+
+    await recordAdminAudit(tx, {
+      action: "feedback.reply",
+      targetType: "feedback",
+      targetId: id,
+      metadata: { mode: "create" },
+    });
+
+    return tx.feedback.findUniqueOrThrow({
+      where: { id },
+      include: { user: true },
+    });
   });
-  if (claimed.count === 0) {
+  if (!updated) {
     return c.json(
       {
         code: ERROR_CODES.VALIDATION_FAILED,
@@ -524,11 +837,6 @@ adminRouter.post("/feedback/:id/reply", mutationLimiter, async (c) => {
       400,
     );
   }
-
-  const updated = await db.feedback.findUniqueOrThrow({
-    where: { id },
-    include: { user: true },
-  });
 
   // In-app уведомление: «feedback_replied» — не критичный тип, подчиняется
   // тумблеру notificationsEnabled пользователя (notifyUser проверяет
@@ -595,10 +903,19 @@ adminRouter.put("/feedback/:id/reply", mutationLimiter, async (c) => {
     );
   }
 
-  const updated = await db.feedback.update({
-    where: { id },
-    data: { reply: parseResult.data.reply },
-    include: { user: true },
+  const updated = await db.$transaction(async (tx) => {
+    const saved = await tx.feedback.update({
+      where: { id },
+      data: { reply: parseResult.data.reply },
+      include: { user: true },
+    });
+    await recordAdminAudit(tx, {
+      action: "feedback.reply",
+      targetType: "feedback",
+      targetId: id,
+      metadata: { mode: "update" },
+    });
+    return saved;
   });
 
   logBusinessEvent("feedback.reply_updated", {
@@ -639,6 +956,52 @@ adminRouter.get("/settings", adminReadLimiter, async (c) => {
 });
 
 /**
+ * GET /audit — append-only журнал админ-мутаций. Отдаём только ID/статусы/
+ * счётчики из metadata: имена, телефоны и тексты ответов сюда не пишутся.
+ * Пагинация и фильтры — те же, что у остальных админ-списков.
+ */
+adminRouter.get("/audit", adminReadLimiter, async (c) => {
+  const parsed = adminAuditQuerySchema.safeParse(sanitizeValue(c.req.query()));
+  if (!parsed.success) {
+    return invalidQueryResponse(c);
+  }
+
+  const { action, targetType, targetId, page, pageSize } = parsed.data;
+  const where = {
+    ...(action ? { action } : {}),
+    ...(targetType ? { targetType } : {}),
+    ...(targetId ? { targetId } : {}),
+  };
+
+  const [items, total] = await Promise.all([
+    db.adminAuditLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    db.adminAuditLog.count({ where }),
+  ]);
+
+  return c.json(
+    adminPaginatedAuditLogSchema.parse({
+      items: items.map((item) => ({
+        id: item.id,
+        action: item.action,
+        targetType: item.targetType,
+        targetId: item.targetId,
+        metadata: item.metadata as Record<string, unknown> | null,
+        actorType: item.actorType,
+        createdAt: item.createdAt.toISOString(),
+      })),
+      total,
+      page,
+      pageSize,
+    }),
+  );
+});
+
+/**
  * Бан пользователя: устанавливаем bannedAt и обязательную причину (banReason).
  * Тело валидируется контрактом — пустая/пробельная/слишком длинная причина
  * (или лишние поля) → 400. Идемпотентно: повторный бан просто обновляет
@@ -669,9 +1032,18 @@ adminRouter.patch("/users/:id/ban", mutationLimiter, async (c) => {
     );
   }
 
-  const updated = await db.user.update({
-    where: { id },
-    data: { bannedAt: new Date(), banReason: parseResult.data.reason },
+  const updated = await db.$transaction(async (tx) => {
+    const saved = await tx.user.update({
+      where: { id },
+      data: { bannedAt: new Date(), banReason: parseResult.data.reason },
+    });
+    await recordAdminAudit(tx, {
+      action: "user.ban",
+      targetType: "user",
+      targetId: id,
+      metadata: { status: "banned" },
+    });
+    return saved;
   });
 
   // Уже установленные WS-сессии не знают о бане до истечения access-токена —
@@ -695,9 +1067,18 @@ adminRouter.patch("/users/:id/unban", mutationLimiter, async (c) => {
     );
   }
 
-  const updated = await db.user.update({
-    where: { id },
-    data: { bannedAt: null, banReason: null },
+  const updated = await db.$transaction(async (tx) => {
+    const saved = await tx.user.update({
+      where: { id },
+      data: { bannedAt: null, banReason: null },
+    });
+    await recordAdminAudit(tx, {
+      action: "user.unban",
+      targetType: "user",
+      targetId: id,
+      metadata: { status: "active" },
+    });
+    return saved;
   });
 
   return c.json(serializeAdminUser(updated));
@@ -720,9 +1101,18 @@ adminRouter.patch("/users/:id/onboarding-reset", mutationLimiter, async (c) => {
     );
   }
 
-  const updated = await db.user.update({
-    where: { id },
-    data: { onboardingVersion: null, consentAcceptedAt: null },
+  const updated = await db.$transaction(async (tx) => {
+    const saved = await tx.user.update({
+      where: { id },
+      data: { onboardingVersion: null, consentAcceptedAt: null },
+    });
+    await recordAdminAudit(tx, {
+      action: "user.onboarding_reset",
+      targetType: "user",
+      targetId: id,
+      metadata: { onboardingReset: true },
+    });
+    return saved;
   });
 
   return c.json(serializeAdminUser(updated));
@@ -757,22 +1147,34 @@ adminRouter.patch("/users/:id/telegram-stop", mutationLimiter, async (c) => {
       data: { tgChatJoinedAt: null },
     });
 
-    return tx.notificationDelivery.updateMany({
+    const cancelled = await tx.notificationDelivery.updateMany({
       where: { userId: id, status: { in: ["pending", "processing"] } },
       data: { status: "skipped", error: "admin_stopped" },
     });
+
+    await recordAdminAudit(tx, {
+      action: "user.telegram_stop",
+      targetType: "user",
+      targetId: id,
+      metadata: { hadConsent, cancelledDeliveries: cancelled.count },
+    });
+
+    return cancelled;
   });
 
+  // Только userId и счётчики: phone/name/telegram id в логи не попадают.
   logger.info(
     { userId: id, cancelled: cancelled.count, hadConsent },
     "tg_admin_stop",
   );
 
-  return c.json({
+  const payload: AdminTelegramStopResponseDto = {
     success: true,
     hadConsent,
     cancelledDeliveries: cancelled.count,
-  });
+  };
+
+  return c.json(payload);
 });
 
 /**
@@ -866,6 +1268,16 @@ adminRouter.patch("/trips/:id/cancel", mutationLimiter, async (c) => {
             cancelledByType: "admin",
           },
           include: { driver: true },
+        });
+
+        await recordAdminAudit(tx, {
+          action: "trip.cancel",
+          targetType: "trip",
+          targetId: updated.id,
+          metadata: {
+            status: "cancelled",
+            passengersAffected: activeBookings.length,
+          },
         });
 
         return {
@@ -1080,6 +1492,13 @@ adminRouter.patch("/bookings/:id/status", mutationLimiter, async (c) => {
           include: { trip: true, passenger: true },
         });
 
+        await recordAdminAudit(tx, {
+          action: "booking.status",
+          targetType: "booking",
+          targetId: updated.id,
+          metadata: { from: oldStatus, to: newStatus },
+        });
+
         return { kind: "updated", booking: updated } as const;
       },
       { isolationLevel: "Serializable" },
@@ -1172,6 +1591,12 @@ adminRouter.delete("/reviews/:id", mutationLimiter, async (c) => {
     async (tx) => {
       await tx.review.delete({ where: { id } });
       await recomputeUserRating(tx, review.targetUserId);
+      await recordAdminAudit(tx, {
+        action: "review.delete",
+        targetType: "review",
+        targetId: id,
+        metadata: { status: "deleted" },
+      });
     },
     // recomputeUserRating — read-modify-write по User (rating/reviewsCount).
     // Serializable исключает lost update при параллельной модерации того же
@@ -1239,6 +1664,13 @@ adminRouter.patch("/reviews/:id/approve", mutationLimiter, async (c) => {
         // Отзыв теперь учитывается в рейтинге — пересчитываем агрегат
         // получателя по актуальным данным внутри той же транзакции.
         await recomputeUserRating(tx, approved.targetUserId);
+
+        await recordAdminAudit(tx, {
+          action: "review.approve",
+          targetType: "review",
+          targetId: approved.id,
+          metadata: { status: "published" },
+        });
 
         return { kind: "ok" as const, review: approved };
       },
@@ -1351,6 +1783,13 @@ adminRouter.patch("/reviews/:id/reject", mutationLimiter, async (c) => {
         const rejected = await tx.review.findUniqueOrThrow({
           where: { id },
           include: { author: true, targetUser: true },
+        });
+
+        await recordAdminAudit(tx, {
+          action: "review.reject",
+          targetType: "review",
+          targetId: rejected.id,
+          metadata: { status: "rejected" },
         });
 
         return { kind: "ok" as const, review: rejected };
@@ -1488,8 +1927,17 @@ adminRouter.post("/cities", mutationLimiter, async (c) => {
   const nameNormalized = cityNameNormalized(name);
 
   try {
-    const created = await db.city.create({
-      data: { name, nameNormalized },
+    const created = await db.$transaction(async (tx) => {
+      const city = await tx.city.create({
+        data: { name, nameNormalized },
+      });
+      await recordAdminAudit(tx, {
+        action: "city.create",
+        targetType: "city",
+        targetId: city.id,
+        metadata: { name: city.name },
+      });
+      return city;
     });
     logBusinessEvent("city.created", {
       cityId: created.id,
@@ -1539,9 +1987,18 @@ adminRouter.patch("/cities/:id", mutationLimiter, async (c) => {
   const nameNormalized = cityNameNormalized(name);
 
   try {
-    const updated = await db.city.update({
-      where: { id },
-      data: { name, nameNormalized },
+    const updated = await db.$transaction(async (tx) => {
+      const city = await tx.city.update({
+        where: { id },
+        data: { name, nameNormalized },
+      });
+      await recordAdminAudit(tx, {
+        action: "city.update",
+        targetType: "city",
+        targetId: city.id,
+        metadata: { name: city.name },
+      });
+      return city;
     });
     logBusinessEvent("city.renamed", {
       cityId: updated.id,
@@ -1595,7 +2052,15 @@ adminRouter.delete("/cities/:id", mutationLimiter, async (c) => {
     );
   }
 
-  await db.city.delete({ where: { id } });
+  await db.$transaction(async (tx) => {
+    await tx.city.delete({ where: { id } });
+    await recordAdminAudit(tx, {
+      action: "city.delete",
+      targetType: "city",
+      targetId: id,
+      metadata: { name: existing.name, tripsCount: existing.tripsCount },
+    });
+  });
   logBusinessEvent("city.deleted", { cityId: id, name: existing.name });
   return c.json({ ok: true, id });
 });
@@ -1614,10 +2079,19 @@ adminRouter.post(
   "/cities/recompute-trips-count",
   mutationLimiter,
   async (c) => {
-    const { updated } = await db.$transaction((tx) =>
-      recomputeCityTripsCount(tx),
-    );
+    const { updated } = await db.$transaction(async (tx) => {
+      const result = await recomputeCityTripsCount(tx);
+      await recordAdminAudit(tx, {
+        action: "city.recompute",
+        targetType: "city",
+        metadata: { updated: result.updated },
+      });
+      return result;
+    });
     logBusinessEvent("city.trips_count.recomputed", { updated });
-    return c.json({ ok: true, updated }, 200);
+    return c.json(
+      recomputeCityTripsCountResponseSchema.parse({ ok: true, updated }),
+      200,
+    );
   },
 );

@@ -97,6 +97,32 @@ model AdminSession {
   @@index([expiresAt])
 }
 
+// Неизменяемый (append-only) журнал админ-действий — governance P1.
+// Строки только добавляются: API не умеет update/delete, поэтому журнал
+// служит доказательством «кто/что/когда». Персональные данные (имя, телефон,
+// текст обращения) НЕ храним: metadata — только id/статусы/счётчики, которые
+// админ и так видит за adminGuard. actorType = "admin" (запрос через guard)
+// или "system" (воркер/фоновое действие).
+model AdminAuditLog {
+  id         String   @id @default(uuid())
+  // Действие из закрытого списка ADMIN_AUDIT_ACTIONS (@edem/contracts).
+  action     String
+  // Тип цели: ADMIN_AUDIT_TARGET_TYPES (user/trip/booking/review/...).
+  targetType String
+  // id цели; null для действий без конкретного объекта (напр. city.recompute).
+  targetId   String?
+  // JSON-снапшот мутации: прошлый/новый статус, причина, счётчики. Без PII.
+  metadata   Json?
+  // Кто выполнил действие: "admin" или "system".
+  actorType  String   @default("admin")
+  createdAt  DateTime @default(now())
+
+  // Новые первыми (дефолтный листинг) + фильтры по действию и по цели.
+  @@index([createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@index([targetType, targetId, createdAt(sort: Desc)])
+}
+
 model Notification {
   id        String   @id @default(uuid())
   userId    String

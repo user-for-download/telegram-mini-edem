@@ -108,7 +108,7 @@ function setMocks(requests: Record<string, unknown> = {}) {
 function renderList(): string {
   return renderToString(
     <AppRoot platform="base">
-      <RideRequestsList onCreate={vi.fn()} />
+      <RideRequestsList />
     </AppRoot>,
   );
 }
@@ -176,7 +176,7 @@ describe("RideRequestsList: состояния", () => {
   it("пустой список — пустое состояние", () => {
     setMocks({ data: [] });
 
-    expect(renderList()).toContain("Активных запросов нет.");
+    expect(renderList()).toContain("Здесь появятся ваши запросы на попутку.");
   });
 
   it("loading — спиннер, ошибка — повтор", () => {

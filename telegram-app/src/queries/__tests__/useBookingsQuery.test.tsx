@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-// Инвалидация после мутаций брони: бронь закрывает подходящие заявки
-// пассажира на бэке (closeRideRequestsForBooking), поэтому «Мои заявки» на
-// /profile/ride-requests обязаны обновиться тем же успехом. Без этого заявка
-// оставалась «Активен» до staleTime 30с — то есть пассажир видел бы заявку,
-// уже закрытую его же бронью.
+// Инвалидация после мутаций брони: бронь закрывает подходящие запросы
+// пассажира на бэке (closeRideRequestsForBooking), поэтому «Мои запросы» на
+// /profile/ride-requests обязаны обновиться тем же успехом. Без этого запрос
+// оставался «Активен» до staleTime 30с — то есть пассажир видел бы запрос,
+// уже закрытый его же бронью.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Флаг тестового окружения React 19: без него act() вне раннера считается
@@ -101,12 +101,12 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("useCreateBookingMutation: успех обновляет и заявки, не только брони", () => {
-  it("инвалидирует брони, поездки И заявки пассажира", async () => {
+describe("useCreateBookingMutation: успех обновляет и запросы, не только брони", () => {
+  it("инвалидирует брони, поездки И запросы пассажира", async () => {
     // Arrange / Act
     await renderProbe();
 
-    // Assert: заявки закрыты этой же бронью — список «Мои заявки» обязан
+    // Assert: запросы закрыты этой же бронью — список «Мои запросы» обязан
     // сменить статус, иначе он до 30 секунд показывает «Активен».
     expect(mockCreateBooking).toHaveBeenCalledTimes(1);
     expect(countCalls(invalidateSpy, BOOKING_KEYS.all)).toBe(1);

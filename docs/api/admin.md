@@ -73,6 +73,11 @@ JWT в httpOnly cookie. Пользовательские роли не испо�
 Списочные endpoint'ы возвращают `{ items, total, page, pageSize }`
 (offset-пагинация; `pageSize` ≤ 100, `page` ≤ 10000). Даты — ISO 8601 (UTC).
 
+Каждая admin-мутация пишет ровно одну строку `AdminAuditLog` в той же
+транзакции (где это возможно). Неуспешная мутация строку не создаёт.
+`metadata` — только идентификаторы, статусы и счётчики; PII и свободный текст
+туда не попадают. Журнал читается через `GET /admin/audit`.
+
 ### GET /api/v1/admin/dashboard
 
 Сводные метрики:
@@ -84,22 +89,56 @@ JWT в httpOnly cookie. Пользовательские роли не испо�
   "activeTrips": 19,
   "totalBookings": 40,
   "totalReviews": 19,
-  "newUsersLast7Days": 22
+  "newUsersLast7Days": 22,
+  "pendingReviews": 3,
+  "openReports": 2,
+  "unansweredFeedback": 1,
+  "telegramPending": 4,
+  "telegramFailed": 0
 }
 ```
+
+`pendingReviews` — отзывы в статусе `pending`; `openReports` — жалобы
+`pending` + `in_review`; `unansweredFeedback` — обращения без ответа;
+`telegramPending`/`telegramFailed` — живые и упавшие доставки outbox.
 
 ### GET /api/v1/admin/users
 
 | Параметр | Тип | Описание |
 |----------|-----|----------|
-| `q` | string | Поиск по имени (без учёта регистра), опционально |
+| `q` | string | Подстрочный поиск по имени (без учёта регистра), max 100 |
+| `id` | string | Точный `User.id`, max 100 |
+| `telegramUserId` | string | Точный Telegram id, только цифры (1–20) |
+| `phone` | string | Точный телефон в том виде, как хранится в `User.phone`, max 25 |
 | `page` | number | default 1 |
 | `pageSize` | number | default 20, max 100 |
 
+Точные фильтры (`id`, `telegramUserId`, `phone`) комбинируются через AND с
+`q`; пустые значения не передаются. Невалидный `telegramUserId` (не цифры)
+→ `400 VALIDATION_FAILED`.
+
 Элемент `items`: `id, name, avatar, rating, tripsCount, reviewsCount,
-isVerified, bannedAt (ISO|null), banReason (string|null),
-createdAt (ISO)`. `banReason` — причина бана; `null` для банов, выставленных
-до появления поля (клиент показывает «Причина не указана»).
+isVerified, bannedAt (ISO|null), banReason (string|null), telegramUserId
+(string|null), telegramConnected, tgChatJoinedAt (ISO|null),
+consentAcceptedAt (ISO|null), phone (string|null), createdAt (ISO)`.
+`banReason` — причина бана; `null` для банов, выставленных до появления поля
+(клиент показывает «Причина не указана»). `phone` — PII, отдаётся только за
+`adminGuard`.
+
+### GET /api/v1/admin/users/:id
+
+Детальная карточка пользователя: базовый user DTO плюс ограниченные списки
+последней активности. `404 NOT_FOUND` для неизвестного id.
+
+Дополнительные поля (каждый массив — не больше
+`ADMIN_USER_DETAIL_RECENT_MAX = 20`):
+
+| Поле | Содержимое |
+|------|------------|
+| `recentTrips` | последние поездки водителя (`AdminTripDto`) |
+| `recentBookings` | последние брони пассажира (`AdminBookingDto`) |
+| `recentReports` | последние жалобы, поданные пользователем (`id, targetType, targetId, category, status, description, createdAt`) |
+| `recentFeedback` | последние обращения пользователя (`AdminFeedbackDto`) |
 
 ### PATCH /api/v1/admin/users/:id/ban
 
@@ -164,29 +203,49 @@ JSON-агрегат outbox-доставок для админ-панели: `cha
 | Параметр | Тип | Описание |
 |----------|-----|----------|
 | `status` | `active\|completed\|cancelled` | Фильтр, опционально |
+| `driverId` | string | Точный id водителя |
+| `fromCity`, `toCity` | string | Точное имя города (снимок `Trip.fromCity`/`toCity`) |
+| `q` | string | Подстрочный поиск по `fromCity`/`toCity`/адресам, max 100 |
 | `page`, `pageSize` | number | как у `/users` |
 
-Элемент `items`: `id, fromCity, toCity, fromAddress, toAddress, price,
-seatsTotal, seatsAvailable, status, departureAt, createdAt, driverName,
-driverId`.
+Все фильтры опциональны и комбинируются через AND. Элемент `items`: `id,
+fromCity, toCity, fromAddress, toAddress, price, seatsTotal, seatsAvailable,
+status, departureAt, createdAt, driverName, driverId`.
+
+### GET /api/v1/admin/trips/:id
+
+Детальная карточка поездки: базовый trip DTO плюс `bookings` — массив
+компактных броней (`id, seat, status, passengerId, passengerName, createdAt`),
+не больше `ADMIN_TRIP_DETAIL_BOOKINGS_MAX = 100`. `404 NOT_FOUND` для
+неизвестного id.
 
 ### PATCH /api/v1/admin/trips/:id/cancel
 
-Ставит `status = cancelled`. Только смена статуса: брони, места и уведомления
-не трогаются (в отличие от водительской отмены с каскадом). Завершённые
-(`completed`) и уже отменённые поездки отклоняются с `409 TRIP_NOT_ACTIVE`
-(отмена завершённой поездки — невалидный переход: пассажиры теряют право
-на отзыв при сохранении `tripsCount`). Ответ — trip DTO.
+Ставит `status = cancelled`. Полный жизненный цикл, как у водительской
+отмены: все активные брони (`pending`/`confirmed`) переводятся в `cancelled`,
+`seatsAvailable = 0`, счётчики городов декрементируются в той же транзакции;
+пассажирам после коммита уходят уведомления. Завершённые (`completed`) и уже
+отменённые поездки отклоняются с `409 TRIP_NOT_ACTIVE`. Ответ — trip DTO.
 
 ### GET /api/v1/admin/bookings
 
 | Параметр | Тип | Описание |
 |----------|-----|----------|
 | `status` | `pending\|confirmed\|declined\|cancelled` | Фильтр, опционально |
+| `passengerId` | string | Точный id пассажира |
+| `tripId` | string | Точный id поездки |
+| `q` | string | Подстрочный поиск по имени пассажира, маршруту и адресам, max 100 |
 | `page`, `pageSize` | number | как у `/users` |
 
 Элемент `items`: `id, seat, status, createdAt, tripId, tripRoute,
 passengerId, passengerName`.
+
+### GET /api/v1/admin/bookings/:id
+
+Детальная карточка брони: базовый booking DTO плюс контекст поездки и
+пассажира — `fromCity, toCity, departureAt, tripStatus, driverId, driverName,
+passengerAvatar, passengerRating, passengerPhone`. `passengerPhone` — PII,
+отдаётся только за `adminGuard`. `404 NOT_FOUND` для неизвестного id.
 
 ### PATCH /api/v1/admin/bookings/:id/status
 
@@ -204,12 +263,21 @@ serialization-конфликт (`P2034`) — `409` с retry. Ответ — book
 | Параметр | Тип | Описание |
 |----------|-----|----------|
 | `status` | `pending\|published\|rejected` | Фильтр по статусу модерации, опционально |
+| `authorId` | string | Точный id автора |
+| `targetUserId` | string | Точный id получателя отзыва |
+| `q` | string | Подстрочный поиск по тексту, маршруту, именам автора/получателя, max 100 |
 | `page`, `pageSize` | number | как у `/users` |
 
 Элемент `items`: `id, rating, text, targetRole, status, tripRoute,
 createdAt, authorId, authorName, targetUserId, targetUserName`.
 `status` — статус модерации: `pending` (на модерации), `published`
 (опубликован), `rejected` (отклонён).
+
+### GET /api/v1/admin/reviews/:id
+
+Детальная карточка отзыва: базовый review DTO плюс `author` и `target` —
+компактные сводки участников (`id, name, avatar, rating, bannedAt`).
+`404 NOT_FOUND` для неизвестного id.
 
 ### DELETE /api/v1/admin/reviews/:id
 
@@ -254,9 +322,16 @@ pending-отзыв в рейтинг никогда не учитывался. �
 ### GET /api/v1/admin/feedback
 
 Список обращений пользователей в поддержку (новые первыми).
-`page`, `pageSize` — как у `/users`. Элемент `items`: `id, subject, text,
-reply (string|null), repliedAt (ISO|null), createdAt, userId, userName`.
-`reply === null` — админ ещё не ответил.
+
+| Параметр | Тип | Описание |
+|----------|-----|----------|
+| `answered` | `"true"\|"false"` | `true` — есть ответ, `false` — без ответа; опционально |
+| `q` | string | Подстрочный поиск по теме, тексту и имени пользователя, max 100 |
+| `page`, `pageSize` | number | как у `/users` |
+
+Элемент `items`: `id, subject, text, reply (string|null), repliedAt
+(ISO|null), createdAt, userId, userName`. `reply === null` — админ ещё не
+ответил.
 
 Обращения создаются пользователями через `POST /api/v1/feedback`
 (авторизованные) и `POST /api/v1/feedback/appeal` (забаненные, без токена —
@@ -380,7 +455,26 @@ trim + lower-case) → `409`.
 
 | Код | Ответ | Описание |
 |-----|-------|----------|
-| 200 | `{ "updated": N }` | `N` — сколько городов получило новое значение |
+| 200 | `{ "ok": true, "updated": N }` | `N` — сколько городов получило новое значение |
+
+### GET /api/v1/admin/audit
+
+Append-only журнал админ-мутаций. Read-only; строки никогда не обновляются и
+не удаляются. Query-параметры:
+
+| Параметр | Тип | Описание |
+|----------|-----|----------|
+| `action` | enum | `user.ban`, `user.unban`, `user.onboarding_reset`, `user.telegram_stop`, `trip.cancel`, `booking.status`, `review.approve`, `review.reject`, `review.delete`, `feedback.reply`, `report.status`, `city.create`, `city.update`, `city.delete`, `city.recompute` |
+| `targetType` | enum | `user`, `trip`, `booking`, `review`, `feedback`, `report`, `city`, `system` |
+| `targetId` | string | Точный id цели, max 100 |
+| `page`, `pageSize` | number | default 1 / 20, max 100 |
+
+Ответ — обычный admin-список `{ items, total, page, pageSize }`. Элемент:
+`id, action, targetType, targetId (string|null), metadata (object|null),
+actorType ("admin"|"system"), createdAt`. `metadata` содержит только ID,
+статусы и счётчики (`{ "from": "pending", "to": "in_review" }`,
+`{ "updated": 12 }`), без имён, телефонов и текстов. Неизвестный
+`action`/`targetType` → `400 VALIDATION_FAILED`.
 
 ### GET /api/v1/admin/settings
 

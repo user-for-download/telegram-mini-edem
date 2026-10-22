@@ -132,7 +132,7 @@ function requestsState(overrides: Record<string, unknown> = {}) {
 function renderList() {
   return render(
     <AppRoot platform="base">
-      <RideRequestsList onCreate={vi.fn()} />
+      <RideRequestsList />
     </AppRoot>,
   );
 }
@@ -214,7 +214,7 @@ describe("RideRequestsList: сентинел останавливается на
     // единственный способ честно смоделировать возврат из состояния ошибки.
     rerender(
       <AppRoot platform="base">
-        <RideRequestsList key="recovered" onCreate={vi.fn()} />
+        <RideRequestsList key="recovered" />
       </AppRoot>,
     );
 

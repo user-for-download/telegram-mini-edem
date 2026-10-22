@@ -187,7 +187,7 @@ export function ProfilePage() {
                     </IconContainer>
                   }
                   title="История запросов"
-                  subtitle="Мои заявки на попутку"
+                  subtitle="Мои запросы на попутку"
                   onClick={() => {
                     haptic.light();
                     navigate("/profile/ride-requests");

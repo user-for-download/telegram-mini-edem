@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import type {
   AdminPaginatedReviews,
@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -50,8 +51,18 @@ import {
   useRejectReviewMutation,
   useReviewsQuery,
 } from "./queries";
+import { ReviewDetailDialog } from "./ReviewDetailDialog";
 
 const PAGE_SIZE = 10;
+
+function useDebouncedValue<T>(value: T, delayMs = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const handle = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(handle);
+  }, [value, delayMs]);
+  return debounced;
+}
 
 // Подписи статусов в таблице (ед. ч.) и в фильтре (мн. ч.) — разные по смыслу.
 const STATUS_LABELS: Record<ReviewStatusValue, string> = {
@@ -77,15 +88,25 @@ interface PendingModeration {
 
 export function ReviewsPage() {
   const [status, setStatus] = useState<StatusFilterValue>("all");
+  const [search, setSearch] = useState("");
+  const [authorId, setAuthorId] = useState("");
+  const [targetUserId, setTargetUserId] = useState("");
   const [page, setPage] = useState(1);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [reviewToDelete, setReviewToDelete] = useState<AdminReviewDto | null>(
     null
   );
   const [pendingModeration, setPendingModeration] =
     useState<PendingModeration | null>(null);
   const [moderateError, setModerateError] = useState<string | null>(null);
+  const q = useDebouncedValue(search.trim());
+  const author = useDebouncedValue(authorId.trim());
+  const target = useDebouncedValue(targetUserId.trim());
   const reviewsQuery = useReviewsQuery({
     status: status === "all" ? undefined : status,
+    q: q || undefined,
+    authorId: author || undefined,
+    targetUserId: target || undefined,
     page,
     pageSize: PAGE_SIZE,
   });
@@ -164,6 +185,36 @@ export function ReviewsPage() {
         </div>
         <StatusFilter value={status} onChange={handleFilterChange} />
       </div>
+      <div className="grid gap-2 md:grid-cols-3">
+        <Input
+          aria-label="Поиск отзывов по тексту, маршруту или имени"
+          placeholder="Текст, маршрут или имя"
+          type="search"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(1);
+          }}
+        />
+        <Input
+          aria-label="Фильтр по id автора"
+          placeholder="ID автора"
+          value={authorId}
+          onChange={(event) => {
+            setAuthorId(event.target.value);
+            setPage(1);
+          }}
+        />
+        <Input
+          aria-label="Фильтр по id получателя"
+          placeholder="ID получателя"
+          value={targetUserId}
+          onChange={(event) => {
+            setTargetUserId(event.target.value);
+            setPage(1);
+          }}
+        />
+      </div>
       {reviewsQuery.isPending && <ReviewsLoading />}
       {reviewsQuery.isError && (
         <ReviewsError
@@ -177,6 +228,7 @@ export function ReviewsPage() {
             reviews={reviewsQuery.data.items}
             moderating={isModerating}
             onDelete={setReviewToDelete}
+            onDetails={(review) => setDetailId(review.id)}
             onModerate={requestModeration}
           />
           <ReviewsPagination
@@ -198,6 +250,10 @@ export function ReviewsPage() {
         error={moderateError}
         onClose={closeModerationDialog}
         onConfirm={confirmModeration}
+      />
+      <ReviewDetailDialog
+        reviewId={detailId}
+        onClose={() => setDetailId(null)}
       />
     </section>
   );
@@ -258,11 +314,13 @@ function ReviewsTable({
   reviews,
   moderating,
   onDelete,
+  onDetails,
   onModerate,
 }: {
   reviews: AdminReviewDto[];
   moderating: boolean;
   onDelete: (review: AdminReviewDto) => void;
+  onDetails: (review: AdminReviewDto) => void;
   onModerate: (review: AdminReviewDto, action: ModerationAction) => void;
 }) {
   return (
@@ -296,6 +354,7 @@ function ReviewsTable({
               review={review}
               moderating={moderating}
               onDelete={onDelete}
+              onDetails={onDetails}
               onModerate={onModerate}
             />
           ))
@@ -309,11 +368,13 @@ function ReviewRow({
   review,
   moderating,
   onDelete,
+  onDetails,
   onModerate,
 }: {
   review: AdminReviewDto;
   moderating: boolean;
   onDelete: (review: AdminReviewDto) => void;
+  onDetails: (review: AdminReviewDto) => void;
   onModerate: (review: AdminReviewDto, action: ModerationAction) => void;
 }) {
   return (
@@ -335,7 +396,14 @@ function ReviewRow({
       </TableCell>
       <TableCell>{formatDateTime(review.createdAt)}</TableCell>
       <TableCell>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onDetails(review)}
+          >
+            Детали
+          </Button>
           {review.status === "pending" && (
             <>
               <Button

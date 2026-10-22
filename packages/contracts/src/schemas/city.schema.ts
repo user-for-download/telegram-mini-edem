@@ -124,3 +124,14 @@ export const paginatedCitiesResponseSchema = z.object({
 export type PaginatedCitiesResponse = z.infer<
   typeof paginatedCitiesResponseSchema
 >;
+
+/** POST /api/v1/admin/cities/recompute-trips-count — результат пересчёта. */
+export const recomputeCityTripsCountResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    updated: z.number().int().nonnegative(),
+  })
+  .strict();
+export type RecomputeCityTripsCountResponse = z.infer<
+  typeof recomputeCityTripsCountResponseSchema
+>;

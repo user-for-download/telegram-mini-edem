@@ -1,4 +1,10 @@
-export { fetchFeedback, fetchFeedbackById, createFeedbackReply, updateFeedbackReply } from "./api";
+export {
+  buildFeedbackSearchParams,
+  createFeedbackReply,
+  fetchFeedback,
+  fetchFeedbackById,
+  updateFeedbackReply,
+} from "./api";
 export type { FetchFeedbackParams } from "./api";
 export {
   useFeedbackQuery,

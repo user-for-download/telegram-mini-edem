@@ -1,10 +1,9 @@
 // SSR-тесты страницы «История запросов» (/profile/ride-requests).
 // Паттерн tripsPages.test.tsx (SSR, без testing-library).
 //
-// Страница — тонкая склейка: кнопка «Создать запрос» открывает окно,
-// тело — список заявок. Проверяем именно склейку и разделение: форма
-// создания живёт в портальном окне (в renderToString не попадает), список —
-// на странице.
+// Страница — только история, как «История поездок»: ни создания, ни
+// внутреннего заголовка-дубля. Пустое состояние и лента приходят из
+// RideRequestsList; здесь проверяем склейку и отсутствие формы на странице.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -115,50 +114,43 @@ afterEach(() => {
 });
 
 describe("RideRequestHistoryPage", () => {
-  it("имя экрана, заголовок списка и CTA только в пустом состоянии", () => {
+  it("имя экрана и пустое состояние — как в истории поездок", () => {
     const html = renderPage();
 
     expect(html).toContain("История запросов");
-    expect(html).toContain("Мои заявки");
     expect(html).toContain("Пока пусто");
-    expect(html).toContain("Создать запрос");
-    expect(html.indexOf("Мои заявки")).toBeLessThan(
-      html.indexOf("Создать запрос"),
-    );
+    expect(html).toContain("Здесь появятся ваши запросы на попутку.");
+    // Внутреннего заголовка-дубля и кнопки создания на странице нет.
+    expect(html).not.toContain("Мои заявки");
+    expect(html).not.toContain("Создать запрос");
   });
 
-  it("в истории нет отдельной секции создания — только окно по CTA", () => {
-    // Регресс: секция «Нужен попутчик» дублировала главную и отодвигала
-    // историю. Создание живёт на главной, на странице истории — только
-    // действие пустого состояния.
+  it("страница — только история: без секции создания и без окна", () => {
+    // Регресс: секция «Нужен попутчик» дублировала главную, а CTA в пустом
+    // состоянии делал историю непохожей на «Историю поездок». Создание
+    // живёт только на главной.
     const source = readFileSync(
       fileURLToPath(new URL("../RideRequestHistoryPage.tsx", import.meta.url)),
       "utf8",
     );
     expect(source).not.toContain("Нужен попутчик");
     expect(source).not.toContain("<SectionBody>");
-    expect(source).toContain("<RideRequestsList onCreate={openCreate} />");
+    expect(source).not.toContain("RideRequestCreateModal");
+    expect(source).not.toContain("Создать запрос");
+    expect(source).toContain("<RideRequestsList />");
   });
 
-  it("при наличии заявок кнопки создания нет — это только история", () => {
-    mockUseRequests.mockReturnValue(infiniteState([makeRequest()]));
-
-    const html = renderPage();
-
-    expect(html).toContain("Москва → Тула");
-    expect(html).not.toContain("Создать запрос");
-  });
-
-  it("список заявок выводится на странице", () => {
+  it("при наличии запросов лента показывает строки без создания", () => {
     mockUseRequests.mockReturnValue(infiniteState([makeRequest()]));
 
     const html = renderPage();
 
     expect(html).toContain("Москва → Тула");
     expect(html).toContain("Активен");
+    expect(html).not.toContain("Создать запрос");
   });
 
-  it("форма создания не встроена в страницу — она в портальном окне", () => {
+  it("форма создания не встроена в страницу — она только на главной", () => {
     // Регресс на возврат к слипшейся шторке: если форма снова окажется в DOM
     // страницы, окно перестанет быть единственным местом создания.
     mockUseRequests.mockReturnValue(infiniteState([makeRequest()]));

@@ -8,21 +8,36 @@ import {
 } from "@edem/contracts";
 
 export interface FetchFeedbackParams {
+  answered?: "true" | "false";
+  q?: string;
   page: number;
   pageSize: number;
 }
 
 /**
- * GET /api/v1/admin/feedback?page=&pageSize=
+ * GET /api/v1/admin/feedback?answered=&q=&page=&pageSize=
+ * answered — string literal ("true"/"false"), как в adminFeedbackQuerySchema.
  */
-export function fetchFeedback(
-  params: FetchFeedbackParams
-): Promise<AdminPaginatedFeedback> {
+export function buildFeedbackSearchParams(
+  params: FetchFeedbackParams,
+): URLSearchParams {
   const search = new URLSearchParams({
     page: String(params.page),
     pageSize: String(params.pageSize),
   });
-  return apiGet(`/feedback?${search.toString()}`, adminPaginatedFeedbackSchema);
+  if (params.answered) search.set("answered", params.answered);
+  const q = params.q?.trim();
+  if (q) search.set("q", q);
+  return search;
+}
+
+export function fetchFeedback(
+  params: FetchFeedbackParams
+): Promise<AdminPaginatedFeedback> {
+  return apiGet(
+    `/feedback?${buildFeedbackSearchParams(params).toString()}`,
+    adminPaginatedFeedbackSchema,
+  );
 }
 
 /**

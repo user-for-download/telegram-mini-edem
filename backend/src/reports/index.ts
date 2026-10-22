@@ -5,6 +5,8 @@ import {
   adminReportsQuerySchema,
   updateReportStatusDtoSchema,
   reportTargetsSchema,
+  type AdminPaginatedReports,
+  type AdminReportTargetSummaryDto,
   type ReportTarget,
 } from "@edem/contracts";
 import { db } from "../db.js";
@@ -21,7 +23,12 @@ import {
 import { ERROR_CODES } from "../errors.js";
 import { devRateMax } from "../env.js";
 import { adminCsrfGuard, adminGuard } from "../admin/guard.js";
-import { serializeAdminReport, serializeReport } from "./serializers.js";
+import { recordAdminAudit } from "../admin/audit.js";
+import {
+  serializeAdminReport,
+  serializeReport,
+  type ReportWithRelations,
+} from "./serializers.js";
 
 const reportLimiter = createUserRateLimiter({
   windowMs: 60 * 60 * 1000,
@@ -39,6 +46,136 @@ const reportAdminMutationLimiter = createRateLimiter({
   keyPrefix: "report-admin-mutation",
 });
 const includeRelations = { reporter: true, adminActor: true } as const;
+
+/**
+ * Дата отправления в МСК как `YYYY-MM-DD` для компактной строки цели.
+ * `Intl` с явной таймзоной не зависит от TZ контейнера (обычно UTC).
+ */
+const reportDateFmt = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Europe/Moscow",
+});
+
+function formatReportDate(date: Date): string {
+  const parts = reportDateFmt.formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+function reportTargetKey(targetType: string, targetId: string): string {
+  return `${targetType}:${targetId}`;
+}
+
+/**
+ * Батчевый резолвер целей жалоб: три запроса (`user`/`trip`/`booking` с
+ * `in`-списками) на всю страницу вместо N+1. Отсутствующая цель просто не
+ * попадает в Map — сериализатор отдаст `targetSummary: null` и fallback
+ * `targetLabel`. Ключ включает тип, чтобы одинаковые id разных сущностей
+ * не перетирали друг друга.
+ */
+async function resolveReportTargetSummaries(
+  reports: ReadonlyArray<{ targetType: string; targetId: string }>,
+): Promise<Map<string, AdminReportTargetSummaryDto>> {
+  const userIds = new Set<string>();
+  const tripIds = new Set<string>();
+  const bookingIds = new Set<string>();
+
+  for (const report of reports) {
+    if (report.targetType === "user") userIds.add(report.targetId);
+    else if (report.targetType === "trip") tripIds.add(report.targetId);
+    else if (report.targetType === "booking") bookingIds.add(report.targetId);
+  }
+
+  const [users, trips, bookings] = await Promise.all([
+    userIds.size
+      ? db.user.findMany({
+          where: { id: { in: [...userIds] } },
+          select: { id: true, name: true, rating: true, bannedAt: true },
+        })
+      : Promise.resolve([]),
+    tripIds.size
+      ? db.trip.findMany({
+          where: { id: { in: [...tripIds] } },
+          select: {
+            id: true,
+            fromCity: true,
+            toCity: true,
+            status: true,
+            departureAt: true,
+            driverId: true,
+          },
+        })
+      : Promise.resolve([]),
+    bookingIds.size
+      ? db.booking.findMany({
+          where: { id: { in: [...bookingIds] } },
+          select: {
+            id: true,
+            seat: true,
+            status: true,
+            tripId: true,
+            passengerId: true,
+            trip: { select: { id: true, fromCity: true, toCity: true } },
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const summaries = new Map<string, AdminReportTargetSummaryDto>();
+
+  for (const user of users) {
+    summaries.set(reportTargetKey("user", user.id), {
+      id: user.id,
+      targetType: "user",
+      label: user.name,
+      secondary: user.bannedAt
+        ? `Рейтинг ${user.rating.toFixed(1)} · Заблокирован`
+        : `Рейтинг ${user.rating.toFixed(1)}`,
+      userId: user.id,
+      tripId: null,
+      bookingId: null,
+    });
+  }
+
+  for (const trip of trips) {
+    summaries.set(reportTargetKey("trip", trip.id), {
+      id: trip.id,
+      targetType: "trip",
+      label: `${trip.fromCity} → ${trip.toCity}`,
+      secondary: `${trip.status} · ${formatReportDate(trip.departureAt)}`,
+      userId: trip.driverId,
+      tripId: trip.id,
+      bookingId: null,
+    });
+  }
+
+  for (const booking of bookings) {
+    summaries.set(reportTargetKey("booking", booking.id), {
+      id: booking.id,
+      targetType: "booking",
+      label: `Бронь: место ${booking.seat}`,
+      secondary: `${booking.trip.fromCity} → ${booking.trip.toCity} · ${booking.status}`,
+      userId: booking.passengerId,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+    });
+  }
+
+  return summaries;
+}
+
+function serializeAdminReportWithTarget(
+  report: ReportWithRelations,
+  summaries: Map<string, AdminReportTargetSummaryDto>,
+) {
+  return serializeAdminReport(
+    report,
+    summaries.get(reportTargetKey(report.targetType, report.targetId)) ?? null,
+  );
+}
 
 export const reportsRouter = new Hono<AuthEnv>();
 reportsRouter.use("*", requireUser);
@@ -359,16 +496,14 @@ adminReportsRouter.get("/", adminReadLimiter, async (c) => {
     }),
     db.report.count({ where }),
   ]);
-  return c.json({
-    items: items.map(serializeAdminReport),
-    pagination: {
-      page,
-      pageSize,
-      total,
-      totalPages: Math.ceil(total / pageSize),
-      hasMore: page * pageSize < total,
-    },
-  });
+  const summaries = await resolveReportTargetSummaries(items);
+  const payload: AdminPaginatedReports = {
+    items: items.map((item) => serializeAdminReportWithTarget(item, summaries)),
+    total,
+    page,
+    pageSize,
+  };
+  return c.json(payload);
 });
 
 adminReportsRouter.get("/:id", adminReadLimiter, async (c) => {
@@ -381,7 +516,8 @@ adminReportsRouter.get("/:id", adminReadLimiter, async (c) => {
       { code: ERROR_CODES.NOT_FOUND, message: "Report not found" },
       404,
     );
-  return c.json(serializeAdminReport(item));
+  const summaries = await resolveReportTargetSummaries([item]);
+  return c.json(serializeAdminReportWithTarget(item, summaries));
 });
 
 adminReportsRouter.patch(
@@ -418,33 +554,41 @@ adminReportsRouter.patch(
     // заметка от предыдущего решения переживала бы переоткрытие и вводила
     // в заблуждение (модератор видит чужой вердикт как текущий).
     const backToReview = parsed.data.status === "in_review";
-    const item = await db.report.updateMany({
-      where: { id, status: { in: ["pending", "in_review"] } },
-      data: {
-        status: parsed.data.status,
-        resolutionNote: backToReview ? null : parsed.data.resolutionNote,
-        resolvedAt:
-          parsed.data.status === "resolved" || parsed.data.status === "rejected"
-            ? new Date()
-            : null,
-        adminActorId: null,
-        adminActorType: "admin",
-      },
+    const updated = await db.$transaction(async (tx) => {
+      const item = await tx.report.updateMany({
+        where: { id, status: { in: ["pending", "in_review"] } },
+        data: {
+          status: parsed.data.status,
+          resolutionNote: backToReview ? null : parsed.data.resolutionNote,
+          resolvedAt:
+            parsed.data.status === "resolved" ||
+            parsed.data.status === "rejected"
+              ? new Date()
+              : null,
+          adminActorId: null,
+          adminActorType: "admin",
+        },
+      });
+      if (item.count !== 1) return null;
+
+      await recordAdminAudit(tx, {
+        action: "report.status",
+        targetType: "report",
+        targetId: id,
+        metadata: { from: current.status, to: parsed.data.status },
+      });
+
+      return tx.report.findUniqueOrThrow({
+        where: { id },
+        include: includeRelations,
+      });
     });
-    if (item.count !== 1)
+    if (!updated)
       return c.json(
         { code: ERROR_CODES.CONFLICT, message: "Report was just changed" },
         409,
       );
-    const updated = await db.report.findUnique({
-      where: { id },
-      include: includeRelations,
-    });
-    if (!updated)
-      return c.json(
-        { code: ERROR_CODES.NOT_FOUND, message: "Report not found" },
-        404,
-      );
-    return c.json(serializeAdminReport(updated));
+    const summaries = await resolveReportTargetSummaries([updated]);
+    return c.json(serializeAdminReportWithTarget(updated, summaries));
   },
 );

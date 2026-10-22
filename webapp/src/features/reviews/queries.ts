@@ -4,20 +4,42 @@ import { toast } from "sonner";
 
 import { ApiError } from "@/lib/api-client";
 
-import { approveReview, deleteReview, fetchReviews, rejectReview } from "./api";
+import {
+  approveReview,
+  deleteReview,
+  fetchReviewDetail,
+  fetchReviews,
+  rejectReview,
+} from "./api";
 
 export interface ReviewsQueryParams {
   status?: ReviewStatusValue;
+  q?: string;
+  authorId?: string;
+  targetUserId?: string;
   page: number;
   pageSize: number;
 }
 
 const reviewsKey = (p: ReviewsQueryParams) => ["admin", "reviews", p] as const;
+const reviewDetailKey = (id: string) =>
+  ["admin", "reviews", "detail", id] as const;
 
 export function useReviewsQuery(params: ReviewsQueryParams) {
   return useQuery({
     queryKey: reviewsKey(params),
     queryFn: () => fetchReviews(params),
+  });
+}
+
+export function useReviewDetailQuery(id: string | null) {
+  return useQuery({
+    queryKey: id ? reviewDetailKey(id) : ["admin", "reviews", "detail", "none"],
+    queryFn: () => {
+      if (id === null) throw new Error("Review id is required");
+      return fetchReviewDetail(id);
+    },
+    enabled: Boolean(id),
   });
 }
 

@@ -2,9 +2,14 @@ import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api-client";
 import {
   adminCityDtoSchema,
   paginatedCitiesResponseSchema,
+  recomputeCityTripsCountResponseSchema,
   type CityNameBody,
 } from "@edem/contracts";
-import type { AdminCityDto, PaginatedCitiesResponse } from "@edem/contracts";
+import type {
+  AdminCityDto,
+  PaginatedCitiesResponse,
+  RecomputeCityTripsCountResponse,
+} from "@edem/contracts";
 import { z } from "zod";
 
 const deleteCityResponseSchema = z.object({ ok: z.literal(true), id: z.string() }).strict();
@@ -52,4 +57,13 @@ export function renameCity(id: string, name: string): Promise<AdminCityDto> {
  */
 export function deleteCity(id: string): Promise<{ ok: true; id: string }> {
   return apiDelete(`/cities/${encodeURIComponent(id)}`, deleteCityResponseSchema);
+}
+
+/** POST /api/v1/admin/cities/recompute-trips-count — идемпотентный пересчёт. */
+export function recomputeCityTripsCount(): Promise<RecomputeCityTripsCountResponse> {
+  return apiPost(
+    "/cities/recompute-trips-count",
+    undefined,
+    recomputeCityTripsCountResponseSchema,
+  );
 }

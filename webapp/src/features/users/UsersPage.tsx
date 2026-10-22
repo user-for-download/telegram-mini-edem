@@ -36,6 +36,7 @@ import {
   useUnbanUserMutation,
   useUsersQuery,
 } from "./queries";
+import { UserDetailDrawer } from "./UserDetailDrawer";
 
 const PAGE_SIZE = 20;
 const BAN_REASON_MAX = 500;
@@ -65,15 +66,29 @@ function validateBanReason(raw: string): string | null {
 
 export function UsersPage() {
   const [search, setSearch] = useState("");
+  const [searchId, setSearchId] = useState("");
+  const [searchTelegramId, setSearchTelegramId] = useState("");
+  const [searchPhone, setSearchPhone] = useState("");
   const [page, setPage] = useState(1);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [banUserTarget, setBanUserTarget] = useState<AdminUserDto | null>(null);
   const [unbanUserTarget, setUnbanUserTarget] = useState<AdminUserDto | null>(
     null
   );
   const [resetUser, setResetUser] = useState<AdminUserDto | null>(null);
   const q = useDebouncedValue(search.trim());
+  const id = useDebouncedValue(searchId.trim());
+  const telegramUserId = useDebouncedValue(searchTelegramId.trim());
+  const phone = useDebouncedValue(searchPhone.trim());
 
-  const usersQuery = useUsersQuery({ q: q || undefined, page, pageSize: PAGE_SIZE });
+  const usersQuery = useUsersQuery({
+    q: q || undefined,
+    id: id || undefined,
+    telegramUserId: telegramUserId || undefined,
+    phone: phone || undefined,
+    page,
+    pageSize: PAGE_SIZE,
+  });
   // Поиск/бан/разбан сжимают выборку — индекс страницы прижимается к
   // валидному, иначе таблица выглядит пустой (audit F8, тот же дефект).
   const currentPage = useClampedPageIndex(
@@ -85,10 +100,14 @@ export function UsersPage() {
   const unbanMutation = useUnbanUserMutation();
   const resetOnboardingMutation = useResetOnboardingMutation();
 
-  // Сбрасываем страницу синхронно с изменением поиска (как в BookingsPage/TripsPage):
-  // эффект после рендера успевал отправить запрос с новым фильтром и старой страницей.
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
+  // Сбрасываем страницу синхронно с изменением любого фильтра (как в
+  // BookingsPage/TripsPage): эффект после рендера успевал отправить запрос
+  // с новым фильтром и старой страницей.
+  const handleFilterChange = (
+    setter: (value: string) => void,
+    value: string,
+  ) => {
+    setter(value);
     setPage(1);
   };
 
@@ -124,18 +143,71 @@ export function UsersPage() {
           Поиск пользователей, блокировка, разблокировка и сброс онбординга
         </p>
       </div>
-      <Input
-        aria-label="Поиск по имени"
-        onChange={(event) => handleSearchChange(event.target.value)}
-        placeholder="Поиск по имени..."
-        value={search}
-      />
+      <div
+        aria-label="Фильтры пользователей"
+        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        role="group"
+      >
+        <div className="grid gap-1.5">
+          <Label htmlFor="users-search-name">Имя</Label>
+          <Input
+            autoComplete="off"
+            id="users-search-name"
+            onChange={(event) =>
+              handleFilterChange(setSearch, event.target.value)
+            }
+            placeholder="Поиск по имени..."
+            value={search}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="users-search-id">ID пользователя</Label>
+          <Input
+            autoComplete="off"
+            id="users-search-id"
+            onChange={(event) =>
+              handleFilterChange(setSearchId, event.target.value)
+            }
+            placeholder="Точный ID"
+            value={searchId}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="users-search-telegram">Telegram ID</Label>
+          <Input
+            autoComplete="off"
+            id="users-search-telegram"
+            inputMode="numeric"
+            onChange={(event) =>
+              handleFilterChange(setSearchTelegramId, event.target.value)
+            }
+            pattern="[0-9]*"
+            placeholder="Только цифры"
+            value={searchTelegramId}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="users-search-phone">Телефон</Label>
+          <Input
+            autoComplete="off"
+            id="users-search-phone"
+            inputMode="tel"
+            onChange={(event) =>
+              handleFilterChange(setSearchPhone, event.target.value)
+            }
+            placeholder="+7..."
+            type="tel"
+            value={searchPhone}
+          />
+        </div>
+      </div>
       {usersQuery.isPending && <UsersTableSkeleton />}
       {usersQuery.isError && <UsersError message={usersQuery.error.message} />}
       {usersQuery.data && (
         <UsersTable
           users={usersQuery.data.items}
           onBan={handleBan}
+          onDetails={(user) => setDetailUserId(user.id)}
           onUnban={handleUnban}
           onReset={setResetUser}
         />
@@ -172,6 +244,10 @@ export function UsersPage() {
         onCancel={() => setResetUser(null)}
         onConfirm={confirmReset}
       />
+      <UserDetailDrawer
+        userId={detailUserId}
+        onClose={() => setDetailUserId(null)}
+      />
     </section>
   );
 }
@@ -179,11 +255,13 @@ export function UsersPage() {
 function UsersTable({
   users,
   onBan,
+  onDetails,
   onUnban,
   onReset,
 }: {
   users: AdminUserDto[];
   onBan: (user: AdminUserDto) => void;
+  onDetails: (user: AdminUserDto) => void;
   onUnban: (user: AdminUserDto) => void;
   onReset: (user: AdminUserDto) => void;
 }) {
@@ -202,6 +280,7 @@ function UsersTable({
           <TableHead>Рейтинг</TableHead>
           <TableHead>Поездок</TableHead>
           <TableHead>Отзывов</TableHead>
+          <TableHead>Telegram</TableHead>
           <TableHead>Статус</TableHead>
           <TableHead>Создан</TableHead>
           <TableHead>Действия</TableHead>
@@ -213,6 +292,7 @@ function UsersTable({
             key={user.id}
             user={user}
             onBan={onBan}
+            onDetails={onDetails}
             onUnban={onUnban}
             onReset={onReset}
           />
@@ -225,11 +305,13 @@ function UsersTable({
 function UserRow({
   user,
   onBan,
+  onDetails,
   onUnban,
   onReset,
 }: {
   user: AdminUserDto;
   onBan: (user: AdminUserDto) => void;
+  onDetails: (user: AdminUserDto) => void;
   onUnban: (user: AdminUserDto) => void;
   onReset: (user: AdminUserDto) => void;
 }) {
@@ -243,18 +325,29 @@ function UserRow({
             alt=""
             className="size-8 shrink-0 rounded-full object-cover"
           />
-          <span className="font-medium">{user.name}</span>
+          <div className="min-w-0">
+            <span className="font-medium">{user.name}</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {user.phone ?? "Телефон не указан"}
+            </span>
+          </div>
         </div>
       </TableCell>
       <TableCell>{user.rating.toFixed(1)}</TableCell>
       <TableCell>{user.tripsCount}</TableCell>
       <TableCell>{user.reviewsCount}</TableCell>
       <TableCell>
+        <UserTelegramCell user={user} />
+      </TableCell>
+      <TableCell>
         <UserStatusCell user={user} isBanned={isBanned} />
       </TableCell>
       <TableCell>{formatDate(user.createdAt)}</TableCell>
       <TableCell>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => onDetails(user)}>
+            Детали
+          </Button>
           {isBanned ? (
             <Button size="sm" variant="outline" onClick={() => onUnban(user)}>
               Разбанить
@@ -274,6 +367,21 @@ function UserRow({
         </div>
       </TableCell>
     </TableRow>
+  );
+}
+
+function UserTelegramCell({ user }: { user: AdminUserDto }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Badge variant={user.telegramConnected ? "secondary" : "outline"}>
+        {user.telegramConnected ? "Подключён" : "Нет"}
+      </Badge>
+      <span className="text-xs text-muted-foreground">
+        {user.consentAcceptedAt
+          ? `Согласие: ${formatDate(user.consentAcceptedAt)}`
+          : "Согласие не получено"}
+      </span>
+    </div>
   );
 }
 

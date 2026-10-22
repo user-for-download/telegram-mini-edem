@@ -7,6 +7,7 @@ import type {
 import { toast } from "sonner";
 
 import {
+  fetchBookingDetail,
   fetchBookings,
   updateBookingStatus,
   type FetchBookingsParams,
@@ -15,6 +16,9 @@ import {
 const bookingsKey = (params: FetchBookingsParams) =>
   ["admin", "bookings", params] as const;
 
+export const bookingDetailKey = (id: string | null) =>
+  ["admin", "bookings", "detail", id] as const;
+
 export function useBookingsQuery(params: FetchBookingsParams) {
   return useQuery({
     queryKey: bookingsKey(params),
@@ -22,10 +26,33 @@ export function useBookingsQuery(params: FetchBookingsParams) {
   });
 }
 
+/**
+ * Детальная карточка брони. Запрос выключен, пока диалог закрыт
+ * (id === null), поэтому скрытый диалог не ходит в сеть.
+ */
+export function useBookingDetailQuery(id: string | null) {
+  return useQuery({
+    queryKey: bookingDetailKey(id),
+    queryFn: () => {
+      if (id === null) throw new Error("Booking id is required");
+      return fetchBookingDetail(id);
+    },
+    enabled: id !== null,
+  });
+}
+
 export interface BookingStatusMutationVars {
   id: string;
   body: AdminBookingStatusBody;
 }
+
+/**
+ * Детальная карточка живёт под тем же префиксом `["admin","bookings"]`, но
+ * имеет другую форму. Оптимистичный апдейт списка обязан её пропускать,
+ * иначе `cached.items` окажется undefined.
+ */
+const isBookingListQuery = (query: { queryKey: readonly unknown[] }) =>
+  query.queryKey[2] !== "detail";
 
 export function useBookingStatusMutation() {
   const queryClient = useQueryClient();
@@ -36,9 +63,10 @@ export function useBookingStatusMutation() {
     onMutate: ({ id, body }: BookingStatusMutationVars) => {
       const previous = queryClient.getQueriesData<AdminPaginatedBookings>({
         queryKey: ["admin", "bookings"],
+        predicate: isBookingListQuery,
       });
       queryClient.setQueriesData<AdminPaginatedBookings>(
-        { queryKey: ["admin", "bookings"] },
+        { queryKey: ["admin", "bookings"], predicate: isBookingListQuery },
         (cached) => {
           if (!cached) return cached;
           const items: AdminBookingDto[] = cached.items.map((booking) =>
@@ -61,8 +89,13 @@ export function useBookingStatusMutation() {
     onSuccess: () => {
       toast.success("Статус брони обновлён");
     },
-    onSettled: () => {
+    onSettled: (_data, _error, variables) => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "bookings"] });
+      // Открытая карточка брони должна перезапросить новый статус, даже
+      // если список по каким-то причинам не совпал с её ключом.
+      void queryClient.invalidateQueries({
+        queryKey: bookingDetailKey(variables.id),
+      });
       void queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
     },
   });

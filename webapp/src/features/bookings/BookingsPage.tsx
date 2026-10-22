@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AdminBookingDto, BookingStatus } from "@edem/contracts";
+import { useSearch } from "@tanstack/react-router";
 
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -32,6 +40,7 @@ import { formatDateTime } from "@/lib/format";
 import { countPages } from "@/lib/page-clamp";
 import { useClampedPageIndex } from "@/lib/use-clamped-page";
 
+import { BookingDetailDialog } from "./BookingDetailDialog";
 import { useBookingStatusMutation, useBookingsQuery } from "./queries";
 
 const PAGE_SIZE = 20;
@@ -65,11 +74,48 @@ function isStatusFilterValue(value: string): value is StatusFilterValue {
   return value === "all" || isBookingStatus(value);
 }
 
+function useDebouncedValue<T>(value: T, delayMs = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
+
+/**
+ * Начальные значения фильтров из query-строки. Ссылки из карточек поездки и
+ * пользователя ведут на `/bookings?tripId=…` / `/bookings?passengerId=…`;
+ * читаем их один раз при монтировании, дальше фильтрами управляет форма.
+ */
+function readInitialFilter(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
 export function BookingsPage() {
+  // strict: false — у маршрута нет validateSearch, но ссылки из других
+  // экранов передают произвольные фильтры в query-строке.
+  const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const [status, setStatus] = useState<StatusFilterValue>("all");
+  const [search, setSearch] = useState("");
+  const [passengerId, setPassengerId] = useState(() =>
+    readInitialFilter(routeSearch.passengerId),
+  );
+  const [tripId, setTripId] = useState(() =>
+    readInitialFilter(routeSearch.tripId),
+  );
   const [page, setPage] = useState(1);
+  const [detailBookingId, setDetailBookingId] = useState<string | null>(null);
+
+  const q = useDebouncedValue(search.trim());
+  const passenger = useDebouncedValue(passengerId.trim());
+  const trip = useDebouncedValue(tripId.trim());
+
   const bookingsQuery = useBookingsQuery({
     status: status === "all" ? undefined : status,
+    q: q || undefined,
+    passengerId: passenger || undefined,
+    tripId: trip || undefined,
     page,
     pageSize: PAGE_SIZE,
   });
@@ -84,22 +130,37 @@ export function BookingsPage() {
     setPage,
   );
 
-  const handleFilterChange = (next: StatusFilterValue) => {
-    setStatus(next);
+  // Сбрасываем страницу синхронно с изменением любого фильтра: эффект после
+  // рендера успевал отправить запрос с новым фильтром и старой страницей.
+  const handleFilterChange = <T,>(setter: (value: T) => void, value: T) => {
+    setter(value);
     setPage(1);
   };
 
   return (
-    <section className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Брони</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Список броней с фильтром по статусу и сменой статуса.
-          </p>
-        </div>
-        <StatusFilter value={status} onChange={handleFilterChange} />
+    <section className="grid gap-4" aria-labelledby="bookings-page-title">
+      <div>
+        <h1 className="text-2xl font-semibold" id="bookings-page-title">
+          Брони
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Поиск по пассажиру и маршруту, фильтры по поездке и статусу, детали
+          брони и смена статуса.
+        </p>
       </div>
+
+      <BookingsFilters
+        onPassengerIdChange={(value) =>
+          handleFilterChange(setPassengerId, value)
+        }
+        onSearchChange={(value) => handleFilterChange(setSearch, value)}
+        onStatusChange={(value) => handleFilterChange(setStatus, value)}
+        onTripIdChange={(value) => handleFilterChange(setTripId, value)}
+        passengerId={passengerId}
+        search={search}
+        status={status}
+        tripId={tripId}
+      />
 
       {bookingsQuery.isPending && <BookingsSkeleton />}
       {bookingsQuery.isError && (
@@ -114,7 +175,10 @@ export function BookingsPage() {
       )}
       {bookingsQuery.data && (
         <>
-          <BookingsTable bookings={bookingsQuery.data.items} />
+          <BookingsTable
+            bookings={bookingsQuery.data.items}
+            onDetails={(booking) => setDetailBookingId(booking.id)}
+          />
           <Pagination
             page={currentPage}
             total={bookingsQuery.data.total}
@@ -123,41 +187,106 @@ export function BookingsPage() {
           />
         </>
       )}
+
+      <BookingDetailDialog
+        bookingId={detailBookingId}
+        onClose={() => setDetailBookingId(null)}
+      />
     </section>
   );
 }
 
-function StatusFilter({
-  value,
-  onChange,
+function BookingsFilters({
+  status,
+  search,
+  passengerId,
+  tripId,
+  onStatusChange,
+  onSearchChange,
+  onPassengerIdChange,
+  onTripIdChange,
 }: {
-  value: StatusFilterValue;
-  onChange: (value: StatusFilterValue) => void;
+  status: StatusFilterValue;
+  search: string;
+  passengerId: string;
+  tripId: string;
+  onStatusChange: (value: StatusFilterValue) => void;
+  onSearchChange: (value: string) => void;
+  onPassengerIdChange: (value: string) => void;
+  onTripIdChange: (value: string) => void;
 }) {
   return (
-    <Select
-      value={value}
-      onValueChange={(next) => {
-        if (!isStatusFilterValue(next)) return;
-        onChange(next);
-      }}
+    <div
+      aria-label="Фильтры броней"
+      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      role="group"
     >
-      <SelectTrigger aria-label="Фильтр по статусу" className="w-44">
-        <SelectValue placeholder="Все" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">Все</SelectItem>
-        {ALL_STATUSES.map((status) => (
-          <SelectItem key={status} value={status}>
-            {STATUS_LABELS[status]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      <div className="grid gap-1.5">
+        <Label htmlFor="bookings-filter-status">Статус</Label>
+        <Select
+          value={status}
+          onValueChange={(next) => {
+            if (!isStatusFilterValue(next)) return;
+            onStatusChange(next);
+          }}
+        >
+          <SelectTrigger className="w-full" id="bookings-filter-status">
+            <SelectValue placeholder="Все" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Все</SelectItem>
+            {ALL_STATUSES.map((value) => (
+              <SelectItem key={value} value={value}>
+                {STATUS_LABELS[value]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label htmlFor="bookings-filter-q">Пассажир или маршрут</Label>
+        <Input
+          autoComplete="off"
+          id="bookings-filter-q"
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Имя, город или адрес"
+          value={search}
+        />
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label htmlFor="bookings-filter-passenger">ID пассажира</Label>
+        <Input
+          autoComplete="off"
+          id="bookings-filter-passenger"
+          onChange={(event) => onPassengerIdChange(event.target.value)}
+          placeholder="Точный ID"
+          value={passengerId}
+        />
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label htmlFor="bookings-filter-trip">ID поездки</Label>
+        <Input
+          autoComplete="off"
+          id="bookings-filter-trip"
+          onChange={(event) => onTripIdChange(event.target.value)}
+          placeholder="Точный ID"
+          value={tripId}
+        />
+      </div>
+    </div>
   );
 }
 
-function BookingsTable({ bookings }: { bookings: AdminBookingDto[] }) {
+function BookingsTable({
+  bookings,
+  onDetails,
+}: {
+  bookings: AdminBookingDto[];
+  onDetails: (booking: AdminBookingDto) => void;
+}) {
   if (bookings.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
@@ -179,14 +308,24 @@ function BookingsTable({ bookings }: { bookings: AdminBookingDto[] }) {
       </TableHeader>
       <TableBody>
         {bookings.map((booking) => (
-          <BookingRow key={booking.id} booking={booking} />
+          <BookingRow
+            key={booking.id}
+            booking={booking}
+            onDetails={onDetails}
+          />
         ))}
       </TableBody>
     </Table>
   );
 }
 
-function BookingRow({ booking }: { booking: AdminBookingDto }) {
+function BookingRow({
+  booking,
+  onDetails,
+}: {
+  booking: AdminBookingDto;
+  onDetails: (booking: AdminBookingDto) => void;
+}) {
   const mutation = useBookingStatusMutation();
   // Pending status awaiting explicit confirmation — no one-click status change.
   const [pendingStatus, setPendingStatus] = useState<BookingStatus | null>(
@@ -225,22 +364,34 @@ function BookingRow({ booking }: { booking: AdminBookingDto }) {
       </TableCell>
       <TableCell>{formatDateTime(booking.createdAt)}</TableCell>
       <TableCell>
-        <Select
-          value={booking.status}
-          onValueChange={handleSelectChange}
-          disabled={mutation.isPending}
-        >
-          <SelectTrigger aria-label={`Статус брони ${booking.id}`} className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ALL_STATUSES.map((status) => (
-              <SelectItem key={status} value={status}>
-                {STATUS_LABELS[status]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onDetails(booking)}
+          >
+            Детали
+          </Button>
+          <Select
+            value={booking.status}
+            onValueChange={handleSelectChange}
+            disabled={mutation.isPending}
+          >
+            <SelectTrigger
+              aria-label={`Статус брони ${booking.id}`}
+              className="w-40"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ALL_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {STATUS_LABELS[status]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Dialog
           open={pendingStatus !== null}
           onOpenChange={(open) => {

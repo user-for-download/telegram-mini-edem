@@ -1,6 +1,7 @@
 import { Link, Outlet } from "@tanstack/react-router";
 import {
   CalendarCheck,
+  History,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
@@ -26,6 +27,7 @@ const navItems = [
   { to: "/feedback", label: "Обратная связь", icon: LifeBuoy },
   { to: "/reports", label: "Жалобы", icon: Flag },
   { to: "/cities", label: "Города", icon: MapPin },
+  { to: "/audit", label: "Аудит", icon: History },
   { to: "/settings", label: "Настройки", icon: Settings },
 ] as const;
 

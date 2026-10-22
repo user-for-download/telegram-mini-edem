@@ -82,27 +82,6 @@ function requestsState() {
   };
 }
 
-function emptyRequestsState() {
-  const state = requestsState();
-  return {
-    ...state,
-    data: {
-      pages: [
-        {
-          items: [],
-          pagination: {
-            page: 1,
-            limit: 20,
-            total: 0,
-            totalPages: 0,
-            hasMore: false,
-          },
-        },
-      ],
-    },
-  };
-}
-
 beforeEach(() => {
   mockUseRequests.mockReturnValue(requestsState());
   mockUseUpdate.mockReturnValue(mutationState());
@@ -115,44 +94,21 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("RideRequestsList: создание только в пустом состоянии", () => {
-  it("пустой список: CTA вызывает onCreate", () => {
-    const onCreate = vi.fn();
-    mockUseRequests.mockReturnValue(emptyRequestsState());
-
-    render(
-      <AppRoot platform="base">
-        <RideRequestsList onCreate={onCreate} />
-      </AppRoot>,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Создать запрос" }));
-    expect(onCreate).toHaveBeenCalledOnce();
-  });
-
-  it("непустой список: CTA создания нет", () => {
-    render(
-      <AppRoot platform="base">
-        <RideRequestsList onCreate={vi.fn()} />
-      </AppRoot>,
-    );
-
-    expect(screen.queryByRole("button", { name: "Создать запрос" })).toBeNull();
-  });
-});
-
 describe("RideRequestsList: тап по строке", () => {
-  it("строки — прямые дети Section, без обёртки с двойным гуттером", () => {
+  it("строки — прямые дети Section, без заголовка-дубля и двойного гуттера", () => {
     render(
       <AppRoot platform="base">
-        <RideRequestsList onCreate={vi.fn()} />
+        <RideRequestsList />
       </AppRoot>,
     );
 
     const cell = screen.getByTestId(`ride-request-cell-${REQUEST_ID}`);
     const section = cell.closest("section");
     expect(section).toBeTruthy();
-    expect(section?.querySelector("h2")?.textContent).toBe("Мои заявки");
+    // Имя экрана — в NavHeader; внутреннего h2 «Мои заявки» больше нет,
+    // как у «Истории поездок» и «Уведомлений».
+    expect(section?.querySelector("h2")).toBeNull();
+    expect(screen.queryByText("Мои заявки")).toBeNull();
     // section > outer div > body div > Cell. Лишняя обёртка (SectionBody или
     // бывший .requestsList) добавила бы ещё один уровень и второй паддинг.
     expect(cell.parentElement?.parentElement?.parentElement).toBe(section);
@@ -161,7 +117,7 @@ describe("RideRequestsList: тап по строке", () => {
   it("открывает шторку с управлением заявкой", async () => {
     render(
       <AppRoot platform="base">
-        <RideRequestsList onCreate={vi.fn()} />
+        <RideRequestsList />
       </AppRoot>,
     );
 

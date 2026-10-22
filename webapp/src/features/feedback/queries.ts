@@ -8,6 +8,8 @@ import {
 } from "./api";
 
 export interface FeedbackQueryParams {
+  answered?: "true" | "false";
+  q?: string;
   page: number;
   pageSize: number;
 }

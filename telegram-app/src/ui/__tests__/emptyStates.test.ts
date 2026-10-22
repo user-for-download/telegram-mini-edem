@@ -105,10 +105,10 @@ describe("EMPTY_STATES: словарь зафиксирован 1:1", () => {
     expect(EMPTY_STATES.tripCompleted.header).toBe("Поездка завершена");
   });
 
-  it("канон заявок, жалоб, отзывов, уведомлений, поддержки", () => {
+  it("канон запросов, заявок, жалоб, отзывов, уведомлений, поддержки", () => {
     expect(EMPTY_STATES.tripRequestsEmpty.header).toBe("Заявок нет");
     expect(EMPTY_STATES.rideRequestsEmpty.description).toBe(
-      "Активных запросов нет.",
+      "Здесь появятся ваши запросы на попутку.",
     );
     expect(EMPTY_STATES.reportsEmpty.header).toBe(
       "Вы пока не отправляли жалоб",

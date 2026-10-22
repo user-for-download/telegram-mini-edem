@@ -1,4 +1,6 @@
 # E2E test artifacts (run outputs, not source — never commit)
 shots-tg/
 shots-realtime/
+shots-admin/
 results-tg.json
+results-admin.json

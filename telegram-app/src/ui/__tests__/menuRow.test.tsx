@@ -24,7 +24,7 @@ function renderRow() {
       <MenuRow
         icon={<span>i</span>}
         title="История запросов"
-        subtitle="Мои заявки на попутку"
+        subtitle="Мои запросы на попутку"
         label="Заявки Вологда — Череповец"
         onClick={() => {}}
       />
@@ -35,7 +35,7 @@ function renderRow() {
 describe("MenuRow", () => {
   it("имя строки = заголовок + подпись (видимая подпись входит в имя)", () => {
     const html = renderRow();
-    expect(html).toContain('aria-label="Заявки Вологда — Череповец. Мои заявки на попутку"');
+    expect(html).toContain('aria-label="Заявки Вологда — Череповец. Мои запросы на попутку"');
   });
 
   it("без label имя = заголовок + подпись", () => {

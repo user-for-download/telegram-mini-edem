@@ -321,33 +321,38 @@ LOG_LEVEL=debug
 | POST | `/api/v1/admin/auth/login` | Вход админ-панели по `ADMIN_TOKEN` (5 req/5 мин, `ADMIN_LOGIN_RATE_*`); ставит httpOnly cookie `edem_admin_jwt` |
 | GET | `/api/v1/admin/auth/session` | Состояние админ-сессии (всегда 200; httpOnly cookie недоступен JS) |
 | POST | `/api/v1/admin/auth/logout` | Выход из админ-панели (очистка cookie) |
-| GET | `/api/v1/admin/dashboard` | Метрики: пользователи, поездки, брони, отзывы, новые за 7 дней |
-| GET | `/api/v1/admin/users` | Список пользователей (поиск `q`, пагинация) |
+| GET | `/api/v1/admin/dashboard` | Метрики и очереди: пользователи, поездки, брони, отзывы, новые за 7 дней, `pendingReviews`, `openReports`, `unansweredFeedback`, `telegramPending`/`telegramFailed` |
+| GET | `/api/v1/admin/users` | Список пользователей: подстрочный `q` + точные `id`/`telegramUserId`/`phone`, пагинация; PII (телефон/Telegram/consent) только за adminGuard |
+| GET | `/api/v1/admin/users/:id` | Карточка пользователя + ограниченные списки последних поездок/броней/жалоб/обращений (404, если нет) |
 | PATCH | `/api/v1/admin/users/:id/ban` | Бан пользователя (`bannedAt` + обязательная причина `banReason` в теле `{ reason }`, 1–500 симв.); поездки не отменяются; открытые WS-соединения закрываются (4403) |
 | PATCH | `/api/v1/admin/users/:id/unban` | Разбан |
 | PATCH | `/api/v1/admin/users/:id/onboarding-reset` | Сброс флага онбординга (`onboardingVersion` → null): пользователь снова увидит экраны согласия |
 | PATCH | `/api/v1/admin/users/:id/telegram-stop` | Стоп Bot API-рассылки пользователю: `tgChatJoinedAt → null` и живые задачи outbox → `skipped/admin_stopped` (атомарная транзакция, идемпотентно). Возвращает `{ success, hadConsent, cancelledDeliveries }` |
 | GET | `/api/v1/admin/telegram/metrics` | JSON-агрегат outbox-доставок (`channelEnabled`, `total`, `pending`, `processing`, `delivered`, `failed`, `skipped` по причинам; без PII) |
-| GET | `/api/v1/admin/trips` | Список поездок (фильтр `status`, пагинация) |
-| PATCH | `/api/v1/admin/trips/:id/cancel` | Отмена поездки (только статус, без каскада); завершённые/отменённые — 409 |
-| GET | `/api/v1/admin/bookings` | Список броней (фильтр `status`, пагинация) |
+| GET | `/api/v1/admin/trips` | Список поездок: `status`/`driverId`/`fromCity`/`toCity`/`q`, пагинация |
+| GET | `/api/v1/admin/trips/:id` | Карточка поездки + ограниченный список броней (404, если нет) |
+| PATCH | `/api/v1/admin/trips/:id/cancel` | Отмена поездки: активные брони отменяются, места и счётчики городов пересчитываются в транзакции; завершённые/отменённые — 409 |
+| GET | `/api/v1/admin/bookings` | Список броней: `status`/`passengerId`/`tripId`/`q`, пагинация |
+| GET | `/api/v1/admin/bookings/:id` | Карточка брони + контекст поездки/пассажира (телефон только за adminGuard; 404, если нет) |
 | PATCH | `/api/v1/admin/bookings/:id/status` | Смена статуса брони (pending/confirmed/declined/cancelled) с пересчётом мест; конфликты — 409 |
-| GET | `/api/v1/admin/reviews` | Список отзывов (фильтр `?status=pending\|published\|rejected`, пагинация; элемент включает `status`) |
+| GET | `/api/v1/admin/reviews` | Список отзывов: `status`/`authorId`/`targetUserId`/`q`, пагинация |
+| GET | `/api/v1/admin/reviews/:id` | Карточка отзыва + сводки автора/получателя (404, если нет) |
 | PATCH | `/api/v1/admin/reviews/:id/approve` | Одобрение отзыва (pending → published, пересчёт рейтинга получателя, уведомление автору; 404/409) |
 | PATCH | `/api/v1/admin/reviews/:id/reject` | Отклонение отзыва (pending → rejected, уведомление автору; 404/409) |
 | DELETE | `/api/v1/admin/reviews/:id` | Удаление отзыва (из любого статуса, с пересчётом рейтинга цели) |
-| GET | `/api/v1/admin/feedback` | Список обращений в поддержку (пагинация; элемент включает `reply`/`repliedAt`) |
+| GET | `/api/v1/admin/feedback` | Список обращений: `answered=true\|false`/`q`, пагинация; элемент включает `reply`/`repliedAt` |
 | GET | `/api/v1/admin/feedback/:id` | Детальная карточка обращения (404, если нет) |
 | POST | `/api/v1/admin/feedback/:id/reply` | Первичный ответ поддержки (создаёт уведомление; 400, если ответ уже есть) |
 | PUT | `/api/v1/admin/feedback/:id/reply` | Редактирование ответа (не двигает `repliedAt`; 400, если ответа ещё нет) |
-| GET | `/api/v1/admin/reports` | Список жалоб с фильтрами `status`/`targetType` и пагинацией |
-| GET | `/api/v1/admin/reports/:id` | Детальная жалоба |
-| PATCH | `/api/v1/admin/reports/:id/status` | Перевести жалобу в `in_review`, `resolved` или `rejected` |
+| GET | `/api/v1/admin/reports` | Список жалоб: `status`/`targetType`, плоская пагинация; элемент содержит `targetLabel`/`targetSummary` |
+| GET | `/api/v1/admin/reports/:id` | Детальная жалоба с `targetSummary` (404, если нет) |
+| PATCH | `/api/v1/admin/reports/:id/status` | Перевести жалобу в `in_review`, `resolved` или `rejected`; терминальные — 409, пишет audit |
 | GET | `/api/v1/admin/cities` | Справочник точек (поиск `q`, пагинация) |
 | POST | `/api/v1/admin/cities` | Создать точку (409 на дубликат имени) |
 | PATCH | `/api/v1/admin/cities/:id` | Переименовать точку (409 на дубликат имени) |
 | DELETE | `/api/v1/admin/cities/:id` | Удалить точку (409, если `tripsCount > 0`) |
-| POST | `/api/v1/admin/cities/recompute-trips-count` | Полный пересчёт `City.tripsCount` по FK и статусу поездок; идемпотентно, чинит дрейф счётчика. Возвращает `{ updated }` |
+| POST | `/api/v1/admin/cities/recompute-trips-count` | Полный пересчёт `City.tripsCount` по FK и статусу поездок; идемпотентно, чинит дрейф счётчика. Возвращает `{ ok: true, updated }` |
+| GET | `/api/v1/admin/audit` | Append-only журнал админ-мутаций: фильтры `action`/`targetType`/`targetId`, пагинация; metadata без PII |
 | GET | `/api/v1/admin/settings` | Read-only снимок rate-limit'ов и флагов env |
 | POST | `/bot/webhook/:secret` | Webhook Telegram-бота: `/start`/`/stop` → согласие на Bot API-рассылку (`tgChatJoinedAt`); секрет в path, IP-лимит `BOT_WEBHOOK_RATE_*` |
 | GET | `/metrics` | Prometheus-метрики: Bearer `METRICS_TOKEN`, если задан; без токена в production — `404`, вне production открыт |

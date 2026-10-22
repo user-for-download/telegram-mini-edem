@@ -12,10 +12,17 @@ Reports require a relevant driver/passenger relationship **and a trip inside the
 
 ## Admin endpoints
 
-- `GET /api/v1/admin/reports?status=&targetType=&page=&pageSize=` lists reports for an authenticated admin session.
-- `GET /api/v1/admin/reports/:id` returns one report.
+- `GET /api/v1/admin/reports?status=&targetType=&page=&pageSize=` lists reports for an authenticated admin session. Response is `{ items, total, page, pageSize }` (no `pagination` envelope).
+- `GET /api/v1/admin/reports/:id` returns one report; `404` for an unknown id.
 - `PATCH /api/v1/admin/reports/:id/status` changes status to `in_review`, `resolved` or `rejected`, optionally with `resolutionNote`.
 
-The state machine is `pending -> in_review -> resolved|rejected`. Terminal reports cannot be changed. Admin actions record `adminActorType: "admin"` and a resolution timestamp.
+Each admin report item carries `targetLabel` (always-present fallback:
+`Пользователь`/`Поездка`/`Бронь`) and `targetSummary` (nullable):
+`{ id, targetType, label, secondary, userId, tripId, bookingId }`.
+`label` is the user name, `Москва → Тула` or `Бронь: место 2`; navigation ids
+are populated only for the relevant target type. Summaries are resolved in
+batched queries, not one query per row.
+
+The state machine is `pending -> in_review -> resolved|rejected`. Terminal reports cannot be changed. Admin actions record `adminActorType: "admin"` and a resolution timestamp, and write one `AdminAuditLog` row with `action: "report.status"` and `metadata: { from, to }` in the same transaction.
 
 One report forever is enforced by a database unique constraint on reporter, target type and target id (migration `report_one_per_reporter_target`, replacing the former partial open-report index). Concurrent duplicates return `409` via the constraint (`P2002`) as well as a pre-check. A **transient** serialization conflict (`P2034`) also returns `409`, but with `retryable: true` — distinct from the **permanent** `P2002` duplicate, so the client can safely retry the former and must not retry the latter. Admin status writes are conditional on a non-terminal current status and concurrent transitions return `409`.

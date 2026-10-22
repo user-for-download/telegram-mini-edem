@@ -266,7 +266,7 @@ describe("adminReviewsQuerySchema — status filter", () => {
   it("should reject unknown fields (strict)", () => {
     const result = adminReviewsQuerySchema.safeParse({
       status: "pending",
-      q: "foo",
+      unknownFilter: "foo",
     });
     expect(result.success).toBe(false);
   });

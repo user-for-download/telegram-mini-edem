@@ -1,5 +1,19 @@
 import { z } from "zod";
 import { REVIEW_STATUSES } from "../schemas/status.const.js";
+import {
+  reportCategorySchema,
+  reportStatusSchema,
+  reportTargetTypeSchema,
+} from "../schemas/report.schema.js";
+
+/** Hard cap for each "recent activity" array in `AdminUserDetailDto`. */
+export const ADMIN_USER_DETAIL_RECENT_MAX = 20;
+
+/**
+ * Hard cap for the bookings array in `AdminTripDetailDto`. Higher than the
+ * seat count because cancelled/declined history can outnumber live seats.
+ */
+export const ADMIN_TRIP_DETAIL_BOOKINGS_MAX = 100;
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 /**
@@ -36,10 +50,54 @@ export const adminDashboardDtoSchema = z
     totalBookings: z.number().int().nonnegative(),
     totalReviews: z.number().int().nonnegative(),
     newUsersLast7Days: z.number().int().nonnegative(),
+    // Actionable queues: everything that needs an admin decision right now.
+    pendingReviews: z.number().int().nonnegative(),
+    openReports: z.number().int().nonnegative(),
+    unansweredFeedback: z.number().int().nonnegative(),
+    telegramPending: z.number().int().nonnegative(),
+    telegramFailed: z.number().int().nonnegative(),
   })
   .strict();
 
 export type AdminDashboardDto = z.infer<typeof adminDashboardDtoSchema>;
+
+// ─── Telegram ───────────────────────────────────────────────────────────────
+/**
+ * Ответ ручного стопа Telegram-доставки (`PATCH /admin/users/:id/telegram-stop`).
+ * `cancelledDeliveries` — сколько живых задач outbox переведено в skipped.
+ */
+export const adminTelegramStopResponseDtoSchema = z
+  .object({
+    success: z.boolean(),
+    hadConsent: z.boolean(),
+    cancelledDeliveries: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type AdminTelegramStopResponseDto = z.infer<
+  typeof adminTelegramStopResponseDtoSchema
+>;
+
+/**
+ * JSON-снимок Telegram-outbox (`GET /admin/telegram/metrics`). Повторяет
+ * `TelegramDeliveryMetrics` из backend/src/services/telegramMetrics.ts:
+ * только счётчики, без идентификаторов пользователей и тел сообщений.
+ */
+export const adminTelegramMetricsDtoSchema = z
+  .object({
+    channelEnabled: z.boolean(),
+    total: z.number().int().nonnegative(),
+    pending: z.number().int().nonnegative(),
+    processing: z.number().int().nonnegative(),
+    delivered: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    skipped: z.record(z.string(), z.number().int().nonnegative()),
+  })
+  .strict();
+
+export type AdminTelegramMetricsDto = z.infer<
+  typeof adminTelegramMetricsDtoSchema
+>;
 
 // ─── User ───────────────────────────────────────────────────────────────────
 export const adminUserDtoSchema = z
@@ -53,6 +111,15 @@ export const adminUserDtoSchema = z
     isVerified: z.boolean(),
     bannedAt: z.string().datetime().nullable(),
     banReason: z.string().nullable(),
+    // Telegram-идентификатор (BigInt в БД сериализуется строкой).
+    telegramUserId: z.string().nullable(),
+    // Производное от tgChatJoinedAt: есть ли у бота согласие на переписку.
+    telegramConnected: z.boolean(),
+    tgChatJoinedAt: z.string().datetime().nullable(),
+    // Момент акцепта правовых документов (доказательство согласия по 152-ФЗ).
+    consentAcceptedAt: z.string().datetime().nullable(),
+    // Телефон для связи; PII — отдаётся только за adminGuard.
+    phone: z.string().nullable(),
     createdAt: z.string().datetime(),
   })
   .strict();
@@ -80,6 +147,40 @@ export const adminTripDtoSchema = z
 
 export type AdminTripDto = z.infer<typeof adminTripDtoSchema>;
 
+/**
+ * Компактная бронь в карточке поездки: только идентификаторы и данные,
+ * нужные для навигации к полной брони. Полная форма — `AdminBookingDetailDto`.
+ */
+export const adminTripBookingSummaryDtoSchema = z
+  .object({
+    id: z.string(),
+    seat: z.number().int().positive(),
+    status: z.string(),
+    passengerId: z.string(),
+    passengerName: z.string(),
+    createdAt: z.string().datetime(),
+  })
+  .strict();
+
+export type AdminTripBookingSummaryDto = z.infer<
+  typeof adminTripBookingSummaryDtoSchema
+>;
+
+/**
+ * Детальная карточка поездки: базовый DTO плюс ограниченный список броней
+ * с пассажирами. Массив ограничен на уровне контракта, чтобы ответ не рос
+ * бесконечно.
+ */
+export const adminTripDetailDtoSchema = adminTripDtoSchema
+  .extend({
+    bookings: z
+      .array(adminTripBookingSummaryDtoSchema)
+      .max(ADMIN_TRIP_DETAIL_BOOKINGS_MAX),
+  })
+  .strict();
+
+export type AdminTripDetailDto = z.infer<typeof adminTripDetailDtoSchema>;
+
 // ─── Booking ────────────────────────────────────────────────────────────────
 export const adminBookingDtoSchema = z
   .object({
@@ -95,6 +196,30 @@ export const adminBookingDtoSchema = z
   .strict();
 
 export type AdminBookingDto = z.infer<typeof adminBookingDtoSchema>;
+
+/**
+ * Детальная карточка брони: базовый DTO плюс контекст поездки и пассажира.
+ * `tripStatus` отделён от `status` (статус самой брони) — иначе поля
+ * столкнулись бы в одной плоской форме. Телефон пассажира — PII, отдаётся
+ * только за `adminGuard`.
+ */
+export const adminBookingDetailDtoSchema = adminBookingDtoSchema
+  .extend({
+    fromCity: z.string(),
+    toCity: z.string(),
+    departureAt: z.string().datetime(),
+    tripStatus: z.string(),
+    driverId: z.string(),
+    driverName: z.string(),
+    passengerAvatar: z.string(),
+    passengerRating: z.number(),
+    passengerPhone: z.string().nullable(),
+  })
+  .strict();
+
+export type AdminBookingDetailDto = z.infer<
+  typeof adminBookingDetailDtoSchema
+>;
 
 // ─── Review ─────────────────────────────────────────────────────────────────
 export const adminReviewDtoSchema = z
@@ -115,6 +240,38 @@ export const adminReviewDtoSchema = z
 
 export type AdminReviewDto = z.infer<typeof adminReviewDtoSchema>;
 
+/**
+ * Компактная карточка участника отзыва (автор или получатель). Нужна для
+ * перехода в карточку пользователя и оценки контекста модерации.
+ */
+export const adminReviewPartySummaryDtoSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    avatar: z.string(),
+    rating: z.number(),
+    bannedAt: z.string().datetime().nullable(),
+  })
+  .strict();
+
+export type AdminReviewPartySummaryDto = z.infer<
+  typeof adminReviewPartySummaryDtoSchema
+>;
+
+/**
+ * Детальная карточка отзыва: полный текст уже есть в базовом DTO, здесь
+ * добавлены сводки автора и получателя. `authorId`/`authorName` и
+ * `targetUserId`/`targetUserName` остаются для обратной совместимости.
+ */
+export const adminReviewDetailDtoSchema = adminReviewDtoSchema
+  .extend({
+    author: adminReviewPartySummaryDtoSchema,
+    target: adminReviewPartySummaryDtoSchema,
+  })
+  .strict();
+
+export type AdminReviewDetailDto = z.infer<typeof adminReviewDetailDtoSchema>;
+
 // ─── Feedback ───────────────────────────────────────────────────────────────
 export const adminFeedbackDtoSchema = z
   .object({
@@ -131,6 +288,47 @@ export const adminFeedbackDtoSchema = z
   .strict();
 
 export type AdminFeedbackDto = z.infer<typeof adminFeedbackDtoSchema>;
+
+// ─── User detail ────────────────────────────────────────────────────────────
+/**
+ * Компактная жалоба в карточке пользователя: только поля, нужные для
+ * навигации к полной карточке жалобы. Полная форма — в admin report DTO.
+ */
+export const adminUserReportSummaryDtoSchema = z
+  .object({
+    id: z.string(),
+    targetType: reportTargetTypeSchema,
+    targetId: z.string(),
+    category: reportCategorySchema,
+    status: reportStatusSchema,
+    description: z.string(),
+    createdAt: z.string().datetime(),
+  })
+  .strict();
+
+export type AdminUserReportSummaryDto = z.infer<
+  typeof adminUserReportSummaryDtoSchema
+>;
+
+/** Bounded list helper: recent activity must never return an unbounded page. */
+const recentItemsSchema = <T extends z.ZodType>(item: T) =>
+  z.array(item).max(ADMIN_USER_DETAIL_RECENT_MAX);
+
+/**
+ * Детальная карточка пользователя для админки: базовый DTO плюс последние
+ * связанные сущности. Массивы ограничены `ADMIN_USER_DETAIL_RECENT_MAX`
+ * на уровне контракта, чтобы ответ не разрастался.
+ */
+export const adminUserDetailDtoSchema = adminUserDtoSchema
+  .extend({
+    recentTrips: recentItemsSchema(adminTripDtoSchema),
+    recentBookings: recentItemsSchema(adminBookingDtoSchema),
+    recentReports: recentItemsSchema(adminUserReportSummaryDtoSchema),
+    recentFeedback: recentItemsSchema(adminFeedbackDtoSchema),
+  })
+  .strict();
+
+export type AdminUserDetailDto = z.infer<typeof adminUserDetailDtoSchema>;
 
 // ─── Settings ───────────────────────────────────────────────────────────────
 /**

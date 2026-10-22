@@ -1,5 +1,5 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import { AlertCircle, Pencil, Trash2 } from "lucide-react";
+import { AlertCircle, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -38,6 +38,7 @@ import {
   useCitiesQuery,
   useCreateCityMutation,
   useDeleteCityMutation,
+  useRecomputeCityTripsCountMutation,
   useUpdateCityMutation,
 } from "./queries";
 import {
@@ -97,12 +98,19 @@ export function CitiesPage() {
     name: string;
     tripsCount: number;
   } | null>(null);
+  const [recomputeOpen, setRecomputeOpen] = useState(false);
 
   return (
     <section className="grid gap-4" aria-labelledby="cities-page-title">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 id="cities-page-title" className="text-2xl font-semibold">Города</h1>
-        <Button onClick={() => setCreateOpen(true)}>Добавить город</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setRecomputeOpen(true)}>
+            <RefreshCw className="size-4" />
+            Пересчитать счётчики
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>Добавить город</Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -173,6 +181,10 @@ export function CitiesPage() {
           onClose={() => setDeleting(null)}
         />
       )}
+      <RecomputeCitiesDialog
+        open={recomputeOpen}
+        onClose={() => setRecomputeOpen(false)}
+      />
     </section>
   );
 }
@@ -505,6 +517,76 @@ function DeleteCityDialog({
             disabled={blocked || remove.isPending}
           >
             {remove.isPending ? "Удаление…" : "Удалить"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RecomputeCitiesDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const recompute = useRecomputeCityTripsCountMutation();
+
+  const close = () => {
+    recompute.reset();
+    onClose();
+  };
+
+  const handleConfirm = () => {
+    recompute.mutate(undefined, {
+      onSuccess: (result) => {
+        toast.success(
+          `Счётчики пересчитаны: обновлено городов — ${result.updated}`,
+        );
+        close();
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof ApiError
+            ? error.message
+            : "Не удалось пересчитать счётчики",
+        );
+      },
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && close()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Пересчитать счётчики поездок?</DialogTitle>
+          <DialogDescription>
+            Полный пересчёт City.tripsCount по фактическим неотменённым
+            поездкам. Операция идемпотентна и безопасна для повторного запуска.
+          </DialogDescription>
+        </DialogHeader>
+        {recompute.isError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Не удалось пересчитать</AlertTitle>
+            <AlertDescription>
+              {recompute.error instanceof ApiError
+                ? recompute.error.message
+                : "Неизвестная ошибка"}
+            </AlertDescription>
+          </Alert>
+        )}
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={close}>
+            Отмена
+          </Button>
+          <Button
+            type="button"
+            onClick={handleConfirm}
+            disabled={recompute.isPending}
+          >
+            {recompute.isPending ? "Пересчёт…" : "Пересчитать"}
           </Button>
         </DialogFooter>
       </DialogContent>

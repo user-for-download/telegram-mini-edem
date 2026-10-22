@@ -93,10 +93,10 @@ export const EMPTY_STATES = {
   tripRequestsEmpty: {
     header: "Заявок нет",
   },
-  /** Запросы попутчика пусты (RideRequestsModal → QueryState emptyText). */
+  /** Запросы попутчика пусты (RideRequestsList). */
   rideRequestsEmpty: {
     header: "Пока пусто",
-    description: "Активных запросов нет.",
+    description: "Здесь появятся ваши запросы на попутку.",
   },
   /** Свои жалобы пусты (ReportsPage). */
   reportsEmpty: {

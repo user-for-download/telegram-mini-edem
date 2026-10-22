@@ -53,19 +53,25 @@ CSS, а не результат: правило может быть коррек
 ## Prerequisites
 
 - Telegram frontend on `E2E_TG_URL` (default `http://localhost:3012`,
-  `telegram-app` vite dev server)
+  `telegram-app` vite dev server) for `telegram-parity.mjs`
+- Admin webapp on `E2E_ADMIN_URL` (default `http://localhost:3013`,
+  `webapp` vite dev server) for `admin-webapp.mjs`
 - Backend running on `http://localhost:3011`
 - Dev DB running (docker container `E2E_DB_CONTAINER`, default `edem-db-dev`)
+  with the `admin_session` and `admin_audit_log` migrations applied
 - `ALLOW_DEV_AUTH=true` in backend `.env` **and** the dev user's Telegram id in
   `DEV_AUTH_USER_ALLOWLIST` (the bypass only works for allowlisted ids)
 - Admin token in `E2E_ADMIN_TOKEN` (default `dev-admin-token-12345`, must match
-  backend `ADMIN_TOKEN`) for review approve + feedback reply steps
+  backend `ADMIN_TOKEN`) for review approve + feedback reply + admin smoke steps
 - Playwright browsers installed: `npx playwright install chromium`
 
 ## Running
 
 ```bash
 node e2e/telegram-parity.mjs
+
+# Admin panel smoke: login, users/detail/telegram-stop, reports, feedback, logout
+node e2e/admin-webapp.mjs
 
 # Realtime smoke (ws.v1 auth/ping-pong/reconnect against a live backend)
 node e2e/telegram-realtime.mjs
@@ -91,7 +97,8 @@ node e2e/ui-demand-static.mjs
 | Var | Default | Purpose |
 | --- | --- | --- |
 | `E2E_TG_URL` | `http://localhost:3012` | Telegram frontend base URL |
-| `E2E_DB_CONTAINER` | `edem-db-dev` | Docker container for time-travel (`departureAt`) + cleanup |
+| `E2E_ADMIN_URL` | `http://localhost:3013` | Admin webapp base URL (Vite dev server, proxies `/api` to `:3011`) |
+| `E2E_DB_CONTAINER` | `edem-db-dev` | Docker container for time-travel (`departureAt`) + admin smoke setup/cleanup |
 | `E2E_VERBOSE` | unset (`1` = verbose) | Log screenshot-helper failures instead of failing the step |
 | `E2E_API_URL` | `http://localhost:3011/api/v1` | Backend API base |
 | `E2E_ADMIN_TOKEN` | `dev-admin-token-12345` | Admin API (must match backend `ADMIN_TOKEN`) |
@@ -134,6 +141,30 @@ raise `TG_AUTH_RATE_MAX` on the dev backend.
 - After the run `restoreDevStand()` reseeds the dev stand: the delete-profile
   step wipes the dev user's notifications, and `reviveDevUser()` alone would
   leave it with 0 instead of the seeded inbox.
+
+## Admin smoke (`admin-webapp.mjs`)
+
+Отдельный сценарий для `webapp/` (`:3013`), потому что cookie-auth админки
+не пересекается с Telegram initData. Prerequisites проверяются **до** создания
+данных: webapp отдаёт HTML, backend отвечает на `/admin/auth/session`, dev DB
+отвечает на `SELECT 1`, таблица `AdminAuditLog` существует. Иначе скрипт
+выходит с кодом `2` и ничего не пишет в БД.
+
+Каждый запуск создаёт два пользователя, поездку, бронь, жалобу и два
+обращения с уникальным `RUN_ID` (имена/телефоны/telegramId/тексты). Все
+вставки идут одной SQL-транзакцией; `finally` удаляет audit-строки и созданные
+сущности. Ошибка cleanup валит прогон. `pageerror` и `unhandledrejection`
+собираются и тоже валят прогон; после падения шага в `e2e/shots-admin/`
+остаётся скриншот, машинный результат — `e2e/results-admin.json`.
+
+### Test Flow (`admin-webapp.mjs` runSteps in order, 6)
+
+1. Auth: `/login`, `ADMIN_TOKEN`, редирект на `/dashboard`
+2. Users: поиск по имени, карточка с телефоном и `Telegram: подключён`
+3. Users: `Остановить Telegram` → подтверждение → тост и `Telegram: нет`
+4. Reports: фильтр `targetType=user`, карточка жалобы с описанием
+5. Feedback: поиск + `answered=false`, карточка обращения
+6. Auth: logout → `/login`, cookie больше не даёт сессию
 
 ## Test Flow (`telegram-parity.mjs` runSteps in order, 17)
 

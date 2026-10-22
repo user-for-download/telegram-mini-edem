@@ -4,6 +4,7 @@ import {
   createCity,
   deleteCity,
   fetchCities,
+  recomputeCityTripsCount,
   renameCity,
   type FetchCitiesParams,
 } from "./api";
@@ -42,6 +43,16 @@ export function useDeleteCityMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteCity(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin", "cities"] });
+    },
+  });
+}
+
+export function useRecomputeCityTripsCountMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: recomputeCityTripsCount,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "cities"] });
     },

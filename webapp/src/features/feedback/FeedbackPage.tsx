@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle2, Pencil } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import type {
   AdminFeedbackDto,
   AdminPaginatedFeedback,
@@ -21,7 +22,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { countPages } from "@/lib/page-clamp";
+import { useClampedPageIndex } from "@/lib/use-clamped-page";
 import {
   Table,
   TableBody,
@@ -43,6 +47,15 @@ import {
 const PAGE_SIZE = 10;
 const FEEDBACK_REPLY_MAX_LENGTH = 2000;
 
+function useDebouncedValue<T>(value: T, delayMs = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const handle = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(handle);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 /**
  * Список обращений пользователей в поддержку + диалог детальной карточки
  * с формой ответа админа (POST/PUT /admin/feedback/:id/reply).
@@ -50,11 +63,52 @@ const FEEDBACK_REPLY_MAX_LENGTH = 2000;
 export function FeedbackPage() {
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
-  const feedbackQuery = useFeedbackQuery({ page, pageSize: PAGE_SIZE });
+  const [search, setSearch] = useState("");
+  const [answered, setAnswered] = useState<"all" | "true" | "false">("all");
+  const q = useDebouncedValue(search.trim());
+  const feedbackQuery = useFeedbackQuery({
+    answered: answered === "all" ? undefined : answered,
+    q: q || undefined,
+    page,
+    pageSize: PAGE_SIZE,
+  });
+  const currentPage = useClampedPageIndex(
+    page,
+    feedbackQuery.data
+      ? countPages(feedbackQuery.data.total, feedbackQuery.data.pageSize)
+      : undefined,
+    setPage,
+  );
 
   return (
     <section className="grid gap-4" aria-labelledby="feedback-page-title">
       <h1 id="feedback-page-title" className="text-2xl font-semibold">Обратная связь</h1>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          aria-label="Поиск обращений по теме, тексту или имени"
+          className="max-w-sm"
+          placeholder="Тема, текст или имя"
+          type="search"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(1);
+          }}
+        />
+        <select
+          aria-label="Фильтр обращений по наличию ответа"
+          className="rounded-md border bg-background px-3 py-2 text-sm"
+          value={answered}
+          onChange={(event) => {
+            setAnswered(event.target.value as "all" | "true" | "false");
+            setPage(1);
+          }}
+        >
+          <option value="all">Все</option>
+          <option value="false">Без ответа</option>
+          <option value="true">Отвеченные</option>
+        </select>
+      </div>
       {feedbackQuery.isPending && <FeedbackLoading />}
       {feedbackQuery.isError && (
         <FeedbackError
@@ -70,7 +124,7 @@ export function FeedbackPage() {
           />
           <FeedbackPagination
             data={feedbackQuery.data}
-            page={page}
+            page={currentPage}
             onPageChange={setPage}
           />
         </>
@@ -131,7 +185,16 @@ function FeedbackTable({
               <TableCell className="whitespace-nowrap">
                 {formatDateTime(feedback.createdAt)}
               </TableCell>
-              <TableCell>{feedback.userName}</TableCell>
+              <TableCell>
+                <Link
+                  className="underline-offset-2 hover:underline"
+                  search={{ id: feedback.userId }}
+                  to="/users"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {feedback.userName}
+                </Link>
+              </TableCell>
               <TableCell className="max-w-48 truncate" title={feedback.subject}>
                 {feedback.subject}
               </TableCell>
