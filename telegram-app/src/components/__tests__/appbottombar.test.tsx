@@ -7,6 +7,7 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 vi.mock("@tma.js/sdk-react", () => ({
   backButton: {
@@ -50,21 +51,23 @@ function renderShell(url: string): string {
   });
   return renderToString(
     <AppRoot platform="base">
-      <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={[url]}>
-          <Routes>
-            <Route element={<Shell />}>
-              <Route path="/" element={<div>Главная раздела</div>} />
-              <Route path="/trips" element={<div>Список поездок</div>} />
-              <Route
-                path="/trips/my/new"
-                element={<div>Создание поездки</div>}
-              />
-              <Route path="*" element={<div>Фолбэк раздела</div>} />
-            </Route>
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>
+      <ToastProvider>
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={[url]}>
+            <Routes>
+              <Route element={<Shell />}>
+                <Route path="/" element={<div>Главная раздела</div>} />
+                <Route path="/trips" element={<div>Список поездок</div>} />
+                <Route
+                  path="/trips/my/new"
+                  element={<div>Создание поездки</div>}
+                />
+                <Route path="*" element={<div>Фолбэк раздела</div>} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ToastProvider>
     </AppRoot>,
   );
 }

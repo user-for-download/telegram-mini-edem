@@ -30,6 +30,12 @@ describe("DELETE /api/v1/users/me", () => {
   });
 
   it("anonymizes the account and invalidates required auth", async () => {
+    await db.userBlock.createMany({
+      data: [
+        { blockerId: userId, blockedId: driverId },
+        { blockerId: driverId, blockedId: userId },
+      ],
+    });
     const response = await app.request("/api/v1/users/me", { method: "DELETE", headers: { Authorization: `Bearer ${devMockAccessToken(userId)}` } });
     expect(response.status).toBe(200);
     const deleted = await db.user.findUnique({ where: { id: userId }, include: { car: true } });
@@ -39,6 +45,11 @@ describe("DELETE /api/v1/users/me", () => {
     expect(deleted?.phone).toBeNull();
     expect(deleted?.tgChatJoinedAt).toBeNull();
     expect(deleted?.car).toBeNull();
+    expect(
+      await db.userBlock.count({
+        where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+      }),
+    ).toBe(0);
     const after = await app.request("/api/v1/users/me", { headers: { Authorization: `Bearer ${devMockAccessToken(userId)}` } });
     expect(after.status).toBe(403);
   });

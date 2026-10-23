@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   BOOKING_KEYS,
+  BLOCK_KEYS,
   CITY_KEYS,
   NOTIFICATION_KEYS,
   REPORT_KEYS,
@@ -51,6 +52,11 @@ describe("Telegram query key factories", () => {
     ]);
     expect(CITY_KEYS.directory()).toEqual(["cities", "all"]);
     expect(RIDE_REQUEST_KEYS.all).toEqual(["ride-requests"]);
+    expect(BLOCK_KEYS.status("user-1")).toEqual([
+      "blocks",
+      "status",
+      "user-1",
+    ]);
     // Спрос на поездку лежит под тем же префиксом: инвалидация по `all`
     // после мутации заявки обновляет и карточку спроса у водителя.
     expect(USER_KEYS.detail("user-1")).toEqual([

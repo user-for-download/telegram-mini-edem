@@ -196,6 +196,13 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
       await tx.refreshToken.deleteMany({ where: { userId: user.id } });
       await tx.notification.deleteMany({ where: { userId: user.id } });
       await tx.feedback.deleteMany({ where: { userId: user.id } });
+      // Soft-delete сохраняет User tombstone, поэтому FK-cascade сам не
+      // сработает: личные блокировки удаляем явно в обеих ролях.
+      await tx.userBlock.deleteMany({
+        where: {
+          OR: [{ blockerId: user.id }, { blockedId: user.id }],
+        },
+      });
       await tx.rideRequest.updateMany({
         where: { userId: user.id, status: { in: ["active", "paused"] } },
         data: { status: "cancelled" },

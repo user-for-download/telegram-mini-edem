@@ -32,6 +32,12 @@ export const RIDE_REQUEST_KEYS = {
   all: ["ride-requests"] as const,
 };
 
+export const BLOCK_KEYS = {
+  all: ["blocks"] as const,
+  lists: () => [...BLOCK_KEYS.all, "list"] as const,
+  status: (userId: string) => [...BLOCK_KEYS.all, "status", userId] as const,
+};
+
 export const REVIEW_KEYS = {
   all: ["reviews"] as const,
   user: (userId: string) => [...REVIEW_KEYS.all, "user", userId] as const,

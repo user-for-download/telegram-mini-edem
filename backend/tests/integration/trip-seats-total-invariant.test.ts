@@ -103,7 +103,11 @@ describe("PATCH /trips/:id (seatsTotal) — инвариант учёта мес
       body: JSON.stringify({ seatsTotal: 3 }),
     });
 
-    const listRes = await app.request("/api/v1/trips?limit=50");
+    const listRes = await app.request("/api/v1/trips?limit=50", {
+      headers: {
+        Authorization: `Bearer ${devMockAccessToken(driverId)}`,
+      },
+    });
     expect(listRes.status).toBe(200);
     const body = (await listRes.json()) as {
       items: Array<{ id: string; seatsTotal: number; seatsAvailable: number; bookedSeats: number[] }>;

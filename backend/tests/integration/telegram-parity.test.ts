@@ -139,11 +139,12 @@ describe("Telegram parity journey", () => {
     });
     expect(sameCity.status).toBe(400);
 
-    // Публичный deep-link: stranger видит поездку, но без адресов.
+    // Поездки персонализированы чёрным списком, поэтому deep-link требует
+    // viewer JWT; без него нельзя вычислить взаимную видимость.
     const pub = await app.request(`/api/v1/trips/${tripId}`, {
       headers: { "X-Real-IP": uniqueIp() },
     });
-    expect(pub.status).toBe(200);
+    expect(pub.status).toBe(401);
     const strangerView = await app.request(`/api/v1/trips/${tripId}`, {
       headers: authHeaders(strangerId, uniqueIp()),
     });

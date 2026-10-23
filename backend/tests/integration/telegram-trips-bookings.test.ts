@@ -159,12 +159,14 @@ describe("Telegram trips/bookings parity (existing backend)", () => {
     expect(driver.status).toBe(200);
   });
 
-  it("serves public trip details for deep links, masking addresses from strangers", async () => {
-    // Без авторизации — публичный deep-link (TripDetailsPage до логина/ретрая).
+  it("requires auth for personalized deep links and masks addresses from strangers", async () => {
     const pub = await app.request(`/api/v1/trips/${tripId}`);
-    expect(pub.status).toBe(200);
+    expect(pub.status).toBe(401);
 
-    const missing = await app.request("/api/v1/trips/00000000-0000-4000-8000-000000000000");
+    const missing = await app.request(
+      "/api/v1/trips/00000000-0000-4000-8000-000000000000",
+      { headers: auth(strangerId) },
+    );
     expect(missing.status).toBe(404);
 
     const stranger = await app.request(`/api/v1/trips/${tripId}`, {

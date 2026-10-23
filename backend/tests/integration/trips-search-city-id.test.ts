@@ -52,6 +52,7 @@ async function ensureCity(name: string): Promise<string> {
 }
 
 let tgSeq = 9_000_000n;
+let driverId: string;
 
 async function createDriver(): Promise<string> {
   const seq = ++tgSeq;
@@ -105,14 +106,18 @@ async function createTrip(
 }
 
 async function listTrips(query: string): Promise<Created[]> {
-  const res = await app.request(`/api/v1/trips?${query}`, { method: "GET" });
+  const res = await app.request(`/api/v1/trips?${query}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${devMockAccessToken(driverId)}`,
+    },
+  });
   expect(res.status).toBe(200);
   const body = (await res.json()) as { items: Created[] };
   return body.items;
 }
 
 describe("GET /trips: фильтр по id города", () => {
-  let driverId: string;
   // «Москва» и «Москва-<суффикс>» — подстрока в обе стороны, как в бою.
   let shortCityId: string;
   let longCityId: string;
@@ -189,7 +194,12 @@ describe("GET /trips: фильтр по id города", () => {
 
     const res = await app.request(
       "/api/v1/trips?fromCity=Москва&fromCityId=00000000-0000-4000-8000-000000000000",
-      { method: "GET" },
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${devMockAccessToken(driverId)}`,
+        },
+      },
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: Created[] };

@@ -14,6 +14,7 @@ export * from "./schemas/admin-audit.schema.js";
 export * from "./schemas/notification.schema.js";
 export * from "./schemas/client-error.schema.js";
 export * from "./schemas/api-error.schema.js";
+export * from "./schemas/user-block.schema.js";
 
 // DTO
 export * from "./dto/auth.dto.js";
@@ -26,4 +27,5 @@ export * from "./dto/city.dto.js";
 export * from "./dto/ride-request.dto.js";
 export * from "./dto/report.dto.js";
 export * from "./dto/admin-audit.dto.js";
+export * from "./dto/user-block.dto.js";
 export * from "./ws.js";

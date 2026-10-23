@@ -166,6 +166,8 @@ describe("политика дедупликации по типу события
       "trip:details_changed": "repeatable",
       // Sentinel-хинт «перезабери inbox» — payload всегда одинаков.
       "notification:new": "repeatable",
+      // У block/unblock свой непрозрачный eventId.
+      "visibility:changed": "strict",
     });
   });
 
@@ -189,6 +191,7 @@ describe("политика дедупликации по типу события
         "trip:status_changed",
         "trip:details_changed",
         "notification:new",
+        "visibility:changed",
       ]),
     );
     for (const type of subscribed) {

@@ -16,6 +16,7 @@ import {
   TriangleAlert,
   Volume2,
   Edit3,
+  ShieldBan,
 } from "lucide-react";
 import { miniApp, useSignal } from "@tma.js/sdk-react";
 import { useNavigate } from "react-router-dom";
@@ -321,6 +322,22 @@ export function ProfilePage() {
                   title="Жалобы"
                   subtitle="На пользователя или бронь"
                   onClick={() => navigate("/profile/reports")}
+                />
+              </Section>
+              <Section header="Конфиденциальность">
+                <MenuRow
+                  label="Чёрный список"
+                  icon={
+                    <IconContainer>
+                      <ShieldBan size={18} />
+                    </IconContainer>
+                  }
+                  title="Чёрный список"
+                  subtitle="Заблокированные пользователи"
+                  onClick={() => {
+                    haptic.light();
+                    navigate("/profile/blocked-users");
+                  }}
                 />
               </Section>
               {/* Опасная зона — как Add Account официалки: секция,

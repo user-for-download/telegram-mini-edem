@@ -41,6 +41,7 @@ import { ReviewsPage } from "@/pages/Reviews/ReviewsPage";
 import { SettingsRoute } from "@/components/Profile/SettingsModal";
 import { SupportPage } from "@/pages/Support/SupportPage";
 import { ReportsPage } from "@/pages/Reports/ReportsPage";
+import { BlockedUsersPage } from "@/pages/BlockedUsers/BlockedUsersPage";
 import {
   parseTripStartParam,
   resolveStartParamRoute,
@@ -79,6 +80,7 @@ const HEADER_TITLE_RULES: [(p: string) => boolean, string][] = [
   [(p) => p.startsWith("/profile/edit"), "Редактировать профиль"],
   [(p) => p.startsWith("/profile/support"), "Поддержка"],
   [(p) => p.startsWith("/profile/reports"), "Жалобы"],
+  [(p) => p.startsWith("/profile/blocked-users"), "Чёрный список"],
   // Шторки поверх профиля, открываемые с экрана профиля. Обе — deep-link
   // цели из бэкенда (telegramNotifications.ts), и без правила NavHeader
   // возвращал null: 44px шапка исчезала на обеих страницах, тогда как у
@@ -288,6 +290,7 @@ function AppRoutes({ location }: { location?: Location }) {
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/profile/support" element={<SupportPage />} />
         <Route path="/profile/reports" element={<ReportsPage />} />
+        <Route path="/profile/blocked-users" element={<BlockedUsersPage />} />
         <Route path="/vehicle" element={<VehicleRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

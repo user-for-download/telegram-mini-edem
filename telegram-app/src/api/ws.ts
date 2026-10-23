@@ -147,6 +147,7 @@ export const WS_REPEATABLE_EVENT_WINDOW_MS = 2_000;
  * | `trip:status_changed`     | `strict`    | в payload `status`: повтор = тот же переход той же поездки |
  * | `trip:details_changed`    | `repeatable`| payload = только `{tripId}`: любая правка деталей (время/адрес/цена) выглядит одинаково |
  * | `notification:new`        | `repeatable`| sentinel-хинт `NOTIFICATION_HINT_REFRESH_ID`: payload одинаков всегда, смысла в нём нет |
+ * | `visibility:changed`      | `strict`    | уникальный eventId на block/unblock |
  *
  * Типы вне таблицы (в т.ч. добавленные в контракт позже) дедуплицируются
  * строго — дефолт fail-closed: лучше лишняя (идемпотентная) инвалидация,
@@ -160,6 +161,7 @@ export const WS_EVENT_DEDUP_POLICY: Readonly<
   "trip:status_changed": "strict",
   "trip:details_changed": "repeatable",
   "notification:new": "repeatable",
+  "visibility:changed": "strict",
 };
 
 /**

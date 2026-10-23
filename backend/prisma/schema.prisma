@@ -66,8 +66,28 @@ model User {
   rideRequests  RideRequest[]
   reportsMade   Report[] @relation("ReportReporter")
   reportsHandled Report[] @relation("ReportAdminActor")
+  // Личный чёрный список направленный, но запрет совместных поездок взаимный:
+  // бизнес-предикат считает пару закрытой при записи в любую сторону.
+  blocksCreated UserBlock[] @relation("BlocksCreated")
+  blocksReceived UserBlock[] @relation("BlocksReceived")
   // Outbox не связан с User relation-полем: userId там денормализован
   // для per-user rate limit/дедупа, связь идёт через Notification.
+}
+
+// Личный чёрный список. Роль не хранится: один User может быть и водителем,
+// и пассажиром. Владелец удаляет только свою строку, а взаимный travel-гейт
+// срабатывает при наличии blocker→blocked ИЛИ blocked→blocker.
+model UserBlock {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("BlocksCreated", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  // PK покрывает blockerId-first; обратная проверка требует зеркального индекса.
+  @@index([blockedId, blockerId])
 }
 
 model RefreshToken {

@@ -13,7 +13,6 @@ import { db } from "../db.js";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
 import { requireUser, type AuthUser } from "../auth/middleware.js";
-import { optionalAuth } from "../auth/optionalMiddleware.js";
 import { serializeTrip, serializeTripPassenger } from "../serializers/index.js";
 import {
   publicReadLimiter,
@@ -46,6 +45,7 @@ import {
 } from "../utils/overlap.js";
 import { moscowDateBoundary } from "../utils/moscowTime.js";
 import { escapeLike } from "../utils/like.js";
+import { visiblePeerWhere } from "../blocks/visibility.js";
 
 type TripWithDriver = Prisma.TripGetPayload<{
   include: { driver: { include: { car: true } } };
@@ -184,9 +184,11 @@ async function cityNameById(id: string): Promise<string | null> {
 }
 
 /**
- * Публичный список активных поездок.
+ * Авторизованный список активных поездок: viewer нужен для взаимного
+ * исключения пользователей из личного чёрного списка.
  */
-tripsRouter.get("/", publicReadLimiter, async (c) => {
+tripsRouter.get("/", requireUser, publicReadLimiter, async (c) => {
+  const viewer = c.get("user")!;
   const q = c.req.query("q");
   const fromCity = c.req.query("fromCity");
   const toCity = c.req.query("toCity");
@@ -232,6 +234,9 @@ tripsRouter.get("/", publicReadLimiter, async (c) => {
     // только через 24 часа после отправления, без этого фильтра поиск
     // показывал бы рейсы, на которые уже невозможно успеть.
     departureAt: { gt: new Date() },
+    // Чёрный список действует в обе стороны: строка A→B скрывает новые
+    // поездки и от A для B, и от B для A.
+    driver: visiblePeerWhere(viewer.id),
   };
 
   if (q) {
@@ -497,12 +502,36 @@ tripsRouter.get("/my", requireUser, tripsMyReadLimiter, async (c) => {
  * Детали поездки.
  * Возвращаем bookedSeats, чтобы фронт мог корректно рисовать SeatScheme.
  */
-tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
+tripsRouter.get("/:id", requireUser, publicReadLimiter, async (c) => {
   const id = c.req.param("id");
-  const currentUser = c.get("user");
+  const currentUser = c.get("user")!;
+  const now = new Date();
 
-  const trip = await db.trip.findUnique({
-    where: { id },
+  const trip = await db.trip.findFirst({
+    where: {
+      id,
+      OR: [
+        // Водитель всегда видит собственную поездку.
+        { driverId: currentUser.id },
+        // Блокировка не рвёт существующую живую бронь.
+        {
+          status: "active",
+          bookings: {
+            some: {
+              passengerId: currentUser.id,
+              ...activeBookingWhere(now),
+            },
+          },
+        },
+        // История сохраняется для состоявшихся отношений.
+        {
+          status: { in: ["completed", "cancelled"] },
+          bookings: { some: { passengerId: currentUser.id } },
+        },
+        // Во всех остальных случаях пара должна быть открыта в обе стороны.
+        { driver: visiblePeerWhere(currentUser.id) },
+      ],
+    },
     include: {
       driver: {
         include: {
@@ -535,43 +564,32 @@ tripsRouter.get("/:id", publicReadLimiter, optionalAuth, async (c) => {
     },
   });
 
-  let myBooking: {
-    id: string;
-    seat: number;
-    status: string;
-    createdAt: Date;
-  } | null = null;
-
-  if (currentUser) {
-    const booking = await db.booking.findFirst({
-      where: {
-        tripId: trip.id,
-        passengerId: currentUser.id,
-        // Expiry-aware: истёкший pending не даёт прав участника (иначе
-        // пассажир видел бы точные адреса по мёртвой заявке до часа,
-        // пока её не выметёт воркер).
-        ...activeBookingWhere(),
-      },
-      select: {
-        id: true,
-        seat: true,
-        status: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    myBooking = booking;
-  }
-
+  const myBooking = await db.booking.findFirst({
+    where: {
+      tripId: trip.id,
+      passengerId: currentUser.id,
+      // Expiry-aware: истёкший pending не даёт прав участника (иначе
+      // пассажир видел бы точные адреса по мёртвой заявке до часа,
+      // пока её не выметёт воркер).
+      ...activeBookingWhere(now),
+    },
+    select: {
+      id: true,
+      seat: true,
+      status: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
   // Точные адреса встречи видят только участники поездки:
   // водитель и пользователи с неистёкшей активной бронью (pending/confirmed).
   // Остальным адреса не отдаются вовсе (приватность места встречи).
   const canSeePrivateDetails =
-    currentUser?.id === trip.driverId || myBooking !== null;
+    currentUser.id === trip.driverId || myBooking !== null;
   // Телефон водителя (F1) — строже адресов: только водитель
   // и ПОДТВЕРЖДЁННЫЙ пассажир. Pending-заявителю номер не светим.
   const canSeeDriverPhone =
-    currentUser?.id === trip.driverId || myBooking?.status === "confirmed";
+    currentUser.id === trip.driverId || myBooking?.status === "confirmed";
 
   return c.json(
     serializeTrip(trip, {

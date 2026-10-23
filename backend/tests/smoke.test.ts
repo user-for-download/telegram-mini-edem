@@ -153,7 +153,11 @@ describe("trips", () => {
       },
     });
 
-    const response = await app.request("/api/v1/trips");
+    const response = await app.request("/api/v1/trips", {
+      headers: {
+        Authorization: `Bearer ${devMockAccessToken(driver.id)}`,
+      },
+    });
 
     expect(response.status).toBe(200);
 

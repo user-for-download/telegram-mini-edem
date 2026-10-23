@@ -100,13 +100,17 @@ describe("GET /trips/my passengers", () => {
     expect(card?.passengers?.[0].avatar).toBe("https://t.me/a.png");
   });
 
-  it("публичные детали /trips/:id не раскрывают пассажиров", async () => {
+  it("детали /trips/:id не раскрывают пассажиров пассажиру", async () => {
     const driver = await createUser("Driver", "https://t.me/driver.png");
     const passenger = await createUser("Иван", "https://t.me/a.png");
     const trip = await createTrip(driver.id);
     await createBooking(trip.id, passenger.id, 1, "confirmed");
 
-    const response = await app.request(`/api/v1/trips/${trip.id}`);
+    const response = await app.request(`/api/v1/trips/${trip.id}`, {
+      headers: {
+        Authorization: `Bearer ${devMockAccessToken(passenger.id)}`,
+      },
+    });
     expect(response.status).toBe(200);
     const card = (await response.json()) as { passengers?: unknown };
     expect(card.passengers).toBeUndefined();

@@ -34,6 +34,30 @@ vi.mock("@/queries/profile", () => ({
   }),
 }));
 
+vi.mock("@/queries/useBlocksQuery", () => ({
+  useBlockStatusQuery: () => ({
+    data: { blockedByMe: false },
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useBlockUserMutation: () => ({
+    mutate: vi.fn(),
+    reset: vi.fn(),
+    error: null,
+    isPending: false,
+  }),
+  useUnblockUserMutation: () => ({
+    mutate: vi.fn(),
+    reset: vi.fn(),
+    error: null,
+    isPending: false,
+  }),
+}));
+
+vi.mock("@/components/Toast/ToastProvider", () => ({
+  useToast: () => ({ show: vi.fn() }),
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();

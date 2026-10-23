@@ -35,6 +35,7 @@ import {
   type NotificationRole,
 } from "@edem/contracts";
 import { PrismaClient } from "../src/generated/prisma/client.js";
+import { seedRideRequestId } from "./seed-ids.js";
 
 // Prisma 7 больше не подгружает .env автоматически — путь относительно файла
 // (как в seed.ts), иначе хостовый запуск без экспорта DATABASE_URL падал бы.
@@ -94,6 +95,17 @@ function validateUserTripSeed(input: {
 }): void {
   const requests = input.requests ?? [];
   for (const rr of requests) {
+    // Публичный контракт rideRequestSchema.id — UUID; не-UUID id клиент
+    // отбрасывает целиком, и «История запросов» падает в error-состояние.
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        rr.id,
+      )
+    ) {
+      throw new Error(
+        `[seed-user-trips] ${rr.id}: id заявки должен быть UUID (контракт)`,
+      );
+    }
     // API отклоняет и равные границы (createRideRequestDtoSchema.superRefine).
     if (rr.earliestAt >= rr.latestAt) {
       throw new Error(
@@ -227,12 +239,35 @@ const days = (n: number, hourMsk = 9): Date =>
   new Date(anchor.getTime() + n * dayMs + (hourMsk - 3) * hourMs);
 
 /**
+ * id заявок — детерминированные UUID v5 (`seed-ids.ts`): публичный контракт
+ * `rideRequestSchema` требует `z.string().uuid()`, поэтому читаемые `rr-tp-N`
+ * ломали zod-валидацию ответа на клиенте — страница «История запросов»
+ * показывала «Не удалось загрузить». Логические ref остаются в аргументе.
+ */
+const RIDE_REQUEST_IDS = {
+  expired: seedRideRequestId("rr-tp-1"),
+  active: seedRideRequestId("rr-tp-2"),
+  paused: seedRideRequestId("rr-tp-3"),
+  fulfilled: seedRideRequestId("rr-tp-4"),
+  cancelled: seedRideRequestId("rr-tp-5"),
+} as const;
+
+/** id из прогонов до перехода на UUID — вычищаем, чтобы не оставлять мусор. */
+const LEGACY_RIDE_REQUEST_IDS = [
+  "rr-tp-1",
+  "rr-tp-2",
+  "rr-tp-3",
+  "rr-tp-4",
+  "rr-tp-5",
+];
+
+/**
  * Связка «заявка → бронь», которая обязана существовать в стенде: без неё
  * нечего проверить ни простановку requestId, ни автозакрытие заявки бронью.
  * Отправление — это t-tp-past-1 (Вологда → Череповец, день −6).
  */
 const FULFILLED_REQUEST_LINK = {
-  requestId: "rr-tp-4",
+  requestId: RIDE_REQUEST_IDS.fulfilled,
   bookingId: "b-tp-past-1-bezz",
   tripDepartureAt: days(-6, 9),
 } as const;
@@ -253,13 +288,7 @@ const ALL_TRIPS = [
   "t-tp-past-1",
 ];
 const ALL_REVIEWS = ["r-tp-1", "r-tp-2", "r-tp-3", "r-tp-4"];
-const ALL_RIDE_REQUESTS = [
-  "rr-tp-1",
-  "rr-tp-2",
-  "rr-tp-3",
-  "rr-tp-4",
-  "rr-tp-5",
-];
+const ALL_RIDE_REQUESTS = Object.values(RIDE_REQUEST_IDS);
 
 async function cityId(name: string): Promise<string> {
   const norm = name.trim().toLowerCase();
@@ -294,7 +323,9 @@ async function main(): Promise<void> {
     where: { userId: USER_ID, title: { contains: "Bezz-тест" } },
   });
   await prisma.review.deleteMany({ where: { id: { in: ALL_REVIEWS } } });
-  await prisma.rideRequest.deleteMany({ where: { id: { in: ALL_RIDE_REQUESTS } } });
+  await prisma.rideRequest.deleteMany({
+    where: { id: { in: [...ALL_RIDE_REQUESTS, ...LEGACY_RIDE_REQUEST_IDS] } },
+  });
   await prisma.booking.deleteMany({ where: { tripId: { in: ALL_TRIPS } } });
   await prisma.trip.deleteMany({ where: { id: { in: ALL_TRIPS } } });
   await prisma.car.deleteMany({ where: { userId: { in: MOCK_IDS } } });
@@ -365,7 +396,7 @@ async function main(): Promise<void> {
         // нечем завершить. Статус expired заодно закрывает пробел покрытия.
         // Прод-сид не затирает данные, но срок в прошлом обязателен: иначе
         // строка называется «просрочена» при expiresAt в будущем.
-        id: "rr-tp-1",
+        id: RIDE_REQUEST_IDS.expired,
         userId: USER_ID,
         fromCityId: vologda,
         toCityId: cherepovets,
@@ -377,7 +408,7 @@ async function main(): Promise<void> {
         createdAt: new Date(now.getTime() - 3 * dayMs),
       },
       {
-        id: "rr-tp-2",
+        id: RIDE_REQUEST_IDS.active,
         userId: USER_ID,
         fromCityId: vologda,
         toCityId: cherepovets,
@@ -389,7 +420,7 @@ async function main(): Promise<void> {
         createdAt: new Date(now.getTime() - dayMs),
       },
       {
-        id: "rr-tp-3",
+        id: RIDE_REQUEST_IDS.paused,
         userId: USER_ID,
         fromCityId: cherepovets,
         toCityId: vologda,
@@ -404,7 +435,7 @@ async function main(): Promise<void> {
         // fulfilled = закрыта состоявшейся бронью. Окно нарочно шире самой
         // поездки t-tp-past-1 (день −6): связка «заявка → бронь» проверяется
         // тем же предикатом, что и автозакрытие, и не накрывала поездку.
-        id: "rr-tp-4",
+        id: RIDE_REQUEST_IDS.fulfilled,
         userId: USER_ID,
         fromCityId: vologda,
         toCityId: cherepovets,
@@ -416,7 +447,7 @@ async function main(): Promise<void> {
         createdAt: new Date(now.getTime() - 8 * dayMs),
       },
       {
-        id: "rr-tp-5",
+        id: RIDE_REQUEST_IDS.cancelled,
         userId: USER_ID,
         fromCityId: cherepovets,
         toCityId: vologda,
@@ -667,7 +698,7 @@ async function main(): Promise<void> {
             // отправление): requestId проставляет рантайм в одной транзакции с
             // закрытием заявки. Без него связку «заявка → поездка» на
             // прод-стенде нечего проверить.
-            requestId: "rr-tp-4",
+            requestId: RIDE_REQUEST_IDS.fulfilled,
             createdAt: mPastBookingCreated,
           },
         ],

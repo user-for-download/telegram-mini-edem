@@ -22,6 +22,7 @@ describe("EMPTY_STATES: словарь зафиксирован 1:1", () => {
     const keys = Object.keys(EMPTY_STATES).sort();
     expect(keys).toEqual(
       [
+        "blockedUsersEmpty",
         "genericEmpty",
         "loadError",
         "myTripsNoResults",

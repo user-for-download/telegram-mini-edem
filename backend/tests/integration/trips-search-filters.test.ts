@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../../src/app.js";
 import { db } from "../../src/db.js";
+import { devMockAccessToken } from "../dev-mock-auth.js";
 
 /**
  * Регрессы фильтров публичного списка поездок (GET /trips):
@@ -54,7 +55,11 @@ describe("GET /trips — search filters", () => {
   });
 
   const list = async (query: string) => {
-    const res = await app.request(`/api/v1/trips?limit=50&${query}`);
+    const res = await app.request(`/api/v1/trips?limit=50&${query}`, {
+      headers: {
+        Authorization: `Bearer ${devMockAccessToken(driverId)}`,
+      },
+    });
     return { status: res.status, body: (await res.json()) as { items: Array<{ id: string }> } };
   };
 

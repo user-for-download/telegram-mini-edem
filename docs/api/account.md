@@ -7,3 +7,5 @@ The operation does not use the older `409 ACCOUNT_HAS_ACTIVE_OBLIGATIONS` gate; 
 On success, the server marks `deletedAt`, anonymizes user-facing profile data (`name`, `avatar`, `about`, `phone`) and revokes bot-notification consent (`tgChatJoinedAt`), removes the car, notifications, feedback and refresh-token rows, cancels owned RideRequests, and closes the user's WebSocket connections. Historical trips, bookings, reviews and reports remain linked to the anonymous tombstone for integrity.
 
 The signed `telegramUserId` is retained as a tombstone so the same Telegram identity cannot silently create a second account. `/auth/telegram` and `/auth/refresh` reject deleted accounts with `403` and no tokens.
+
+Directed `UserBlock` rows where the account is either blocker or target are deleted explicitly inside the soft-deletion transaction. Database `ON DELETE CASCADE` provides the same guarantee for a future physical cleanup.

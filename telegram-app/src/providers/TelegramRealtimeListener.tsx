@@ -8,6 +8,7 @@ import { buildWsEventKey, markSeenEvent } from "@/api/ws";
 import { useWs, useWsEvent } from "@/providers/WebSocketProvider";
 import {
   BOOKING_KEYS,
+  BLOCK_KEYS,
   REVIEW_KEYS,
   RIDE_REQUEST_KEYS,
   TRIP_KEYS,
@@ -106,6 +107,7 @@ export const TelegramRealtimeListener: FC = () => {
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.all });
     void queryClient.invalidateQueries({ queryKey: NOTIFICATION_KEYS.all });
     void queryClient.invalidateQueries({ queryKey: RIDE_REQUEST_KEYS.all });
+    void queryClient.invalidateQueries({ queryKey: BLOCK_KEYS.all });
   }, [resyncSeq, queryClient]);
 
   useWsEvent("notification:new", () => {
@@ -122,6 +124,17 @@ export const TelegramRealtimeListener: FC = () => {
       queryKey: NOTIFICATION_KEYS.lists(),
       refetchType: "active",
     });
+  });
+
+  useWsEvent("visibility:changed", ({ eventId }) => {
+    if (claimEvent("visibility:changed", { eventId }) === null) return;
+    // Событие намеренно без toast: заблокированный не должен получать
+    // уведомление или actor id. Оно только убирает устаревшие карточки на
+    // всех открытых устройствах обеих сторон.
+    void queryClient.resetQueries({ queryKey: TRIP_KEYS.lists() });
+    void queryClient.resetQueries({ queryKey: TRIP_KEYS.details() });
+    void queryClient.invalidateQueries({ queryKey: RIDE_REQUEST_KEYS.all });
+    void queryClient.invalidateQueries({ queryKey: BLOCK_KEYS.all });
   });
 
   useWsEvent("booking:new", ({ bookingId, tripId }) => {

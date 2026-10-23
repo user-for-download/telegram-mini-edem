@@ -4,6 +4,7 @@ import {
   notifyUser,
   tripSnapshotOf,
 } from "../services/notification.service.js";
+import { visiblePeerWhere } from "../blocks/visibility.js";
 
 type TripForMatching = Pick<
   Prisma.TripGetPayload<Prisma.TripDefaultArgs>,
@@ -87,6 +88,9 @@ export function matchingRideRequestWhere(
   );
   return {
     userId: { not: trip.driverId },
+    // Ни одна сторона пары не должна получить предложение новой совместной
+    // поездки, если блокировку поставил водитель или автор запроса.
+    user: visiblePeerWhere(trip.driverId),
     fromCityId: trip.fromCityId,
     toCityId: trip.toCityId,
     status: "active",

@@ -62,6 +62,7 @@ const ROUTES = [
   { path: "/reviews", name: "Отзывы" },
   { path: "/profile/support", name: "Поддержка" },
   { path: "/profile/reports", name: "Мои обращения" },
+  { path: "/profile/blocked-users", name: "Чёрный список" },
   { path: "/trips/my/new", name: "Создание поездки" },
 ];
 

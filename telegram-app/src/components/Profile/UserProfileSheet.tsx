@@ -1,11 +1,22 @@
 import { Caption, Text } from "@telegram-apps/telegram-ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sheet } from "@/ui/Sheet";
+import { Button } from "@/ui/Button";
 import { QueryState } from "@/components/QueryState";
+import { ConfirmPopup } from "@/components/ConfirmPopup";
+import { MutationError } from "@/components/MutationError";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { Stack } from "@/ui/Stack";
 import { Blockquote } from "@/ui/Blockquote";
 import { useUserQuery } from "@/queries/profile";
+import {
+  useBlockStatusQuery,
+  useBlockUserMutation,
+  useUnblockUserMutation,
+} from "@/queries/useBlocksQuery";
 import { useModalBack } from "@/utils/modalBack";
+import { haptic } from "@/utils/haptics";
+import { MIN_TARGET } from "@/ui/classes";
 import { ProfileHero } from "./ProfileHero";
 import type { UserProfileTarget } from "./UserProfileProvider";
 import styles from "./UserProfileSheet.module.css";
@@ -63,6 +74,18 @@ export function UserProfileSheet({
   // ревалидирует профиль. Это же сужает окно stale-initial
   // для удалённого пользователя (M4 аудита) до одного фетча.
   const user = useUserQuery(target?.id ?? "", { enabled: open, staleTime: 0 });
+  const blockStatus = useBlockStatusQuery(target?.id ?? "", { enabled: open });
+  const block = useBlockUserMutation();
+  const unblock = useUnblockUserMutation();
+  const toast = useToast();
+  const resetBlockMutation = block.reset;
+  const resetUnblockMutation = unblock.reset;
+
+  // Ошибка мутации прошлого профиля не должна переехать в следующую шторку.
+  useEffect(() => {
+    resetBlockMutation();
+    resetUnblockMutation();
+  }, [target?.id, resetBlockMutation, resetUnblockMutation]);
   // Пока идёт догрузка, рисуем то, что вызывающий уже знает (initial):
   // карточка не мигает пустотой, если данные уже были на руках.
   // Источник — удержанный target: после закрытия shown остаётся тем же,
@@ -103,6 +126,69 @@ export function UserProfileSheet({
                     {`${shown.car.model} · ${shown.car.color}`}
                   </Text>
                 </div>
+              ) : null}
+              <MutationError
+                error={block.error ?? unblock.error}
+                fallback="Не удалось изменить чёрный список"
+              />
+              {blockStatus.error ? (
+                <Stack gap="xs">
+                  <MutationError
+                    error={blockStatus.error}
+                    fallback="Не удалось проверить чёрный список"
+                  />
+                  <Button
+                    size="m"
+                    variant="gray"
+                    stretched
+                    onClick={() => void blockStatus.refetch()}
+                  >
+                    Повторить
+                  </Button>
+                </Stack>
+              ) : blockStatus.data?.blockedByMe ? (
+                <Button
+                  size="m"
+                  variant="gray"
+                  stretched
+                  loading={unblock.isPending}
+                  disabled={unblock.isPending}
+                  onClick={() =>
+                    visible &&
+                    unblock.mutate(visible.id, {
+                      onSuccess: () => {
+                        haptic.success();
+                        toast.show({ text: "Пользователь разблокирован" });
+                      },
+                    })
+                  }
+                >
+                  Убрать из чёрного списка
+                </Button>
+              ) : blockStatus.data ? (
+                <ConfirmPopup
+                  label="Добавить в чёрный список"
+                  confirmLabel="Заблокировать пользователя"
+                  description="Новые поездки между вами исчезнут из поиска, создать новую бронь будет нельзя. Текущие брони и история сохранятся."
+                  pending={block.isPending}
+                  disabled={block.isPending}
+                  mode="plain"
+                  destructive
+                  nested
+                  className={MIN_TARGET}
+                  onConfirm={() => {
+                    if (!visible) return;
+                    block.mutate(visible.id, {
+                      onSuccess: () => {
+                        haptic.success();
+                        toast.show({
+                          text: "Пользователь добавлен в чёрный список",
+                        });
+                        onClose();
+                      },
+                    });
+                  }}
+                />
               ) : null}
             </Stack>
           ) : null}

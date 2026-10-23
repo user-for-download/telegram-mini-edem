@@ -19,6 +19,7 @@ import {
 import { usersRouter } from "./users/index.js";
 import { adminRouter } from "./admin/index.js";
 import { citiesRouter } from "./cities/index.js";
+import { blocksRouter } from "./blocks/index.js";
 import { notificationsRouter } from "./notifications/index.js";
 import { rideRequestsRouter } from "./rideRequests/index.js";
 import { reportsRouter, adminReportsRouter } from "./reports/index.js";
@@ -286,6 +287,7 @@ app.route("/api/v1/reports", reportsRouter);
 app.route("/api/v1/admin/reports", adminReportsRouter);
 app.route("/api/v1/users", usersRouter);
 app.route("/api/v1/cities", citiesRouter);
+app.route("/api/v1/blocks", blocksRouter);
 app.route("/api/v1/admin", adminRouter);
 app.get(
   "/api/v1/ws",

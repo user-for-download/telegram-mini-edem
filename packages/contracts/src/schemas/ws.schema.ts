@@ -31,6 +31,12 @@ export const wsServerEventSchema = z.discriminatedUnion("type", [
     type: z.literal("notification:new"),
     payload: z.object({ id: z.string() }),
   }),
+  // Непрозрачный cache-invalidation hint: без actor/target id, toast и inbox.
+  // eventId отличает быстрые block/unblock и не даёт dedupe проглотить второй.
+  z.object({
+    type: z.literal("visibility:changed"),
+    payload: z.object({ eventId: z.string().uuid() }),
+  }),
 ]);
 
 export type WsServerEvent = z.infer<typeof wsServerEventSchema>;

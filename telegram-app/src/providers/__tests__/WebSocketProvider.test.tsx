@@ -101,7 +101,13 @@ import { TelegramRealtimeListener } from "@/providers/TelegramRealtimeListener";
 import { ApiError } from "@/api/client";
 import { WS_REPEATABLE_EVENT_WINDOW_MS } from "@/api/ws";
 import { useAuthStore } from "@/store/useAuthStore";
-import { BOOKING_KEYS, REVIEW_KEYS, TRIP_KEYS } from "@/queries/keys";
+import {
+  BLOCK_KEYS,
+  BOOKING_KEYS,
+  REVIEW_KEYS,
+  RIDE_REQUEST_KEYS,
+  TRIP_KEYS,
+} from "@/queries/keys";
 import { NOTIFICATION_KEYS } from "@/queries/useNotificationsQuery";
 
 /** Управляемый дубль WebSocket: handshake, события и close — по команде. */
@@ -201,6 +207,7 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
   let container: HTMLDivElement | null = null;
   let queryClient: QueryClient;
   let invalidateSpy: ReturnType<typeof vi.spyOn>;
+  let resetSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -231,6 +238,7 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
     invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    resetSpy = vi.spyOn(queryClient, "resetQueries");
 
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -464,6 +472,31 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     expect(invalidateCallsFor([...NOTIFICATION_KEYS.lists()])).toBe(1);
     // Blanket-инвалидации всего notifications-ключа больше нет.
     expect(invalidateCallsFor([...NOTIFICATION_KEYS.all])).toBe(0);
+  });
+
+  it("visibility:changed молча сбрасывает поездки и чёрный список", async () => {
+    authenticate();
+    await renderProvider();
+    const ws = lastInstance();
+    await act(async () => {
+      ws.serverOpen();
+      ws.serverMessage({ type: "auth:ok" });
+    });
+    invalidateSpy.mockClear();
+    resetSpy.mockClear();
+
+    await act(async () => {
+      ws.serverMessage({
+        type: "visibility:changed",
+        payload: { eventId: "00000000-0000-4000-8000-000000000123" },
+      });
+    });
+
+    expect(resetSpy).toHaveBeenCalledWith({ queryKey: TRIP_KEYS.lists() });
+    expect(resetSpy).toHaveBeenCalledWith({ queryKey: TRIP_KEYS.details() });
+    expect(invalidateCallsFor([...RIDE_REQUEST_KEYS.all])).toBe(1);
+    expect(invalidateCallsFor([...BLOCK_KEYS.all])).toBe(1);
+    expect(document.body.textContent).not.toContain("заблокирован");
   });
 
   it("повтор того же события — дубликат: без повторной инвалидации и нотиса", async () => {

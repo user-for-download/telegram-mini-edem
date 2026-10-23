@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../../src/app.js";
 import { db } from "../../src/db.js";
+import { devMockAccessToken } from "../dev-mock-auth.js";
 
 /**
  * Согласованность «карты мест» между двумя эндпоинтами одной поездки:
@@ -76,7 +77,11 @@ describe("bookedSeats — согласованность детали и спи�
   });
 
   it("GET /trips/:id: bookedSeats содержит удержанное просроченное место и согласован с seatsAvailable", async () => {
-    const res = await app.request(`/api/v1/trips/${tripId}`);
+    const res = await app.request(`/api/v1/trips/${tripId}`, {
+      headers: {
+        Authorization: `Bearer ${devMockAccessToken(driverId)}`,
+      },
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       seatsTotal: number;
@@ -88,10 +93,18 @@ describe("bookedSeats — согласованность детали и спи�
   });
 
   it("GET /trips/:id и GET /trips дают одинаковые bookedSeats для одной поездки", async () => {
-    const detailRes = await app.request(`/api/v1/trips/${tripId}`);
+    const detailRes = await app.request(`/api/v1/trips/${tripId}`, {
+      headers: {
+        Authorization: `Bearer ${devMockAccessToken(driverId)}`,
+      },
+    });
     const detail = (await detailRes.json()) as { bookedSeats: number[] };
 
-    const listRes = await app.request("/api/v1/trips?limit=50");
+    const listRes = await app.request("/api/v1/trips?limit=50", {
+      headers: {
+        Authorization: `Bearer ${devMockAccessToken(driverId)}`,
+      },
+    });
     const list = (await listRes.json()) as {
       items: Array<{ id: string; bookedSeats: number[] }>;
     };

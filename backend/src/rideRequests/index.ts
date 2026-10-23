@@ -18,6 +18,7 @@ import {
 import { ERROR_CODES } from "../errors.js";
 import { devRateMax } from "../env.js";
 import { serializeRideRequest } from "./serializers.js";
+import { visiblePeerWhere } from "../blocks/visibility.js";
 
 const MAX_ACTIVE_REQUESTS = 3;
 // Потолок ленты главной: секция на экране, 20 строк — уже не список.
@@ -211,6 +212,7 @@ rideRequestsRouter.get("/matching", publicReadLimiter, async (c) => {
   const items = await db.rideRequest.findMany({
     where: {
       userId: { not: c.get("user").id },
+      user: visiblePeerWhere(c.get("user").id),
       fromCityId,
       toCityId,
       status: "active",
@@ -272,6 +274,7 @@ rideRequestsRouter.get("/feed", publicReadLimiter, async (c) => {
   const requests = await db.rideRequest.findMany({
     where: {
       userId: { not: c.get("user").id },
+      user: visiblePeerWhere(c.get("user").id),
       status: "active",
       expiresAt: { gt: now },
       latestAt: { gt: now },

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { app } from "../../src/app.js";
 import { db } from "../../src/db.js";
+import { devMockAccessToken } from "../dev-mock-auth.js";
 
 /**
  * Регрессия поиска GET /trips: уехавшие поездки скрываются.
@@ -76,7 +77,12 @@ describe("GET /trips — departed trips hidden", () => {
 
     // Act
     const res = await app.request(
-      `/api/v1/trips?fromCity=${encodeURIComponent(SEARCH_CITY)}`
+      `/api/v1/trips?fromCity=${encodeURIComponent(SEARCH_CITY)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${devMockAccessToken(driverId)}`,
+        },
+      },
     );
 
     // Assert
@@ -100,7 +106,12 @@ describe("GET /trips — departed trips hidden", () => {
 
     // Act
     const res = await app.request(
-      `/api/v1/trips?fromCity=${encodeURIComponent(SEARCH_CITY)}`
+      `/api/v1/trips?fromCity=${encodeURIComponent(SEARCH_CITY)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${devMockAccessToken(driverId)}`,
+        },
+      },
     );
 
     // Assert — уехавшая скрыта, будущая на месте.

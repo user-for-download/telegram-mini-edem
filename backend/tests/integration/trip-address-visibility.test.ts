@@ -89,12 +89,9 @@ describe("GET /trips/:id — address visibility", () => {
     expect(body.toAddress).toBe("Торговый центр на пр. Ленина");
   });
 
-  it("unauthenticated requester gets no addresses", async () => {
-    const body = await getTripDetails();
-    expect(body.fromCity).toBe("Москва");
-    expect(body.toCity).toBe("Тула");
-    expect(body.fromAddress).toBeUndefined();
-    expect(body.toAddress).toBeUndefined();
+  it("unauthenticated requester is rejected: visibility needs viewer id", async () => {
+    const res = await app.request(`/api/v1/trips/${tripId}`);
+    expect(res.status).toBe(401);
   });
 
   it("authenticated stranger without booking gets no addresses", async () => {
@@ -151,8 +148,13 @@ describe("GET /trips/:id — address visibility", () => {
     expect(body.toAddress).toBeUndefined();
   });
 
-  it("public trips list never exposes addresses", async () => {
-    const res = await app.request("/api/v1/trips?limit=50");
+  it("search list never exposes addresses", async () => {
+    const stranger = await createUser("ListStranger");
+    const res = await app.request("/api/v1/trips?limit=50", {
+      headers: {
+        Authorization: `Bearer ${devMockAccessToken(stranger.id)}`,
+      },
+    });
     expect(res.status).toBe(200);
 
     const body = await res.json();
@@ -441,4 +443,3 @@ describe("GET /bookings/my и /bookings/history — address visibility", () => {
     expect(findItem(mine, trip.id).passenger.car?.plate).toBe(PLATE);
   });
 });
-

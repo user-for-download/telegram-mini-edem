@@ -27,6 +27,7 @@ import { closeRideRequestsForBooking } from "./rideRequests.js";
 import { logBusinessEvent } from "../logger/business.js";
 import { domainEvents } from "../events/domainEvents.js";
 import { wsManager } from "../ws/manager.js";
+import { isPairBlocked } from "../blocks/visibility.js";
 
 export const createRouter = new Hono<AuthEnv>();
 
@@ -68,6 +69,27 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
 
         if (!trip) {
           throw new BookingError("Trip not found", 404, ERROR_CODES.NOT_FOUND);
+        }
+
+        // Проверяем ДО статуса/времени/мест: иначе прямой POST по известному
+        // id превращается в оракул скрытой поездки (400 vs 404). Живая бронь —
+        // сохранённое обязательство, её идемпотентный retry идёт дальше.
+        if (await isPairBlocked(tx, passenger.id, trip.driverId)) {
+          const existingObligation = await tx.booking.findFirst({
+            where: {
+              tripId,
+              passengerId: passenger.id,
+              ...activeBookingWhere(now),
+            },
+            select: { id: true },
+          });
+          if (!existingObligation) {
+            throw new BookingError(
+              "Trip not found",
+              404,
+              ERROR_CODES.NOT_FOUND,
+            );
+          }
         }
 
         if (trip.status !== "active") {

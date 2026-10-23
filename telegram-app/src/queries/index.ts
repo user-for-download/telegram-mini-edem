@@ -4,6 +4,7 @@
 export * from "./keys";
 export * from "./useAllCities";
 export * from "./useBookingsQuery";
+export * from "./useBlocksQuery";
 export * from "./useNotificationsQuery";
 export * from "./useReportQuery";
 export * from "./useReviewsQuery";
