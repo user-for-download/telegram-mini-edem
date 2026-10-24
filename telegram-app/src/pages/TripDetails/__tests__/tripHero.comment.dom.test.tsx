@@ -15,11 +15,12 @@
 // САМ ВИЗУАЛЬНЫЙ ИТОГ (перенос строки на экране, отсутствие вылезающего за
 // плашку слова) в jsdom не проверяемый в принципе — это работа e2e.
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 
-import { TripHero } from "@/pages/TripDetails/TripHero";
+import { TripConditions } from "@/pages/TripDetails/TripHero";
 import uiStyles from "@/ui/ui.module.css";
+import detailStyles from "../TripDetailsPage.module.css";
 import type { Trip } from "@edem/contracts";
 
 // RTL auto-cleanup в проекте выключен (globals не заданы) — убираем дерево руками.
@@ -65,14 +66,7 @@ function makeTrip(comment: string): Trip {
 function renderHero(comment: string): HTMLElement {
   const { container } = render(
     <AppRoot platform="base">
-      <TripHero
-        item={makeTrip(comment)}
-        shareStatus={null}
-        isConfirmedBooking={false}
-        hasActiveBooking={false}
-        arrival="12:30"
-        onShare={() => {}}
-      />
+      <TripConditions item={makeTrip(comment)} />
     </AppRoot>,
   );
   return container;
@@ -131,5 +125,29 @@ describe("TripHero: комментарий водителя идёт через 
     })();
     expect(parent.textContent).toBe(long);
     expect(parent.classList.contains(QUOTE_CLASS)).toBe(true);
+  });
+
+  it("длинный комментарий раскрывается и сворачивается без потери текста", () => {
+    const long = "Подробности поездки. ".repeat(20);
+    const container = renderHero(long);
+    const quote = container.querySelector(`.${QUOTE_CLASS}`)!;
+    const toggle = screen.getByRole("button", { name: "Читать полностью" });
+    expect(quote.classList.contains(detailStyles.noteClamp!)).toBe(true);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(toggle);
+    expect(quote.classList.contains(detailStyles.noteClamp!)).toBe(false);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(toggle.textContent).toBe("Свернуть");
+    expect(quote.textContent).toBe(long);
+
+    fireEvent.click(toggle);
+    expect(quote.classList.contains(detailStyles.noteClamp!)).toBe(true);
+    expect(quote.textContent).toBe(long);
+  });
+
+  it("короткий комментарий не требует раскрытия", () => {
+    renderHero(COMMENT);
+    expect(screen.queryByRole("button", { name: "Читать полностью" })).toBeNull();
   });
 });

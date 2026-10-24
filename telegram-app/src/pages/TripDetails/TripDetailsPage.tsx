@@ -8,10 +8,17 @@ import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useTripDetailQuery } from "@/queries/useTripsQuery";
 import { useNavigate, useParams } from "react-router-dom";
-import { BookingPanel } from "./BookingPanel";
+import { TripPassengers } from "@/components/Trip/TripPassengers";
+import {
+  BookingBar,
+  BookingCancellation,
+  BookingPanel,
+  BookingStatus,
+} from "./BookingPanel";
 import { DriverPanel } from "./DriverPanel";
-import { TripHero } from "./TripHero";
+import { TripConditions, TripHero } from "./TripHero";
 import { useTripActions } from "./useTripActions";
+import styles from "./TripDetailsPage.module.css";
 
 /**
  * Детали поездки — язык TripDetailsModal эталона
@@ -93,15 +100,35 @@ export function TripDetailsPage() {
   }
 
   const item = trip.data;
+  // Статус брони — первый блок для пассажира с живой бронью. У
+  // терминальной поездки приоритет у статуса рейса: архивная бронь не
+  // должна выглядеть как действующая.
+  const showBookingStatus =
+    actions.isActive && actions.hasActiveBooking && !!item.myBooking;
+  // Цена в сводке нужна там, где панели бронирования нет вовсе:
+  // водитель, архив, нет мест, отправление прошло.
+  const showPriceInSummary = !actions.canBook && !showBookingStatus;
 
   return (
-    <Stack>
+    <Stack className={actions.canBook ? undefined : styles.stackBottomGap}>
+      {showBookingStatus && <BookingStatus item={item} />}
       <TripHero
         item={item}
         shareStatus={actions.shareStatus}
         isConfirmedBooking={!!actions.isConfirmedBooking}
         hasActiveBooking={actions.hasActiveBooking}
         arrival={actions.arrival}
+        price={showPriceInSummary ? item.price : null}
+        afterRoute={
+          // Заявки водителя — сразу после маршрута, до собственного
+          // профиля и условий: это его рабочая задача на этом экране.
+          actions.isDriver && actions.isActive ? (
+            <TripPassengers
+              tripId={item.id}
+              pendingCount={item.pendingRequestsCount}
+            />
+          ) : null
+        }
         onShare={() => actions.handleShare(item.id)}
       />
       <BookingPanel
@@ -117,6 +144,14 @@ export function TripDetailsPage() {
         createBooking={actions.createBooking}
         onSelectSeat={actions.setSelectedSeat}
         onCommentChange={actions.setComment}
+      />
+      <TripConditions item={item} />
+      <BookingCancellation item={item} isActive={actions.isActive} />
+      <BookingBar
+        item={item}
+        canBook={actions.canBook}
+        effectiveSeat={actions.effectiveSeat}
+        createBooking={actions.createBooking}
         onSubmit={actions.submitBooking}
       />
       {actions.isDriver && (

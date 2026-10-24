@@ -8,6 +8,8 @@ export interface TripRouteTimelineProps {
   toCity: string;
   toAddress?: string | null;
   arrival?: string | null;
+  /** Отправление + длительность переходят через полночь. */
+  arrivalNextDay?: boolean;
 }
 
 const ADDRESS_FALLBACK =
@@ -41,6 +43,7 @@ export function TripRouteTimeline({
   toCity,
   toAddress,
   arrival,
+  arrivalNextDay = false,
 }: TripRouteTimelineProps) {
   const stops = [
     { city: fromCity, address: fromAddress, time: fromTime },
@@ -70,6 +73,9 @@ export function TripRouteTimeline({
           );
         })}
       </ol>
+      {arrivalNextDay && (
+        <p className={styles.hint}>Прибытие на следующий день</p>
+      )}
       {addressesHidden && <p className={styles.hint}>{ADDRESS_FALLBACK}</p>}
     </div>
   );

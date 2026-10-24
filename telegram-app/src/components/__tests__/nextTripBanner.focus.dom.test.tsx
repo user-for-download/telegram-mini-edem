@@ -230,7 +230,9 @@ describe("NextTripBanner: видимый индикатор фокуса (стр
       // селекторы списка — из семейства .sheetBody* и несут `:focus`. Суть
       // проверки: сброс физически не может достать баннер.
       for (const selector of (match[1] ?? "").split(",")) {
-        expect(selector.trim()).toMatch(/^\.sheetBody(Edge|Static)?:focus$/);
+        expect(selector.trim()).toMatch(
+          /^\.sheetBody(Edge|Flush|Static)?:focus$/,
+        );
       }
       expect(match[0]).toContain("outline: none");
     }
@@ -242,7 +244,7 @@ describe("NextTripBanner: видимый индикатор фокуса (стр
     // при каждом открытии (Chromium матчит его для программного фокуса на
     // скролл-регионе) и читалось синей рамкой вокруг всей шторки.
     expect(stripComments(uiCss)).not.toMatch(
-      /\.sheetBody(Edge|Static)?:focus-visible[^{}]*\{[^}]*outline/,
+      /\.sheetBody(Edge|Flush|Static)?:focus-visible[^{}]*\{[^}]*outline/,
     );
   });
 

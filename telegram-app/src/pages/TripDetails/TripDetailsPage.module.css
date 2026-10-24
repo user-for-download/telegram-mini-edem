@@ -35,19 +35,38 @@
   background: var(--tgui--tertiary_bg_color);
 }
 
-/* Шапка карточки: день слева, путь справа. */
+/* Шапка карточки: день слева, шаринг справа. */
 .routeHead {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+}
+
+/* Метаданные могут переноситься при большой цене на узком экране. */
+.routeMeta {
+  color: var(--app-muted);
+}
+
+/* Нижняя строка маршрута: длительность/километры слева, цена справа
+ * (только когда панели бронирования нет). */
+.routeFoot {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--app-space-sm);
 }
 
-/* Подпись «В пути ~ 1 ч 50 мин · 155 км» — мета, поэтому приглушённая
- * и без переноса: цифры короткие, ломать их на две строки незачем. */
-.routeMeta {
+.summaryPrice {
+  flex: none;
+  font-size: 17px;
+  line-height: 22px;
+  color: var(--tgui--text_color);
+}
+
+.shareStatus {
   color: var(--app-muted);
-  white-space: nowrap;
 }
 
 /* ── Карточка водителя ─────────────────────────────────────────────── */
@@ -67,11 +86,18 @@
  * удалением рамки. Реестр отклонений: ui/README.md #37. */
 .driverCard {
   display: flex;
-  align-items: center;
-  gap: var(--app-space-xs);
+  flex-direction: column;
+  gap: var(--app-space-sm);
   padding: var(--app-card-pad);
   border-radius: var(--app-card-radius);
   background: var(--tgui--tertiary_bg_color);
+}
+
+/* Верхняя строка группы: профиль и действия справа. */
+.driverTop {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs);
 }
 
 /* Кнопка «открыть профиль водителя» — сосед блока действий, а не его
@@ -147,20 +173,21 @@
   flex-shrink: 0;
 }
 
-/* Статус шаринга — плотный Stack gap="2xs" в TSX. */
-
 /* ── Строка автомобиля ─────────────────────────────────────────────── */
 
 /* Иконка + две строки текста. Раньше здесь был text-xs на всю плашку и
  * space-between: модель и госномер стояли по краям и переносились
  * каждый по-своему («Lada Vesta · | графитовый»). Теперь это одна
  * осмысленная группа: иконка слева, модель и номер друг под другом. */
+/* Строка автомобиля внутри группы водителя: та же поверхность, что у
+ * родителя, отделена только волоском. Отдельной карточкой авто читалось
+ * как ещё один равнозначный факт, а не свойство поездки водителя. */
 .carRow {
   display: flex;
   align-items: center;
-  gap: var(--app-space-sm);
-  padding: var(--app-card-pad);
-  border-radius: var(--app-card-radius);
+  gap: var(--app-space-xs);
+  padding-top: var(--app-space-sm);
+  border-top: 1px solid var(--tgui--outline);
   background: var(--tgui--tertiary_bg_color);
 }
 
@@ -203,6 +230,19 @@
   padding: 0 0 0 var(--app-space-xs);
   border-radius: 0;
   background: transparent;
+}
+
+/* Длинный комментарий: пять строк превью. Текст остаётся в DOM целиком —
+ * это данные водителя, а не декоративная обрезка. */
+.noteClamp.noteClamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+}
+
+.commentToggle {
+  align-self: flex-start;
 }
 
 /* ── Секции под разделителем ───────────────────────────────────────── */
@@ -269,21 +309,9 @@
 
 /* ── Цена и CTA ────────────────────────────────────────────────────── */
 
-/* Строка «цена — оплата водителю»: цена главная (19/700), подсказка —
- * мета справа. По базовой линии, а не по центру: строка подсказки из
- * двух строк не должна поднимать цену вверх. */
-.priceRow {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--app-space-sm);
-  padding: var(--app-space-2xs) 0;
-}
-
-/* Подсказка в строке цены (не счётчик!): подпись способа оплаты.
- * Одной строкой: раньше здесь стоял max-width 45% + жёсткий <br>, и
- * «Оплата водителю при посадке» переносилась на две строки даже там, где
- * помещалась в одну. Ширину держит flex, а не доля от контейнера. */
+/* Подсказка рядом с ценой внизу формы: выбранное место.
+ * Одной строкой, приглушённая, справа. Ширину держит flex, а не доля
+ * от контейнера. */
 .payHint {
   min-width: 0;
   text-align: right;
@@ -296,4 +324,38 @@
   font-size: 12px;
   line-height: 16px;
   color: var(--app-muted);
+}
+
+/* Необязательный комментарий: тихая кнопка-раскрытие вместо постоянной
+ * textarea. */
+.addComment {
+  align-self: flex-start;
+}
+
+/* ── Нижний блок бронирования ────────────────────────────────────── */
+
+/* Последний блок формы, прокручивается вместе с остальным содержимым.
+ * Фон во всю ширину, содержимое — на общем рельсе 16px. */
+.bookBar {
+  --book-bar-pad-bottom: max(var(--app-space-sm), env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  margin: 0 calc(-1 * var(--app-page-gutter));
+  padding: var(--app-space-sm) var(--app-page-gutter) var(--book-bar-pad-bottom);
+  background: var(--tgui--bg_color);
+  border-top: 1px solid var(--tgui--outline);
+}
+
+/* Нижний клиренс шторки, когда блока бронирования нет (шторка открыта
+ * в режиме flush — свой bottom padding у неё отключён). */
+.stackBottomGap {
+  padding-bottom: var(--app-sheet-pad-bottom);
+}
+
+.bookBarRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
 }

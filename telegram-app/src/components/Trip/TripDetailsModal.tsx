@@ -17,7 +17,12 @@ export function TripDetailsModal({
   // Имя диалога + видимый заголовок на base: tgui Modal.Header рисует
   // текст только на iOS.
   return (
-    <Sheet open={open} onClose={onClose} title="Детали поездки">
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Детали поездки"
+      variant="flush"
+    >
       <TripDetailsPage />
     </Sheet>
   );

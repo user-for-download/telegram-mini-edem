@@ -100,6 +100,17 @@
   overflow-y: auto;
 }
 
+/* Тело без нижнего паддинга: закреплённая панель экрана сама держит
+ * нижний клиренс и safe-area. Верх и бока — тот же рельс. */
+.sheetBodyFlush {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  padding: var(--app-sheet-pad-top) var(--app-page-gutter) 0;
+  max-height: 82dvh;
+  overflow-y: auto;
+}
+
 /* Тело без скролла: короткая форма обратной связи. */
 .sheetBodyStatic {
   display: flex;
@@ -121,6 +132,7 @@
  * шторки кольцо остаётся — единый рецепт (реестр #39). */
 .sheetBody:focus,
 .sheetBodyEdge:focus,
+.sheetBodyFlush:focus,
 .sheetBodyStatic:focus {
   outline: none;
 }

@@ -28,6 +28,7 @@ const readSrc = (relativePath: string): string =>
   readFileSync(join(here, "..", "..", "..", relativePath), "utf8");
 
 const pageCss = readSrc("pages/TripDetails/TripDetailsPage.module.css");
+const pageTsx = readSrc("pages/TripDetails/TripDetailsPage.tsx");
 const heroTsx = readSrc("pages/TripDetails/TripHero.tsx");
 const bookingTsx = readSrc("pages/TripDetails/BookingPanel.tsx");
 const driverTsx = readSrc("pages/TripDetails/DriverPanel.tsx");
@@ -74,10 +75,15 @@ describe("маршрут: компактный рельс вместо Timeline"
 });
 
 describe("шапка карточки маршрута", () => {
-  it("день слева, путь справа — как в карточке поездки", () => {
+  it("день слева, шаринг справа", () => {
     const head = ruleBody(pageCss, ".routeHead");
     expect(head).toMatch(/justify-content:\s*space-between/);
     expect(ruleBody(pageCss, ".routeMeta")).toMatch(/color:\s*var\(--app-muted\)/);
+  });
+
+  it("длительность и крупная цена не переполняют узкую карточку", () => {
+    expect(ruleBody(pageCss, ".routeFoot")).toMatch(/flex-wrap:\s*wrap/);
+    expect(ruleBody(pageCss, ".routeMeta")).not.toContain("white-space: nowrap");
   });
 });
 
@@ -97,9 +103,10 @@ describe("выбор места: сетка в строку", () => {
 describe("действия водителя: одна главная кнопка", () => {
   it("вторая шторка не открывается — заявки встроены в детали", () => {
     // Раньше кнопка вела на /trips/my/:id/requests: две модалки друг на
-    // друге. Теперь список — часть этой же шторки.
+    // друге. Теперь список — часть этой же шторки, сразу после маршрута.
     expect(driverTsx).not.toContain("/trips/my/");
-    expect(driverTsx).toContain("TripPassengers");
+    expect(pageTsx).toContain("TripPassengers");
+    expect(pageTsx).toContain("afterRoute");
     // Кнопки-перехода нет (упоминание в комментарии не в счёт).
     expect(driverTsx).not.toMatch(/<Button[^>]*>[^<]*Заявки пассажиров/);
   });
@@ -149,19 +156,36 @@ describe("авто, теги и комментарий", () => {
   });
 });
 
-describe("шаринг: одна явная кнопка с полной подписью", () => {
+describe("шаринг: тихая иконка в шапке маршрута", () => {
   it("подпись короткая и не обрезается", () => {
     expect(heroTsx).toContain("Поделиться поездкой");
     expect(heroTsx).not.toContain("с попутчиком в Telegram");
   });
 
-  it("дубля-иконки шаринга в карточке водителя нет", () => {
-    // В карточке водителя остаётся только телефон; шаринг — кнопкой ниже.
-    expect(heroTsx).not.toMatch(/aria-label="Поделиться поездкой"/);
+  it("шаринг не в карточке водителя: действие относится к поездке", () => {
+    // Иконка живёт в routeHead; в блоке действий водителя остаётся телефон.
+    const routeHead = heroTsx.slice(
+      heroTsx.indexOf("styles.routeHead"),
+      heroTsx.indexOf("<TripRouteTimeline"),
+    );
+    expect(routeHead).toContain('aria-label="Поделиться поездкой"');
+    const driverActions = heroTsx.slice(
+      heroTsx.indexOf("styles.driverActions"),
+      heroTsx.indexOf("item.driver.car"),
+    );
+    expect(driverActions).not.toContain("Поделиться поездкой");
   });
 });
 
 describe("цена: сильная цифра и подпись в строку", () => {
+  it("бронирование находится в потоке формы, не плавает поверх содержимого", () => {
+    const bar = ruleBody(pageCss, ".bookBar");
+    expect(bar).not.toMatch(/position:\s*(sticky|fixed|absolute)/);
+    expect(pageTsx.indexOf("<BookingBar")).toBeGreaterThan(
+      pageTsx.indexOf("<TripConditions"),
+    );
+  });
+
   it("цена — Headline 19/700", () => {
     expect(bookingTsx).toMatch(/<Headline weight="1"[\s\S]*?item\.price/);
   });

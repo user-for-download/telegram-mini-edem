@@ -45,6 +45,7 @@ vi.mock("@/queries/useTripsQuery", () => ({
 }));
 
 import { DriverPanel } from "@/pages/TripDetails/DriverPanel";
+import { TripPassengers } from "@/components/Trip/TripPassengers";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function mutationState() {
@@ -150,6 +151,13 @@ function renderPanel(
     <AppRoot platform="base">
       <MemoryRouter initialEntries={["/trips/t-1"]}>
         <ToastProvider>
+          {/* Заявки живут в композиции страницы (TripDetailsPage →
+              TripHero.afterRoute), поэтому проверяем их вместе с
+              управлением — так же, как они видны водителю. */}
+          <TripPassengers
+            tripId="t-1"
+            pendingCount={(trip.pendingRequestsCount as number) ?? 0}
+          />
           <DriverPanel
             tripId="t-1"
             status="active"

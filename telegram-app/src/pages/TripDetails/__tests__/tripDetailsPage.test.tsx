@@ -180,7 +180,7 @@ describe("TripDetailsPage parity", () => {
     expect(html).toContain("км");
     expect(html).toContain("Не курить");
     expect(html).toContain("Еду без остановок");
-    expect(html).toContain("Комментарий водителю");
+    expect(html).toContain("Добавить комментарий водителю");
     expect(html).toContain("Забронировать место");
     // Занятое место помечено, свободные — выбираемые кнопки.
     // SSR разбивает текст комментарием: «2<!-- --> (зан.)».
@@ -199,20 +199,59 @@ describe("TripDetailsPage parity", () => {
     );
     const html = render();
     expect(html).toContain("уже отправилась");
-    expect(html).not.toContain("Комментарий водителю");
+    expect(html).not.toContain("Добавить комментарий водителю");
   });
 
-  it("shows the booking status and guarded cancel for own booking", () => {
+  it.each([
+    ["pending", "Заявка отправлена"],
+    ["confirmed", "Бронь подтверждена"],
+  ])("shows status and puts guarded cancel after trip conditions for %s", (status, label) => {
     setMocks(
       makeTrip({
-        myBooking: { id: "b-1", seat: 1, status: "pending" },
+        myBooking: { id: "b-1", seat: 1, status },
         bookedSeats: [1, 2],
         seatsAvailable: 1,
       }),
     );
     const html = render();
-    expect(html).toContain("Вы записались попутчиком");
+    expect(html).toContain(label);
     expect(html).toContain("Отменить бронирование");
+    expect(html.indexOf("Отменить бронирование")).toBeGreaterThan(
+      html.indexOf("Не курить"),
+    );
+    expect(html.indexOf("Отменить бронирование")).toBeGreaterThan(
+      html.indexOf("Еду без остановок"),
+    );
+  });
+
+  it.each([
+    ["completed", "Завершена"],
+    ["cancelled", "Отменена"],
+  ])("does not offer booking actions on a %s trip", (status, label) => {
+    // Завершённая поездка с подтверждённой бронью раньше показывала
+    // «Вы записались попутчиком» и отмену — действия уже неактуальны.
+    setMocks(
+      makeTrip({
+        status,
+        myBooking: { id: "b-1", seat: 1, status: "confirmed" },
+        bookedSeats: [1],
+        seatsAvailable: 0,
+      }),
+    );
+    const html = render();
+    expect(html).toContain(label);
+    expect(html).not.toContain("Бронь подтверждена");
+    expect(html).not.toContain("Отменить бронирование");
+    expect(html).not.toContain("Забронировать место");
+  });
+
+  it.each([
+    ["09:00", 150, false],
+    ["23:45", 15, true],
+    ["23:45", 510, true],
+  ])("marks next-day arrival for %s + %s min", (time, durationMinutes, nextDay) => {
+    setMocks(makeTrip({ time, durationMinutes }));
+    expect(render().includes("Прибытие на следующий день")).toBe(nextDay);
   });
 
   it("shows share action", () => {
@@ -272,7 +311,7 @@ describe("TripDetailsPage parity", () => {
       expect(html).toContain("Редактировать поездку");
       expect(html).toContain("Завершить поездку");
       expect(html).toContain("Отменить поездку");
-      expect(html).not.toContain("Комментарий водителю");
+      expect(html).not.toContain("Добавить комментарий водителю");
     } finally {
       authState.userId = "u-pass";
     }

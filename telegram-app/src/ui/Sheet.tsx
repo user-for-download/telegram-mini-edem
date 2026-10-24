@@ -14,9 +14,11 @@ export interface SheetProps {
   /**
    * Тело шторки: "padded" (по умолчанию) — скролл 82dvh и бока 16;
    * "edge" — без боковых (контент сам держит рельс: отзывы, досье);
+   * "flush" — без нижнего паддинга: экран сам рисует закреплённую нижнюю
+   * панель (детали поездки);
    * "static" — без скролла (короткая форма обратной связи).
    */
-  variant?: "padded" | "edge" | "static";
+  variant?: "padded" | "edge" | "flush" | "static";
   /**
    * Шторка открывается ПОВЕРХ уже открытой шторки (подтверждение поверх
    * «Автомобиля»/«Заявок»). Кит переключает `Drawer.Root` на
@@ -33,6 +35,7 @@ export interface SheetProps {
 const BODY_VARIANTS = {
   padded: styles.sheetBody,
   edge: styles.sheetBodyEdge,
+  flush: styles.sheetBodyFlush,
   static: styles.sheetBodyStatic,
 } as const;
 

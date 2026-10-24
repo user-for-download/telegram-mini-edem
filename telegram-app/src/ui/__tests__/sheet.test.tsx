@@ -67,4 +67,19 @@ describe("Sheet", () => {
     expect(active?.className).toContain(uiStyles.sheetBodyStatic);
     expect(active?.textContent).toContain("Отправить");
   });
+
+  it("variant=flush монтирует тело без нижнего паддинга", () => {
+    // Экран сам рисует закреплённую нижнюю панель (детали поездки):
+    // шторка не должна оставлять под ней 40px клиренса.
+    render(
+      <AppRoot>
+        <Sheet open onClose={() => {}} title="Детали поездки" variant="flush">
+          <button type="button">Забронировать</button>
+        </Sheet>
+      </AppRoot>,
+    );
+    const active = document.activeElement as HTMLElement | null;
+    expect(active?.className).toContain(uiStyles.sheetBodyFlush);
+    expect(active?.className).not.toContain(uiStyles.sheetBodyStatic);
+  });
 });

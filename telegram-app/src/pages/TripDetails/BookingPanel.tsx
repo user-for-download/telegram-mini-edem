@@ -1,4 +1,5 @@
 import { Caption, Headline, Text, Textarea } from "@telegram-apps/telegram-ui";
+import { useId, useState } from "react";
 import { Button } from "@/ui/Button";
 import { EmptyState } from "@/ui/EmptyState";
 import { Field } from "@/ui/Field";
@@ -6,7 +7,7 @@ import { Notice } from "@/ui/Notice";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { GroupLabel } from "@/ui/GroupLabel";
-import { MIN_TARGET } from "@/ui/classes";
+import { GROW, MIN_TARGET, SHRINK } from "@/ui/classes";
 import { StatusPill } from "@/components/StatusPill/StatusPill";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import {
@@ -30,14 +31,51 @@ interface BookingPanelProps {
   createBooking: ReturnType<typeof useCreateBookingMutation>;
   onSelectSeat: (seat: number) => void;
   onCommentChange: (value: string) => void;
-  onSubmit: () => void;
 }
 
 /**
- * Бронирование пассажира: баннер активной заявки, отмена, выбор места,
- * комментарий, цена, терминальные состояния (нет мест / уехала /
- * отменена / завершена). Мутация отмены — локально, создание — из
- * useTripActions (тот же инстанс, что и onSubmit).
+ * Статус собственной брони — отдельным блоком вверху шторки.
+ *
+ * Раньше он стоял после водителя и комментария, то есть ниже всей
+ * описательной части. Для пассажира с заявкой это главный ответ на вопрос
+ * «что с моей бронью», поэтому блок идёт первым. Pending — нейтральный
+ * info, confirmed — зелёный success: ожидание не должно выглядеть как
+ * состоявшееся подтверждение.
+ */
+export function BookingStatus({ item }: { item: Trip }) {
+  const booking = item.myBooking;
+  if (!booking) return null;
+  const confirmed = booking.status === "confirmed";
+
+  return (
+    <Notice tone={confirmed ? "success" : "info"} variant="banner">
+      <div className={GROW}>
+        <Text
+          weight="2"
+          Component="div"
+          className={confirmed ? styles.success : undefined}
+        >
+          {confirmed ? "Бронь подтверждена" : "Заявка отправлена"}
+        </Text>
+        <Caption
+          Component="div"
+          className={confirmed ? styles.successMuted : undefined}
+        >
+          Место №{booking.seat} · {item.price} ₽
+          {confirmed ? " · Оплата при посадке" : " · Ждём решения водителя"}
+        </Caption>
+      </div>
+      <StatusPill tone={confirmed ? "success" : "info"} className={SHRINK}>
+        {confirmed ? "Подтверждено" : "На рассмотрении"}
+      </StatusPill>
+    </Notice>
+  );
+}
+
+/**
+ * Бронирование пассажира: выбор места, раскрываемый комментарий,
+ * терминальные состояния (нет мест / уехала).
+ * Цена и основное действие — последним блоком формы.
  */
 export function BookingPanel({
   item,
@@ -52,59 +90,15 @@ export function BookingPanel({
   createBooking,
   onSelectSeat,
   onCommentChange,
-  onSubmit,
 }: BookingPanelProps) {
-  const cancelBooking = useCancelBookingMutation();
+  // Комментарий нужен редко: постоянная textarea съедала треть высоты до
+  // цены. Уже введённый текст (или возврат на экран) оставляет поле
+  // открытым.
+  const [commentOpen, setCommentOpen] = useState(comment.length > 0);
+  const commentPanelId = useId();
 
   return (
     <>
-      {hasActiveBooking && item.myBooking && (
-        <Notice tone="success" variant="banner">
-          <div>
-            <Text weight="2" Component="div" className={styles.success}>
-              Вы записались попутчиком
-            </Text>
-            <Caption Component="div" className={styles.successMuted}>
-              Место №{item.myBooking.seat} · {item.price} ₽
-            </Caption>
-          </div>
-          <StatusPill
-            tone={item.myBooking.status === "confirmed" ? "success" : "warning"}
-          >
-            {item.myBooking.status === "confirmed"
-              ? "Подтверждено"
-              : "На рассмотрении"}
-          </StatusPill>
-        </Notice>
-      )}
-
-      {item.myBooking && (
-        <div className={styles.section}>
-          {(item.myBooking.status === "pending" ||
-            item.myBooking.status === "confirmed") && (
-            <ConfirmPopup
-              label="Отменить бронирование"
-              confirmLabel="Отменить бронь"
-              description="Заявка будет отменена, а место снова станет доступно."
-              pending={cancelBooking.isPending}
-              destructive
-              className={MIN_TARGET}
-              onConfirm={() =>
-                cancelBooking.mutate(item.myBooking!.id, {
-                  onSuccess: () =>
-                    hapticFeedback.notificationOccurred.ifAvailable("success"),
-                })
-              }
-            />
-          )}
-          {cancelBooking.error && (
-            <Notice tone="danger" variant="text">
-              {bookingErrorMessage(cancelBooking.error)}
-            </Notice>
-          )}
-        </div>
-      )}
-
       {canBook && (
         <div className={styles.sectionLoose}>
           <div role="group" aria-label="Выбор места">
@@ -149,46 +143,33 @@ export function BookingPanel({
               )}
             </div>
           </div>
-          <Field label="Комментарий водителю" id="booking-comment">
-            {(field) => (
-              <Textarea
-                {...field}
-                value={comment}
-                maxLength={300}
-                rows={3}
-                placeholder="Например: буду с небольшим чемоданом, подойду к 9:25"
-                onChange={(event) => onCommentChange(event.target.value)}
-              />
-            )}
-          </Field>
-          <div className={styles.priceRow}>
-            <div>
-              <Caption Component="div">Цена за место</Caption>
-              <Headline weight="1" Component="div">
-                {item.price} ₽
-              </Headline>
-            </div>
-            <Caption Component="div" className={styles.payHint}>
-              Оплата водителю при посадке
-            </Caption>
-          </div>
+
           <Button
-            variant="primary"
-            size="l"
+            variant="ghost"
             stretched
-            loading={createBooking.isPending}
-            disabled={effectiveSeat === null || createBooking.isPending}
-            onClick={onSubmit}
+            className={styles.addComment}
+            aria-expanded={commentOpen}
+            aria-controls={commentPanelId}
+            onClick={() => setCommentOpen((value) => !value)}
           >
-            {effectiveSeat !== null
-              ? `Забронировать место №${effectiveSeat} · ${item.price} ₽`
-              : "Забронировать место"}
+            {commentOpen ? "Скрыть комментарий" : "Добавить комментарий водителю"}
           </Button>
-          {createBooking.error && (
-            <Notice tone="danger" variant="text">
-              {bookingErrorMessage(createBooking.error)}
-            </Notice>
-          )}
+          <div id={commentPanelId} hidden={!commentOpen}>
+            {commentOpen && (
+              <Field label="Комментарий водителю" id="booking-comment">
+                {(field) => (
+                  <Textarea
+                    {...field}
+                    value={comment}
+                    maxLength={300}
+                    rows={3}
+                    placeholder="Например: буду с небольшим чемоданом, подойду к 9:25"
+                    onChange={(event) => onCommentChange(event.target.value)}
+                  />
+                )}
+              </Field>
+            )}
+          </div>
         </div>
       )}
 
@@ -208,12 +189,101 @@ export function BookingPanel({
           description={EMPTY_STATES.tripDeparted.description}
         />
       )}
-      {item.status === "cancelled" && (
-        <EmptyState header={EMPTY_STATES.tripCancelled.header} />
-      )}
-      {item.status === "completed" && (
-        <EmptyState header={EMPTY_STATES.tripCompleted.header} />
-      )}
     </>
+  );
+}
+
+/** Вторичная отмена своей брони — после всех сведений о поездке. */
+export function BookingCancellation({
+  item,
+  isActive,
+}: {
+  item: Trip;
+  isActive: boolean;
+}) {
+  const cancelBooking = useCancelBookingMutation();
+  const booking = item.myBooking;
+  if (
+    !isActive ||
+    !booking ||
+    (booking.status !== "pending" && booking.status !== "confirmed")
+  ) {
+    return null;
+  }
+
+  return (
+    <div className={styles.section}>
+      <ConfirmPopup
+        label="Отменить бронирование"
+        confirmLabel="Отменить бронь"
+        description="Заявка будет отменена, а место снова станет доступно."
+        pending={cancelBooking.isPending}
+        destructive
+        className={MIN_TARGET}
+        onConfirm={() =>
+          cancelBooking.mutate(booking.id, {
+            onSuccess: () =>
+              hapticFeedback.notificationOccurred.ifAvailable("success"),
+          })
+        }
+      />
+      {cancelBooking.error && (
+        <Notice tone="danger" variant="text">
+          {bookingErrorMessage(cancelBooking.error)}
+        </Notice>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Цена и основное действие — внизу формы, без плавающего поведения.
+ */
+export function BookingBar({
+  item,
+  canBook,
+  effectiveSeat,
+  createBooking,
+  onSubmit,
+}: {
+  item: Trip;
+  canBook: boolean;
+  effectiveSeat: number | null;
+  createBooking: ReturnType<typeof useCreateBookingMutation>;
+  onSubmit: () => void;
+}) {
+  if (!canBook) return null;
+
+  return (
+    <div className={styles.bookBar}>
+      <div className={styles.bookBarRow}>
+        <div>
+          <Caption Component="div">Цена за место</Caption>
+          <Headline weight="1" Component="div">
+            {item.price} ₽
+          </Headline>
+        </div>
+        <Caption Component="div" className={styles.payHint}>
+          {effectiveSeat !== null ? `Место №${effectiveSeat}` : "Выберите место"}
+        </Caption>
+      </div>
+      <Button
+        variant="primary"
+        size="l"
+        stretched
+        loading={createBooking.isPending}
+        disabled={effectiveSeat === null || createBooking.isPending}
+        onClick={onSubmit}
+      >
+        {effectiveSeat !== null
+          ? `Забронировать место №${effectiveSeat}`
+          : "Забронировать место"}
+      </Button>
+      {createBooking.error && (
+        <Notice tone="danger" variant="text">
+          {bookingErrorMessage(createBooking.error)}
+        </Notice>
+      )}
+    </div>
   );
 }

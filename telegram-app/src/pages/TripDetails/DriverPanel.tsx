@@ -5,7 +5,6 @@ import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { MIN_TARGET } from "@/ui/classes";
 import { EditTripForm } from "@/components/Trip/EditTripForm";
-import { TripPassengers } from "@/components/Trip/TripPassengers";
 import { GroupLabel } from "@/ui/GroupLabel";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import {
@@ -75,24 +74,6 @@ export function DriverPanel({
     });
   return (
     <>
-      {/* Заявки и подтверждённые пассажиры — ПРЯМО ЗДЕСЬ, а не второй
-          шторкой поверх деталей: «Заявки пассажиров» открывали ещё одну
-          route-backed модалку, и водитель закрывал две подряд. Те же
-          Cell'ы, что в карточке поездки (TripPassengers → DriverTripRequests).
-          Секция целиком скрыта у неактивной поездки: список над пустотой
-          читался как незагрузившийся.
-          Отдельного заголовка «Пассажиры» нет — группы подписаны сами
-          («Ожидают решения (N)» / «В поездке (N)»), третий уровень над
-          ними был бы лишним. */}
-      {isActive && (
-        <div className={styles.section}>
-          <TripPassengers
-            tripId={tripId}
-            pendingCount={trip.pendingRequestsCount}
-          />
-        </div>
-      )}
-
       <div className={styles.section}>
       {/* Надпись над группой действий, а не второй заголовок экрана:
           раньше это был Text 17/600, и он спорил с названием поездки. */}
