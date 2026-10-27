@@ -77,7 +77,7 @@ describe("AppBottomBar", () => {
     const html = renderTabs("home");
     expect(html).toContain("Главная");
     expect(html).toContain("Поездки");
-    expect(html).toContain("Уведомления");
+    expect(html).toContain("События");
     expect(html).toContain("Профиль");
     expect(html).toContain("Поиск");
     expect(html).not.toContain("Витрина");

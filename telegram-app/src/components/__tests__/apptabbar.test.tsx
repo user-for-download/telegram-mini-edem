@@ -27,16 +27,16 @@ describe("AppBottomBar", () => {
     const html = render("home");
     expect(html).toContain("Главная");
     expect(html).toContain("Поездки");
-    expect(html).toContain("Уведомления");
+    expect(html).toContain("События");
     expect(html).toContain("Поиск");
     expect(html).toContain("Профиль");
     // Кастомной пилюли/tablist больше нет — семантика нативная.
     expect(html).not.toContain('role="tablist"');
   });
 
-  it("порядок: Главная → Поездки → Поиск → Уведомления → Профиль (нативный ряд)", () => {
+  it("порядок: Главная → Поездки → Поиск → События → Профиль (нативный ряд)", () => {
     const html = render("home");
-    const order = ["Главная", "Поездки", "Поиск", "Уведомления", "Профиль"].map((t) =>
+    const order = ["Главная", "Поездки", "Поиск", "События", "Профиль"].map((t) =>
       html.indexOf(t),
     );
     expect(order.every((i) => i >= 0)).toBe(true);
@@ -48,7 +48,7 @@ describe("AppBottomBar", () => {
     const html = render("notifications");
     // tgui Tabbar.Item: selected && "tgui-e6658d0b8927f95e" (pinned v2.1.13).
     expect(html.match(/tgui-e6658d0b8927f95e/g)?.length).toBe(1);
-    expect(html).toContain("Уведомления");
+    expect(html).toContain("События — уведомления");
   });
 
   it("бейдж непрочитанных только при count > 0", () => {

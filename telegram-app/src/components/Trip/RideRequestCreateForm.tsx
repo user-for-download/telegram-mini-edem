@@ -9,6 +9,8 @@ import { useCreateRideRequestMutation } from "@/queries/useRideRequestsQuery";
 import { QueryState } from "@/components/QueryState";
 import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { haptic } from "@/utils/haptics";
+import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 import { RideRequestFields } from "./RideRequestFields";
 import { useMatchingTripCheck } from "./useMatchingTripCheck";
 import {
@@ -47,8 +49,16 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
   const checkTrip = useMatchingTripCheck(onNavigate);
   // Города — id справочника: имя резолвится в id только при отправке —
   // тот же антипаттерн давал ложную ошибку «Выберите города из справочника».
-  const [values, setValues] = useState<RideRequestDraft>(
+  const [values, setValues, clearDraft, captureSubmission] = useSessionDraft<RideRequestDraft>(
+    "ride-request:create",
     EMPTY_RIDE_REQUEST_DRAFT,
+  );
+  useClosingConfirmation(
+    values.fromCityId !== "" ||
+      values.toCityId !== "" ||
+      values.earliest !== "" ||
+      values.latest !== "" ||
+      values.seats !== "1",
   );
   const [createError, setCreateError] = useState<RideRequestFieldError | null>(
     null,
@@ -88,19 +98,10 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
     );
   }
 
-  /** Маршрут и окно чистим, выбранные места оставляем — как было. */
-  const clear = () =>
-    setValues((current) => ({
-      ...current,
-      fromCityId: "",
-      toCityId: "",
-      earliest: "",
-      latest: "",
-    }));
-
-  const publish = (dto: CreateRideRequestDto, routeLabel: string) => {
-    create.mutate(dto, {
+  const publish = (dto: CreateRideRequestDto, routeLabel: string, onCommitted: () => boolean) => {
+    create.mutate({ ...dto, onCommitted }, {
       onSuccess: () => {
+        if (!onCommitted()) return;
         haptic.success();
         // Подтверждение — тостом, как после публикации поездки и прочих
         // действий (7 вызовов toast.show в приложении). Одной хаптики мало:
@@ -114,7 +115,9 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
           text: "Запрос опубликован",
           description: `${routeLabel} — водители увидят его в поиске`,
         });
-        clear();
+        // Reset only this successful revision, keeping the submitted seat choice.
+        setValues({ ...EMPTY_RIDE_REQUEST_DRAFT, seats: String(dto.seats) });
+        clearDraft();
       },
       onError: () => haptic.error(),
       // Гейт снимаем только после завершения мутации, иначе повторный тап
@@ -134,6 +137,7 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
     }
     setCreateError(null);
     submittingRef.current = true;
+    const onCommitted = captureSubmission();
     let proceed: boolean;
     try {
       proceed = await checkTrip(values, draft.routeLabel);
@@ -147,7 +151,7 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
       submittingRef.current = false;
       return;
     }
-    publish(draft.dto, draft.routeLabel);
+    publish(draft.dto, draft.routeLabel, onCommitted);
   };
 
   return (
@@ -184,6 +188,7 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
       <Button
         stretched
         size="l"
+        variant="primary"
         loading={create.isPending}
         // Кит у `loading` не гасит кнопку: без `disabled` она остаётся
         // фокусируемой и активной во время отправки.
@@ -191,6 +196,19 @@ export const RideRequestCreateForm = memo(function RideRequestCreateForm({
         onClick={() => void submit()}
       >
         Опубликовать запрос
+      </Button>
+      <Button
+        stretched
+        size="l"
+        disabled={create.isPending}
+        onClick={() => {
+          if (submittingRef.current) return;
+          setValues(EMPTY_RIDE_REQUEST_DRAFT);
+          clearDraft();
+          setCreateError(null);
+        }}
+      >
+        Отмена
       </Button>
     </Stack>
   );

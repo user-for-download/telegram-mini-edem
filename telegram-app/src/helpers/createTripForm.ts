@@ -68,7 +68,12 @@ export function schemaErrorMessage(
   const addr = (name: string) => `${fieldPrefix}-${name}${addrSuffix}`;
   switch (key) {
     case "durationMinutes":
-      return { error: "Время в пути — от 1 до 168 часов", field: f("duration") };
+      return {
+        error: fieldPrefix === "edit"
+          ? "Время в пути — от 1 минуты до 7 суток"
+          : "Время в пути — от 1 до 168 часов",
+        field: f("duration"),
+      };
     case "distanceKm":
       return { error: "Укажите расстояние — от 1 до 20000 км", field: f("distance") };
     case "price":

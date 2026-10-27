@@ -9,6 +9,7 @@ import {
   apiClient,
 } from "@/api/client";
 import type { AuthResponse, TelegramAuthRequest } from "@edem/contracts";
+import { bindSessionDrafts } from "@/helpers/sessionDrafts";
 
 /**
  * Статусы авторизации. Состояния "error" нет: сбой авторизации — это
@@ -426,3 +427,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     applyBanned(set, banReason, null);
   },
 }));
+
+function syncSessionDrafts(state: AuthState): void {
+  const active = state.session && (
+    state.status === "authenticated" ||
+    state.status === "background" ||
+    state.status === "initializing"
+  );
+  bindSessionDrafts(active ? state.user?.id ?? null : null);
+}
+
+// Synchronous subscription covers actions AND silent-refresh/profile setState paths.
+// Token rotation/background validation keep the same owner; terminal states purge it.
+syncSessionDrafts(useAuthStore.getState());
+const unsubscribeSessionDrafts = useAuthStore.subscribe(syncSessionDrafts);
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    unsubscribeSessionDrafts();
+    bindSessionDrafts(null);
+  });
+}

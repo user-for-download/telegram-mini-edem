@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 import { Input, Textarea } from "@telegram-apps/telegram-ui";
 import { Chip } from "@/ui/Chip";
 import { Notice } from "@/ui/Notice";
@@ -21,6 +22,18 @@ import { bookingErrorMessage } from "@/helpers/bookingErrors";
 import { useUpdateTripMutation } from "@/queries/useTripsQuery";
 import styles from "./EditTripForm.module.css";
 
+interface EditTripDraft {
+  fromAddress: string;
+  toAddress: string;
+  departure: string;
+  durationMinutes: string;
+  distanceKm: string;
+  price: string;
+  seats: string;
+  tags: TripTag[];
+  comment: string;
+}
+
 /**
  * Inline-редактирование поездки водителем.
  * Маршрут заблокирован сервером (strict-схема отвергает fromCity/toCity) —
@@ -34,14 +47,6 @@ export function EditTripForm({
   onDone: () => void;
 }) {
   const update = useUpdateTripMutation();
-  // Длительность поездки хранится в минутах, а поле — в часах. Округление
-  // теряет реальные минуты (110, 125, …), поэтому исходные минуты держим
-  // как есть и конвертируем только если поле реально правили.
-  const initialDurationHours = String(
-    Math.max(1, Math.round(trip.durationMinutes / 60)),
-  );
-  const [fromAddress, setFromAddress] = useState(trip.fromAddress ?? "");
-  const [toAddress, setToAddress] = useState(trip.toAddress ?? "");
   // Начало — стенное время ПО МОСКВЕ (общий хелпер date.ts, пара к
   // fromMoscowDateTimeInput в submit): геттеры даты дали бы зону устройства,
   // и на клиенте вне МСК правка стартовала бы со сдвинутого времени.
@@ -49,13 +54,31 @@ export function EditTripForm({
   const initialDeparture = trip.departureAt
     ? toLocalDateTimeInputValue(new Date(trip.departureAt))
     : "";
-  const [departure, setDeparture] = useState(initialDeparture);
-  const [durationHours, setDurationHours] = useState(initialDurationHours);
-  const [distanceKm, setDistanceKm] = useState(String(trip.distanceKm));
-  const [price, setPrice] = useState(String(trip.price));
-  const [seats, setSeats] = useState(String(trip.seatsTotal));
-  const [tags, setTags] = useState<TripTag[]>([...(trip.tags ?? [])]);
-  const [comment, setComment] = useState(trip.comment ?? "");
+  const initialDraft = (): EditTripDraft => ({
+    fromAddress: trip.fromAddress ?? "",
+    toAddress: trip.toAddress ?? "",
+    departure: initialDeparture,
+    // Минуты не округляются в часы: 110 минут остаются 110 в поле и PATCH.
+    durationMinutes: String(trip.durationMinutes),
+    distanceKm: String(trip.distanceKm),
+    price: String(trip.price),
+    seats: String(trip.seatsTotal),
+    tags: [...(trip.tags ?? [])],
+    comment: trip.comment ?? "",
+  });
+  const [draft, setDraft, clearDraft, captureSubmission] = useSessionDraft<EditTripDraft>(
+    `trip:edit:${trip.id}`,
+    initialDraft,
+  );
+  const {
+    fromAddress, toAddress, departure, durationMinutes,
+    distanceKm, price, seats, tags, comment,
+  } = draft;
+  const setField = <K extends keyof EditTripDraft>(
+    field: K,
+    value: EditTripDraft[K],
+  ) =>
+    setDraft((current) => ({ ...current, [field]: value }));
   // Ошибка приходит с полем: <Field error=…> ставит aria-invalid и
   // aria-describedby. Тексты DTO переводятся общим schemaErrorMessage.
   const [fieldError, setFieldError] = useState<{
@@ -67,13 +90,13 @@ export function EditTripForm({
     fieldError?.field === id ? fieldError.error : undefined;
 
   // Несохранённые правки — Telegram спросит подтверждение закрытия.
-  // Сравнение с начальными значениями (см. useState выше): теги —
+  // Сравнение с данными поездки: теги —
   // JSON-сравнением (порядок toggle не меняет, дубли запрещены).
   useClosingConfirmation(
     fromAddress !== (trip.fromAddress ?? "") ||
       toAddress !== (trip.toAddress ?? "") ||
       departure !== initialDeparture ||
-      durationHours !== initialDurationHours ||
+      durationMinutes !== String(trip.durationMinutes) ||
       distanceKm !== String(trip.distanceKm) ||
       price !== String(trip.price) ||
       seats !== String(trip.seatsTotal) ||
@@ -82,9 +105,12 @@ export function EditTripForm({
   );
 
   const toggleTag = (tag: TripTag) => {
-    setTags((prev) =>
-      prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag],
-    );
+    setDraft((current) => ({
+      ...current,
+      tags: current.tags.includes(tag)
+        ? current.tags.filter((item) => item !== tag)
+        : [...current.tags, tag],
+    }));
   };
 
   const submit = () => {
@@ -103,15 +129,12 @@ export function EditTripForm({
       fromAddress: fromAddress.trim(),
       toAddress: toAddress.trim(),
       departureAt: departureAt.toISOString(),
-      durationMinutes:
-        durationHours === initialDurationHours
-          ? trip.durationMinutes
-          : Number(durationHours) * 60,
+      durationMinutes: Number(durationMinutes),
       distanceKm: Number(distanceKm),
       price: Number(price),
       seatsTotal: Number(seats),
       tags,
-      comment: comment.trim() ? comment.trim() : undefined,
+      comment: comment.trim(),
     });
     if (!parsed.success) {
       setFieldError(
@@ -119,9 +142,15 @@ export function EditTripForm({
       );
       return;
     }
+    const onCommitted = captureSubmission();
     update.mutate(
-      { id: trip.id, data: parsed.data },
-      { onSuccess: () => onDone() },
+      { id: trip.id, data: parsed.data, onCommitted },
+      {
+        onSuccess: () => {
+          if (!onCommitted()) return;
+          onDone();
+        },
+      },
     );
   };
 
@@ -135,7 +164,7 @@ export function EditTripForm({
               {...field}
               before={<MapPin size={17} className={INFO} />}
               value={fromAddress}
-              onChange={(event) => setFromAddress(event.target.value)}
+              onChange={(event) => setField("fromAddress", event.target.value)}
               placeholder="Например: м. Тёплый Стан"
             />
           )}
@@ -146,7 +175,7 @@ export function EditTripForm({
               {...field}
               before={<MapPin size={17} className={SUCCESS} />}
               value={toAddress}
-              onChange={(event) => setToAddress(event.target.value)}
+              onChange={(event) => setField("toAddress", event.target.value)}
               placeholder="Например: пр-т Ленина"
             />
           )}
@@ -158,21 +187,22 @@ export function EditTripForm({
               before={<Calendar size={16} className={HINT} />}
               type="datetime-local"
               value={departure}
-              onChange={(event) => setDeparture(event.target.value)}
+              onChange={(event) => setField("departure", event.target.value)}
             />
           )}
         </Field>
         <div className={styles.grid2}>
-          <Field label="В пути, часов" id="edit-duration" error={errorFor("edit-duration")}>
+          <Field label="В пути, минут" id="edit-duration" error={errorFor("edit-duration")}>
             {(field) => (
               <Input
                 {...field}
                 before={<Clock size={16} className={HINT} />}
                 type="number"
                 min="1"
-                max="168"
-                value={durationHours}
-                onChange={(event) => setDurationHours(event.target.value)}
+                max={7 * 24 * 60}
+                step="1"
+                value={durationMinutes}
+                onChange={(event) => setField("durationMinutes", event.target.value)}
               />
             )}
           </Field>
@@ -184,7 +214,7 @@ export function EditTripForm({
                 min="1"
                 max="20000"
                 value={distanceKm}
-                onChange={(event) => setDistanceKm(event.target.value)}
+                onChange={(event) => setField("distanceKm", event.target.value)}
               />
             )}
           </Field>
@@ -199,7 +229,7 @@ export function EditTripForm({
                 min="1"
                 max="100000"
                 value={price}
-                onChange={(event) => setPrice(event.target.value)}
+                onChange={(event) => setField("price", event.target.value)}
               />
             )}
           </Field>
@@ -212,7 +242,7 @@ export function EditTripForm({
                 min="1"
                 max={MAX_SEATS}
                 value={seats}
-                onChange={(event) => setSeats(event.target.value)}
+                onChange={(event) => setField("seats", event.target.value)}
               />
             )}
           </Field>
@@ -247,7 +277,7 @@ export function EditTripForm({
               rows={3}
               placeholder="Например: одна остановка в пути, багажник свободен"
               status={errorFor("edit-comment") ? "error" : undefined}
-              onChange={(event) => setComment(event.target.value)}
+              onChange={(event) => setField("comment", event.target.value)}
             />
           )}
         </Field>
@@ -279,7 +309,12 @@ export function EditTripForm({
             size="m"
             stretched
             disabled={update.isPending}
-            onClick={onDone}
+            onClick={() => {
+              setDraft(initialDraft());
+              clearDraft();
+              setFieldError(null);
+              onDone();
+            }}
           >
             Отмена
           </Button>

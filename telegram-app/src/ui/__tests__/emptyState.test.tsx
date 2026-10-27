@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 
 import { Button } from "@/ui/Button";
 import { EmptyState } from "@/ui/EmptyState";
+import styles from "@/ui/EmptyState.module.css";
 
 const render = (node: ReactNode): string =>
   renderToString(<AppRoot platform="base">{node}</AppRoot>);
@@ -20,12 +21,13 @@ const render = (node: ReactNode): string =>
 const textOf = (html: string): string => html.replace(/<!-- -->/g, "");
 
 describe("EmptyState: контракт 1:1 с китовым Placeholder", () => {
-  it("делегирует киту (его классы в разметке, наших — нет)", () => {
+  it("делегирует киту и доставляет scoped-тон на корневой Placeholder", () => {
     const html = render(<EmptyState header="Пока пусто" />);
     // Кит-классы на месте → Placeholder реально отрисован, а не заглушка.
     expect(html).toMatch(/tgui-[a-z0-9]+/);
-    // Обёртка не добавляет собственной разметки/класса: вид остаётся китовым.
-    expect(html).not.toMatch(/class="[^"]*emptyState/);
+    // Своя разметка не нужна: класс задаёт тон реальному kit-description.
+    expect(styles.emptyState).toBeTruthy();
+    expect(html).toContain(styles.emptyState);
   });
 
   it("передаёт description в слот описания кита", () => {

@@ -62,6 +62,8 @@ import {
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MenuRow } from "@/ui/MenuRow";
+import uiStyles from "@/ui/ui.module.css";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {
@@ -131,6 +133,22 @@ function makeProfile(overrides: Record<string, unknown> = {}) {
 }
 
 describe("ProfilePage header", () => {
+  it.each(["loading", "error"])("%s остаётся в Page с именем экрана", (state) => {
+    mockUseProfile.mockReturnValue(queryState({
+      isLoading: state === "loading",
+      error: state === "error" ? new Error("Failed") : null,
+    }));
+    const html = render(<ProfilePage />);
+    expect(html).toContain(uiStyles.page);
+    expect(html).toContain("Профиль");
+  });
+
+  it("ошибка фонового обновления не стирает профиль", () => {
+    mockUseProfile.mockReturnValue(queryState({ data: makeProfile(), error: new Error("Refetch failed") }));
+    const html = render(<ProfilePage />);
+    expect(html).toContain("Александр");
+    expect(html).toContain("Повторить обновление профиля");
+  });
   it("шапка с рейтингом и статистикой", () => {
     mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
     const html = render(<ProfilePage />);
@@ -248,6 +266,35 @@ describe("ProfilePage header", () => {
     );
     const html = render(<ProfilePage />);
     expect(html).toContain("Добавить автомобиль");
+  });
+
+  it("важные пункты меню используют перенос, а не ellipsis", () => {
+    mockUseProfile.mockReturnValue(
+      queryState({ data: makeProfile({ car: null }) }),
+    );
+    const html = render(<ProfilePage />);
+    const rowClasses = render(
+      <MenuRow
+        icon={null}
+        title="Название"
+        subtitle="Подпись"
+        multiline
+        onClick={() => {}}
+      />,
+    ).match(/<button[^>]*class="([^"]+)"/)?.[1];
+    expect(rowClasses).toBeTruthy();
+    const rows = html.match(/<button[^>]*>/g) ?? [];
+    for (const title of [
+      "История поездок",
+      "История запросов",
+      "Добавить автомобиль",
+      "Настройки уведомлений",
+      "Служба поддержки",
+      "Чёрный список",
+    ]) {
+      const row = rows.find((button) => button.includes(`aria-label="${title}.`));
+      expect(row, title).toContain(`class="${rowClasses}"`);
+    }
   });
 });
 

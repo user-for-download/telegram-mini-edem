@@ -1,10 +1,11 @@
 import type { ComponentProps } from "react";
 import { Button as TguiButton } from "@telegram-apps/telegram-ui";
 import { MIN_TARGET } from "@/ui/classes";
+import styles from "./Button.module.css";
 
 /**
- * Смысловые варианты кнопки → режимы кита (маппинг 1:1: визуально ничего
- * не меняем, но выбор «какая это кнопка» перестаёт быть выбором mode).
+ * Смысловые варианты кнопки → режимы кита; фасад калибрует только тона,
+ * сохраняя нативные размеры и состояния.
  */
 export type ButtonVariant =
   "primary" | "secondary" | "ghost" | "outline" | "white" | "gray";
@@ -71,8 +72,9 @@ export function Button({
     <TguiButton
       mode={MODES[variant]}
       size={size}
+      data-variant={variant}
       data-tap-target={hasMinTarget ? "44" : undefined}
-      className={[minH, className].filter(Boolean).join(" ") || undefined}
+      className={[styles.button, minH, className].filter(Boolean).join(" ")}
       {...restProps}
     />
   );

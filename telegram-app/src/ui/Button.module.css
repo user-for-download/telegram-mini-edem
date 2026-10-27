@@ -1,0 +1,48 @@
+.button {
+  --tgui--button--spinner-color: currentColor;
+}
+
+/* Defaults must not outrank explicit consumer tones, regardless of order. */
+:where(.button) {
+  color: var(--app-info);
+}
+
+/* База заливки — акцент кнопки клиента, а не затемнённый текстовый
+   --app-info: иначе заливка затемняется дважды (83% × 85% = ~71% акцента).
+   :where — чтобы .destructive потребителя (0,1,0) побеждал и красил
+   confirm-кнопку в --app-danger. */
+:where(.button[data-variant="primary"]) {
+  color: var(--app-action-ink);
+}
+
+.button[data-variant="primary"] {
+  background: var(--app-action-surface);
+  /* Подпись и спиннер — из button_text_color клиента (в тёмной iOS он
+     чёрный на белом акценте). --app-action-text остаётся для бейджей и
+     деструктивных заливок, где подпись обязана быть белой. */
+  --tgui--button--spinner-color: var(
+    --app-action-label,
+    var(--app-action-text)
+  );
+}
+
+/* The root keeps the semantic ink (including a consumer's danger override).
+   Only kit-owned text/icon/spinner slots use the label ink for the filled
+   surface. */
+.button[data-variant="primary"] > * {
+  color: var(--app-action-label, var(--app-action-text));
+}
+
+.button[data-variant="secondary"] {
+  background: var(--app-info-bg);
+}
+
+:where(.button[data-variant="gray"]) {
+  color: var(--app-muted);
+}
+
+/* White stays white in both themes; the inherited semantic ink is darkened
+   on its text slots, rather than using dark-theme link ink on white. */
+.button[data-variant="white"] > * {
+  color: var(--app-action-surface);
+}

@@ -1,6 +1,6 @@
 import { Badge, Tabbar } from "@telegram-apps/telegram-ui";
-import { hapticFeedback } from "@tma.js/sdk-react";
 import { Bell, Car, Home, Search, User } from "lucide-react";
+import { haptic } from "@/utils/haptics";
 import styles from "./Tabbar.module.css";
 
 export type AppTabId =
@@ -18,7 +18,7 @@ const TABS = [
   { key: "search", text: "Поиск", to: "/trips", Icon: Search },
   {
     key: "notifications",
-    text: "Уведомления",
+    text: "События",
     to: "/notifications",
     Icon: Bell,
   },
@@ -32,7 +32,7 @@ function go(
   onSelect: (to: string) => void,
 ) {
   if (activeTab === key) return;
-  hapticFeedback.selectionChanged.ifAvailable();
+  haptic.selection();
   onSelect(to);
 }
 
@@ -57,6 +57,7 @@ export function TabsBar({
         const selected = activeTab === key;
         const showBadge = key === "notifications" && unreadCount > 0;
         const isSearch = key === "search";
+        const label = key === "notifications" ? `${text} — уведомления` : text;
 
         return (
           <Tabbar.Item
@@ -64,7 +65,7 @@ export function TabsBar({
             selected={selected}
             text={isSearch ? undefined : text}
             aria-label={
-              showBadge ? `${text}, непрочитанных: ${unreadCount}` : text
+              showBadge ? `${label}, непрочитанных: ${unreadCount}` : label
             }
             // Состояние раздела для скринридера. У кита `selected` — это
             // ТОЛЬКО CSS-класс (`TabbarItem.js`: `selected && "tgui-…"`), в

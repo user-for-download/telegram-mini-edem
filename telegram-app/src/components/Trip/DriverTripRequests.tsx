@@ -40,17 +40,25 @@ import styles from "./TripCards.module.css";
  * pending на активных будущих поездках (take 50 суммарно — при >50
  * заявок строки обрежутся, точный счётчик — pendingRequestsCount).
  */
-export function DriverTripRequests({ tripId }: { tripId: string }) {
+export function DriverTripRequests({
+  tripId,
+  bookings,
+}: {
+  tripId: string;
+  /** В деталях — все страницы конкретной поездки, а не сводка take 50. */
+  bookings?: Booking[];
+}) {
   const toast = useToast();
-  const query = useDriverRequestsQuery();
+  const query = useDriverRequestsQuery({ enabled: bookings === undefined });
   const updateStatus = useUpdateBookingStatusMutation();
   const openUserProfile = useOpenUserProfile();
   // Болванки заявок — тот же tgui Skeleton, что и в components/Skeletons.tsx:
   // пульсацию 1.8s гасим ПРОПОМ по системной настройке (WCAG 2.3.3).
   const reduceMotion = usePrefersReducedMotion();
 
-  const pending = (query.data ?? []).filter(
-    (booking) => booking.trip.id === tripId && booking.status === "pending",
+  const pending = (bookings ?? query.data ?? []).filter(
+    (booking) => booking.status === "pending" &&
+      (bookings !== undefined || booking.trip.id === tripId),
   );
 
   // Кнопки −/+ блокируем только у обрабатываемой строки.
@@ -116,7 +124,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
     );
   };
 
-  if (query.isLoading && pending.length === 0) {
+  if (bookings === undefined && query.isLoading && pending.length === 0) {
     return (
       // Скелетон без действий: всплытие безвредно (тап открывает детали
       // поездки — тот же результат, что и тап по карточке), поэтому
@@ -141,7 +149,7 @@ export function DriverTripRequests({ tripId }: { tripId: string }) {
     );
   }
 
-  if (query.error && pending.length === 0) {
+  if (bookings === undefined && query.error && pending.length === 0) {
     return (
       <div className={styles.requestsList}>
         <Notice role="alert" tone="danger" variant="text">

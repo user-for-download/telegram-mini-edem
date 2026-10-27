@@ -25,6 +25,7 @@
    видимый фокус. flex:1 — блок должен занять свободное место в .head,
    иначе звёзды справа прижмутся к аватару. */
 .author {
+  position: relative;
   display: flex;
   flex: 1;
   align-items: center;
@@ -40,6 +41,17 @@
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
+}
+
+/* Реальная зона клика 44px без увеличения высоты шапки отзыва. */
+.author::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
 }
 
 .author:focus-visible {

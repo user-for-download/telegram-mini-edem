@@ -52,6 +52,36 @@ CSS, а не результат: правило может быть коррек
 
 ## Prerequisites
 
+### Fixture-only UI remediation (без backend/DB)
+
+`ui-remediation.mjs` проверяет 17 маршрутов, черновики после реального
+закрытия и позднего успеха, полноту поиска/пагинации, состояния ошибок,
+контраст и порядок бронирования/отмены. Все `/api/v1/**` запросы, включая
+auth и мутации, исполняются локальными проверяемыми фикстурами; неизвестный
+endpoint роняет прогон. WebSocket backend/HMR изолированы. Скрипт не запускает
+seed/reset/revive и не требует доступа к БД.
+
+Требуются существующие зависимости, Chromium, собранные `@edem/contracts`
+(`npm run build:contracts`) и Vite frontend на `E2E_TG_URL`.
+
+```bash
+# Представительно: 3 конфигурации × 17 маршрутов × верх/середина/низ
+E2E_TG_URL=http://127.0.0.1:3012 node e2e/ui-remediation.mjs
+
+# Полностью: 320/390/430px × iOS/base × light/dark = 612 наблюдений
+E2E_UI_FULL=1 E2E_TG_URL=http://127.0.0.1:3012 node e2e/ui-remediation.mjs
+
+# Целевой повтор; никогда не заменяет полный итоговый прогон
+E2E_UI_FILTER='booking-static|request-live' node e2e/ui-remediation.mjs
+```
+
+JSON и снимки: `/tmp/opencode/telegram-ui-remediation/`. Отчёт содержит
+явные пробелы покрытия; exit 0 не означает сертификацию WCAG или проверку
+реальных Telegram keyboard/safe-area/VoiceOver/TalkBack. Каждый запуск
+перезаписывает JSON, поэтому целевой результат нельзя выдавать за полный.
+
+### Live-backend journeys
+
 - Telegram frontend on `E2E_TG_URL` (default `http://localhost:3012`,
   `telegram-app` vite dev server) for `telegram-parity.mjs`
 - Admin webapp on `E2E_ADMIN_URL` (default `http://localhost:3013`,

@@ -1,17 +1,33 @@
 // SSR-тесты тела VehicleModal (паттерн components/__tests__/modals.test.tsx:
 // Modal — портал и в renderToString не попадает, тестируется VehicleBody).
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { ApiError } from "@/api/client";
 
+vi.mock("@/store/useAuthStore", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/store/useAuthStore")>();
+  return {
+    ...actual,
+    useAuthStore: Object.assign(
+      <T,>(selector: (state: ReturnType<typeof actual.useAuthStore.getState>) => T) => selector(actual.useAuthStore.getState()),
+      actual.useAuthStore,
+    ),
+  };
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
+  useAuthStore.setState({
+    status: "authenticated",
+    user: { id: "vehicle-owner", name: "Водитель", avatar: "", rating: 5, reviewsCount: 0, tripsCount: 0 },
+    session: { accessToken: "test-access", refreshToken: "test-refresh", expiresAt: 0 },
+  });
   mockUseVehicle.mockReturnValue(
     queryState({
-      data: { car: { model: "Skoda Octavia", color: "белый", plate: "583" } },
+      data: { id: "vehicle-owner", car: { model: "Skoda Octavia", color: "белый", plate: "583" } },
       vehicle: { model: "Skoda Octavia", color: "белый", plate: "583" },
     }),
   );
@@ -19,6 +35,10 @@ beforeEach(() => {
   mockUseRemove.mockReturnValue(
     mutation({ isError: false, error: null }),
   );
+});
+afterEach(() => {
+  useAuthStore.setState({ status: "idle", user: null, session: null });
+  vi.restoreAllMocks();
 });
 
 const { mockUseVehicle, mockUseUpsert, mockUseRemove } = vi.hoisted(() => ({
@@ -34,6 +54,7 @@ vi.mock("@/queries/vehicle", () => ({
 }));
 
 import { VehicleBody } from "@/components/Profile/VehicleModal";
+import { useAuthStore } from "@/store/useAuthStore";
 import uiStyles from "@/ui/ui.module.css";
 
 function queryState(overrides: Record<string, unknown> = {}) {
@@ -72,7 +93,7 @@ describe("VehicleBody", () => {
 
   it("авто нет — сразу пустая форма с подсказкой", () => {
     mockUseVehicle.mockReturnValue(
-      queryState({ data: { car: null }, vehicle: null }),
+      queryState({ data: { id: "vehicle-owner", car: null }, vehicle: null }),
     );
     const html = render(<VehicleBody onDone={() => {}} />);
     expect(html).toContain("Чтобы публиковать поездки, добавьте автомобиль");

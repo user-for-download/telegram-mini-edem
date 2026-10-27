@@ -42,6 +42,7 @@ vi.mock("@/queries/useAllCities", () => ({
 
 import { RideRequestCreateForm } from "@/components/Trip/RideRequestCreateForm";
 import uiStyles from "@/ui/ui.module.css";
+import { Button } from "@/ui/Button";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {
@@ -83,6 +84,16 @@ afterEach(() => {
 });
 
 describe("RideRequestCreateForm: контракт формы", () => {
+  it("публикация — явное главное действие", () => {
+    const primaryClasses = renderToString(
+      <AppRoot platform="base">
+        <Button variant="primary" size="l" stretched>Опубликовать запрос</Button>
+      </AppRoot>,
+    ).match(/<button[^>]*class="([^"]+)"/)?.[1];
+    expect(primaryClasses).toBeTruthy();
+    expect(renderForm()).toContain(`class="${primaryClasses}"`);
+  });
+
   it("заголовок, поля и кнопка публикации", () => {
     const html = renderForm();
 

@@ -9,6 +9,7 @@ import { EmptyState } from "@/ui/EmptyState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { FetchMore } from "@/ui/FetchMore";
 import { Notice } from "@/ui/Notice";
+import { Button } from "@/ui/Button";
 import { ICON_TARGET } from "@/ui/classes";
 
 import { CheckCheck } from "lucide-react";
@@ -481,9 +482,15 @@ export function NotificationsPage() {
   }
 
   return (
-    <>
+    <Page>
       <VisuallyHidden Component="h1">Уведомления</VisuallyHidden>
       <MutationError error={markRead.error ?? markAll.error} />
+      {inbox.data && inbox.error && !inbox.isFetchNextPageError && (
+        <>
+          <Notice tone="danger">Не удалось обновить уведомления. Показанные данные могут быть устаревшими.</Notice>
+          <Button variant="ghost" onClick={() => void inbox.refetch()}>Повторить обновление уведомлений</Button>
+        </>
+      )}
       <QueryState
         loading={inbox.isLoading}
         error={listBlockingError(inbox)}
@@ -492,20 +499,20 @@ export function NotificationsPage() {
         skeleton={<NotificationCardsSkeleton />}
         onRetry={() => void inbox.refetch()}
       >
-        <Page>
+        <>
           {/* Счётчик непрочитанных — независимый запрос: лента при его сбое
             остаётся в силе, поэтому здесь НЕ QueryState (он заменил бы всю
             страницу, как на CreateTripPage), а точечная плашка. */}
           {counter.isError ? (
             <Notice tone="danger" variant="banner">
               Не удалось загрузить счётчик непрочитанных — «Прочитать все»{" "}
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 className={styles.retry}
                 onClick={() => void counter.refetch()}
               >
                 Повторить
-              </button>
+              </Button>
             </Notice>
           ) : null}
           {/* Сверху ряд пилюль: сегменты Новые / Водитель / Пассажир +
@@ -585,8 +592,8 @@ export function NotificationsPage() {
               placeholderLabel="Загрузка ещё уведомлений"
             />
           )}
-        </Page>
+        </>
       </QueryState>
-    </>
+    </Page>
   );
 }

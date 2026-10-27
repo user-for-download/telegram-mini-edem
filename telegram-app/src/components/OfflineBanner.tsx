@@ -1,6 +1,7 @@
 import { Banner } from "@telegram-apps/telegram-ui";
 import { WifiOff } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import styles from "./OfflineBanner.module.css";
 
 /**
  * Предупреждение о stale-данных и подтверждение восстановления
@@ -16,6 +17,7 @@ export function OfflineBanner() {
   return (
     <Banner
       type="inline"
+      className={styles.banner}
       before={<WifiOff size={24} />}
       description={
         isOnline && wasOffline

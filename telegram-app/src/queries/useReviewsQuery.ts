@@ -1,6 +1,5 @@
 import {
   useInfiniteQuery,
-  useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -8,6 +7,7 @@ import { reviewsApi } from "@/api/reviews.api";
 import { BOOKING_KEYS, REVIEW_KEYS, TRIP_KEYS } from "./keys";
 import { USER_KEYS } from "./profile";
 import type { CreateReviewDto } from "@edem/contracts";
+import { useCommittedMutation } from "./useCommittedMutation";
 
 export function useMyReviewsQuery(options?: { enabled?: boolean }) {
   return useQuery({
@@ -42,7 +42,7 @@ export function useAvailableReviewTripsQuery(options?: { enabled?: boolean }) {
 
 export function useCreateReviewMutation() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: (data: CreateReviewDto) => reviewsApi.createReview(data),
     onSuccess: (_, variables) =>
       Promise.all([

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Caption, Input, Subheadline } from "@telegram-apps/telegram-ui";
 import {
   MAX_SEATS,
@@ -17,6 +17,8 @@ import { Notice } from "@/ui/Notice";
 import { Sheet } from "@/ui/Sheet";
 import { Stack } from "@/ui/Stack";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useDeadlineClock } from "@/hooks/useDeadlineClock";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 import {
   useCancelRideRequestMutation,
   useRideRequestStatusMutation,
@@ -41,6 +43,13 @@ import {
   rideRequestViewStatus,
 } from "./rideRequestStatus";
 import styles from "./TripModals.module.css";
+
+interface RideRequestEditDraft {
+  earliest: string;
+  latest: string;
+  expires: string;
+  seats: string;
+}
 
 /**
  * Шторка управления своей заявкой на попутку — открывается тапом по строке
@@ -98,21 +107,51 @@ export function RideRequestDetailsBody({
   const status = useRideRequestStatusMutation();
   const cancel = useCancelRideRequestMutation();
   const [editing, setEditing] = useState(false);
-  const [editEarliest, setEditEarliest] = useState("");
-  const [editLatest, setEditLatest] = useState("");
-  const [editExpires, setEditExpires] = useState("");
-  const [editSeats, setEditSeats] = useState("1");
+  // null — нет правок: после сохранения/отмены берём свежие данные заявки.
+  const [editDraft, setEditDraft, clearDraft, captureSubmission] =
+    useSessionDraft<RideRequestEditDraft | null>(
+      `ride-request:edit:${request.id}`,
+      null,
+    );
+  // datetime-local — стенное время по Москве, пара к fromMoscowDateTimeInput.
+  const initialDraft: RideRequestEditDraft = {
+    earliest: toLocalDateTimeInputValue(new Date(request.earliestAt)),
+    latest: toLocalDateTimeInputValue(new Date(request.latestAt)),
+    expires: request.expiresAt
+      ? toLocalDateTimeInputValue(new Date(request.expiresAt))
+      : "",
+    seats: String(request.seats),
+  };
+  const {
+    earliest: editEarliest,
+    latest: editLatest,
+    expires: editExpires,
+    seats: editSeats,
+  } = editDraft ?? initialDraft;
+  const setEditField = <K extends keyof RideRequestEditDraft>(
+    field: K,
+    value: RideRequestEditDraft[K],
+  ) =>
+    setEditDraft((current) => ({ ...(current ?? initialDraft), [field]: value }));
   const [editError, setEditError] = useState<RideRequestFieldError | null>(
     null,
   );
+  const submittingRef = useRef(false);
 
   // Несохранённая правка — Telegram спросит подтверждение закрытия
   // приложения. Шторку Back/крестик закрывают без гейта: это локальное
   // действие, а не потеря уже введённого на странице.
   useClosingConfirmation(editing);
 
-  const shownStatus = rideRequestViewStatus(request);
+  const now = useDeadlineClock(
+    request.status === "active" || request.status === "paused" ? request.expiresAt : null,
+  );
+  const shownStatus = rideRequestViewStatus(request, new Date(now));
   const live = shownStatus === "active" || shownStatus === "paused";
+  const stillLive = () => {
+    const current = rideRequestViewStatus(request);
+    return current === "active" || current === "paused";
+  };
   const statusLabel = RIDE_REQUEST_STATUS_LABELS[shownStatus];
   const window = formatMoscowDateTimeRange(
     request.earliestAt,
@@ -130,26 +169,15 @@ export function RideRequestDetailsBody({
     cancel.error;
 
   const startEdit = () => {
+    if (!stillLive()) return;
     setEditing(true);
     setEditError(null);
-    // datetime-local ждёт стенное время ПО МОСКВЕ (общий хелпер date.ts,
-    // пара к fromMoscowDateTimeInput в submitEdit): локальная копия
-    // форматирования через геттеры даты давала зону устройства, и начало
-    // окна уезжало на часы у клиента вне МСК. Битый ISO — "" (хелпер
-    // возвращает пустую строку для Invalid Date).
-    setEditEarliest(toLocalDateTimeInputValue(new Date(request.earliestAt)));
-    setEditLatest(toLocalDateTimeInputValue(new Date(request.latestAt)));
-    setEditExpires(
-      request.expiresAt
-        ? toLocalDateTimeInputValue(new Date(request.expiresAt))
-        : "",
-    );
-    setEditSeats(String(request.seats));
   };
 
   const submitEdit = () => {
+    if (update.isPending || submittingRef.current || !stillLive()) return;
     setEditError(null);
-    // Строки полей — стенное время ПО МОСКВЕ (пара к хелперу в startEdit):
+    // Строки полей — стенное время ПО МОСКВЕ (пара к хелперу initialDraft):
     // `new Date(value)` читал бы их в зоне устройства и сдвигал окно.
     const earliestDate = fromMoscowDateTimeInput(editEarliest);
     const latestDate = fromMoscowDateTimeInput(editLatest);
@@ -181,14 +209,20 @@ export function RideRequestDetailsBody({
       );
       return;
     }
+    submittingRef.current = true;
+    const onCommitted = captureSubmission();
     update.mutate(
-      { id: request.id, data: parsed.data },
+      { id: request.id, data: parsed.data, onCommitted },
       {
         onSuccess: () => {
+          if (!onCommitted()) return;
           haptic.success();
           setEditing(false);
         },
         onError: () => haptic.error(),
+        onSettled: () => {
+          submittingRef.current = false;
+        },
       },
     );
   };
@@ -230,7 +264,7 @@ export function RideRequestDetailsBody({
                 {...field}
                 type="datetime-local"
                 value={editEarliest}
-                onChange={(event) => setEditEarliest(event.target.value)}
+                onChange={(event) => setEditField("earliest", event.target.value)}
               />
             )}
           </Field>
@@ -240,7 +274,7 @@ export function RideRequestDetailsBody({
                 {...field}
                 type="datetime-local"
                 value={editLatest}
-                onChange={(event) => setEditLatest(event.target.value)}
+                onChange={(event) => setEditField("latest", event.target.value)}
               />
             )}
           </Field>
@@ -250,7 +284,7 @@ export function RideRequestDetailsBody({
                 {...field}
                 type="datetime-local"
                 value={editExpires}
-                onChange={(event) => setEditExpires(event.target.value)}
+                onChange={(event) => setEditField("expires", event.target.value)}
               />
             )}
           </Field>
@@ -266,7 +300,7 @@ export function RideRequestDetailsBody({
                 min="1"
                 max={MAX_SEATS}
                 value={editSeats}
-                onChange={(event) => setEditSeats(event.target.value)}
+                onChange={(event) => setEditField("seats", event.target.value)}
               />
             )}
           </Field>
@@ -283,6 +317,7 @@ export function RideRequestDetailsBody({
               size="s"
               className={MIN_TARGET}
               loading={update.isPending}
+              disabled={update.isPending || !live}
               onClick={submitEdit}
             >
               Сохранить
@@ -293,6 +328,9 @@ export function RideRequestDetailsBody({
               className={MIN_TARGET}
               disabled={update.isPending}
               onClick={() => {
+                if (submittingRef.current) return;
+                setEditDraft(null);
+                clearDraft();
                 setEditing(false);
                 setEditError(null);
               }}
@@ -309,12 +347,13 @@ export function RideRequestDetailsBody({
             size="m"
             loading={status.isPending}
             disabled={status.isPending || cancel.isPending}
-            onClick={() =>
+            onClick={() => {
+              if (!stillLive()) return;
               status.mutate({
                 id: request.id,
                 status: shownStatus === "active" ? "paused" : "active",
-              })
-            }
+              });
+            }}
           >
             {shownStatus === "active" ? "На паузу" : "Возобновить"}
           </Button>
@@ -336,15 +375,18 @@ export function RideRequestDetailsBody({
             destructive
             nested
             className={MIN_TARGET}
-            onConfirm={() =>
-              cancel.mutate(request.id, {
+            onConfirm={() => {
+              if (!stillLive()) return;
+              const onCommitted = captureSubmission();
+              cancel.mutate({ id: request.id, onCommitted }, {
                 onSuccess: () => {
+                  if (!onCommitted()) return;
                   haptic.success();
                   onClose();
                 },
                 onError: () => haptic.error(),
-              })
-            }
+              });
+            }}
           />
         </>
       ) : null}

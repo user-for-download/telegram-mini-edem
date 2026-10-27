@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Placeholder } from "@telegram-apps/telegram-ui";
+import styles from "./EmptyState.module.css";
 
 /**
  * Экран-заглушка: заголовок + описание + действие.
@@ -41,7 +42,12 @@ export function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <Placeholder header={header} description={description} action={action}>
+    <Placeholder
+      className={styles.emptyState}
+      header={header}
+      description={description}
+      action={action}
+    >
       {children}
     </Placeholder>
   );

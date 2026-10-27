@@ -24,6 +24,9 @@ import { QueryState } from "@/components/QueryState";
 import { ReviewCardsSkeleton } from "@/components/Skeletons";
 import { RatingInput } from "@/components/RatingInput/RatingInput";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
+import { getSessionDraftScope } from "@/helpers/sessionDrafts";
+import { captureReviewSubmission, type ReviewDraft, type ReviewInput } from "@/helpers/reviewDraftCommit";
 import { ReviewCard } from "@/components/ReviewCard/ReviewCard";
 import { ApiError } from "@/api/client";
 import { REVIEW_TEXT_MAX_LENGTH, type Trip, type User } from "@edem/contracts";
@@ -158,18 +161,17 @@ export const ReviewsBody = memo(function ReviewsBody({
   const about = useUserReviewsInfiniteQuery(me?.id ?? "", 20);
   const create = useCreateReviewMutation();
 
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [form, setForm] = useSessionDraft<ReviewDraft>(
+    "review:new",
+    () => ({ selectedTripId: null, selectedPassengerId: null, entries: {} }),
+  );
+  const { selectedTripId, selectedPassengerId } = form;
   // Кого уже оценили за эту сессию: сервис такой отметки не отдаёт, а без
   // неё форма повторно предлагает только что оценённого (см.
   // selectReviewablePassengers).
   const [reviewedTargets, setReviewedTargets] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
-  const [selectedPassengerId, setSelectedPassengerId] = useState<string | null>(
-    null,
-  );
-  const [rating, setRating] = useState(5);
-  const [text, setText] = useState("");
   // Клиентская ошибка приходит С ПОЛЕМ: <Field error=…> сам ставит
   // aria-invalid + aria-describedby и рисует текст (FieldError) рядом с тем
   // контролом, о котором сообщение. Раньше была одна строка formError, и
@@ -183,19 +185,18 @@ export const ReviewsBody = memo(function ReviewsBody({
   // ответ сервера (409 ALREADY_REVIEWED, конфликт параллельной записи).
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  useClosingConfirmation(
-    text !== "" ||
-      selectedTripId !== null ||
-      selectedPassengerId !== null ||
-      rating !== 5,
-  );
   // Защита от двойного сабмита: ref синхронен (в отличие от state),
   // второй клик до ре-рендера не отправит второй запрос.
   const submitGuard = useRef(false);
 
   const trips = useMemo(() => available.data ?? [], [available.data]);
   const selectedTrip: Trip | null =
-    trips.find((trip) => trip.id === selectedTripId) ?? trips[0] ?? null;
+    selectedTripId === null
+      ? trips[0] ?? null
+      : trips.find((trip) => trip.id === selectedTripId) ?? null;
+  const tripUnavailable =
+    selectedTripId !== null && !selectedTrip &&
+    !available.isLoading && !available.isError;
 
   const isDriverTrip = Boolean(
     me && selectedTrip && selectedTrip.driver.id === me.id,
@@ -235,10 +236,43 @@ export const ReviewsBody = memo(function ReviewsBody({
   // Цель отзыва: пассажир всегда пишет водителю; водитель выбирает
   // пассажира (явный выбор > первый в списке).
   const targetUser: User | null = isDriverTrip
-    ? (passengers.find((p) => p.id === selectedPassengerId) ??
-      passengers[0] ??
-      null)
+    ? selectedPassengerId === null
+      ? passengers[0] ?? null
+      : passengers.find((p) => p.id === selectedPassengerId) ?? null
     : (selectedTrip?.driver ?? null);
+  const passengerUnavailable =
+    isDriverTrip && selectedPassengerId !== null && !targetUser &&
+    !targetsPending && !targetsFailed;
+  const targetKey =
+    selectedTrip && targetUser
+      ? reviewTargetKey(selectedTrip.id, targetUser.id)
+      : null;
+  const { rating, text } = (targetKey ? form.entries[targetKey] : undefined) ?? {
+    rating: 5,
+    text: "",
+  };
+  useClosingConfirmation(
+    selectedTripId !== null ||
+      selectedPassengerId !== null ||
+      Object.values(form.entries).some(
+        (entry) => entry.text !== "" || entry.rating !== 5,
+      ),
+  );
+  const updateInput = (input: Partial<ReviewInput>) => {
+    if (!selectedTrip || !targetUser || !targetKey) return;
+    setForm((current) => ({
+      ...current,
+      selectedTripId: selectedTrip.id,
+      selectedPassengerId: isDriverTrip ? targetUser.id : null,
+      entries: {
+        ...current.entries,
+        [targetKey]: {
+          ...(current.entries[targetKey] ?? { rating: 5, text: "" }),
+          ...input,
+        },
+      },
+    }));
+  };
 
   // Подпись формы. Предлог «о» требует падежа, а имя мы не склоняем:
   // «Отзыв о Марина Ковалёва» ломало согласование (реестр #59). Роль стоит
@@ -253,18 +287,14 @@ export const ReviewsBody = memo(function ReviewsBody({
     [about.data],
   );
 
-  // Смена адресата = смена того, О КОМ пишется отзыв. Текст и оценка
-  // относятся к человеку, а не к форме, поэтому при переходе на другого
-  // адресата их надо сбрасывать: иначе написанное про одного уходило
-  // другому (в т.ч. другому ВОДИТЕЛЮ при смене поездки).
+  // Selection only: text/rating are restored from the separate trip/recipient entry.
   const resetTarget = (tripId: string | null, passengerId: string | null) => {
-    if (tripId !== null) setSelectedTripId(tripId);
-    setSelectedPassengerId(passengerId);
-    setText("");
-    setRating(5);
-    // Сброс формы гасит и ошибку поля: текст/rating обнулены, значит
-    // прежняя претензия к комментарию больше не про эту форму — оставить
-    // её значило бы пометить поле, которое сбросили.
+    setForm((current) => ({
+      ...current,
+      selectedTripId: tripId ?? selectedTrip?.id ?? null,
+      selectedPassengerId: passengerId,
+    }));
+    // Ошибки относятся к прежнему адресату; новый ввод проверяется при отправке.
     setFieldError(null);
     setFormError(null);
     setSuccess(false);
@@ -275,7 +305,10 @@ export const ReviewsBody = memo(function ReviewsBody({
   };
 
   const submit = () => {
-    if (create.isPending || submitGuard.current) return;
+    if (
+      create.isPending || submitGuard.current || available.isLoading ||
+      available.isError || targetsPending || targetsFailed
+    ) return;
 
     // Ошибка формы всегда идёт С ПОЛЕМ: без этого textarea получал
     // aria-invalid при ошибке про поездку, а у обоих Select не появлялось
@@ -300,21 +333,28 @@ export const ReviewsBody = memo(function ReviewsBody({
     setFieldError(null);
     setSuccess(false);
     submitGuard.current = true;
+    const submittedKey = reviewTargetKey(selectedTrip.id, targetUser.id);
+    const onCommitted = captureReviewSubmission(
+      getSessionDraftScope(me?.id ?? null),
+      "review:new",
+      submittedKey,
+      form.entries[submittedKey]!,
+    );
     create.mutate(
       {
         tripId: selectedTrip.id,
         targetUserId: targetUser.id,
         rating,
         text: normalizeReviewText(text),
+        onCommitted,
       },
       {
         onSettled: () => {
           submitGuard.current = false;
         },
         onSuccess: () => {
+          if (!onCommitted()) return;
           haptic.success();
-          setText("");
-          setRating(5);
           // Запоминаем «поездка:кто», чтобы пассажир не вернулся в список
           // выбора и следующий отзыв не ушёл в тот же 409.
           setReviewedTargets((current) => {
@@ -322,11 +362,6 @@ export const ReviewsBody = memo(function ReviewsBody({
             next.add(reviewTargetKey(selectedTrip.id, targetUser.id));
             return next;
           });
-          // Сбрасываем выбор: reviewed-поездка уйдёт из available-trips
-          // инвалидацией, повторный сабмит той же цели упёрся бы в
-          // ALREADY_REVIEWED; заодно гаснет dirty-бит закрытия.
-          setSelectedTripId(null);
-          setSelectedPassengerId(null);
           setSuccess(true);
         },
         onError: (error) => {
@@ -353,6 +388,10 @@ export const ReviewsBody = memo(function ReviewsBody({
     Boolean(selectedTrip) &&
     Boolean(targetUser) &&
     text.trim().length > 0 &&
+    !available.isLoading &&
+    !available.isError &&
+    !targetsPending &&
+    !targetsFailed &&
     !create.isPending;
 
   const pickTab = (next: ReviewsTab) => setTab(next);
@@ -415,7 +454,7 @@ export const ReviewsBody = memo(function ReviewsBody({
             emptyText=""
             onRetry={() => void available.refetch()}
           >
-            {!selectedTrip ? (
+            {trips.length === 0 ? (
               <EmptyState
                 header={EMPTY_STATES.reviewsNewEmpty.header}
                 description={EMPTY_STATES.reviewsNewEmpty.description}
@@ -425,14 +464,21 @@ export const ReviewsBody = memo(function ReviewsBody({
                 <Field
                   label="Поездка"
                   id="review-trip"
-                  error={errorFor("trip")}
+                  error={
+                    tripUnavailable
+                      ? "Выбранная поездка больше недоступна — выберите другую"
+                      : errorFor("trip")
+                  }
                 >
                   {(field) => (
                     <Select
                       {...field}
-                      value={selectedTrip.id}
+                      value={selectedTrip?.id ?? ""}
                       onChange={(event) => pickTrip(event.target.value)}
                     >
+                      {!selectedTrip && (
+                        <option value="">Выберите поездку</option>
+                      )}
                       {trips.map((trip) => (
                         <option key={trip.id} value={trip.id}>
                           {tripLabel(trip)}
@@ -463,7 +509,11 @@ export const ReviewsBody = memo(function ReviewsBody({
                     <Field
                       label="Кому оставить отзыв"
                       id="review-target"
-                      error={errorFor("target")}
+                      error={
+                        passengerUnavailable
+                          ? "Выбранный пассажир больше недоступен — выберите другого"
+                          : errorFor("target")
+                      }
                     >
                       {(field) => (
                         <Select
@@ -484,6 +534,9 @@ export const ReviewsBody = memo(function ReviewsBody({
                           )}
                           {targetsEmpty && (
                             <option value="">Нет пассажиров</option>
+                          )}
+                          {passengerUnavailable && !targetsEmpty && (
+                            <option value="">Выберите пассажира</option>
                           )}
                           {passengers.map((passenger) => (
                             <option key={passenger.id} value={passenger.id}>
@@ -508,7 +561,10 @@ export const ReviewsBody = memo(function ReviewsBody({
 
                 <div>
                   <span id="review-rating-label">Оценка</span>
-                  <RatingInput value={rating} onChange={setRating} />
+                  <RatingInput
+                    value={rating}
+                    onChange={(rating) => updateInput({ rating })}
+                  />
                 </div>
 
                 <Field
@@ -524,7 +580,7 @@ export const ReviewsBody = memo(function ReviewsBody({
                       placeholder="Расскажите, что понравилось или что стоит улучшить"
                       value={text}
                       onChange={(event) => {
-                        setText(event.target.value);
+                        updateInput({ text: event.target.value });
                         if (fieldError) setFieldError(null);
                         if (success) setSuccess(false);
                       }}

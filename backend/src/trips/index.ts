@@ -373,6 +373,16 @@ tripsRouter.get("/my", requireUser, tripsMyReadLimiter, async (c) => {
   const pageParam = c.req.query("page");
   const limitParam = c.req.query("limit");
   const statusParam = c.req.query("status"); // "active" | "archive"
+  const q = c.req.query("q")?.trim() ?? "";
+  if (q.length > MAX_SEARCH_LENGTH) {
+    return c.json(
+      {
+        code: ERROR_CODES.VALIDATION_FAILED,
+        message: `Search parameters must not exceed ${MAX_SEARCH_LENGTH} characters`,
+      },
+      400,
+    );
+  }
   const page = Math.min(
     MAX_PAGE,
     Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1),
@@ -392,12 +402,21 @@ tripsRouter.get("/my", requireUser, tripsMyReadLimiter, async (c) => {
         ? { in: ["completed", "cancelled"] }
         : undefined;
 
+  const where: Prisma.TripWhereInput = {
+    driverId: user.id,
+    ...(statusFilter ? { status: statusFilter } : {}),
+  };
+  if (q) {
+    const like = escapeLike(q);
+    where.OR = [
+      { fromCity: { contains: like, mode: "insensitive" } },
+      { toCity: { contains: like, mode: "insensitive" } },
+    ];
+  }
+
   const [trips, total] = await Promise.all([
     db.trip.findMany({
-      where: {
-        driverId: user.id,
-        ...(statusFilter ? { status: statusFilter } : {}),
-      },
+      where,
       include: {
         driver: {
           include: {
@@ -405,18 +424,16 @@ tripsRouter.get("/my", requireUser, tripsMyReadLimiter, async (c) => {
           },
         },
       },
-      orderBy: {
-        departureAt: "desc",
-      },
+      // Активная лента догружается от ближайших к дальним без пересортировки
+      // страниц в UI. Архив и вызовы без status сохраняют прежний порядок.
+      orderBy: [
+        { departureAt: statusParam === "active" ? "asc" : "desc" },
+        { id: "asc" },
+      ],
       skip,
       take: limit,
     }),
-    db.trip.count({
-      where: {
-        driverId: user.id,
-        ...(statusFilter ? { status: statusFilter } : {}),
-      },
-    }),
+    db.trip.count({ where }),
   ]);
 
   const tripIds = trips.map((trip) => trip.id);

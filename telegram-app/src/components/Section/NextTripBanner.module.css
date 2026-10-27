@@ -17,6 +17,8 @@
  * комментарии, а не в стиле. Снятие удвоений уже откатывали (23 места),
  * см. MEMORY.md §7. */
 .banner.banner {
+  --tgui--hint_color: var(--app-muted);
+  --tgui--subtitle_text_color: var(--app-muted);
   margin: 0;
 }
 

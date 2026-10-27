@@ -20,6 +20,8 @@ import { MIN_TARGET } from "@/ui/classes";
 import { ProfileHero } from "./ProfileHero";
 import type { UserProfileTarget } from "./UserProfileProvider";
 import styles from "./UserProfileSheet.module.css";
+import { useAuthStore } from "@/store/useAuthStore";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 /**
  * Шторка профиля другого человека (водитель, пассажир, автор отзыва).
@@ -51,6 +53,8 @@ export function UserProfileSheet({
   onClose: () => void;
 }) {
   const open = target !== null;
+  const me = useAuthStore((state) => state.user);
+  const isSelf = target?.id === me?.id;
   // Нативная кнопка «Назад» закрывает шторку, а не уводит с экрана:
   // без этой подписки Back ушёл бы по истории вместе с экраном.
   useModalBack(onClose, open);
@@ -74,7 +78,7 @@ export function UserProfileSheet({
   // ревалидирует профиль. Это же сужает окно stale-initial
   // для удалённого пользователя (M4 аудита) до одного фетча.
   const user = useUserQuery(target?.id ?? "", { enabled: open, staleTime: 0 });
-  const blockStatus = useBlockStatusQuery(target?.id ?? "", { enabled: open });
+  const blockStatus = useBlockStatusQuery(target?.id ?? "", { enabled: open && !isSelf });
   const block = useBlockUserMutation();
   const unblock = useUnblockUserMutation();
   const toast = useToast();
@@ -100,6 +104,7 @@ export function UserProfileSheet({
       onClose={onClose}
       title={visible?.title ?? shown?.name ?? "Профиль"}
     >
+      <OfflineBanner />
       {visible ? (
         <QueryState
           loading={user.isLoading && !shown}
@@ -131,7 +136,7 @@ export function UserProfileSheet({
                 error={block.error ?? unblock.error}
                 fallback="Не удалось изменить чёрный список"
               />
-              {blockStatus.error ? (
+              {!isSelf && (blockStatus.error ? (
                 <Stack gap="xs">
                   <MutationError
                     error={blockStatus.error}
@@ -189,7 +194,7 @@ export function UserProfileSheet({
                     });
                   }}
                 />
-              ) : null}
+              ) : null)}
             </Stack>
           ) : null}
         </QueryState>

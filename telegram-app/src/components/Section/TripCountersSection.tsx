@@ -178,6 +178,7 @@ export function TripCountersSection() {
         <Badge
           type="number"
           mode={tripsTotal === 0 ? "white" : undefined}
+          data-tone={tripsTotal === 0 ? "zero" : "info"}
           className={styles.badge}
         >
           {tripsTotal}
@@ -197,6 +198,7 @@ export function TripCountersSection() {
           mode={
             bookingsValue === 0 ? "white" : showPending ? "critical" : undefined
           }
+          data-tone={bookingsValue === 0 ? "zero" : showPending ? "danger" : "info"}
           className={styles.badge}
         >
           {bookingsValue}
@@ -214,6 +216,7 @@ export function TripCountersSection() {
         <Badge
           type="number"
           mode={requestsValue === 0 ? "white" : "critical"}
+          data-tone={requestsValue === 0 ? "zero" : "danger"}
           className={styles.badge}
         >
           {requestsValue}

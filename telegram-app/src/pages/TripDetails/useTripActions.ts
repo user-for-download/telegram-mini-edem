@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { hapticFeedback } from "@tma.js/sdk-react";
+import { haptic } from "@/utils/haptics";
 import type { Trip } from "@edem/contracts";
 import { ApiError } from "@/api/client";
 import { useToast } from "@/components/Toast/ToastProvider";
@@ -9,6 +9,7 @@ import { TRIP_KEYS } from "@/queries/keys";
 import { useCreateBookingMutation } from "@/queries/useBookingsQuery";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatArrivalTime } from "@/utils/date";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 
 export type CreateBookingMutation = ReturnType<
   typeof useCreateBookingMutation
@@ -32,7 +33,10 @@ export function useTripActions(item: Trip | undefined) {
   const queryClient = useQueryClient();
   const createBooking = useCreateBookingMutation();
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
-  const [comment, setComment] = useState("");
+  const [comment, setComment, , captureBookingSubmission] = useSessionDraft(
+    `trip:booking:${item?.id ?? "loading"}`,
+    "",
+  );
   const [editing, setEditing] = useState(false);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   // Снимок «сейчас» на момент монтирования (lazy-инициализатор — Date.now()
@@ -110,7 +114,7 @@ export function useTripActions(item: Trip | undefined) {
       const feedback = shareOutcomeFeedback(result);
       setShareStatus(feedback.text);
       if (feedback.haptic !== null) {
-        hapticFeedback.notificationOccurred.ifAvailable(feedback.haptic);
+        haptic[feedback.haptic]();
       }
     });
   };
@@ -122,16 +126,18 @@ export function useTripActions(item: Trip | undefined) {
     const tripId = item.id;
     const seat = effectiveSeat;
     const trimmed = comment.trim();
+    const onCommitted = captureBookingSubmission();
     createBooking.mutate(
       {
         tripId,
         seat,
         comment: trimmed ? trimmed : undefined,
+        onCommitted,
       },
       {
         onSuccess: () => {
-          hapticFeedback.notificationOccurred.ifAvailable("success");
-          setComment("");
+          if (!onCommitted()) return;
+          haptic.success();
           toast.show({
             text: "Место успешно забронировано",
             description: "Ожидайте подтверждения от водителя",

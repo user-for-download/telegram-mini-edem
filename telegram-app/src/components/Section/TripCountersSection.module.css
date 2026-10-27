@@ -15,6 +15,28 @@
   top: -8px;
   right: -14px;
   pointer-events: none;
+  background: var(--app-badge-surface);
+}
+
+.badge[data-tone="info"] {
+  color: var(--app-info);
+}
+
+.badge[data-tone="danger"] {
+  color: var(--app-danger);
+}
+
+.badge > * {
+  color: var(--app-action-text);
+}
+
+.badge[data-tone="zero"] {
+  background: var(--app-warning-bg);
+  color: var(--tgui--text_color);
+}
+
+.badge[data-tone="zero"] > * {
+  color: inherit;
 }
 
 /* Скелетон сводки (CLS): три серые болванки ≈ высоте InlineButtons.Item.

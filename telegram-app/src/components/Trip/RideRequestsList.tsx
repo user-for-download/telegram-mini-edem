@@ -17,6 +17,7 @@ import { formatMoscowDateTimeRange } from "@/utils/date";
 import { plural } from "@/utils/plural";
 import { useModalBack } from "@/utils/modalBack";
 import { RideRequestDetailsModal } from "./RideRequestDetailsModal";
+import { useDeadlineClock } from "@/hooks/useDeadlineClock";
 import {
   RIDE_REQUEST_STATUS_LABELS,
   RIDE_REQUEST_STATUS_TONES,
@@ -31,7 +32,10 @@ const RideRequestCell = memo(function RideRequestCell({
   request: RideRequest;
   onOpen: (id: string) => void;
 }) {
-  const shownStatus = rideRequestViewStatus(request);
+  const now = useDeadlineClock(
+    request.status === "active" || request.status === "paused" ? request.expiresAt : null,
+  );
+  const shownStatus = rideRequestViewStatus(request, new Date(now));
   const statusLabel = RIDE_REQUEST_STATUS_LABELS[shownStatus];
   const window = formatMoscowDateTimeRange(
     request.earliestAt,
@@ -42,6 +46,7 @@ const RideRequestCell = memo(function RideRequestCell({
   return (
     <Cell
       className={styles.requestCell}
+      multiline
       Component="button"
       type="button"
       before={

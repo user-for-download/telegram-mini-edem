@@ -39,6 +39,7 @@ import {
   notificationTarget,
 } from "@/pages/Notifications/NotificationsPage";
 import { NOTIFICATION_ROLE_TYPES } from "@edem/contracts";
+import uiStyles from "@/ui/ui.module.css";
 
 /** UUID поездки в allowlist- deepLink приглашения (та же форма, что на бэке). */
 const TRIP_ID = "0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b";
@@ -112,6 +113,19 @@ const pageWithItems = (items: Array<Record<string, unknown>>, unreadCount = item
   data: {
     pages: [{ items, nextCursor: null, unreadCount }],
   },
+});
+
+describe("NotificationsPage: error/loading geometry", () => {
+  it.each(["loading", "error"])("%s сохраняет Page", (state) => {
+    setMocks({ isLoading: state === "loading", error: state === "error" ? new Error("Failed") : null });
+    expect(renderPage()).toContain(uiStyles.page);
+  });
+  it("фоновой сбой сохраняет уведомления и даёт свой retry", () => {
+    setMocks({ ...pageWithItems([makeNotification()]), error: new Error("Refetch failed") });
+    const html = renderPage();
+    expect(html).toContain("Бронь подтверждена");
+    expect(html).toContain("Повторить обновление уведомлений");
+  });
 });
 
 beforeEach(() => {

@@ -14,7 +14,7 @@ import {
   useCancelBookingMutation,
   useCreateBookingMutation,
 } from "@/queries/useBookingsQuery";
-import { hapticFeedback } from "@tma.js/sdk-react";
+import { haptic } from "@/utils/haptics";
 import type { Trip } from "@edem/contracts";
 import styles from "./TripDetailsPage.module.css";
 
@@ -223,7 +223,7 @@ export function BookingCancellation({
         onConfirm={() =>
           cancelBooking.mutate(booking.id, {
             onSuccess: () =>
-              hapticFeedback.notificationOccurred.ifAvailable("success"),
+              haptic.success(),
           })
         }
       />

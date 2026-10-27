@@ -1,6 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { reportsApi } from "@/api/reports";
 import type { CreateReportDto } from "@edem/contracts";
+import { useCommittedMutation } from "./useCommittedMutation";
 
 export const REPORT_KEYS = {
   all: ["reports"] as const,
@@ -39,7 +40,7 @@ export function useReportTargetsQuery(options?: { enabled?: boolean }) {
 
 export function useCreateReportMutation() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: (data: CreateReportDto) => reportsApi.create(data),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: REPORT_KEYS.mine() }),

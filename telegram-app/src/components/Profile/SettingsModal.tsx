@@ -16,6 +16,7 @@ import {
 import { Sheet } from "@/ui/Sheet";
 import { Stack } from "@/ui/Stack";
 import styles from "./ProfileModals.module.css";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 /**
  * Настройки уведомлений — route-backed шторка поверх «Профиля»; роут
@@ -38,6 +39,7 @@ export function SettingsModal({
   // (tgui Modal.Header рисует текст только на iOS).
   return (
     <Sheet open={open} onClose={onClose} title="Настройки уведомлений">
+      <OfflineBanner />
       <SettingsBody />
     </Sheet>
   );

@@ -1,7 +1,8 @@
-import { useMemo, useReducer, useState } from "react";
+import { useMemo, useState } from "react";
 import type { TripTag } from "@edem/contracts";
 import { MAX_TRIP_TAGS } from "@/consts/tags";
 import type { CreateTripDraft } from "@/helpers/createTripForm";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 import { toLocalDateTimeInputValue } from "@/utils/date";
 
 const tomorrow = () =>
@@ -138,7 +139,7 @@ export function isTripFormDirty(
 }
 
 /**
- * Форма создания поездки на useReducer + isDirty из сравнения
+ * Форма создания поездки с сессионным черновиком + isDirty из сравнения
  * с начальными значениями (несохранённый черновик для
  * useClosingConfirmation). UI-флаги (vehicleOpen/validationError/
  * errorField) остаются в useState страницы.
@@ -147,7 +148,9 @@ export function useTripForm() {
   // Снимок начальных значений на момент монтирования: date фиксируется
   // один раз.
   const [initial] = useState(initialTripFormState);
-  const [form, dispatch] = useReducer(tripFormReducer, initial);
+  const [form, setForm, clearDraft, captureSubmission] = useSessionDraft("trip:create", initial);
+  const dispatch = (action: TripFormAction) =>
+    setForm((current) => tripFormReducer(current, action));
 
   const setField = <K extends TripFormField>(
     field: K,
@@ -181,6 +184,12 @@ export function useTripForm() {
     form,
     draft,
     isDirty,
+    clearDraft,
+    captureSubmission,
+    cancelDraft: () => {
+      setForm(initial);
+      clearDraft();
+    },
     setField,
     swapCities: () => dispatch({ type: "swapCities" }),
     toggleTag: (tag: TripTag) => dispatch({ type: "toggleTag", tag }),

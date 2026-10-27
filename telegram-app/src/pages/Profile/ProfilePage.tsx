@@ -27,6 +27,7 @@ import { Page } from "@/ui/Page";
 import { SectionBody } from "@/ui/SectionBody";
 import { Section } from "@/ui/Section";
 import { Stack } from "@/ui/Stack";
+import { Notice } from "@/ui/Notice";
 import { EMPTY_STATES } from "@/ui/emptyStates";
 import { MIN_TARGET } from "@/ui/classes";
 import { AccountStatePage } from "@/pages/AccountStatePage/AccountStatePage";
@@ -100,20 +101,23 @@ export function ProfilePage() {
   }
 
   return (
-    <>
+    <Page>
+      <VisuallyHidden Component="h1">Профиль</VisuallyHidden>
+      {profile.data && profile.error && (
+        <Stack gap="xs">
+          <Notice tone="danger">Не удалось обновить профиль. Показанные данные могут быть устаревшими.</Notice>
+          <Button variant="ghost" onClick={() => void profile.refetch()}>Повторить обновление профиля</Button>
+        </Stack>
+      )}
       <QueryState
         loading={profile.isLoading}
-        error={profile.error}
+        error={profile.data ? null : profile.error}
         empty={!profile.data}
         emptyText={EMPTY_STATES.profileEmpty.description}
         onRetry={() => void profile.refetch()}
       >
         {profile.data && (
-          <Page>
-            {/* NavHeader помечен aria-hidden («авторитетные h1 живут на
-                страницах»), поэтому имя экрана даёт скрытый h1, а заголовки
-                секций — h2 (гарантирует фасад ui/Section). */}
-            <VisuallyHidden Component="h1">Профиль</VisuallyHidden>
+          <>
             {/* Шапка профиля: центрированная витрина. Поверхность —
                 Section без заголовка, сама шапка — общий ProfileHero
                 (свой CSS-модуль) со слотом кнопки правки. */}
@@ -164,6 +168,7 @@ export function ProfilePage() {
               <Section header="Мои поездки">
                 <MenuRow
                   label="История поездок"
+                  multiline
                   icon={
                     <IconContainer>
                       <History size={18} />
@@ -182,6 +187,7 @@ export function ProfilePage() {
                       всплывающее окно; создание заявки живёт в окне. */}
                 <MenuRow
                   label="История запросов"
+                  multiline
                   icon={
                     <IconContainer>
                       <ClipboardList size={18} />
@@ -216,6 +222,7 @@ export function ProfilePage() {
                   label={
                     profile.data.car ? "Автомобиль" : "Добавить автомобиль"
                   }
+                  multiline
                   icon={
                     <IconContainer>
                       <Car size={18} />
@@ -265,6 +272,7 @@ export function ProfilePage() {
                     оставлено за шторкой, где контрол один. */}
                 <MenuRow
                   label="Настройки уведомлений"
+                  multiline
                   icon={
                     <IconContainer>
                       <Bell size={18} />
@@ -296,6 +304,7 @@ export function ProfilePage() {
               <Section header="Сервис и помощь">
                 <MenuRow
                   label="Служба поддержки"
+                  multiline
                   icon={
                     <IconContainer>
                       <TriangleAlert size={18} />
@@ -327,6 +336,7 @@ export function ProfilePage() {
               <Section header="Конфиденциальность">
                 <MenuRow
                   label="Чёрный список"
+                  multiline
                   icon={
                     <IconContainer>
                       <ShieldBan size={18} />
@@ -361,9 +371,9 @@ export function ProfilePage() {
                 />
               </Section>
             </Stack>
-          </Page>
+          </>
         )}
       </QueryState>
-    </>
+    </Page>
   );
 }

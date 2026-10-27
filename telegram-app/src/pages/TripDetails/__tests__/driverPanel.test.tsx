@@ -178,7 +178,7 @@ describe("DriverPanel: заявки прямо в деталях, без вто�
   it("строка заявки — на месте, кнопки-перехода больше нет", () => {
     const html = renderPanel(
       makeTrip({ pendingRequestsCount: 1 }),
-      tripBookings([{ items: [] }]),
+      tripBookings([{ items: [requestRow()] }]),
       { requests: driverRequests([requestRow()]) },
     );
 
@@ -196,7 +196,7 @@ describe("DriverPanel: заявки прямо в деталях, без вто�
     // 50 строк на странице, реальных заявок 73.
     const html = renderPanel(
       makeTrip({ pendingRequestsCount: 73 }),
-      tripBookings([{ items: [] }]),
+      tripBookings([{ items: [requestRow()] }]),
       { requests: driverRequests([requestRow()]) },
     );
 

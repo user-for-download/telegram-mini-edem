@@ -28,6 +28,7 @@ import { AppRoot } from "@telegram-apps/telegram-ui";
 import { TripCard } from "@/components/Trip/TripCard";
 import { ICON_TARGET, MIN_TARGET } from "@/ui/classes";
 import type { PassengerBooking, Trip } from "@edem/contracts";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 afterEach(cleanup);
 
@@ -78,7 +79,7 @@ function renderCard(variant: React.ComponentProps<typeof TripCard>["variant"]) {
   return render(
     <AppRoot platform="base">
       <MemoryRouter initialEntries={["/bookings"]}>
-        <TripCard variant={variant} />
+        <ToastProvider><TripCard variant={variant} /></ToastProvider>
       </MemoryRouter>
     </AppRoot>,
   );

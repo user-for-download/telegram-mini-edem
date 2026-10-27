@@ -9,7 +9,8 @@ import { TripStandardCard } from "@/components/Section/TripStandardCard";
 import { DriverTripRequests } from "@/components/Trip/DriverTripRequests";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { ICON_TARGET, MIN_TARGET } from "@/ui/classes";
-import { shareTrip } from "@/helpers/tripShare";
+import { shareOutcomeFeedback, shareTrip } from "@/helpers/tripShare";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { useAuthStore } from "@/store/useAuthStore";
 import { haptic } from "@/utils/haptics";
 import type { PassengerBooking, Trip } from "@edem/contracts";
@@ -86,6 +87,15 @@ function isCancellable(trip: Trip, now: Date = new Date()): boolean {
  */
 export function TripCard({ variant }: { variant: TripCardVariant }) {
   const openTrip = useOpenTrip();
+  const toast = useToast();
+  const share = async (tripId: string) => {
+    const feedback = shareOutcomeFeedback(await shareTrip(tripId));
+    if (feedback.haptic) haptic[feedback.haptic]();
+    toast.show({
+      text: feedback.text,
+      tone: feedback.haptic === "error" ? "error" : feedback.haptic ? "success" : "info",
+    });
+  };
   // Своя строка «Вы водитель» показывает собственный аватар: «ВЫ» из
   // первых двух букв имени читалось как ошибка инициалов. Хранилище может
   // быть пустым (SSR/тесты) — тогда аватар деградирует до акронима.
@@ -151,7 +161,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
               onClick={(event) => {
                 event.stopPropagation();
                 haptic.light();
-                void shareTrip(booking.trip.id);
+                void share(booking.trip.id);
               }}
             >
               <Share2 size={15} />
@@ -222,7 +232,7 @@ export function TripCard({ variant }: { variant: TripCardVariant }) {
             onClick={(event) => {
               event.stopPropagation();
               haptic.light();
-              void shareTrip(trip.id);
+              void share(trip.id);
             }}
           >
             <Share2 size={15} />

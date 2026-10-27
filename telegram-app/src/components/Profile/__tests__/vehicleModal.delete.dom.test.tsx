@@ -21,12 +21,13 @@ vi.mock("@/queries/vehicle", () => ({
 }));
 
 import { VehicleBody } from "@/components/Profile/VehicleModal";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const CAR = { model: "Skoda Octavia", color: "белый", plate: "583" };
 
 function queryState(vehicle: typeof CAR | null) {
   return {
-    data: { car: vehicle },
+    data: { id: "vehicle-owner", car: vehicle },
     vehicle,
     isLoading: false,
     isError: false,
@@ -53,12 +54,21 @@ const field = (id: string): HTMLInputElement => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useAuthStore.setState({ status: "idle", user: null, session: null });
+  useAuthStore.setState({
+    status: "authenticated",
+    user: { id: "vehicle-owner", name: "Водитель", avatar: "", rating: 5, reviewsCount: 0, tripsCount: 0 },
+    session: { accessToken: "test-access", refreshToken: "test-refresh", expiresAt: 0 },
+  });
   mockUseUpsert.mockReturnValue({ mutate: vi.fn(), isPending: false, reset: vi.fn() });
   mockUseRemove.mockReturnValue({ mutate: vi.fn(), isPending: false, isError: false, error: null });
   mockUseVehicle.mockReturnValue(queryState(CAR));
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  useAuthStore.setState({ status: "idle", user: null, session: null });
+});
 
 /**
  * Регресс M2: удаление автомобиля оставляло форму с его данными.

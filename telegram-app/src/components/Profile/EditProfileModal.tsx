@@ -6,12 +6,15 @@ import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
 import { QueryState } from "@/components/QueryState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 import { useNavigate } from "react-router-dom";
 import { ProfilePage } from "@/pages/Profile/ProfilePage";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { haptic } from "@/utils/haptics";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useProfileQuery, useProfileUpdateMutation } from "@/queries/profile";
 import {
   normalizeProfileForm,
@@ -19,6 +22,12 @@ import {
   type ProfileFieldError,
 } from "@/pages/Profile/profileValidation";
 import { Stack } from "@/ui/Stack";
+
+interface ProfileDraft {
+  name: string;
+  about: string;
+  phone: string;
+}
 
 /**
  * Редактирование профиля — модальная шторка поверх «Профиля»
@@ -34,7 +43,7 @@ export function EditProfileModal({
 }) {
   // Имя диалога для скринридера + видимый заголовок на base-платформе
   // (tgui Modal.Header рисует текст только на iOS).
-  // Тело держит name/about в useState с инициализацией от profile.data:
+  // Тело инициализирует черновик данными profile.data:
   // при прямом входе на /profile/edit (пустой кэш) данные приезжают ПОСЛЕ
   // маунта и форма осталась бы пустой. key по id пользователя перемонтирует
   // тело по arrival данных (react-query dedupe — второго запроса нет);
@@ -42,6 +51,7 @@ export function EditProfileModal({
   const profile = useProfileQuery();
   return (
     <Sheet open={open} onClose={onClose} title="Редактировать профиль">
+      <OfflineBanner />
       <EditProfileBody key={profile.data?.id ?? "loading"} onDone={onClose} />
     </Sheet>
   );
@@ -75,9 +85,17 @@ export const EditProfileBody = memo(function EditProfileBody({
   const toast = useToast();
   const profile = useProfileQuery();
   const update = useProfileUpdateMutation();
-  const [name, setName] = useState(profile.data?.name ?? "");
-  const [about, setAbout] = useState(profile.data?.about ?? "");
-  const [phone, setPhone] = useState(profile.data?.phone ?? "");
+  const ownerId = useAuthStore((state) => state.user?.id ?? null);
+  const profileData = profile.data?.id === ownerId ? profile.data : undefined;
+  const [form, setForm, clearDraft, captureSubmission] = useSessionDraft<ProfileDraft>(
+    `profile:edit:${profileData?.id ?? "loading"}`,
+    () => ({
+      name: profileData?.name ?? "",
+      about: profileData?.about ?? "",
+      phone: profileData?.phone ?? "",
+    }),
+  );
+  const { name, about, phone } = form;
   // Хранится id поля, а не текст: ошибку привязывает <Field>, который ставит
   // aria-invalid + aria-describedby.
   const [fieldError, setFieldError] = useState<ProfileFieldError | null>(null);
@@ -93,9 +111,9 @@ export const EditProfileBody = memo(function EditProfileBody({
   };
 
   useClosingConfirmation(
-    name !== (profile.data?.name ?? "") ||
-      about !== (profile.data?.about ?? "") ||
-      phone !== (profile.data?.phone ?? ""),
+    name !== (profileData?.name ?? "") ||
+      about !== (profileData?.about ?? "") ||
+      phone !== (profileData?.phone ?? ""),
   );
 
   // Защита от двойного сабмита: ref синхронен (в отличие от state), второй
@@ -116,8 +134,10 @@ export const EditProfileBody = memo(function EditProfileBody({
     setFieldError(null);
     setInvalidField(null);
     isSubmittingRef.current = true;
-    update.mutate(normalizeProfileForm(name, about, phone), {
+    const onCommitted = captureSubmission();
+    update.mutate({ ...normalizeProfileForm(name, about, phone), onCommitted }, {
       onSuccess: () => {
+        if (!onCommitted()) return;
         haptic.success();
         toast.show({ text: "Профиль обновлён" });
         onDone();
@@ -129,7 +149,7 @@ export const EditProfileBody = memo(function EditProfileBody({
     });
   };
 
-  if (profile.isLoading) {
+  if (profile.isLoading || (!profileData && !profile.error)) {
     return (
       <p role="status" aria-label="Загрузка профиля">
         Загрузка…
@@ -150,7 +170,7 @@ export const EditProfileBody = memo(function EditProfileBody({
     <QueryState
       loading={false}
       error={profile.error}
-      empty={!profile.data}
+      empty={!profileData}
       emptyText={EMPTY_STATES.profileEmpty.description}
       onRetry={() => void profile.refetch()}
     >
@@ -162,7 +182,8 @@ export const EditProfileBody = memo(function EditProfileBody({
               value={name}
               maxLength={100}
               onChange={(event) => {
-                setName(event.target.value);
+                const name = event.target.value;
+                setForm((current) => ({ ...current, name }));
                 clearErrors();
               }}
             />
@@ -181,7 +202,8 @@ export const EditProfileBody = memo(function EditProfileBody({
               placeholder="Например: за рулём 7 лет, люблю музыку 80-х"
               value={about}
               onChange={(event) => {
-                setAbout(event.target.value);
+                const about = event.target.value;
+                setForm((current) => ({ ...current, about }));
                 clearErrors();
               }}
             />
@@ -202,7 +224,8 @@ export const EditProfileBody = memo(function EditProfileBody({
               placeholder="+7 900 123-45-67"
               value={phone}
               onChange={(event) => {
-                setPhone(event.target.value);
+                const phone = event.target.value;
+                setForm((current) => ({ ...current, phone }));
                 clearErrors();
               }}
             />
@@ -230,7 +253,10 @@ export const EditProfileBody = memo(function EditProfileBody({
             size="l"
             stretched
             disabled={update.isPending}
-            onClick={onDone}
+            onClick={() => {
+              clearDraft();
+              onDone();
+            }}
           >
             Отмена
           </Button>

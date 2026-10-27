@@ -1,0 +1,3 @@
+.emptyState {
+  --tgui--hint_color: var(--app-muted);
+}

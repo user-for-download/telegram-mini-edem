@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supportApi } from "@/api/support";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getRawInitData } from "@/utils/telegram-adapter";
 import type { CreateFeedbackDto, CreateFeedbackResponse } from "@edem/contracts";
+import { useCommittedMutation } from "./useCommittedMutation";
 
 export const SUPPORT_KEYS = {
   all: ["feedback"] as const,
@@ -26,7 +27,7 @@ export function useMyFeedbacksQuery(options?: { enabled?: boolean }) {
 
 export function useCreateFeedbackMutation() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: (data: CreateFeedbackDto) => supportApi.create(data),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: SUPPORT_KEYS.mine() }),
@@ -87,7 +88,7 @@ export async function submitSupportFeedback(
  * токен здесь нельзя: именно его наличие и уводило апелляцию в 403.
  */
 export function useAppealFeedbackMutation() {
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: (data: CreateFeedbackDto) =>
       submitSupportFeedback(data, "appeal"),
   });

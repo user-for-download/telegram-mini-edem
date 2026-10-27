@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 
 import { Cell } from "@/ui/Cell";
 import { AS_BUTTON } from "@/ui/classes";
+import styles from "@/ui/Cell.module.css";
 
 const require = createRequire(import.meta.url);
 const pkgPath = require.resolve("@telegram-apps/telegram-ui/package.json");
@@ -95,6 +96,8 @@ describe("фасад ui/Cell", () => {
     const html = render(<Cell>строка</Cell>);
     expect(html).toContain(KIT_CELL);
     expect(html).toContain(RESET);
+    expect(styles.cell).toBeTruthy();
+    expect(html).toContain(styles.cell);
     expect(rootTagOf(html)).toBe("div");
   });
 
@@ -106,6 +109,7 @@ describe("фасад ui/Cell", () => {
     );
     expect(html).toContain(KIT_CELL);
     expect(html).toContain(RESET);
+    expect(html).toContain(styles.cell);
     expect(rootTagOf(html)).toBe("button");
   });
 

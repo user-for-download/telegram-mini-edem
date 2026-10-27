@@ -8,6 +8,7 @@ import {
 import { MutationError } from "@/components/MutationError";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { useCreateFeedbackMutation } from "@/queries/useSupportQuery";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 import { Button } from "@/ui/Button";
 import { CharCounter } from "@/ui/CharCounter";
 import { HINT } from "@/ui/classes";
@@ -19,6 +20,11 @@ import {
   type SupportField,
   type SupportFieldError,
 } from "./supportValidation";
+
+interface FeedbackDraft {
+  subject: string;
+  text: string;
+}
 
 /**
  * Форма обращения в поддержку — тело всплывающего окна `FeedbackModal`.
@@ -39,8 +45,11 @@ import {
 export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
   const toast = useToast();
   const create = useCreateFeedbackMutation();
-  const [subject, setSubject] = useState("");
-  const [text, setText] = useState("");
+  const [form, setForm, , captureSubmission] = useSessionDraft<FeedbackDraft>(
+    "support:new",
+    { subject: "", text: "" },
+  );
+  const { subject, text } = form;
   // Клиентская ошибка приходит С ПОЛЕМ: <Field error=…> сам ставит
   // aria-invalid + aria-describedby и рисует текст рядом с нужным
   // контролом. Отдельной общей плашки больше нет — она была причиной
@@ -63,18 +72,18 @@ export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
     }
     setFieldError(null);
     submitGuard.current = true;
-    create.mutate(normalizeSupportForm(subject, text), {
+    const onCommitted = captureSubmission();
+    create.mutate({ ...normalizeSupportForm(subject, text), onCommitted }, {
       onSettled: () => {
         submitGuard.current = false;
       },
       onSuccess: () => {
+        if (!onCommitted()) return;
         haptic.success();
         toast.show({
           text: "Обращение отправлено!",
           description: "Служба поддержки свяжется с вами в Telegram",
         });
-        setSubject("");
-        setText("");
         onSubmitted?.();
       },
     });
@@ -96,7 +105,8 @@ export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
             maxLength={FEEDBACK_SUBJECT_MAX_LENGTH}
             status={errorFor("subject") ? "error" : undefined}
             onChange={(event) => {
-              setSubject(event.target.value);
+              const subject = event.target.value;
+              setForm((current) => ({ ...current, subject }));
               // Гасим ТОЛЬКО свою ошибку: правка соседнего поля не должна
               // снимать сообщение, которое всё ещё верно.
               if (fieldError?.field === "subject") setFieldError(null);
@@ -114,7 +124,8 @@ export function FeedbackForm({ onSubmitted }: { onSubmitted?: () => void }) {
             value={text}
             status={errorFor("text") ? "error" : undefined}
             onChange={(event) => {
-              setText(event.target.value);
+              const text = event.target.value;
+              setForm((current) => ({ ...current, text }));
               if (fieldError?.field === "text") setFieldError(null);
             }}
           />

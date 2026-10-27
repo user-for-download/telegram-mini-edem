@@ -39,6 +39,7 @@ vi.mock("@/components/Toast/ToastProvider", async (importOriginal) => {
 });
 
 import { ComplaintForm } from "@/pages/Reports/ComplaintForm";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const TRIP_ID = "11111111-1111-4111-8111-111111111111";
 const USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -88,6 +89,11 @@ function fill(targetKey: string, description = "Грубое вождение") 
 }
 
 beforeEach(() => {
+  useAuthStore.setState({
+    status: "authenticated",
+    user: { id: "complaint-submit-owner", name: "Автор", avatar: "", rating: 5, reviewsCount: 0, tripsCount: 0 },
+    session: { accessToken: "test-access", refreshToken: "test-refresh", expiresAt: 0 },
+  });
   mockUseTargets.mockReturnValue({
     data: TARGETS,
     isLoading: false,
@@ -104,6 +110,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  useAuthStore.setState({ status: "idle", user: null, session: null });
   vi.clearAllMocks();
 });
 

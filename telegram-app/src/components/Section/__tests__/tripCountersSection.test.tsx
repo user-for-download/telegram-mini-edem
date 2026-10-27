@@ -169,3 +169,34 @@ describe("TripCountersSection: догрузка страниц активных 
     expect(mockFetchNextPage).not.toHaveBeenCalled();
   });
 });
+
+describe("U20: counter contrast retains zero/nonzero meaning", () => {
+  it("loaded zero counts receive the neutral tone on all three badges", () => {
+    mockUseInfiniteMyTrips.mockReturnValue(myTripsState([]));
+    const { container } = renderSection();
+    const badges = container.querySelectorAll('[data-tone="zero"]');
+    expect(badges.length).toBe(3);
+    for (const badge of badges) expect(badge.textContent).toBe("0");
+  });
+
+  it("large known counts retain their numbers and semantic roles", () => {
+    mockUseInfiniteMyTrips.mockReturnValue(myTripsState([trip(1, 123)], { total: 101 }));
+    const { container, getByRole } = renderSection();
+    expect(container.querySelector('[data-tone="info"]')?.textContent).toBe("101");
+    expect(container.querySelector('[data-tone="danger"]')?.textContent).toBe("123");
+    expect(getByRole("button", { name: "Ваши поездки, активных: 101" })).toBeTruthy();
+    expect(getByRole("button", { name: "Заявки пассажиров, новых: 123" })).toBeTruthy();
+  });
+
+  it.each(["loading", "error"])("%s is not presented as a zero count", (state) => {
+    mockUseInfiniteMyTrips.mockReturnValue({
+      ...myTripsState([]),
+      data: undefined,
+      isLoading: state === "loading",
+      isError: state === "error",
+      error: state === "error" ? new Error("Offline") : null,
+    });
+    const { container } = renderSection();
+    expect(container.querySelector('[data-tone="zero"]')).toBeNull();
+  });
+});

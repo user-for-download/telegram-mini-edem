@@ -51,6 +51,7 @@ vi.mock("@/components/Toast/ToastProvider", async (importOriginal) => {
 });
 
 import { RideRequestCreateForm } from "@/components/Trip/RideRequestCreateForm";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const CITIES = [
   { id: "c-1", name: "Вологда" },
@@ -102,6 +103,11 @@ function renderForm(): void {
 }
 
 beforeEach(() => {
+  useAuthStore.setState({
+    status: "authenticated",
+    user: { id: "request-submit-owner", name: "Автор", avatar: "", rating: 5, reviewsCount: 0, tripsCount: 0 },
+    session: { accessToken: "test-access", refreshToken: "test-refresh", expiresAt: 0 },
+  });
   mockUseCities.mockReturnValue(queryState({ data: CITIES }));
   // Мутация сразу зовёт onSuccess — как успешный ответ сервера.
   mockMutate.mockImplementation(
@@ -112,6 +118,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  useAuthStore.setState({ status: "idle", user: null, session: null });
   vi.clearAllMocks();
 });
 

@@ -49,12 +49,13 @@ vi.mock("@/api/client", async (importOriginal) => {
   };
 });
 
-import { ACCOUNT_DELETED_CODE, ApiError } from "@/api/client";
-import type { RefreshResult } from "@/api/client";
+import { ACCOUNT_DELETED_CODE, ApiError, apiClient } from "@/api/client";
+import type { RefreshResult, TokenUpdate } from "@/api/client";
 import { authApi } from "@/api/auth.api";
 import { getRawInitData, purgeLaunchParamsCache } from "@/utils/telegram-adapter";
 import { useAuthStore } from "@/store/useAuthStore";
 import type { AuthResponse } from "@edem/contracts";
+import { getSessionDraftScope, readSessionDraft, writeSessionDraft } from "@/helpers/sessionDrafts";
 
 const mockedLoginWithTelegram = vi.mocked(authApi.loginWithTelegram);
 const mockedGetRawInitData = vi.mocked(getRawInitData);
@@ -108,6 +109,7 @@ function resetStore() {
   mockTryRefresh.mockReset();
   mockSetSession.mockReset();
   mockInvalidatePendingRefresh.mockReset();
+  vi.mocked(apiClient.onTokenUpdate).mockReset().mockReturnValue(() => {});
 }
 
 /** Сессия в фоне: refresh «завис» в полёте, logout приходит параллельно. */
@@ -388,5 +390,115 @@ describe("useAuthStore.refreshSession: сессия снята параллел�
 
     expect(mockTryRefresh).not.toHaveBeenCalled();
     expect(useAuthStore.getState().status).toBe("unauthenticated");
+  });
+});
+
+describe("useAuthStore: session draft boundary", () => {
+  beforeEach(resetStore);
+  afterEach(() => vi.restoreAllMocks());
+
+  function seedDrafts() {
+    seedBackgroundSession();
+    const scope = getSessionDraftScope(validUser.id);
+    expect(scope).not.toBeNull();
+    writeSessionDraft(scope, "profile", "profile draft");
+    writeSessionDraft(scope, "trip:1", "trip draft");
+    return scope;
+  }
+
+  it.each([
+    ["logout", () => useAuthStore.getState().clearSession("test logout")],
+    ["ban", () => useAuthStore.getState().markBanned(null)],
+    ["account deletion", () => useAuthStore.getState().markAccountDeleted()],
+  ] as const)("%s purges every draft and rejects old queued writes", async (_name, terminate) => {
+    const oldScope = seedDrafts();
+
+    await terminate();
+
+    expect(getSessionDraftScope(validUser.id)).toBeNull();
+    seedBackgroundSession();
+    writeSessionDraft(oldScope, "profile", "queued draft");
+    const newScope = getSessionDraftScope(validUser.id);
+    expect(readSessionDraft(newScope, "profile")).toBeUndefined();
+    expect(readSessionDraft(newScope, "trip:1")).toBeUndefined();
+  });
+
+  it("same-user successful refresh preserves drafts during token rotation and validation", async () => {
+    const scope = seedDrafts();
+    useAuthStore.setState({ status: "initializing" });
+    let onTokens: (tokens: TokenUpdate) => void = () => {};
+    vi.mocked(apiClient.onTokenUpdate).mockImplementation((listener) => {
+      onTokens = listener;
+      return () => {};
+    });
+    mockTryRefresh.mockImplementation(async () => {
+      onTokens({ ...validAuthResponse, user: { ...validUser, name: "Updated name" } });
+      return { kind: "success" };
+    });
+
+    await useAuthStore.getState().refreshSession();
+
+    expect(useAuthStore.getState().user?.name).toBe("Updated name");
+    expect(getSessionDraftScope(validUser.id)).toBe(scope);
+    expect(readSessionDraft(scope, "profile")).toEqual({ value: "profile draft" });
+    expect(readSessionDraft(scope, "trip:1")).toEqual({ value: "trip draft" });
+  });
+
+  it("successful refresh with another identity purges the previous user's drafts", async () => {
+    const oldScope = seedDrafts();
+    let onTokens: (tokens: TokenUpdate) => void = () => {};
+    vi.mocked(apiClient.onTokenUpdate).mockImplementation((listener) => {
+      onTokens = listener;
+      return () => {};
+    });
+    mockTryRefresh.mockImplementation(async () => {
+      onTokens({ ...validAuthResponse, user: { ...validUser, id: "user-2" } });
+      return { kind: "success" };
+    });
+
+    await useAuthStore.getState().refreshSession();
+
+    expect(getSessionDraftScope(validUser.id)).toBeNull();
+    expect(readSessionDraft(oldScope, "profile")).toBeUndefined();
+    expect(readSessionDraft(getSessionDraftScope("user-2"), "profile")).toBeUndefined();
+  });
+
+  it("successful bootstrap with a new identity purges drafts", async () => {
+    const oldScope = seedDrafts();
+    mockedLoginWithTelegram.mockResolvedValue({
+      ...validAuthResponse,
+      user: { ...validUser, id: "user-2" },
+    });
+
+    await useAuthStore.getState().bootstrap();
+
+    expect(readSessionDraft(oldScope, "profile")).toBeUndefined();
+    expect(readSessionDraft(getSessionDraftScope("user-2"), "trip:1")).toBeUndefined();
+  });
+
+  it.each([
+    bannedError(null),
+    new ApiError("Account unavailable", ACCOUNT_DELETED_CODE, 403),
+    new Error("network down"),
+  ])("failed bootstrap clears the prior draft session (%s)", async (error) => {
+    const oldScope = seedDrafts();
+    mockedLoginWithTelegram.mockRejectedValue(error);
+
+    await useAuthStore.getState().bootstrap();
+
+    expect(getSessionDraftScope(validUser.id)).toBeNull();
+    expect(readSessionDraft(oldScope, "profile")).toBeUndefined();
+  });
+
+  it("direct setState token/profile updates preserve same-user drafts but purge identity changes", () => {
+    const oldScope = seedDrafts();
+    useAuthStore.setState({ status: "authenticated", user: { ...validUser, name: "Updated" } });
+    expect(readSessionDraft(oldScope, "profile")).toEqual({ value: "profile draft" });
+
+    useAuthStore.setState({ user: { ...validUser, id: "user-2" } });
+
+    expect(readSessionDraft(oldScope, "profile")).toBeUndefined();
+    useAuthStore.setState({ user: validUser });
+    expect(readSessionDraft(getSessionDraftScope(validUser.id), "trip:1")).toBeUndefined();
   });
 });

@@ -1,5 +1,6 @@
-import { Avatar, VisuallyHidden } from "@telegram-apps/telegram-ui";
+import { Avatar, Spinner, VisuallyHidden } from "@telegram-apps/telegram-ui";
 import type { BlockedUserItem } from "@edem/contracts";
+import { LockOpen } from "lucide-react";
 import { QueryState } from "@/components/QueryState";
 import { MutationError } from "@/components/MutationError";
 import { useInfiniteSentinel } from "@/hooks/useInfiniteSentinel";
@@ -10,14 +11,15 @@ import {
 } from "@/queries/useBlocksQuery";
 import { useToast } from "@/components/Toast/ToastProvider";
 import { Cell } from "@/ui/Cell";
-import { Button } from "@/ui/Button";
+import { IconButton } from "@/ui/IconButton";
 import { FetchMore } from "@/ui/FetchMore";
 import { Page } from "@/ui/Page";
 import { Section } from "@/ui/Section";
 import { EMPTY_STATES } from "@/ui/emptyStates";
-import { MIN_TARGET, STATIC_CELL } from "@/ui/classes";
+import { ICON_TARGET, STATIC_CELL } from "@/ui/classes";
 import { haptic } from "@/utils/haptics";
 import { moscowNumericDate } from "@/utils/date";
+import styles from "./BlockedUsersPage.module.css";
 
 function BlockedUserRow({
   item,
@@ -30,23 +32,33 @@ function BlockedUserRow({
 }) {
   return (
     <Cell
-      className={STATIC_CELL}
+      className={`${STATIC_CELL} ${styles.row}`}
+      multiline
       before={<Avatar size={40} src={item.user.avatar} alt="" />}
       subtitle={`Добавлен ${moscowNumericDate(item.blockedAt)}`}
       after={
-        <Button
+        // На узком iPhone текстовой кнопке не хватает колонки: она
+        // вылезала из Cell. Действие — иконка 44×44 в after; полный
+        // глагол остаётся в доступном имени и title.
+        <IconButton
+          variant="outline"
           size="s"
-          variant="gray"
-          className={MIN_TARGET}
-          loading={pending}
+          className={ICON_TARGET}
           disabled={pending}
+          aria-busy={pending || undefined}
+          aria-label={`Разблокировать ${item.user.name}`}
+          title="Разблокировать"
           onClick={() => onUnblock(item.user.id)}
         >
-          Разблокировать
-        </Button>
+          {pending ? (
+            <Spinner size="s" aria-hidden />
+          ) : (
+            <LockOpen size={18} aria-hidden />
+          )}
+        </IconButton>
       }
     >
-      {item.user.name}
+      <span className={styles.name}>{item.user.name}</span>
     </Cell>
   );
 }

@@ -2,6 +2,11 @@ import { Avatar, Caption, Subheadline } from "@telegram-apps/telegram-ui";
 import { Cell } from "@/ui/Cell";
 import { GroupLabel } from "@/ui/GroupLabel";
 import { STATIC_CELL } from "@/ui/classes";
+import { Button } from "@/ui/Button";
+import { FetchMore } from "@/ui/FetchMore";
+import { Loading } from "@/ui/Loading";
+import { Notice } from "@/ui/Notice";
+import { mergeUniqueById } from "@/helpers/mergeUniqueById";
 import { DriverTripRequests } from "@/components/Trip/DriverTripRequests";
 import { useTripBookingsQuery } from "@/queries/useBookingsQuery";
 import styles from "./TripCards.module.css";
@@ -33,20 +38,22 @@ export function TripPassengers({
   // Список рендерится только у активной поездки (см. DriverPanel): у
   // завершённой/отменённой бэкенд отдал бы 403 на заявки.
   const query = useTripBookingsQuery(tripId);
-  const items = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = mergeUniqueById(query.data?.pages);
   const confirmed = items.filter((booking) => booking.status === "confirmed");
   const pending = pendingCount ?? items.filter((b) => b.status === "pending").length;
 
-  // Пока данные не пришли, «Заявок пока нет» было бы враньём: скелетон
-  // заявок рисует сам DriverTripRequests.
-  const empty = !query.isLoading && !query.isError && pending === 0 && confirmed.length === 0;
+  const empty = !query.isLoading && !query.isError && !query.hasNextPage && pending === 0 && confirmed.length === 0;
 
   return (
     <div className={styles.passengers}>
-      {query.isError && (
-        <Caption Component="p" className={styles.passengersHint}>
-          Не удалось загрузить заявки.
-        </Caption>
+      {query.isLoading && <Loading label="Загрузка пассажиров" />}
+      {query.isError && !query.isFetchNextPageError && (
+        <>
+          <Notice tone="danger">Не удалось загрузить заявки.</Notice>
+          <Button variant="ghost" onClick={() => void query.refetch()}>
+            Повторить загрузку пассажиров
+          </Button>
+        </>
       )}
 
       {pending > 0 && (
@@ -56,7 +63,7 @@ export function TripPassengers({
       {/* Ожидающие решения — ровно те же строки, что в карточке поездки:
           один компонент на два места, поэтому поведение (включая
           подтверждение клиента и тап-таргеты) не расходится. */}
-      <DriverTripRequests tripId={tripId} />
+      <DriverTripRequests tripId={tripId} bookings={items} />
 
       {confirmed.length > 0 && (
         <>
@@ -91,6 +98,13 @@ export function TripPassengers({
           Заявок пока нет
         </Caption>
       )}
+      <FetchMore
+        hasNextPage={query.hasNextPage}
+        isFetchingNextPage={query.isFetchingNextPage}
+        fetchNextPage={() => void query.fetchNextPage()}
+        error={query.isFetchNextPageError ? query.error : null}
+        label="Показать ещё пассажиров"
+      />
     </div>
   );
 }

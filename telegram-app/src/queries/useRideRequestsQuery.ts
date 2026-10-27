@@ -13,6 +13,7 @@ import type {
   UpdateRideRequestDto,
 } from "@edem/contracts";
 import { RIDE_REQUEST_KEYS } from "./keys";
+import { useCommittedMutation, type WithCommit } from "./useCommittedMutation";
 
 /**
  * Лента заявок попутчиков для главной: чужие активные, ближайшее окно сверху.
@@ -46,11 +47,11 @@ export function useRideRequestsQuery(enabled = true) {
   });
 }
 
-function useRideRequestMutation<TData, TVariables>(
+function useRideRequestMutation<TData, TVariables extends object>(
   mutationFn: (variables: TVariables) => Promise<TData>,
 ) {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: RIDE_REQUEST_KEYS.all }),
@@ -78,5 +79,16 @@ export function useRideRequestStatusMutation() {
 }
 
 export function useCancelRideRequestMutation() {
-  return useRideRequestMutation((id: string) => rideRequestsApi.cancel(id));
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: string | WithCommit<{ id: string }>) =>
+      rideRequestsApi.cancel(typeof variables === "string" ? variables : variables.id),
+    onSuccess: async (_, variables) => {
+      try {
+        await queryClient.invalidateQueries({ queryKey: RIDE_REQUEST_KEYS.all });
+      } finally {
+        if (typeof variables !== "string") variables.onCommitted?.();
+      }
+    },
+  });
 }

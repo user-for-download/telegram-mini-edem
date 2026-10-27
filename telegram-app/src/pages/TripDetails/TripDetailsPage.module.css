@@ -106,6 +106,7 @@
    действие. UA-сброс кнопки (шрифт/рамка/фон) — тот же, что у .open
    в TripStandardCard. */
 .driverOpen {
+  position: relative;
   display: flex;
   flex: 1;
   min-width: 0;
@@ -119,6 +120,17 @@
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
+}
+
+/* Как у автора отзыва: расширяем hit-area, не раскладку карточки. */
+.driverOpen::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
 }
 
 /* Фокус виден: карточка водителя открывается и с клавиатуры. */

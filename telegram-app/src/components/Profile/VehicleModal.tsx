@@ -1,10 +1,13 @@
 import { useCallback, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { Caption, Input } from "@telegram-apps/telegram-ui";
 import { Notice } from "@/ui/Notice";
 import { HINT, INFO, PROSE } from "@/ui/classes";
 import { Field } from "@/ui/Field";
 import { Sheet } from "@/ui/Sheet";
 import { Button } from "@/ui/Button";
+import { useAuthStore } from "@/store/useAuthStore";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 import { Car, Hash, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +15,7 @@ import { ApiError, isAccountDeletedError } from "@/api/client";
 import { ConfirmPopup } from "@/components/ConfirmPopup";
 import { MIN_TARGET } from "@/ui/classes";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 import { haptic } from "@/utils/haptics";
 import { QueryState } from "@/components/QueryState";
 import { EMPTY_STATES } from "@/ui/emptyStates";
@@ -33,6 +37,12 @@ import {
 
 type Vehicle = NonNullable<ReturnType<typeof useVehicleQuery>["vehicle"]>;
 
+interface VehicleDraft {
+  model: string;
+  color: string;
+  plate: string;
+}
+
 /**
  * Автомобиль водителя — route-backed шторка (роут /vehicle остаётся источником правды, вход из
  * ProfilePage тем же navigate("/vehicle") — см. VehicleRoute).
@@ -48,6 +58,7 @@ export function VehicleModal({
   // (tgui Modal.Header рисует текст только на iOS).
   return (
     <Sheet open={open} onClose={onClose} title="Автомобиль">
+      <OfflineBanner />
       <VehicleBody onDone={onClose} />
     </Sheet>
   );
@@ -97,8 +108,20 @@ function VehicleTerminal({ deleted }: { deleted: boolean }) {
  */
 export function VehicleBody({ onDone }: { onDone: () => void }) {
   const vehicleQuery = useVehicleQuery();
-  const vehicle = vehicleQuery.vehicle ?? null;
+  const ownerId = useAuthStore((state) => state.user?.id ?? null);
+  const profileData = vehicleQuery.data?.id === ownerId ? vehicleQuery.data : undefined;
+  const vehicle = profileData ? vehicleQuery.vehicle ?? null : null;
   const remove = useRemoveVehicleMutation();
+  // Car has no public id: its entity is the owner's single car (or creation).
+  const formKey = `vehicle:${profileData?.id ?? "loading"}:${vehicle ? "existing" : "new"}`;
+  const [form, setForm, clearDraft, captureSubmission] = useSessionDraft<VehicleDraft>(
+    formKey,
+    () => ({
+      model: vehicle?.model ?? "",
+      color: vehicle?.color ?? "",
+      plate: vehicle?.plate ?? "",
+    }),
+  );
   if (
     vehicleQuery.error instanceof ApiError &&
     vehicleQuery.error.status === 403
@@ -109,13 +132,13 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
   }
   return (
     <QueryState
-      loading={vehicleQuery.isLoading}
+      loading={vehicleQuery.isLoading || (!profileData && !vehicleQuery.error)}
       error={vehicleQuery.error}
-      empty={!vehicleQuery.data}
+      empty={!profileData}
       emptyText={EMPTY_STATES.vehicleEmpty.description}
       onRetry={() => void vehicleQuery.refetch()}
     >
-      {vehicleQuery.data && (
+      {profileData && (
         // Тело окна прямо на фоне шторки, без Card: карточка внутри шторки —
         // вложенная поверхность, которой нет ни в одном другом окне (жалоба,
         // обращение, правка профиля, «Ищу попутку»). Раскладку даёт ui/Stack —
@@ -126,17 +149,15 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
               Чтобы публиковать поездки, добавьте автомобиль.
             </Caption>
           )}
-          {/* key по наличию автомобиля: после удаления useRemoveVehicleMutation
-              пишет пользователя без машины в общий кэш ["users","me"], `vehicle`
-              становится null, но VehicleForm без key НЕ перемонтируется и
-              продолжает держать удалённые значения в полях. Последствия были
-              реальными: «Сохранить» молча создавал только что удалённую машину,
-              а useClosingConfirmation сравнивал поля с пустым автомобилем и
-              спрашивал «отменить изменения?» при ВЫХОДЕ из приложения.
-              Тот же приём, что key={profile.data?.id} в EditProfileModal. */}
+          {/* Смена владельца/наличия автомобиля переключает черновик и
+              перемонтирует локальную валидацию, не трогая правки при refetch. */}
           <VehicleForm
-            key={vehicle ? "has-vehicle" : "no-vehicle"}
+            key={formKey}
             vehicle={vehicle}
+            form={form}
+            setForm={setForm}
+            clearDraft={clearDraft}
+            captureSubmission={captureSubmission}
             onDone={onDone}
           />
           {vehicle && (
@@ -149,12 +170,16 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
                 pending={remove.isPending}
                 destructive
                 className={MIN_TARGET}
-                onConfirm={() =>
-                  remove.mutate(undefined, {
-                    onSuccess: () => haptic.success(),
+                onConfirm={() => {
+                  const onCommitted = captureSubmission();
+                  remove.mutate({ onCommitted }, {
+                    onSuccess: () => {
+                      onCommitted();
+                      haptic.success();
+                    },
                     onError: () => haptic.error(),
-                  })
-                }
+                  });
+                }}
               />
               {remove.isError && (
                 <Notice tone="danger" variant="text">
@@ -172,15 +197,21 @@ export function VehicleBody({ onDone }: { onDone: () => void }) {
 /** Добавление/редактирование через POST /users/me/car (лимиты — vehicleValidation). */
 function VehicleForm({
   vehicle,
+  form,
+  setForm,
+  clearDraft,
+  captureSubmission,
   onDone,
 }: {
   vehicle: Vehicle | null;
+  form: VehicleDraft;
+  setForm: Dispatch<SetStateAction<VehicleDraft>>;
+  clearDraft: () => void;
+  captureSubmission: () => (() => boolean);
   onDone: () => void;
 }) {
   const upsert = useUpsertVehicleMutation();
-  const [model, setModel] = useState(vehicle?.model ?? "");
-  const [color, setColor] = useState(vehicle?.color ?? "");
-  const [plate, setPlate] = useState(vehicle?.plate ?? "");
+  const { model, color, plate } = form;
   // Хранится id поля, а не текст: <Field error=…> сам ставит aria-invalid и
   // aria-describedby.
   const [fieldError, setFieldError] = useState<VehicleFieldError | null>(null);
@@ -201,8 +232,10 @@ function VehicleForm({
     }
     setFieldError(null);
     isSubmittingRef.current = true;
-    upsert.mutate(normalizeVehicleForm(model, color, plate), {
+    const onCommitted = captureSubmission();
+    upsert.mutate({ ...normalizeVehicleForm(model, color, plate), onCommitted }, {
       onSuccess: () => {
+        if (!onCommitted()) return;
         haptic.success();
         onDone();
       },
@@ -227,7 +260,8 @@ function VehicleForm({
             maxLength={VEHICLE_LIMITS.model}
             placeholder="Skoda Octavia"
             onChange={(e) => {
-              setModel(e.target.value.slice(0, VEHICLE_LIMITS.model));
+              const model = e.target.value.slice(0, VEHICLE_LIMITS.model);
+              setForm((current) => ({ ...current, model }));
               setFieldError(null);
             }}
           />
@@ -242,7 +276,8 @@ function VehicleForm({
             maxLength={VEHICLE_LIMITS.color}
             placeholder="белый"
             onChange={(e) => {
-              setColor(e.target.value.slice(0, VEHICLE_LIMITS.color));
+              const color = e.target.value.slice(0, VEHICLE_LIMITS.color);
+              setForm((current) => ({ ...current, color }));
               setFieldError(null);
             }}
           />
@@ -261,9 +296,10 @@ function VehicleForm({
             maxLength={VEHICLE_LIMITS.plate}
             placeholder="Например: 583"
             onChange={(e) => {
-              setPlate(
-                e.target.value.toUpperCase().slice(0, VEHICLE_LIMITS.plate),
-              );
+              const plate = e.target.value
+                .toUpperCase()
+                .slice(0, VEHICLE_LIMITS.plate);
+              setForm((current) => ({ ...current, plate }));
               setFieldError(null);
             }}
           />
@@ -295,6 +331,7 @@ function VehicleForm({
         stretched
         disabled={upsert.isPending}
         onClick={() => {
+          clearDraft();
           setFieldError(null);
           upsert.reset();
           onDone();

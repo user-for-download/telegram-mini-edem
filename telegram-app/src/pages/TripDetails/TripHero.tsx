@@ -13,7 +13,7 @@ import { formatRating } from "@/helpers/rating";
 import { formatDuration, relativeMoscowDay } from "@/utils/date";
 import { plural } from "@/utils/plural";
 import { terminalTripStatusLabel } from "@/utils/tripStatus";
-import { hapticFeedback } from "@tma.js/sdk-react";
+import { haptic } from "@/utils/haptics";
 import { CarFront, Phone, Share2, ShieldCheck, Star } from "lucide-react";
 import type { Trip } from "@edem/contracts";
 import styles from "./TripDetailsPage.module.css";
@@ -192,7 +192,7 @@ export function TripHero({
                 aria-label={`Позвонить водителю: ${item.driver.phone}`}
                 title={item.driver.phone}
                 onClick={() => {
-                  hapticFeedback.impactOccurred.ifAvailable("light");
+                  haptic.light();
                   window.location.assign(`tel:${item.driver.phone}`);
                 }}
               >

@@ -85,6 +85,8 @@ describe("ToastProvider: роль на самом тосте", () => {
     expect(nodes[0]?.getAttribute("role")).toBe("alert");
     expect(nodes[0]?.getAttribute("aria-live")).toBe("assertive");
     expect(nodes[0]?.textContent).toContain("Профиль обновлён");
+    expect(nodes[0]?.querySelector(".lucide-circle-alert")).not.toBeNull();
+    expect(nodes[0]?.querySelector(".lucide-circle-check")).toBeNull();
   });
 
   it("тост скрывается сам по duration", () => {

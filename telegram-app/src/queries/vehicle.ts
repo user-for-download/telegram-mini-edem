@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { vehicleApi, type VehicleFormDto } from "@/api/vehicle";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useProfileQuery } from "./profile";
+import { PROFILE_KEYS, useProfileQuery } from "./profile";
+import { useCommittedMutation, type WithCommit } from "./useCommittedMutation";
 
 /**
  * Ключи кэша автомобиля. Намеренно совпадают с PROFILE_KEYS/USER_KEYS
@@ -11,7 +12,7 @@ import { useProfileQuery } from "./profile";
  */
 export const VEHICLE_KEYS = {
   all: ["users"] as const,
-  current: () => [...VEHICLE_KEYS.all, "me"] as const,
+  current: PROFILE_KEYS.current,
 };
 
 /**
@@ -36,10 +37,11 @@ export function useVehicleQuery(options?: {
  */
 export function useUpsertVehicleMutation() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: (data: VehicleFormDto) => vehicleApi.upsertVehicle(data),
     onSuccess: (user) => {
-      queryClient.setQueryData(VEHICLE_KEYS.current(), user);
+      if (useAuthStore.getState().user?.id !== user.id) return;
+      queryClient.setQueryData(VEHICLE_KEYS.current(user.id), user);
       useAuthStore.setState({ user });
     },
   });
@@ -54,10 +56,16 @@ export function useUpsertVehicleMutation() {
 export function useRemoveVehicleMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => vehicleApi.removeVehicle(),
-    onSuccess: (user) => {
-      queryClient.setQueryData(VEHICLE_KEYS.current(), user);
-      useAuthStore.setState({ user });
+    mutationFn: (_variables: WithCommit<object> | undefined) => vehicleApi.removeVehicle(),
+    onSuccess: (user, variables) => {
+      try {
+        if (useAuthStore.getState().user?.id === user.id) {
+          queryClient.setQueryData(VEHICLE_KEYS.current(user.id), user);
+          useAuthStore.setState({ user });
+        }
+      } finally {
+        variables?.onCommitted?.();
+      }
     },
   });
 }

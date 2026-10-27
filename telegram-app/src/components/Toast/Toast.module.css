@@ -39,3 +39,6 @@
 .snackbar.snackbar > div {
   min-height: 48px;
 }
+.errorIcon {
+  color: var(--app-danger);
+}

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Sheet } from "@/ui/Sheet";
 import { SearchPage } from "@/pages/Search/SearchPage";
 import { TripDetailsPage } from "@/pages/TripDetails/TripDetailsPage";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 /**
  * Детали поездки — route-backed шторка поверх «Поиска»;
@@ -23,6 +24,7 @@ export function TripDetailsModal({
       title="Детали поездки"
       variant="flush"
     >
+      <OfflineBanner />
       <TripDetailsPage />
     </Sheet>
   );

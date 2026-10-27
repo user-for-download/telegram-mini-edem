@@ -98,7 +98,8 @@ describe("route-шторка деталей поездки: фон — отку�
       .getAllByRole("button")
       .filter((tab) => tab.getAttribute("aria-current") === "page");
     expect(active).toHaveLength(1);
-    expect(active[0]?.textContent).toContain("Уведомления");
+    expect(active[0]?.textContent).toContain("События");
+    expect(active[0]?.getAttribute("aria-label")).toContain("уведомления");
   });
 
   it("холодный deep link без state: фоном «Поиск» (прежний путь)", () => {

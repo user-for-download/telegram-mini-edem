@@ -1,0 +1,10 @@
+/* Действие — иконка в after: на узком iPhone текстовая кнопка
+   вылезала из Cell и конкурировала с именем за колонку. */
+.row {
+  width: 100%;
+  gap: var(--app-space-sm);
+}
+
+.name {
+  overflow-wrap: anywhere;
+}

@@ -8,6 +8,7 @@ import {
 import { bookingsApi } from "@/api/bookings.api";
 import { BOOKING_KEYS, RIDE_REQUEST_KEYS, TRIP_KEYS } from "./keys";
 import type { CreateBookingDto, DriverBookingAction } from "@edem/contracts";
+import { useCommittedMutation } from "./useCommittedMutation";
 
 
 export function useMyBookingsQuery(options?: { enabled?: boolean }) {
@@ -81,7 +82,7 @@ function useInvalidateBookingsAndTrips() {
 
 export function useCreateBookingMutation() {
   const invalidate = useInvalidateBookingsAndTrips();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: (data: CreateBookingDto) => bookingsApi.createBooking(data),
     onSuccess: invalidate,
   });
@@ -89,7 +90,7 @@ export function useCreateBookingMutation() {
 
 export function useUpdateBookingStatusMutation() {
   const invalidate = useInvalidateBookingsAndTrips();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: ({ id, status }: { id: string; status: DriverBookingAction }) =>
       bookingsApi.updateBookingStatus(id, { status }),
     onSuccess: invalidate,

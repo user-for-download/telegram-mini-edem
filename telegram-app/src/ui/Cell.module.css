@@ -1,0 +1,7 @@
+/* The kit reads these on the actual subtitle/description/hint and Info
+   nodes. Scoped aliases leave explicit semantic descendant colors intact. */
+.cell {
+  --tgui--hint_color: var(--app-muted);
+  --tgui--subtitle_text_color: var(--app-muted);
+  --tgui--secondary_hint_color: var(--app-muted);
+}

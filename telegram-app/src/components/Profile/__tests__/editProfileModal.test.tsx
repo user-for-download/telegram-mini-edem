@@ -1,6 +1,6 @@
 // SSR-тесты тела модалки редактирования профиля: форма поверх данных,
 // валидация, loading/error, closing-confirmation не мешает рендеру.
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppRoot } from "@telegram-apps/telegram-ui";
@@ -18,6 +18,18 @@ const profileState = vi.hoisted(() => ({
   current: "ok" as "ok" | "loading" | "error",
 }));
 
+vi.mock("@/store/useAuthStore", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/store/useAuthStore")>();
+  // SSR uses Zustand's initial snapshot; this fixture deliberately reads its owner.
+  return {
+    ...actual,
+    useAuthStore: Object.assign(
+      <T,>(selector: (state: ReturnType<typeof actual.useAuthStore.getState>) => T) => selector(actual.useAuthStore.getState()),
+      actual.useAuthStore,
+    ),
+  };
+});
+
 vi.mock("@/queries/profile", () => ({
   useProfileQuery: () => {
     if (profileState.current === "loading") return { isLoading: true };
@@ -31,7 +43,7 @@ vi.mock("@/queries/profile", () => ({
     }
     return {
       isLoading: false,
-      data: { name: "Пётр", about: "Про меня" },
+      data: { id: "profile-owner", name: "Пётр", about: "Про меня" },
       error: null,
     };
   },
@@ -52,6 +64,19 @@ vi.mock("@/components/Toast/ToastProvider", () => ({
 }));
 
 import { EditProfileBody } from "@/components/Profile/EditProfileModal";
+import { useAuthStore } from "@/store/useAuthStore";
+
+beforeEach(() => {
+  useAuthStore.setState({
+    status: "authenticated",
+    user: { id: "profile-owner", name: "Пётр", avatar: "", rating: 5, reviewsCount: 0, tripsCount: 0 },
+    session: { accessToken: "test-access", refreshToken: "test-refresh", expiresAt: 0 },
+  });
+});
+afterEach(() => {
+  useAuthStore.setState({ status: "idle", user: null, session: null });
+  vi.restoreAllMocks();
+});
 
 function render(): string {
   const client = new QueryClient({

@@ -156,6 +156,7 @@ export function TripHistoryPage() {
                 <Cell
                   key={item.key}
                   className={styles.cell}
+                  multiline
                   Component="button"
                   type="button"
                   before={
@@ -168,14 +169,8 @@ export function TripHistoryPage() {
                     </IconContainer>
                   }
                   subtitle={`${relativeMoscowDay(trip.departureAt)}, ${trip.time}`}
-                  /* Строка 3 — статус тоном: та же трёхстрочная раскладка, что у
-                     уведомлений и жалоб. Раньше статус был приклеен к дате
-                     (`subtitle`) и обрезался в «Отме…»/«Заверш…» — ключевое
-                     слово не читалось. Подсказка отзыва — здесь же, словами:
-                     в `after` она стояла числовым бейджем «1»
-                     (`Badge mode="critical"`), который читался счётчиком
-                     непрочитанного (такая роль в приложении одна — бейдж
-                     таббара), и заодно ВЫТЕСНЯЛА цену поездки. */
+                  /* Статус и подсказка не конкурируют с ценой в after:
+                     переносятся, а отзыв начинается отдельной строкой. */
                   description={
                     <>
                       <span
@@ -190,7 +185,7 @@ export function TripHistoryPage() {
                           className={styles.reviewHint}
                           data-testid={`history-review-${item.key}`}
                         >
-                          {"· Оставьте отзыв"}
+                          Оставьте отзыв
                         </span>
                       )}
                     </>
@@ -220,7 +215,9 @@ export function TripHistoryPage() {
                     }${trip.price} ₽`
                   }
                 >
-                  {trip.fromCity} → {trip.toCity}
+                  <span className={styles.route}>
+                    {trip.fromCity} → {trip.toCity}
+                  </span>
                 </Cell>
               );
             })}

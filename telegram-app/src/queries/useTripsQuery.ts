@@ -11,6 +11,7 @@ import {
 } from "@/api/trips.api";
 import type { CreateTripDto } from "@edem/contracts";
 import { BOOKING_KEYS, REVIEW_KEYS, TRIP_KEYS } from "./keys";
+import { useCommittedMutation } from "./useCommittedMutation";
 
 export function useInfiniteTripsQuery(filters?: SearchTripsFilters) {
   return useInfiniteQuery({
@@ -29,12 +30,14 @@ export function useInfiniteTripsQuery(filters?: SearchTripsFilters) {
 export function useInfiniteMyTripsQuery(options?: {
   enabled?: boolean;
   status?: "active" | "archive";
+  q?: string;
 }) {
+  const q = options?.q?.trim().toLowerCase() ?? "";
   return useInfiniteQuery({
-    queryKey: [...TRIP_KEYS.my(), "infinite", options?.status] as const,
+    queryKey: [...TRIP_KEYS.my(), "infinite", options?.status, q] as const,
     queryFn: ({ pageParam, signal }) =>
       tripsApi.getMyTrips(
-        { page: pageParam, limit: 20, status: options?.status },
+        { page: pageParam, limit: 20, status: options?.status, q: q || undefined },
         signal,
       ),
     initialPageParam: 1,
@@ -71,7 +74,7 @@ function useInvalidateTripsAndBookings() {
 
 export function useCreateTripMutation() {
   const invalidateTrips = useInvalidateTrips();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: (data: CreateTripDto) => tripsApi.createTrip(data),
     onSuccess: invalidateTrips,
   });
@@ -79,7 +82,7 @@ export function useCreateTripMutation() {
 
 export function useUpdateTripMutation() {
   const invalidateTrips = useInvalidateTrips();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateTripDto }) =>
       tripsApi.updateTrip(id, data),
     onSuccess: invalidateTrips,

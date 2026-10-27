@@ -82,6 +82,7 @@
 .requestCell {
   width: 100%;
   gap: var(--app-space-md);
+  overflow-wrap: anywhere;
 }
 
 /* Статус в третьей строке: текст + тон, как в истории поездок и жалобах.

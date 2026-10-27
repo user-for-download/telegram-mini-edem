@@ -89,13 +89,27 @@ describe("SupportPage: FAQ (порт SupportPanel)", () => {
     expect(html).toContain("Как забронировать место?");
     expect(html).toContain("Как отменить бронь?");
     expect(html).toContain("Как оставить отзыв?");
-    expect(html).toContain("Как работает подтверждение личности?");
+    expect(html).toContain("Какие данные используются в профиле?");
   });
 
   it("пункт про личность адаптирован под Telegram (без ВКонтакте)", () => {
     const safety = SUPPORT_FAQ.find((item) => item.id === "safety");
     expect(safety?.answer).toContain("Telegram");
     expect(safety?.answer).not.toContain("ВКонтакте");
+  });
+
+  it("справка использует реальные разделы и кнопки", () => {
+    const answer = (id: string) => SUPPORT_FAQ.find((item) => item.id === id)?.answer;
+    expect(answer("how-to-book")).toContain("«Забронировать место»");
+    expect(answer("how-to-cancel")).toContain("«Поездки»");
+    expect(answer("how-to-cancel")).toContain("«Отменить бронирование»");
+    expect(answer("how-to-cancel")).toContain("«Отменить бронь»");
+    expect(answer("how-to-review")).toContain("«Отзывы» → «Новая»");
+    expect(answer("how-to-review")).toContain("«Оставьте отзыв»");
+    expect(answer("how-to-review")).toContain("«Отправить отзыв»");
+    expect(answer("driver-not-confirmed")).toContain("«Создать обращение»");
+    const text = SUPPORT_FAQ.map((item) => item.answer).join(" ");
+    expect(text).not.toMatch(/Мои брони|Отправить заявку|Отменить заявку|написать водителю через поддержку|дополнительные проверки/);
   });
 });
 
@@ -169,7 +183,7 @@ describe("SupportPage: структура экрана", () => {
       html.indexOf("Мои обращения"),
     );
     expect(html.indexOf("Мои обращения")).toBeLessThan(
-      html.indexOf("Создать обращение"),
+      html.lastIndexOf("Создать обращение"),
     );
   });
 

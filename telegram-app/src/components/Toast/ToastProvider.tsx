@@ -10,8 +10,8 @@ import {
   type ReactNode,
 } from "react";
 import { Snackbar } from "@telegram-apps/telegram-ui";
-import { CheckCircle2 } from "lucide-react";
-import { SHRINK, SUCCESS } from "@/ui/classes";
+import { CheckCircle2, CircleAlert, Info } from "lucide-react";
+import { INFO, SHRINK, SUCCESS } from "@/ui/classes";
 import styles from "./Toast.module.css";
 
 export interface Toast {
@@ -20,6 +20,8 @@ export interface Toast {
   before?: ReactNode;
   /** Ошибка/важное предупреждение — role=alert (немедленный анонс). */
   assertive?: boolean;
+  /** Смысл сообщения отделён от срочности анонса. */
+  tone?: "success" | "error" | "info";
 }
 
 interface ToastContextValue {
@@ -53,6 +55,8 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
   }, []);
 
   const value = useMemo(() => ({ show }), [show]);
+  const tone = toast?.tone ?? (toast?.assertive ? "error" : "success");
+  const assertive = toast?.assertive ?? tone === "error";
 
   return (
     <ToastContext.Provider value={value}>
@@ -66,13 +70,20 @@ export const ToastProvider: FC<PropsWithChildren> = ({ children }) => {
         // ...restProps, поэтому role и aria-live приходят прямо на узел тоста.
         <Snackbar
           className={styles.snackbar}
-          role={toast.assertive ? "alert" : "status"}
-          aria-live={toast.assertive ? "assertive" : "polite"}
+          role={assertive ? "alert" : "status"}
+          aria-live={assertive ? "assertive" : "polite"}
+          data-tone={tone}
           onClose={close}
           duration={TOAST_DURATION_MS}
           before={
             toast.before ?? (
-              <CheckCircle2 size={20} className={`${SUCCESS} ${SHRINK}`} />
+              tone === "error" ? (
+                <CircleAlert size={20} className={`${styles.errorIcon} ${SHRINK}`} />
+              ) : tone === "info" ? (
+                <Info size={20} className={`${INFO} ${SHRINK}`} />
+              ) : (
+                <CheckCircle2 size={20} className={`${SUCCESS} ${SHRINK}`} />
+              )
             )
           }
           description={toast.description}

@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { profileApi, type ProfileUpdateDto } from "@/api/profile";
 import { useAuthStore } from "@/store/useAuthStore";
+import { ApiError } from "@/api/client";
+import { useCommittedMutation } from "./useCommittedMutation";
 
 /**
  * Ключи ресурса «пользователь». Префикс один и общий: и собственный
@@ -11,7 +13,9 @@ import { useAuthStore } from "@/store/useAuthStore";
  */
 export const USER_KEYS = {
   all: ["users"] as const,
-  current: () => [...USER_KEYS.all, "me"] as const,
+  current: (ownerId?: string | null) => ownerId
+    ? [...USER_KEYS.all, "me", ownerId] as const
+    : [...USER_KEYS.all, "me"] as const,
   details: () => [...USER_KEYS.all, "detail"] as const,
   detail: (id: string) => [...USER_KEYS.details(), id] as const,
 };
@@ -31,10 +35,15 @@ export function useProfileQuery(options?: {
   enabled?: boolean;
   refetchOnMount?: boolean | "always";
 }) {
+  const ownerId = useAuthStore((state) => state.user?.id ?? null);
   return useQuery({
-    queryKey: PROFILE_KEYS.current(),
-    queryFn: ({ signal }) => profileApi.getCurrentUser(signal),
-    enabled: options?.enabled ?? true,
+    queryKey: PROFILE_KEYS.current(ownerId),
+    queryFn: async ({ signal }) => {
+      const user = await profileApi.getCurrentUser(signal);
+      if (user.id !== ownerId) throw new ApiError("Invalid server response", "INVALID_RESPONSE", 502);
+      return user;
+    },
+    enabled: Boolean(ownerId) && (options?.enabled ?? true),
     refetchOnMount: options?.refetchOnMount,
   });
 }
@@ -64,10 +73,11 @@ export function useUserQuery(
 
 export function useProfileUpdateMutation() {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useCommittedMutation({
     mutationFn: (data: ProfileUpdateDto) => profileApi.updateProfile(data),
     onSuccess: (user) => {
-      queryClient.setQueryData(PROFILE_KEYS.current(), user);
+      if (useAuthStore.getState().user?.id !== user.id) return;
+      queryClient.setQueryData(PROFILE_KEYS.current(user.id), user);
       useAuthStore.setState({ user });
     },
   });
@@ -79,7 +89,8 @@ export function useProfileNotificationSettingsMutation() {
     mutationFn: (enabled: boolean) =>
       profileApi.updateNotificationSettings(enabled),
     onSuccess: (user) => {
-      queryClient.setQueryData(PROFILE_KEYS.current(), user);
+      if (useAuthStore.getState().user?.id !== user.id) return;
+      queryClient.setQueryData(PROFILE_KEYS.current(user.id), user);
       useAuthStore.setState({ user });
     },
   });

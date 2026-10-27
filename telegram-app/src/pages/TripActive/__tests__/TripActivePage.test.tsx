@@ -167,7 +167,7 @@ describe("TripActivePage scope", () => {
     expect(html).toContain("Череповец");
   });
 
-  it("Все: поездки и брони одним списком, бейдж Водитель — только с заявками", () => {
+  it("Все: поездки и брони одним списком, Водитель — все свои поездки", () => {
     mockUseMyBookings.mockReturnValue(
       queryState({
         data: [
@@ -226,7 +226,7 @@ describe("TripActivePage scope", () => {
     expect(driverHtml).not.toContain("Череповец");
   });
 
-  it("Водитель без заявок: условие снято, видны все поездки", () => {
+  it("Водитель: поездка без заявок видна и рядом с поездкой с заявками", () => {
     mockUseMyBookings.mockReturnValue(queryState({ data: [] }));
     const plain = {
       id: "t-plain",
@@ -242,7 +242,7 @@ describe("TripActivePage scope", () => {
     };
     mockUseInfiniteMyTrips.mockReturnValue(
       queryState({
-        data: { pages: [{ items: [plain] }] },
+        data: { pages: [{ items: [plain, { ...plain, id: "t-pending", toCity: "Сокол", pendingRequestsCount: 2 }] }] },
         fetchNextPage: vi.fn(),
         hasNextPage: false,
         isFetchingNextPage: false,
@@ -250,6 +250,7 @@ describe("TripActivePage scope", () => {
     );
     const html = render(<TripActivePage />, "/bookings?segment=driver");
     expect(html).toContain("Грязовец");
+    expect(html).toContain("Сокол");
   });
 });
 

@@ -16,6 +16,7 @@ export interface MyTripsOptions {
   page?: number;
   limit?: number;
   status?: "active" | "archive";
+  q?: string;
 }
 
 function toTripsQuery(filters?: SearchTripsFilters): string {
@@ -56,6 +57,8 @@ export const tripsApi = {
     if (options?.page !== undefined) query.set("page", String(options.page));
     if (options?.limit !== undefined) query.set("limit", String(options.limit));
     if (options?.status) query.set("status", options.status);
+    const q = options?.q?.trim();
+    if (q) query.set("q", q);
     const value = query.toString();
 
     return apiClient.request(

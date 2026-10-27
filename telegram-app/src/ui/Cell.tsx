@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 import { Cell as TguiCell } from "@telegram-apps/telegram-ui";
 
 import { AS_BUTTON_FLAT } from "@/ui/classes";
+import styles from "./Cell.module.css";
 
 /**
  * Единая строка-интерактив приложения: обёртка над китовым `Cell`.
@@ -25,7 +26,7 @@ export function Cell({ className, ...restProps }: CellProps) {
   return (
     <TguiCell
       className={
-        [AS_BUTTON_FLAT, className].filter(Boolean).join(" ") || undefined
+        [AS_BUTTON_FLAT, styles.cell, className].filter(Boolean).join(" ")
       }
       {...restProps}
     />

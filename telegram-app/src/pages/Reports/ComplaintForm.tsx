@@ -25,7 +25,14 @@ import {
   useReportTargetsQuery,
 } from "@/queries/useReportQuery";
 import { useClosingConfirmation } from "@/hooks/useClosingConfirmation";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 import { haptic } from "@/utils/haptics";
+
+interface ComplaintDraft {
+  targetKey: string;
+  category: (typeof REPORT_CATEGORIES)[number];
+  description: string;
+}
 
 /**
  * Форма жалобы — тело всплывающего окна `ComplaintModal`.
@@ -65,10 +72,11 @@ export function ComplaintForm({
   const targets = useReportTargetsQuery();
   // Выбор держим ключом «тип:id», а не готовым объектом: при перезапросе
   // списка объект ищем заново, и выбор не рассинхронится с новыми данными.
-  const [targetKey, setTargetKey] = useState("");
-  const [category, setCategory] =
-    useState<(typeof REPORT_CATEGORIES)[number]>("safety");
-  const [description, setDescription] = useState("");
+  const [form, setForm, , captureSubmission] = useSessionDraft<ComplaintDraft>(
+    "complaint:new",
+    { targetKey: "", category: "safety", description: "" },
+  );
+  const { targetKey, category, description } = form;
   // Клиентская ошибка приходит с полем: <Field error=…> ставит aria-invalid и
   // aria-describedby сам. formError остаётся для ошибок, которые не
   // принадлежат конкретному полю: лимит «одна жалоба» и ответ сервера.
@@ -84,6 +92,8 @@ export function ComplaintForm({
   const selected =
     list.find((target) => reportTargetKey(target) === targetKey) ?? null;
   const noTargets = !targets.isLoading && !targets.isError && list.length === 0;
+  const targetUnavailable =
+    targetKey !== "" && !selected && !targets.isLoading && !targets.isError;
 
   useClosingConfirmation(targetKey !== "" || description !== "");
 
@@ -92,7 +102,10 @@ export function ComplaintForm({
     hasExistingReport(reports, selected.targetType, selected.id);
 
   const submit = () => {
-    if (create.isPending || submitGuard.current || !selected) return;
+    if (
+      create.isPending || submitGuard.current || !selected ||
+      targets.isLoading || targets.isError
+    ) return;
     const validationError = validateReportForm(description);
     if (validationError) {
       setFieldError(validationError);
@@ -107,18 +120,21 @@ export function ComplaintForm({
     }
     setFormError(null);
     submitGuard.current = true;
+    const onCommitted = captureSubmission();
     create.mutate(
       {
         targetType: selected.targetType,
         targetId: selected.id,
         category,
         description: description.trim(),
+        onCommitted,
       },
       {
         onSettled: () => {
           submitGuard.current = false;
         },
         onSuccess: () => {
+          if (!onCommitted()) return;
           haptic.success();
           // Тост, а не inline-Notice: после отправки окно закрывается, и
           // Notice уехал бы вместе с ним (как в форме обращения в поддержку).
@@ -127,8 +143,6 @@ export function ComplaintForm({
             description:
               "Модерация ответит в приложении — ответ появится в списке",
           });
-          setTargetKey("");
-          setDescription("");
           onSubmitted?.();
         },
         onError: (error) => {
@@ -143,6 +157,8 @@ export function ComplaintForm({
     selected !== null &&
     description.trim().length > 0 &&
     !alreadyReported &&
+    !targets.isLoading &&
+    !targets.isError &&
     !create.isPending;
 
   return (
@@ -164,14 +180,23 @@ export function ComplaintForm({
           </Button>
         </>
       )}
-      <Field label="На что жалуетесь" id="report-target">
+      <Field
+        label="На что жалуетесь"
+        id="report-target"
+        error={
+          targetUnavailable
+            ? "Выбранный объект больше недоступен — выберите другой"
+            : undefined
+        }
+      >
         {(field) => (
           <Select
             {...field}
             value={selected ? targetKey : ""}
             disabled={targets.isLoading || targets.isError || noTargets}
             onChange={(event) => {
-              setTargetKey(event.target.value);
+              const targetKey = event.target.value;
+              setForm((current) => ({ ...current, targetKey }));
               setFieldError(null);
               if (formError) setFormError(null);
             }}
@@ -204,7 +229,7 @@ export function ComplaintForm({
             onChange={(event) => {
               const next = event.target.value;
               if (!isReportCategory(next)) return;
-              setCategory(next);
+              setForm((current) => ({ ...current, category: next }));
             }}
           >
             {REPORT_CATEGORIES.map((value) => (
@@ -229,7 +254,8 @@ export function ComplaintForm({
             value={description}
             status={errorFor("report-description") ? "error" : undefined}
             onChange={(event) => {
-              setDescription(event.target.value);
+              const description = event.target.value;
+              setForm((current) => ({ ...current, description }));
               setFieldError(null);
               if (formError) setFormError(null);
             }}

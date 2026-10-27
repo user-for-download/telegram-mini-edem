@@ -15,6 +15,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
+import { hapticFeedback } from "@tma.js/sdk-react";
+import { setSoundEnabled } from "@/utils/appSettings";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 vi.mock("@tma.js/sdk-react", () => ({
   hapticFeedback: {
@@ -29,6 +34,7 @@ import {
 
 afterEach(() => {
   cleanup();
+  localStorage.removeItem("edem:sound-enabled");
   vi.clearAllMocks();
 });
 
@@ -42,7 +48,7 @@ const ROUTE_TO_TAB: Record<string, AppTabId> = {
   "/profile": "profile",
 };
 
-const ORDER = ["Главная", "Поездки", "Поиск", "Уведомления", "Профиль"];
+const ORDER = ["Главная", "Поездки", "Поиск", "События — уведомления", "Профиль"];
 
 function Stands({ unreadCount = 0 }: { unreadCount?: number }) {
   const [active, setActive] = useState<AppTabId>("home");
@@ -110,18 +116,47 @@ describe("TabsBar: состояние раздела для скринридер
 
   it("имя раздела с бейджем не выдаёт состояние и не называет счётчик, когда его нет", () => {
     const { unmount } = render(<Stands unreadCount={3} />);
-    const notifications = screen.getByRole("button", { name: /^Уведомления/ });
+    const notifications = screen.getByRole("button", { name: /^События — уведомления/ });
     // Имя начинается с видимой подписи (MEMORY.md §18), счётчик дописан в конец.
     expect(notifications.getAttribute("aria-label")).toBe(
-      "Уведомления, непрочитанных: 3",
+      "События — уведомления, непрочитанных: 3",
     );
+    expect(notifications.textContent).toContain("События");
+    expect(notifications.textContent).not.toContain("Уведомления");
     expect(notifications.hasAttribute("aria-current")).toBe(false);
     unmount();
 
     render(<Stands />);
     // Без счётчика имя раздела нейтрально — «0 непрочитанных» не выдумывается.
-    expect(screen.getByRole("button", { name: "Уведомления" }).getAttribute("aria-label")).toBe(
-      "Уведомления",
+    expect(screen.getByRole("button", { name: "События — уведомления" }).getAttribute("aria-label")).toBe(
+      "События — уведомления",
     );
+  });
+
+  it("крупный счётчик остаётся полным в имени при видимом бейдже 99+", () => {
+    render(<Stands unreadCount={150} />);
+    const notifications = screen.getByRole("button", {
+      name: "События — уведомления, непрочитанных: 150",
+    });
+    expect(notifications.textContent).toContain("99+");
+  });
+
+  it("короткая подпись не требует уменьшения шрифта", () => {
+    const css = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../TabsBar/Tabbar.module.css"), "utf8",
+    );
+    expect(css).toMatch(/font-size:\s*12px/);
+  });
+
+  it("смена раздела уважает отключённую вибрацию и не вибрирует на повторном тапе", () => {
+    setSoundEnabled(false);
+    render(<Stands />);
+    fireEvent.click(screen.getByRole("button", { name: "Поиск" }));
+    expect(hapticFeedback.selectionChanged.ifAvailable).not.toHaveBeenCalled();
+    setSoundEnabled(true);
+    fireEvent.click(screen.getByRole("button", { name: "Главная" }));
+    expect(hapticFeedback.selectionChanged.ifAvailable).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Главная" }));
+    expect(hapticFeedback.selectionChanged.ifAvailable).toHaveBeenCalledTimes(1);
   });
 });

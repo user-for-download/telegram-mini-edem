@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const { state, blockMutate, unblockMutate, toastShow } = vi.hoisted(() => ({
   state: { blockedByMe: false },
@@ -87,9 +88,16 @@ afterEach(() => {
   cleanup();
   state.blockedByMe = false;
   vi.clearAllMocks();
+  useAuthStore.setState({ user: null, session: null });
 });
 
 describe("UserProfileSheet: чёрный список", () => {
+  it("собственному профилю не предлагает блокировку", () => {
+    useAuthStore.setState({ user: { id: "u-driver" } as never });
+    renderProfile();
+    expect(screen.queryByRole("button", { name: "Добавить в чёрный список" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Убрать из чёрного списка" })).toBeNull();
+  });
   it("требует подтверждение и передаёт id профиля", () => {
     blockMutate.mockImplementation(
       (_id: string, options?: { onSuccess?: () => void }) =>

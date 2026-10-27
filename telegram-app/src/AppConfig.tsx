@@ -1,5 +1,5 @@
 import type { FC, PropsWithChildren } from "react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import {
   InvalidLaunchParamsError,
@@ -24,8 +24,10 @@ import { ToastProvider } from "@/components/Toast/ToastProvider";
 import styles from "./AppConfig.module.css";
 import { WsProvider } from "@/providers/WebSocketProvider";
 import { TelegramRealtimeListener } from "@/providers/TelegramRealtimeListener";
+import { useAuthStore } from "@/store/useAuthStore";
 
-const queryClient = new QueryClient({
+function createQueryClient() {
+  return new QueryClient({
   defaultOptions: {
     queries: {
       // Детерминированные ошибки и 4xx
@@ -54,7 +56,8 @@ const queryClient = new QueryClient({
       retry: 0,
     },
   },
-});
+  });
+}
 
 export function ErrorFallback({ error }: { error: unknown }) {
   const message =
@@ -295,6 +298,11 @@ function useTguiPlatform(): "base" | "ios" {
 }
 
 export const AppConfig: FC<PropsWithChildren> = ({ children }) => {
+  const owner = useAuthStore((state) => state.session ? state.user?.id ?? null : null);
+  const [queryScope, setQueryScope] = useState(() => ({ owner, client: createQueryClient() }));
+  if (queryScope.owner !== owner) setQueryScope({ owner, client: createQueryClient() });
+  const queryClient = queryScope.client;
+  useEffect(() => () => queryClient.clear(), [queryClient]);
   const platform = useTguiPlatform();
   const appearance = useTelegramAppearance();
   useFullscreenSubscription();
@@ -303,7 +311,8 @@ export const AppConfig: FC<PropsWithChildren> = ({ children }) => {
   useTelegramChromiumFallback();
 
   return (
-    <QueryClientProvider client={queryClient}>
+    // TanStack observers bind their client at mount, so owner changes must remount them.
+    <QueryClientProvider key={owner === null ? "anonymous" : `user:${owner}`} client={queryClient}>
       <AppRoot
         platform={platform}
         appearance={appearance}

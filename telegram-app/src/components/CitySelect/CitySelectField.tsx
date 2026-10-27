@@ -92,7 +92,7 @@ export function CitySelectField({
             onChange(event.target.value);
           }}
         >
-          <option value="" disabled hidden>
+          <option value="" disabled={required} hidden={required}>
             {placeholder}
           </option>
           {cities

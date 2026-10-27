@@ -82,6 +82,7 @@ vi.mock("@/components/Toast/ToastProvider", () => ({
 
 import { EditProfileBody } from "@/components/Profile/EditProfileModal";
 import { useProfileQuery } from "@/queries/profile";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Ровно та же композиция, что в EditProfileModal, но без шторки (в jsdom
 // vaul-drawer не нужен): key по id пользователя перемонтирует тело на
@@ -110,6 +111,11 @@ function renderBody() {
 }
 
 beforeEach(() => {
+  useAuthStore.setState({
+    status: "authenticated",
+    user: { ...store.profile, avatar: "", rating: 5, reviewsCount: 0, tripsCount: 0 },
+    session: { accessToken: "test-access", refreshToken: "test-refresh", expiresAt: 0 },
+  });
   store.refetch.mockClear();
   store.snapshot = {
     data: undefined,

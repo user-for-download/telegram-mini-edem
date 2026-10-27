@@ -32,6 +32,8 @@ vi.mock("@/queries/useRideRequestsQuery", async (importOriginal) => {
 });
 
 import { RideRequestsList } from "@/components/Trip/RideRequestsList";
+import { Cell } from "@/ui/Cell";
+import styles from "../TripModals.module.css";
 
 function makeRequest(overrides: Record<string, unknown> = {}) {
   return {
@@ -122,6 +124,26 @@ afterEach(() => {
 });
 
 describe("RideRequestsList: строки Cell", () => {
+  it("обе границы многодневного окна видимы и входят в доступное имя", () => {
+    setMocks({
+      data: [makeRequest({
+        earliestAt: "2030-11-06T00:00:00.000Z",
+        latestAt: "2030-11-08T14:00:00.000Z",
+      })],
+    });
+    const html = renderList();
+    const interval = "6 ноября, 03:00 — 8 ноября, 17:00";
+    expect(html).toContain(`. ${interval}. Активен.`);
+    expect(html).toContain(`>${interval}</`);
+    const cellClasses = renderToString(
+      <AppRoot platform="base">
+        <Cell Component="button" multiline className={styles.requestCell} />
+      </AppRoot>,
+    ).match(/<button[^>]*class="([^"]+)"/)?.[1];
+    expect(cellClasses).toBeTruthy();
+    expect(html).toContain(`class="${cellClasses}"`);
+  });
+
   it("активный запрос: маршрут, статус, окно и места", () => {
     setMocks({ data: [makeRequest()] });
 

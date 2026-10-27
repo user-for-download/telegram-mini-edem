@@ -37,6 +37,8 @@ vi.mock("@/queries/useTripsQuery", async (importOriginal) => {
 });
 
 import { TripHistoryPage } from "@/pages/TripHistory/TripHistoryPage";
+import { Cell } from "@/ui/Cell";
+import styles from "../TripHistoryPage.module.css";
 
 function queryState(overrides: Record<string, unknown> = {}) {
   return {
@@ -176,6 +178,43 @@ describe("TripHistoryPage: строки истории", () => {
     // строки к строке.
     expect(css).toMatch(/\.cell\s*\{[^}]*width:\s*100%/);
     expect(raw).toContain("className={styles.cell}");
+  });
+
+  it("маршрут и подсказка не усекаются даже с ценой 100000 ₽", () => {
+    mockUseHistory.mockReturnValue(
+      queryState({
+        data: [
+          {
+            id: "long",
+            status: "confirmed",
+            historyCategory: "completed",
+            canReview: true,
+            trip: makeTrip({
+              fromCity: "Ленинградская область",
+              toCity: "Санкт-Петербург",
+              price: 100000,
+            }),
+          },
+        ],
+      }),
+    );
+    const html = render(<TripHistoryPage />);
+    // Пин публичного multiline-контракта без знания хешей кита.
+    const cellClasses = render(
+      <Cell Component="button" multiline className={styles.cell} />,
+    ).match(/<button[^>]*class="([^"]+)"/)?.[1];
+    expect(cellClasses).toBeTruthy();
+    expect(html).toContain(`class="${cellClasses}"`);
+    expect(html).toContain("Ленинградская область");
+    expect(html).toContain("Санкт-Петербург");
+    expect(html).toContain("100000 ₽");
+    expect(html).toContain("Оставьте отзыв");
+    const css = readFileSync(
+      new URL("../TripHistoryPage.module.css", import.meta.url),
+      "utf8",
+    );
+    expect(css).toMatch(/\.route\s*\{[^}]*overflow-wrap:\s*anywhere/);
+    expect(css).toMatch(/\.reviewHint\s*\{[^}]*display:\s*block/);
   });
 
   it("числового Badge в строке истории нет вовсе (source-пин)", () => {

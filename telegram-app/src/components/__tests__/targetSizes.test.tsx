@@ -225,6 +225,29 @@ describe("имя пассажира: тап-таргет без отступа �
   });
 });
 
+describe("профили водителя и автора отзыва: hit-area 44px без роста карточек", () => {
+  for (const [file, selector] of [
+    ["pages/TripDetails/TripDetailsPage.module.css", "driverOpen"],
+    ["components/ReviewCard/ReviewCard.module.css", "author"],
+  ] as const) {
+    it(`${selector}: псевдоэлемент расширяет реальную область нажатия`, () => {
+      const css = readSrc(file);
+      const rule = css.match(new RegExp(`\\.${selector}\\s*\\{([^}]*)\\}`))?.[1];
+      expect(rule).toContain("position: relative");
+      expect(rule).not.toContain("min-height");
+      const hitArea = css.match(new RegExp(`\\.${selector}::after\\s*\\{([^}]*)\\}`))?.[1];
+      expect(hitArea).toContain('content: ""');
+      expect(hitArea).toContain("position: absolute");
+      expect(hitArea).toContain("height: 44px");
+      expect(hitArea).toContain("left: 0");
+      expect(hitArea).toContain("right: 0");
+      expect(hitArea).toContain("top: 50%");
+      expect(hitArea).toContain("transform: translateY(-50%)");
+      expect(hitArea).not.toContain("pointer-events: none");
+    });
+  }
+});
+
 describe("механизм: MIN_TARGET доходит до DOM", () => {
   it("ConfirmPopup с MIN_TARGET выставляет триггеру data-tap-target=44", () => {
     const withTarget = renderToString(

@@ -89,6 +89,11 @@ export function CreateTripPage() {
   return (
     <CreateTripForm
       onCreated={(tripId) => navigate(`/trips/${tripId}`, { replace: true })}
+      onCancel={() => {
+        const index = window.history.state?.idx;
+        if (typeof index === "number" && index > 0) navigate(-1);
+        else navigate("/bookings", { replace: true });
+      }}
     />
   );
 }
@@ -96,8 +101,10 @@ export function CreateTripPage() {
 /** Тело формы (экспортировано для SSR-тестов). */
 export function CreateTripForm({
   onCreated,
+  onCancel,
 }: {
   onCreated: (tripId: string) => void;
+  onCancel?: () => void;
 }) {
   const toast = useToast();
   const cities = useAllCitiesQuery();
@@ -128,7 +135,7 @@ export function CreateTripForm({
   }, [vehicleChecking, vehicleQuery.error, hasCar]);
   const closeVehicle = () => setVehicleOpen(false);
   useModalBack(closeVehicle, vehicleOpen);
-  // Поля формы — в useTripForm (useReducer + isDirty); UI-флаги ниже —
+  // Поля формы — в useTripForm (сессионный черновик + isDirty); UI-флаги ниже —
   // в useState.
   const {
     form: {
@@ -148,6 +155,8 @@ export function CreateTripForm({
     },
     draft,
     isDirty,
+    captureSubmission,
+    cancelDraft,
     setField,
     swapCities: swapFormCities,
     toggleTag: toggleFormTag,
@@ -239,8 +248,10 @@ export function CreateTripForm({
       setErrorField(validation.field);
       return;
     }
-    create.mutate(validation.data, {
+    const onCommitted = captureSubmission();
+    create.mutate({ ...validation.data, onCommitted }, {
       onSuccess: (trip) => {
+        if (!onCommitted()) return;
         haptic.success();
         toast.show({
           text: "Поездка опубликована!",
@@ -685,6 +696,18 @@ export function CreateTripForm({
         onClick={submit}
       >
         Опубликовать
+      </Button>
+      <Button
+        size="l"
+        stretched
+        disabled={create.isPending}
+        onClick={() => {
+          cancelDraft();
+          touch();
+          onCancel?.();
+        }}
+      >
+        Отмена
       </Button>
     </Page>
   );

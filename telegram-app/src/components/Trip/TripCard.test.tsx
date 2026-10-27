@@ -9,11 +9,14 @@ import { MemoryRouter } from "react-router-dom";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import { TripCard } from "@/components/Trip/TripCard";
 import type { PassengerBooking, Trip } from "@edem/contracts";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 
 function render(element: ReactNode): string {
   return renderToString(
     <AppRoot platform="base">
-      <MemoryRouter initialEntries={["/bookings"]}>{element}</MemoryRouter>
+      <MemoryRouter initialEntries={["/bookings"]}>
+        <ToastProvider>{element}</ToastProvider>
+      </MemoryRouter>
     </AppRoot>,
   );
 }

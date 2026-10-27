@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Notice } from "@/ui/Notice";
 import { FetchMore } from "@/ui/FetchMore";
 import { Button } from "@/ui/Button";
@@ -67,12 +67,11 @@ function matchesQuery(
 
 /**
  * Активные поездки/брони в стиле кошелька: сверху строка поиска
- * «Откуда → Куда» (живой клиентский фильтр по загруженным спискам),
+ * «Откуда → Куда» (серверный поиск своих поездок, локальный — полных броней),
  * ниже бейджи Все / Водитель / Пассажир (без счётчиков).
  *
  * Все — поездки за рулём и брони одним списком по дате отправления;
- * Водитель — только поездки с заявками (заявки уже развёрнуты внутри
- * TripCard, отдельный сегмент не нужен); Пассажир — брони.
+ * Водитель — все свои активные поездки; Пассажир — брони.
  * Канонический URL — чистый /bookings (= Все).
  */
 export function TripActivePage() {
@@ -81,9 +80,17 @@ export function TripActivePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const segment = normalizeSegment(searchParams.get("segment"));
   const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchPending = normalizedQuery !== searchQuery;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearchQuery(normalizedQuery), 300);
+    return () => window.clearTimeout(timer);
+  }, [normalizedQuery]);
 
   const bookings = useMyBookingsQuery();
-  const driverActive = useInfiniteMyTripsQuery({ status: "active" });
+  const driverActive = useInfiniteMyTripsQuery({ status: "active", q: searchQuery });
   const cancelBooking = useCancelBookingMutation();
   const cancelTrip = useCancelTripMutation();
 
@@ -101,18 +108,9 @@ export function TripActivePage() {
     )
     .sort((a, b) => timeOf(a.trip.departureAt) - timeOf(b.trip.departureAt));
 
-  const activeDriverTrips =
+  // Сервер уже сортирует active по departureAt/id до пагинации.
+  const driverTrips =
     driverActive.data?.pages.flatMap((page) => page.items) ?? [];
-  const driverTrips = activeDriverTrips
-    .filter((trip) => matchesQuery(trip.fromCity, trip.toCity, query))
-    .sort((a, b) => timeOf(a.departureAt) - timeOf(b.departureAt));
-  const driverWithRequests = driverTrips.filter(
-    (trip) => (trip.pendingRequestsCount ?? 0) > 0,
-  );
-  // Заявок нигде нет — условие снимаем, показываем все поездки водителя,
-  // иначе вкладка необъяснимо пуста.
-  const driverList =
-    driverWithRequests.length > 0 ? driverWithRequests : driverTrips;
 
   const SEGMENTS = [
     { value: "all", label: "Все" },
@@ -199,7 +197,7 @@ export function TripActivePage() {
     // Упавшая догрузка не сбрасывает hasNextPage, а плейсхолдер сентинел
     // возвращает во вьюпорт — без глушения observer бьёт по кругу
     // (MEMORY.md §18). Стоп до явного повтора пользователем.
-    disabled: driverActive.isFetchNextPageError,
+    disabled: driverActive.isFetchNextPageError || searchPending || segment === "passenger",
     fetchNextPage: () => {
       void driverActive.fetchNextPage();
     },
@@ -257,6 +255,7 @@ export function TripActivePage() {
         <Input
           id="bookings-search"
           value={query}
+          maxLength={100}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Поиск"
           before={<SearchIcon size={17} aria-hidden />}
@@ -292,9 +291,9 @@ export function TripActivePage() {
         </QueryState>
       ) : segment === "driver" ? (
         <QueryState
-          loading={driverActive.isLoading}
+          loading={driverActive.isLoading || searchPending}
           error={listBlockingError(driverActive)}
-          empty={driverList.length === 0}
+          empty={driverTrips.length === 0 && !driverActive.hasNextPage}
           emptyHeader={emptyHeader}
           emptyText={emptyText}
           emptyAction={emptyAction}
@@ -304,7 +303,7 @@ export function TripActivePage() {
           }}
         >
           <Stack>
-            {driverList.map(renderDriving)}
+            {driverTrips.map(renderDriving)}
             <FetchMore
               hasNextPage={driverActive.hasNextPage}
               isFetchingNextPage={driverActive.isFetchingNextPage}
@@ -320,9 +319,9 @@ export function TripActivePage() {
         </QueryState>
       ) : (
         <QueryState
-          loading={driverActive.isLoading || bookings.isLoading}
+          loading={driverActive.isLoading || bookings.isLoading || searchPending}
           error={listBlockingError(driverActive) ?? bookings.error}
-          empty={allCards.length === 0}
+          empty={allCards.length === 0 && !driverActive.hasNextPage}
           emptyHeader={emptyHeader}
           emptyText={emptyText}
           emptyAction={emptyAction}
