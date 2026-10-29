@@ -123,7 +123,7 @@ try {
     } catch {
       // Онбординг уже принят — идём дальше.
     }
-    await page.getByText("Поиск попутных поездок").first().waitFor({ timeout: 30000 });
+    await page.getByRole("heading", { name: "Поиск", exact: true }).first().waitFor({ timeout: 30000 });
     return TG_URL;
   });
 
@@ -273,15 +273,21 @@ try {
 
   await runStep("approve: водитель принимает заявку в UI", async () => {
     await hashUrl(page, `/trips/my/${tripId}/requests`);
-    await page.getByRole("button", { name: "Принять" }).click();
+    // ConfirmPopup: в dev-браузере нативного popup нет, поэтому открывается
+    // ConfirmSheet и решение требует второго клика по confirm-кнопке.
+    await page.getByRole("button", { name: "Принять", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Подтвердить пассажира?", exact: true })
+      .click();
     await page.getByText("Подтверждён").first().waitFor({ timeout: 30000 });
     await shot(page, "booking-confirmed");
     return "status=confirmed";
   });
 
   await runStep("notifications: inbox показывает новую заявку", async () => {
-    // Тап по баннеру: непрочитанную помечает прочитанной и уходит по маршруту
-    // заявки (кнопок в карточке нет — паттерн NotificationBanner).
+    // Тап по баннеру: непрочитанную помечает прочитанной и открывает шторку
+    // деталей поездки (fragment `/trips/:id`; кнопок в карточке нет — паттерн
+    // NotificationBanner).
     await hashUrl(page, "/notifications");
     // Баннер ищем по МАРШРУТУ этого прогона (имена городов уникальны на прогон),
     // а не по общему заголовку «Новая заявка»: у дев-юзера сид держит своё
@@ -295,8 +301,12 @@ try {
         .getAttribute("aria-label"))?.match(/\((\d+)\)/)?.[1] ?? "0",
     );
     await banner.click();
-    // Уход со страницы доказывает markRead+навигацию: ждём заявки водителя.
-    await page.getByText("Заявки").first().waitFor({ timeout: 15000 });
+    // Уход со страницы доказывает markRead+навигацию: ждём детали поездки
+    // с подтверждённой заявкой (заявки живут в TripPassengers, а не отдельной
+    // шторкой — «Заявки» видимым текстом там больше нет).
+    await page.waitForURL(new RegExp(`/trips/${tripId}$`), { timeout: 15000 });
+    // Детали отрисовались: в hero — уникальный город прогона.
+    await page.getByText(CITY_FROM).first().waitFor({ timeout: 15000 });
 await shot(page, "notification-read");
     // Возврат: заявка прочитана — в «Новых» её больше нет.
     // Проверяем ИМЕННО её отсутствие, а не пустоту списка: к этому моменту в
@@ -373,6 +383,8 @@ await shot(page, "notification-read");
     } catch (e) {
       throw new Error(`${e.message.split("\n")[0]} | ${await diagnose(page, "complete-details")}`, { cause: e });
     }
+    // ConfirmSheet в dev-браузере: подтверждаем завершение вторым кликом.
+    await page.getByRole("button", { name: "Завершить", exact: true }).click();
     // После завершения детали показывают терминальный экран статуса.
     await page.getByText("Поездка завершена").first().waitFor({ timeout: 30000 });
     await shot(page, "trip-completed");
@@ -497,7 +509,7 @@ await shot(page, "notification-read");
     await page.setViewportSize({ width: 390, height: 844 });
     try {
       await hashUrl(page, "/trips");
-      await page.getByText("Поиск попутных поездок").first().waitFor({ timeout: 30000 });
+      await page.getByRole("heading", { name: "Поиск", exact: true }).first().waitFor({ timeout: 30000 });
       // Ищем по городу отправления — карточка ЧУЖОЙ поездки (контрагент,
       // PRICE+1): свои поиск скрывает.
       // Город выбирается из справочника (решение владельца 2026-10-03), а не
@@ -514,10 +526,13 @@ await shot(page, "notification-read");
 
   await runStep("delete: удаление профиля в UI, экран «Профиль удалён»", async () => {
     await hashUrl(page, "/profile");
-    // ConfirmPopup: в браузер-моке (dev) действие выполняется сразу —
-    // нативного popup в браузере нет, второго клика «Удалить окончательно».
-    // В реальном Telegram это нативный алерт [Отмена | красная].
-    await page.getByRole("button", { name: "Удалить профиль" }).click();
+    // ConfirmPopup: в dev-браузере нативного popup нет — открывается
+    // ConfirmSheet, удаление подтверждается вторым кликом. В реальном
+    // Telegram это нативный алерт [Отмена | красная].
+    await page.getByRole("button", { name: "Удалить профиль", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Удалить окончательно", exact: true })
+      .click();
     // Именно заголовок, а не getByText: текст «Профиль удалён» есть и в h1
     // экрана, и в dt внутри пустого состояния, и getByText без .first()
     // падал на strict mode violation («resolved to 2 elements»).
