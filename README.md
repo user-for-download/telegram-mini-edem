@@ -420,7 +420,7 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 Пользователь → Telegram (WebView) → https://<your-domain> → Traefik (443) → backend:3000
 ```
 
-Прокси обязан: пробрасывать `Host` без изменений (Host-роутинг фронта), **перезаписывать** `X-Real-IP`/`X-Forwarded-For` на `$remote_addr` + `TRUST_PROXY=true` в бэкенде (иначе общий IP-бакет лимитеров), поддерживать `Upgrade` для `/api/v1/ws`.
+Прокси обязан: пробрасывать `Host` без изменений (Host-роутинг фронта) либо отдавать исходный домен в `X-Forwarded-Host` (иначе WS-upgrade с другим `Host` вернёт `403`), **перезаписывать** `X-Real-IP`/`X-Forwarded-For` на `$remote_addr` + `TRUST_PROXY=true` в бэкенде (иначе общий IP-бакет лимитеров), поддерживать `Upgrade` для `/api/v1/ws`.
 
 ### Известные ограничения перед production
 
@@ -493,6 +493,8 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 ### WebSocket за Traefik/nginx
 
 Прокси должен поддерживать upgrade (Traefik — из коробки). Клиент подключается к `wss://<host>/api/v1/ws`, JWT — первым `auth`-сообщением, анонимные сокеты закрываются кодом 4401.
+
+Проверка Origin (CSWSH) принимает same-origin, если Origin совпадает с `Host`, с `X-Forwarded-Host` (доверие — только loopback-пиру или при `TRUST_PROXY=true`) либо входит в `CORS_ORIGINS`. Поэтому прокси, переписывающий `Host` (`Vite changeOrigin`, `proxy_set_header Host`), должен передавать исходный домен: nginx — `proxy_set_header X-Forwarded-Host $host;`, Vite-конфиги этого репозитория кладут его сами для HTTP и WS. Без `X-Forwarded-Host` добавьте публичный origin в `CORS_ORIGINS`, иначе upgrade вернёт `403`.
 
 ### Админ-панель (production)
 

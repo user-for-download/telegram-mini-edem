@@ -6,6 +6,7 @@ import { db } from "../db.js";
 import { env } from "../env.js";
 import { wsManager } from "../services/wsManager.js";
 import { logger } from "../logger.js";
+import { isWsOriginPermitted } from "./origin.js";
 import { WS_TERMINAL_REASON, wsClientMessageSchema } from "@edem/contracts";
 
 /**
@@ -29,25 +30,48 @@ function setConnId(ws: WSContext, connId: string): void {
  * Браузер всегда присылает Origin для WebSocket; cross-site страница
  * иначе могла бы открыть сокет с украденным токеном. Разрешаем:
  *  - отсутствие Origin (не-браузерный клиент; токен всё равно проверяется);
- *  - Origin, совпадающий с Host (same-origin за прокси);
+ *  - Origin, совпадающий с Host (same-origin без прокси);
+ *  - Origin, совпадающий с X-Forwarded-Host (same-origin за прокси,
+ *    который переписывает Host: Vite `changeOrigin`, nginx);
  *  - Origin из CORS_ORIGINS (явный allowlist).
+ *
+ * X-Forwarded-Host — подделываемый заголовок, поэтому верим ему только
+ * от доверенного прокси: TRUST_PROXY или TCP-пир на loopback (Vite/nginx
+ * на том же хосте). Иначе прямой клиент подставил бы свой Origin в XFH
+ * и обошёл проверку.
  */
 export function isWsOriginAllowed(c: Context): boolean {
   const origin = c.req.header("origin");
   if (!origin) return true;
 
-  try {
-    const parsed = new URL(origin);
-    const host = c.req.header("host");
-    if (host && parsed.host === host) return true;
+  const forwardedHost =
+    env.TRUST_PROXY || isLoopbackPeer(c)
+      ? firstHeaderValue(c.req.header("x-forwarded-host"))
+      : undefined;
 
-    return env.CORS_ORIGINS.split(",")
-      .map((value) => value.trim())
-      .filter(Boolean)
-      .includes(parsed.origin);
+  return isWsOriginPermitted({
+    origin,
+    host: c.req.header("host"),
+    forwardedHost,
+    corsOrigins: env.CORS_ORIGINS,
+  });
+}
+
+const LOOPBACK_ADDRESSES = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+
+function isLoopbackPeer(c: Context): boolean {
+  try {
+    return LOOPBACK_ADDRESSES.has(getConnInfo(c).remote.address ?? "");
   } catch {
+    // Нет транспорта (юнит-тесты) — доверенного прокси нет.
     return false;
   }
+}
+
+/** Первый элемент списка X-Forwarded-Host, нормализованный. */
+function firstHeaderValue(value: string | undefined): string | undefined {
+  const first = value?.split(",")[0]?.trim().toLowerCase();
+  return first || undefined;
 }
 
 /**

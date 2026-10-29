@@ -92,6 +92,23 @@ export default defineConfig(({ mode }) => {
           target: apiTarget,
           ws: true,
           changeOrigin: true,
+          // changeOrigin переписывает Host на target, поэтому бэкенд не видит
+          // исходный домен. Для HTTP http-proxy сам добавляет
+          // X-Forwarded-Host, а для WS — нет; кладём его в обоих случаях,
+          // чтобы WS-проверка Origin (`backend/src/ws/index.ts`) принимала
+          // same-origin за прокси (доверие — только loopback/TRUST_PROXY).
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq, req) => {
+              if (req.headers.host) {
+                proxyReq.setHeader("x-forwarded-host", req.headers.host);
+              }
+            });
+            proxy.on("proxyReqWs", (proxyReq, req) => {
+              if (req.headers.host) {
+                proxyReq.setHeader("x-forwarded-host", req.headers.host);
+              }
+            });
+          },
         },
       },
       hmr: env.DISABLE_HMR !== "true",

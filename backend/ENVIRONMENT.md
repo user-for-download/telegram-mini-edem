@@ -28,7 +28,7 @@ production defaults, production is unchanged.
 | `PORT` | `3000` | HTTP port in production |
 | `BACKEND_PORT` | `3001` | HTTP port outside production (dev stand) |
 | `NODE_ENV` | unset | `production` enables strict secrets, `PORT`, `Secure` cookies; `development` enables the rate multiplier and ephemeral dev secrets; `test` is strict |
-| `TRUST_PROXY` | `false` | Trust `X-Real-IP` / `X-Forwarded-For`. **Required behind a reverse proxy** that rewrites those headers; otherwise all clients share one IP bucket |
+| `TRUST_PROXY` | `false` | Trust `X-Real-IP` / `X-Forwarded-For` and, for WS origin checks, `X-Forwarded-Host`. **Required behind a reverse proxy** that rewrites those headers; otherwise all clients share one IP bucket. WS also trusts `X-Forwarded-Host` from a loopback peer (local Vite/nginx) even when `false` |
 | `LOG_LEVEL` | `info` (prod), `debug` (dev) | pino level |
 | `TZ` | `Europe/Moscow` (container) | Moscow dates in serializers, workers and seeds |
 

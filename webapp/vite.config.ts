@@ -56,6 +56,21 @@ export default defineConfig({
       "/api": {
         target: "http://127.0.0.1:3011",
         changeOrigin: true,
+        // См. telegram-app/vite.config.ts: для WS http-proxy не добавляет
+        // X-Forwarded-Host, а backend принимает same-origin за прокси
+        // только по нему (loopback/TRUST_PROXY).
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq, req) => {
+            if (req.headers.host) {
+              proxyReq.setHeader("x-forwarded-host", req.headers.host);
+            }
+          });
+          proxy.on("proxyReqWs", (proxyReq, req) => {
+            if (req.headers.host) {
+              proxyReq.setHeader("x-forwarded-host", req.headers.host);
+            }
+          });
+        },
       },
     },
   },
