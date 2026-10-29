@@ -1,11 +1,12 @@
 /* Кнопка деструктивного действия в confirm-панели/попапе: цвет из токена
  * приложения --app-danger, который указывает на китовый
  * --tgui--destructive_text_color (index.css), а не на свою палитру.
- * Заливка — 65% danger + чёрный в ОБЕИХ темах: это темнее обычного primary,
- * зато белая подпись держит AA и в светлой (9.83:1), и в тёмной (5.75:1),
- * тогда как на 82% (общий primary) тёмная давала 4.08:1. */
+ * Заливка — --app-danger-fill: сырой destructive-тон, затемнённый до
+ * минимума, при котором белая подпись держит AA (85% в светлой → 4.73,
+ * 92% в тёмной → 4.66). Раньше смешивались 65% от уже затемнённого
+ * текстового --app-danger — выходило почти чёрное багровое пятно. */
 .destructive {
   color: var(--app-danger);
   --app-action-label: var(--tgui--white);
-  --app-action-surface: color-mix(in srgb, var(--app-danger) 65%, black);
+  --app-action-surface: var(--app-danger-fill);
 }

@@ -103,8 +103,7 @@
   top: -6px;
   right: -8px;
   pointer-events: none;
-  color: var(--app-danger);
-  background: var(--app-badge-surface);
+  background: var(--app-danger-fill);
 }
 
 .badge > * {

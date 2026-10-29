@@ -47,19 +47,22 @@ describe("U01: shared action tones retain kit behavior and explicit overrides", 
     expect(buttonCss).toMatch(/\[data-variant="primary"\] > \*\s*\{\s*color: var\(--app-action-label, var\(--app-action-text\)\)/);
     expect(buttonCss).toMatch(/\[data-variant="secondary"\]\s*\{\s*background: var\(--app-info-bg\)/);
     const tokens = read("../../index.css");
-    expect(tokens).toMatch(/--app-action-surface:\s*color-mix\(in srgb, currentColor 80%, black\)/);
-    expect(tokens).toMatch(/\.dark \.app-theme\s*\{\s*--app-action-ink:\s*var\(--tgui--button_color\);\s*--app-action-surface:\s*color-mix\(in srgb, currentColor 82%, black\)/);
+    expect(tokens).toMatch(/--app-action-surface:\s*color-mix\(in srgb, currentColor 92%, black\)/);
+    expect(tokens).toMatch(/\.dark \.app-theme\s*\{\s*--app-action-ink:\s*var\(--tgui--button_color\);\s*--app-action-surface:\s*color-mix\(in srgb, currentColor 88%, black\)/);
     expect(tokens).toMatch(/--app-action-ink:\s*var\(--tgui--button_color\)/);
     expect(tokens).toMatch(/--app-action-label:\s*var\(--tgui--button_text_color\)/);
     expect(tokens).toMatch(/--app-action-text:\s*var\(--tgui--white\)/);
-    expect(tokens).toMatch(/--app-badge-surface:\s*color-mix\(in srgb, currentColor 65%, black\)/);
+    expect(tokens).toMatch(/--app-danger-fill:\s*color-mix\(\s*in srgb,\s*var\(--tgui--destructive_text_color\) 85%,\s*black\s*\)/);
+    expect(tokens).toMatch(/--app-badge-info:\s*color-mix\(in srgb, var\(--tgui--link_color\) 92%, black\)/);
+    expect(tokens).toMatch(/\.dark \.app-theme\s*\{[^}]*--app-danger-fill:\s*color-mix\(\s*in srgb,\s*var\(--tgui--destructive_text_color\) 92%,\s*black\s*\)/);
+    expect(tokens).toMatch(/\.dark \.app-theme\s*\{[^}]*--app-badge-info:\s*color-mix\(in srgb, var\(--tgui--link_color\) 65%, black\)/);
     expect(buttonCss).not.toMatch(/#[\da-f]{3,8}\b|!important|:global/);
   });
 
   it("destructive fill keeps a white label on its own darker surface", () => {
     const css = read("../../components/ConfirmPopup.module.css");
     expect(css).toMatch(/\.destructive\s*\{[^}]*--app-action-label:\s*var\(--tgui--white\)/);
-    expect(css).toMatch(/\.destructive\s*\{[^}]*--app-action-surface:\s*color-mix\(in srgb, var\(--app-danger\) 65%, black\)/);
+    expect(css).toMatch(/\.destructive\s*\{[^}]*--app-action-surface:\s*var\(--app-danger-fill\)/);
   });
 });
 
@@ -110,16 +113,16 @@ describe("U03: compact search without Field receives the shared placeholder tone
 describe("U20: badge tones are checked against their own surfaces", () => {
   it("filled counters share action ink; zero counters use a theme-aware neutral surface", () => {
     const css = read("../../components/Section/TripCountersSection.module.css");
-    expect(css).toMatch(/\.badge\s*\{[^}]*background: var\(--app-badge-surface\)/);
+    expect(css).toMatch(/\.badge\s*\{[^}]*background: var\(--app-badge-info\)/);
     expect(css).toMatch(/\.badge > \*\s*\{\s*color: var\(--app-action-text\)/);
-    expect(css).toMatch(/\[data-tone="info"\]\s*\{\s*color: var\(--app-info\)/);
-    expect(css).toMatch(/\[data-tone="danger"\]\s*\{\s*color: var\(--app-danger\)/);
+    expect(css).toMatch(/\[data-tone="info"\]\s*\{\s*background: var\(--app-badge-info\)/);
+    expect(css).toMatch(/\[data-tone="danger"\]\s*\{\s*background: var\(--app-danger-fill\)/);
     // Neutral badges are on the tinted InlineButtons surface, not a bare Page.
     expect(css).toMatch(/\[data-tone="zero"\]\s*\{\s*background: var\(--app-warning-bg\);\s*color: var\(--tgui--text_color\)/);
     expect(css).toMatch(/\[data-tone="zero"\] > \*\s*\{\s*color: inherit/);
     expect(css).not.toMatch(/#[\da-f]{3,8}\b|!important|:global/);
     const tabbar = read("../../components/TabsBar/Tabbar.module.css");
-    expect(tabbar).toMatch(/\.badge\s*\{[^}]*color: var\(--app-danger\);\s*background: var\(--app-badge-surface\)/);
+    expect(tabbar).toMatch(/\.badge\s*\{[^}]*background: var\(--app-danger-fill\)/);
     expect(tabbar).toMatch(/\.badge > \*\s*\{\s*color: var\(--app-action-text\)/);
   });
 });

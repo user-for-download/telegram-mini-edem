@@ -15,15 +15,15 @@
   top: -8px;
   right: -14px;
   pointer-events: none;
-  background: var(--app-badge-surface);
+  background: var(--app-badge-info);
 }
 
 .badge[data-tone="info"] {
-  color: var(--app-info);
+  background: var(--app-badge-info);
 }
 
 .badge[data-tone="danger"] {
-  color: var(--app-danger);
+  background: var(--app-danger-fill);
 }
 
 .badge > * {
