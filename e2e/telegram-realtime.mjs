@@ -90,10 +90,12 @@ const wsState = {
 
 function attachFakeWsServer(context) {
   return context.routeWebSocket("**/api/v1/ws", (route) => {
-    const index = wsState.connections.length;
+    // Сокет регистрируем только после auth-кадра. React 19 StrictMode в dev
+    // делает mount → cleanup → mount, поэтому первый сокет закрывается ещё
+    // до open и auth не шлёт; если считать его «соединением», тест ловит
+    // мёртвый сокет и падает по таймауту (флейк).
     const conn = { url: route.url(), frames: [] };
-    wsState.connections.push(conn);
-    if (VERBOSE) console.log(`  [ws] connection #${index}: ${conn.url}`);
+    if (VERBOSE) console.log(`  [ws] connection: ${conn.url}`);
 
     route.onMessage((message) => {
       // Playwright ≥1.62: сырая строка/Buffer, а не WebSocketFrame с .text().
@@ -109,6 +111,7 @@ function attachFakeWsServer(context) {
       conn.frames.push(frame);
       if (frame?.type === "auth" && typeof frame.token === "string") {
         wsState.authTokens.push(frame.token);
+        const index = wsState.connections.push(conn) - 1;
         route.send(JSON.stringify({ type: "auth:ok" }));
         // Только первому соединению — скриптованные keep-alive/события.
         if (index === 0) {
@@ -188,13 +191,13 @@ try {
   });
 
   await step("ping сервера → pong клиента", async () => {
-    const conn = wsState.connections[0];
+    const conn = wsState.connections.at(-1);
     await waitFor(() => findFrame(conn, (f) => f.type === "pong"), 10000, "pong frame");
     return "pong received";
   });
 
   await step("booking:new → нотис + refetch /trips/my", async () => {
-    const conn = wsState.connections[0];
+    const conn = wsState.connections.at(-1);
     const tripsMy = page.waitForResponse(
       (response) => response.url().includes("/api/v1/trips/my") && response.request().method() === "GET",
       { timeout: 15000 },
@@ -209,7 +212,7 @@ try {
   });
 
   await step("повтор события — дедуп (без второго нотиса)", async () => {
-    const conn = wsState.connections[0];
+    const conn = wsState.connections.at(-1);
     conn.route.send(
       JSON.stringify({ type: "booking:new", payload: { bookingId: "e2e-b-1", tripId: "e2e-t-1" } }),
     );
@@ -223,7 +226,7 @@ try {
   await step("4401 → refresh + reconnect с новым токеном", async () => {
     const tokenBefore = wsState.authTokens[wsState.authTokens.length - 1];
     const refreshBefore = wsState.refreshRequests;
-    wsState.connections[0].route.close({ code: 4401, reason: "Invalid token" });
+    wsState.connections.at(-1).route.close({ code: 4401, reason: "Invalid token" });
     await page.waitForResponse(
       (response) => response.url().includes("/api/v1/auth/refresh"),
       { timeout: 15000 },
