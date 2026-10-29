@@ -143,6 +143,11 @@ raise `TG_AUTH_RATE_MAX` on the dev backend.
 
 ## Determinism
 
+- **Не запускайте live-скрипты параллельно.** `telegram-parity.mjs` пишет в
+  dev-БД и в `finally` делает полный reseed; другой прогон в этот момент
+  увидит пустые списки (например, `ui-demand-static.mjs` — «0 строк спроса»).
+  Read-only гейты (`ui-*`) допустимо гонять параллельно между собой, но не
+  рядом с `telegram-parity.mjs`.
 - Each run uses unique data: `PRICE = 700 + ((Date.now() + pid) % 90)` plus
   unique review/feedback texts and directory cities, so repeat runs never
   collide on cards/search. The created trip `id` is captured from the URL
