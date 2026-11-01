@@ -13,7 +13,7 @@ import { db } from "../db.js";
 import { logger } from "../logger.js";
 import { reportServerError } from "../client-errors/index.js";
 import { requireUser, type AuthEnv } from "../auth/middleware.js";
-import { getSanitizedBody, sanitizeValue } from "../middleware/sanitize.js";
+import { getSanitizedBody, getSanitizedQuery } from "../middleware/sanitize.js";
 import {
   mutationLimiter,
   createUserRateLimiter,
@@ -473,9 +473,7 @@ export const adminReportsRouter = new Hono();
 adminReportsRouter.use("*", adminGuard);
 adminReportsRouter.use("*", adminCsrfGuard);
 adminReportsRouter.get("/", adminReadLimiter, async (c) => {
-  const parsed = adminReportsQuerySchema.safeParse(
-    sanitizeValue(c.req.query()),
-  );
+  const parsed = adminReportsQuerySchema.safeParse(getSanitizedQuery(c));
   if (!parsed.success)
     return c.json(
       { code: ERROR_CODES.VALIDATION_FAILED, message: "Invalid query" },

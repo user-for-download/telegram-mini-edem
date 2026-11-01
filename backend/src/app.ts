@@ -167,7 +167,10 @@ app.use("*", async (c, next) => {
     errored = true;
     throw error;
   } finally {
-    httpRequestsTotal.inc();
+    httpRequestsTotal.inc({
+      method: c.req.method,
+      status: errored ? "error" : c.res.status,
+    });
 
     logger.info(
       {

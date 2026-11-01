@@ -9,6 +9,7 @@ vi.hoisted(() => {
 
 const { app } = await import("../../src/app.js");
 const { db } = await import("../../src/db.js");
+const { Prisma } = await import("../../src/generated/prisma/client.js");
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 const ADMIN_TOKEN = "test-admin-token-cities";
@@ -56,6 +57,7 @@ describe("Admin cities CRUD", () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     // Удаляем тестовые города по уникальной метке.
     await db.city.deleteMany({
       where: { nameNormalized: { endsWith: "citiestest" } },
@@ -174,14 +176,53 @@ describe("Admin cities CRUD", () => {
     const city = await db.city.create({
       data: { name: "Удалить-citiestest", nameNormalized: "удалить-citiestest" },
     });
+    const transaction = vi.spyOn(db, "$transaction");
+    const rootLookup = vi.spyOn(db.city, "findUnique");
     const res = await adminRequest(
       `/cities/${city.id}`,
       { method: "DELETE" },
       cookie,
     );
     expect(res.status).toBe(200);
+    // The reference check must not happen before the serializable transaction.
+    expect(rootLookup).not.toHaveBeenCalled();
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: "Serializable",
+    });
     const after = await db.city.findUnique({ where: { id: city.id } });
     expect(after).toBeNull();
+    const audit = await db.adminAuditLog.findFirst({
+      where: { action: "city.delete", targetId: city.id },
+    });
+    expect(audit).toMatchObject({ targetType: "city", actorType: "admin" });
+  });
+
+  it.each([
+    { prismaCode: "P2034", status: 409, code: "CONFLICT", retryable: true },
+    { prismaCode: "P2025", status: 404, code: "NOT_FOUND", retryable: undefined },
+  ])("maps deletion transaction $prismaCode to $status without deleting or auditing", async ({ prismaCode, status, code, retryable }) => {
+    const city = await db.city.create({
+      data: { name: "Конфликт-citiestest", nameNormalized: "конфликт-citiestest" },
+    });
+    vi.spyOn(db, "$transaction").mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("City deletion conflict", {
+        code: prismaCode,
+        clientVersion: Prisma.prismaVersion.client,
+      }),
+    );
+
+    const res = await adminRequest(`/cities/${city.id}`, { method: "DELETE" }, cookie);
+
+    expect(res.status).toBe(status);
+    expect(await res.json()).toEqual({
+      code,
+      message: expect.any(String),
+      ...(retryable ? { retryable } : {}),
+    });
+    expect(await db.city.findUnique({ where: { id: city.id } })).not.toBeNull();
+    expect(await db.adminAuditLog.count({
+      where: { action: "city.delete", targetId: city.id },
+    })).toBe(0);
   });
 
   it("returns 409 on DELETE for a referenced city (tripsCount > 0)", async () => {

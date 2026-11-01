@@ -346,4 +346,47 @@ describe("notifyUser — WS hint wiring (item 7)", () => {
     expect(notificationCreate).not.toHaveBeenCalled();
     expect(sendToUser).not.toHaveBeenCalled();
   });
+
+  it("creates an identical-text notice when the caller handles entity idempotency", async () => {
+    findUnique.mockResolvedValue({
+      id: "u1",
+      telegramUserId: null,
+      notificationsEnabled: false,
+    });
+    notificationFindFirst.mockResolvedValue({ id: "existing" });
+
+    await expect(notifyUser({
+      userId: "u1",
+      type: "booking_status_changed",
+      title: "T",
+      body: "B",
+      deduplicate: false,
+    })).resolves.toBe("n1");
+
+    expect(notificationFindFirst).not.toHaveBeenCalled();
+    expect(notificationCreate).toHaveBeenCalledTimes(1);
+    expect(sendToUser).toHaveBeenCalledWith("u1", {
+      type: "notification:new",
+      payload: { id: NOTIFICATION_HINT_REFRESH_ID },
+    });
+  });
+
+  it("disabling text dedupe does not bypass optional notification preferences", async () => {
+    findUnique.mockResolvedValue({
+      id: "u1",
+      telegramUserId: null,
+      notificationsEnabled: false,
+    });
+
+    await expect(notifyUser({
+      userId: "u1",
+      type: "booking_created",
+      title: "T",
+      body: "B",
+      deduplicate: false,
+    })).resolves.toBeNull();
+
+    expect(notificationCreate).not.toHaveBeenCalled();
+    expect(sendToUser).not.toHaveBeenCalled();
+  });
 });

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { bannedErrorSchema } from "@edem/contracts";
 import { registerDevTelegramUser } from "../dev-mock-auth.js";
 
 // Лимитер /auth/refresh создаётся при импорте app со значениями из env.
@@ -12,8 +13,8 @@ vi.hoisted(() => {
 
 const { app } = await import("../../src/app.js");
 const { db } = await import("../../src/db.js");
-const { signRefreshToken } = await import("../../src/auth/tokens.js");
-const { devMockRefreshToken } = await import("../dev-mock-auth.js");
+const { signAccessToken, signRefreshToken } = await import("../../src/auth/tokens.js");
+const { devMockAccessToken, devMockRefreshToken } = await import("../dev-mock-auth.js");
 
 /**
  * Регрессия: «причина бана» в auth-слое.
@@ -122,6 +123,29 @@ afterEach(async () => {
     await db.user.deleteMany({ where: { id: { in: createdUserIds } } });
     createdUserIds.length = 0;
   }
+});
+
+describe("requireAuth: strict banned error includes banReason", () => {
+  it.each([
+    { kind: "JWT", reason: "Нарушение правил сервиса", mock: false },
+    { kind: "JWT", reason: null, mock: false },
+    { kind: "dev-mock", reason: "Спам", mock: true },
+    { kind: "dev-mock", reason: null, mock: true },
+  ])("returns 403 for $kind with reason $reason", async ({ reason, mock }) => {
+    const { id: userId } = await createBannedUser({ reason });
+    const accessToken = mock
+      ? devMockAccessToken(userId)
+      : await signAccessToken(userId);
+
+    const res = await app.request("/api/v1/bookings/my", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(res.status).toBe(403);
+    const body: unknown = await res.json();
+    expect(bannedErrorSchema.safeParse(body).success).toBe(true);
+    expect(body).toMatchObject({ code: "FORBIDDEN", banReason: reason });
+  });
 });
 
 describe("auth/telegram: banned user rejected with banReason", () => {

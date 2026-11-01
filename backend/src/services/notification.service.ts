@@ -186,6 +186,10 @@ export async function pruneOldNotifications(
   return result;
 }
 
+/**
+ * Создаёт inbox-уведомление.
+ * Возвращает id созданной записи; null — пропуск (тумблер/дедуп) или сбой.
+ */
 export async function createNotification(
   userId: string,
   type: string,
@@ -199,11 +203,11 @@ export async function createNotification(
   action?: string,
   /** Снапшот поездки для третьей строки («дата • цена • маршрут»). */
   tripSnapshot?: NotificationTripSnapshot,
-  /** Роль получателя в момент события (driver | passenger). Последний
-   * опциональный параметр — прямым вызывающим ничего не ломает.
+  /** Роль получателя в момент события (driver | passenger).
    * null в БД — записи без ролевого контекста (админ-события, легаси). */
   role?: NotificationRole,
-  /** Возвращает id созданной записи; null — пропуск (тумблер/дедуп) или сбой. */
+  /** Отключать только когда вызывающий уже отсекает повторы по сущности. */
+  deduplicate = true,
 ): Promise<string | null> {
   try {
     const user = await db.user.findUnique({ where: { id: userId } });
@@ -221,13 +225,10 @@ export async function createNotification(
     // Дедуп: повтор того же события внутри окна не плодит записи.
     // Для всех пользователей, не только TG: повторный прогон воркера
     // иначе дублирует и остальным (m9).
-    const duplicate = await findNotificationDuplicate({
-      userId,
-      type,
-      title,
-      body,
-    });
-    if (duplicate) {
+    if (
+      deduplicate &&
+      (await findNotificationDuplicate({ userId, type, title, body }))
+    ) {
       logger.debug({ userId, type }, "notification_duplicate_skipped");
       return null;
     }
@@ -302,6 +303,8 @@ export interface NotifyUserInput {
   /** Роль получателя в момент события. Без неё — null (админ-события
    * без ролевого контекста, легаси-совместимость). */
   role?: NotificationRole;
+  /** По умолчанию дедуп текста; false — только для идемпотентных мутаций. */
+  deduplicate?: boolean;
 }
 
 /**
@@ -328,6 +331,7 @@ export async function notifyUser(
     input.action,
     input.tripSnapshot,
     input.role,
+    input.deduplicate,
   );
   if (id) {
     wsManager.sendToUser(input.userId, {

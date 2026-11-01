@@ -28,6 +28,43 @@ class Counter {
   }
 }
 
+/**
+ * Counter с набором меток (Prometheus labels). Метки нужны, чтобы считать
+ * запросы по коду ответа; без них гистограмма недоступна, а 5xx не отличить
+ * от 2xx.
+ */
+class LabeledCounter {
+  private readonly values = new Map<string, number>();
+
+  constructor(
+    private readonly name: string,
+    private readonly help: string
+  ) {}
+
+  inc(labels: Record<string, string | number>): void {
+    const key = Object.entries(labels)
+      .map(([label, value]) => `${label}="${value}"`)
+      .join(",");
+    this.values.set(key, (this.values.get(key) ?? 0) + 1);
+  }
+
+  render(): string {
+    const lines = [
+      `# HELP ${this.name} ${this.help}`,
+      `# TYPE ${this.name} counter`,
+    ];
+    if (this.values.size === 0) {
+      // Валидный exposition: счётчик без серий — просто 0 без меток.
+      lines.push(`${this.name} 0`);
+    } else {
+      for (const [labels, value] of this.values) {
+        lines.push(`${this.name}{${labels}} ${value}`);
+      }
+    }
+    return lines.join("\n");
+  }
+}
+
 class Gauge {
   private value = 0;
 
@@ -91,8 +128,8 @@ export const wsAuthenticatedUsers = new Gauge(
   "Current number of users with at least one authenticated WebSocket connection."
 );
 
-/** Все HTTP-запросы по (method, status). */
-export const httpRequestsTotal = new Counter(
+/** Все HTTP-запросы по (method, status); status="error" — необработанная ошибка. */
+export const httpRequestsTotal = new LabeledCounter(
   "http_requests_total",
   "Total number of HTTP requests processed."
 );

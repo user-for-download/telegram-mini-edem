@@ -157,9 +157,11 @@ services:
       # Метрики: пусто = /metrics закрыт (403). Прокси может отдать токен
       # сборщику метрик через заголовок Authorization.
       METRICS_TOKEN: ${METRICS_TOKEN:-}
-      # Backend доступен только через внешний reverse proxy. Не доверяем
-      # произвольным forwarding headers от прямых клиентов.
-      TRUST_PROXY: "false"
+      # Backend доступен только через внешний reverse proxy (порт по умолчанию
+      # слушает 127.0.0.1, см. ports ниже), поэтому доверяем X-Real-IP /
+      # X-Forwarded-For: иначе все клиенты делят один IP-бакет лимитеров.
+      # Прокси ОБЯЗАН перезаписывать эти заголовки, а не пробрасывать клиентские.
+      TRUST_PROXY: ${TRUST_PROXY:-true}
     ports:
       # Адрес публикации настраивается через BACKEND_BIND_ADDR (root .env).
       # Дефолт 127.0.0.1 — для reverse proxy на том же хосте.

@@ -57,7 +57,16 @@ export async function requireAuth(c: Context<AuthEnv>, next: Next) {
   }
 
   if (user.bannedAt) {
-    return c.json({ code: ERROR_CODES.FORBIDDEN, message: "Account is banned" }, 403);
+    // banReason входит в bannedErrorSchema (.strict()) — клиент показывает
+    // причину бана; null для легаси-банов без причины.
+    return c.json(
+      {
+        code: ERROR_CODES.FORBIDDEN,
+        message: "Account is banned",
+        banReason: user.banReason ?? null,
+      },
+      403,
+    );
   }
 
   c.set("user", user);

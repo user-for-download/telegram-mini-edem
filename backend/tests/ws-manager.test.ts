@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WSContext } from "hono/ws";
 import { wsManager, startWsReaper, stopWsReaper } from "../src/services/wsManager.js";
-import { wsConnectionLimitHits } from "../src/metrics.js";
+import { metricsSnapshot, wsConnectionLimitHits } from "../src/metrics.js";
 import { app } from "../src/app.js";
 import { env } from "../src/env.js";
 
@@ -155,6 +155,8 @@ describe("GET /metrics", () => {
     env.METRICS_TOKEN = "";
     env.isProduction = false;
 
+    const health = await app.request("/health/live");
+    expect(health.status).toBe(200);
     const res = await app.request("/metrics");
     expect(res.status).toBe(200);
 
@@ -162,7 +164,27 @@ describe("GET /metrics", () => {
     expect(body).toContain("# TYPE ws_connection_limit_hits_total counter");
     expect(body).toContain("# TYPE ws_connections gauge");
     expect(body).toContain("# TYPE http_requests_total counter");
+    expect(body).toMatch(/^http_requests_total\{method="GET",status="200"\} \d+$/m);
     expect(body).toContain("ws_connection_limit_hits_total ");
+  });
+
+  it("increments separate HTTP counter series by method and response status", async () => {
+    const getSeries = 'http_requests_total{method="GET",status="200"}';
+    const postSeries = 'http_requests_total{method="POST",status="404"}';
+    const count = (series: string) => {
+      const sample = metricsSnapshot().split("\n").find((line) => line.startsWith(`${series} `));
+      return Number(sample?.slice(series.length + 1) ?? 0);
+    };
+    const getBefore = count(getSeries);
+    const postBefore = count(postSeries);
+
+    const health = await app.request("/health/live");
+    const missing = await app.request("/metrics-missing-route", { method: "POST" });
+
+    expect(health.status).toBe(200);
+    expect(missing.status).toBe(404);
+    expect(count(getSeries)).toBe(getBefore + 1);
+    expect(count(postSeries)).toBe(postBefore + 1);
   });
 
   it("requires the configured bearer token", async () => {

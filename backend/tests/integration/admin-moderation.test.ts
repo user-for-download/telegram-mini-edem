@@ -1,15 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// ADMIN_TOKEN и лимиты логина читаются из env при старте/импорте.
-// Задаём до импорта app; лимит завышаем, чтобы тест не упёрся в 429.
+// ADMIN_TOKEN и лимиты читаются из env при старте/импорте.
+// Задаём до импорта app; лимиты завышаем, чтобы тест не упёрся в 429
+// (мутаций в файле больше дефолтного бюджета 30/мин).
 vi.hoisted(() => {
   process.env.ADMIN_TOKEN = "test-admin-token-123";
   process.env.ADMIN_LOGIN_RATE_WINDOW_MS = "300000";
   process.env.ADMIN_LOGIN_RATE_MAX = "1000";
+  process.env.MUTATION_RATE_MAX = "5000";
 });
 
 const { app } = await import("../../src/app.js");
 const { db } = await import("../../src/db.js");
+const { wsManager } = await import("../../src/ws/manager.js");
+const { PENDING_BOOKING_TTL_MS } = await import("../../src/bookings/shared.js");
 
 /**
  * Регрессия модераторских операций админки:
@@ -148,6 +152,7 @@ function adminRequest(
 }
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   if (createdBookingIds.length > 0) {
     await db.booking.deleteMany({ where: { id: { in: createdBookingIds } } });
     createdBookingIds.length = 0;
@@ -428,11 +433,15 @@ describe("admin list query validation", () => {
     ["trips", "/api/v1/admin/trips"],
     ["bookings", "/api/v1/admin/bookings"],
     ["reviews", "/api/v1/admin/reviews"],
+    ["audit", "/api/v1/admin/audit"],
+    ["reports", "/api/v1/admin/reports"],
   ])("rejects unknown, repeated, malformed, and out-of-range queries for %s", async (_name, path) => {
     const cookie = await loginAndGetCookie();
     const queries = [
       "?unexpected=value",
       "?page=1&page=2",
+      "?page=1&page=1",
+      "?p%61ge=1&page=2",
       "?page=not-a-number",
       "?page=10001",
     ];
@@ -474,9 +483,241 @@ describe("PATCH /admin/trips/:id/cancel — booking cascade", () => {
     expect(confirmed?.status).toBe("cancelled");
     expect(confirmed?.cancelledByType).toBe("admin");
   });
+
+  it("notifies the driver in inbox and WS even without passengers", async () => {
+    const cookie = await loginAndGetCookie();
+    const driverId = await createUser("NotifiedCancelDriver");
+    const tripId = await createTrip(driverId);
+    const sendToUser = vi.spyOn(wsManager, "sendToUser");
+
+    const res = await adminRequest(
+      "PATCH",
+      `/api/v1/admin/trips/${tripId}/cancel`,
+      cookie,
+    );
+
+    expect(res.status).toBe(200);
+    const notifications = await db.notification.findMany({
+      where: { userId: driverId },
+    });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({
+      type: "trip_status_changed",
+      title: "Поездка отменена",
+      actorName: "Администратор",
+      action: "cancelled",
+      recipientRole: "driver",
+      deepLink: `/trips/${tripId}`,
+      tripFrom: "Москва",
+      tripTo: "Тула",
+    });
+    expect(sendToUser).toHaveBeenCalledWith(driverId, {
+      type: "trip:status_changed",
+      payload: { tripId, status: "cancelled" },
+    });
+  });
+
+  it("persists identical-text notices for distinct trips, but not cancellation retries", async () => {
+    const cookie = await loginAndGetCookie();
+    const driverId = await createUser("SameRouteDriver");
+    const passengerId = await createUser("SameRoutePassenger");
+    const tripIds = [
+      await createTrip(driverId, { seatsAvailable: 2 }),
+      await createTrip(driverId, { seatsAvailable: 2 }),
+    ];
+    const sendToUser = vi.spyOn(wsManager, "sendToUser");
+
+    for (const tripId of tripIds) {
+      await createBooking(tripId, passengerId, 1, "confirmed");
+      const res = await adminRequest("PATCH", `/api/v1/admin/trips/${tripId}/cancel`, cookie);
+      expect(res.status).toBe(200);
+      for (const userId of [driverId, passengerId]) {
+        expect(sendToUser).toHaveBeenCalledWith(userId, {
+          type: "trip:status_changed",
+          payload: { tripId, status: "cancelled" },
+        });
+      }
+    }
+
+    for (const userId of [driverId, passengerId]) {
+      const notices = await db.notification.findMany({ where: { userId } });
+      expect(notices).toHaveLength(2);
+      expect(notices[0].body).toBe(notices[1].body);
+      expect(notices.map((notice) => notice.deepLink).sort()).toEqual(
+        tripIds.map((id) => `/trips/${id}`).sort(),
+      );
+      for (const tripId of tripIds) expect(notices[0].body).not.toContain(tripId);
+      expect(await db.notificationDelivery.count({
+        where: { notificationId: { in: notices.map((notice) => notice.id) } },
+      })).toBe(2);
+    }
+
+    sendToUser.mockClear();
+    const retry = await adminRequest("PATCH", `/api/v1/admin/trips/${tripIds[0]}/cancel`, cookie);
+    expect(retry.status).toBe(409);
+    expect(sendToUser).not.toHaveBeenCalled();
+    expect(await db.notification.count({ where: { userId: driverId } })).toBe(2);
+    expect(await db.notification.count({ where: { userId: passengerId } })).toBe(2);
+  });
+});
+
+describe("PATCH /admin/bookings/:id/status — passenger notifications", () => {
+  it.each([
+    { scope: "different trips", sameTrip: false },
+    { scope: "the same trip", sameTrip: true },
+  ])("keeps identical-text notices for distinct bookings on $scope, but not retries", async ({ sameTrip }) => {
+    const cookie = await loginAndGetCookie();
+    const driverId = await createUser("SameRouteBookingDriver");
+    const passengerId = await createUser("SameRouteBookingPassenger");
+    const firstTripId = await createTrip(driverId);
+    const secondTripId = sameTrip ? firstTripId : await createTrip(driverId);
+    const bookingIds = [
+      await createBooking(firstTripId, passengerId, 1, "declined"),
+      await createBooking(secondTripId, passengerId, 2, "declined"),
+    ];
+    const sendToUser = vi.spyOn(wsManager, "sendToUser");
+
+    for (const bookingId of bookingIds) {
+      const res = await adminRequest(
+        "PATCH", `/api/v1/admin/bookings/${bookingId}/status`, cookie, { status: "cancelled" },
+      );
+      expect(res.status).toBe(200);
+    }
+
+    const notices = await db.notification.findMany({ where: { userId: passengerId } });
+    expect(notices).toHaveLength(2);
+    expect(notices[0].body).toBe(notices[1].body);
+    expect(notices.map((notice) => notice.deepLink).sort()).toEqual(
+      [firstTripId, secondTripId].map((id) => `/trips/${id}`).sort(),
+    );
+    for (const bookingId of bookingIds) expect(notices[0].body).not.toContain(bookingId);
+    expect(await db.notificationDelivery.count({
+      where: { notificationId: { in: notices.map((notice) => notice.id) } },
+    })).toBe(2);
+
+    sendToUser.mockClear();
+    const retry = await adminRequest(
+      "PATCH", `/api/v1/admin/bookings/${bookingIds[0]}/status`, cookie, { status: "cancelled" },
+    );
+    expect(retry.status).toBe(200);
+    expect(sendToUser).not.toHaveBeenCalled();
+    expect(await db.notification.count({ where: { userId: passengerId } })).toBe(2);
+  });
+
+  it.each([
+    { from: "pending", to: "confirmed", title: "Заявка подтверждена", action: "confirmed" },
+    { from: "confirmed", to: "declined", title: "Заявка отклонена", action: "declined" },
+    { from: "confirmed", to: "cancelled", title: "Заявка отменена", action: "cancelled" },
+    { from: "declined", to: "pending", title: "Заявка снова ожидает подтверждения", action: "changed" },
+  ])("notifies passenger in inbox and WS for $from → $to", async ({ from, to, title, action }) => {
+    const cookie = await loginAndGetCookie();
+    const driverId = await createUser("NoticeDriver");
+    const passengerId = await createUser("NoticePassenger");
+    const tripId = await createTrip(driverId, {
+      seatsAvailable: from === "declined" ? 3 : 2,
+    });
+    const bookingId = await createBooking(tripId, passengerId, 1, from);
+    const sendToUser = vi.spyOn(wsManager, "sendToUser");
+
+    const res = await adminRequest(
+      "PATCH",
+      `/api/v1/admin/bookings/${bookingId}/status`,
+      cookie,
+      { status: to },
+    );
+
+    expect(res.status).toBe(200);
+    const notifications = await db.notification.findMany({
+      where: { userId: passengerId },
+    });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({
+      type: "booking_status_changed",
+      title,
+      actorName: "Администратор",
+      action,
+      recipientRole: "passenger",
+      deepLink: `/trips/${tripId}`,
+      tripFrom: "Москва",
+      tripTo: "Тула",
+    });
+    expect(sendToUser).toHaveBeenCalledWith(passengerId, {
+      type: "booking:status_changed",
+      payload: { bookingId, tripId, status: to },
+    });
+  });
+
+  it.each([
+    { status: "confirmed", hasExpiry: true },
+    { status: "pending", hasExpiry: true },
+    { status: "pending", hasExpiry: false },
+  ])("preserves expiry and seats without notices for a $status no-op (expiry: $hasExpiry)", async ({ status, hasExpiry }) => {
+    const cookie = await loginAndGetCookie();
+    const driverId = await createUser("NoopDriver");
+    const passengerId = await createUser("NoopPassenger");
+    const tripId = await createTrip(driverId, { seatsAvailable: 2 });
+    const bookingId = await createBooking(tripId, passengerId, 1, status);
+    const expiresAt = hasExpiry
+      ? new Date(Date.now() + PENDING_BOOKING_TTL_MS / 2)
+      : null;
+    await db.booking.update({ where: { id: bookingId }, data: { expiresAt } });
+    const sendToUser = vi.spyOn(wsManager, "sendToUser");
+
+    const res = await adminRequest(
+      "PATCH",
+      `/api/v1/admin/bookings/${bookingId}/status`,
+      cookie,
+      { status },
+    );
+
+    expect(res.status).toBe(200);
+    const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    expect(booking.status).toBe(status);
+    expect(booking.expiresAt).toEqual(expiresAt);
+    const trip = await db.trip.findUniqueOrThrow({ where: { id: tripId } });
+    expect(trip.seatsAvailable).toBe(2);
+    expect(await db.notification.count({ where: { userId: passengerId } })).toBe(0);
+    expect(
+      await db.adminAuditLog.count({
+        where: { action: "booking.status", targetId: bookingId },
+      }),
+    ).toBe(0);
+    expect(sendToUser).not.toHaveBeenCalled();
+  });
 });
 
 describe("PATCH /admin/bookings/:id/status — reactivation lifecycle guard", () => {
+  it.each(["declined", "confirmed"])("replaces stale expiresAt with a full TTL on %s → pending", async (status) => {
+    const cookie = await loginAndGetCookie();
+    const driverId = await createUser("ExpiryDriver");
+    const passengerId = await createUser("ExpiryPassenger");
+    const tripId = await createTrip(driverId, {
+      seatsAvailable: status === "confirmed" ? 2 : 3,
+    });
+    const bookingId = await createBooking(tripId, passengerId, 1, status);
+    await db.booking.update({
+      where: { id: bookingId },
+      data: { expiresAt: new Date(Date.now() - PENDING_BOOKING_TTL_MS) },
+    });
+    const startedAt = Date.now();
+
+    const res = await adminRequest(
+      "PATCH",
+      `/api/v1/admin/bookings/${bookingId}/status`,
+      cookie,
+      { status: "pending" },
+    );
+    const completedAt = Date.now();
+
+    expect(res.status).toBe(200);
+    const booking = await db.booking.findUniqueOrThrow({ where: { id: bookingId } });
+    expect(booking.status).toBe("pending");
+    expect(booking.expiresAt?.getTime()).toBeGreaterThanOrEqual(startedAt + PENDING_BOOKING_TTL_MS);
+    expect(booking.expiresAt?.getTime()).toBeLessThanOrEqual(completedAt + PENDING_BOOKING_TTL_MS);
+    const trip = await db.trip.findUniqueOrThrow({ where: { id: tripId } });
+    expect(trip.seatsAvailable).toBe(2);
+  });
+
   it("reactivation on a cancelled trip → 409 TRIP_NOT_ACTIVE, booking unchanged", async () => {
     // Arrange: неактивная бронь на отменённой поездке.
     const cookie = await loginAndGetCookie();

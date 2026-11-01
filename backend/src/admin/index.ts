@@ -49,7 +49,7 @@ import { WS_TERMINAL_REASON, cityNameNormalized } from "@edem/contracts";
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { ERROR_CODES } from "../errors.js";
-import { getSanitizedBody, sanitizeValue } from "../middleware/sanitize.js";
+import { getSanitizedBody, getSanitizedQuery } from "../middleware/sanitize.js";
 import {
   createRateLimiter,
   mutationLimiter,
@@ -90,6 +90,7 @@ import {
   decrementCityTripsCount,
   recomputeCityTripsCount,
 } from "../cities/counters.js";
+import { PENDING_BOOKING_TTL_MS } from "../bookings/shared.js";
 
 const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
 
@@ -231,26 +232,6 @@ adminRouter.post("/auth/logout", adminCsrfGuard, mutationLimiter, async (c) => {
 
 adminRouter.use("*", adminGuard);
 adminRouter.use("*", adminCsrfGuard);
-
-/**
- * getSanitizedBody читает только JSON-тело и для GET не подходит:
- * собираем объект из query-параметров и чистим строки от HTML.
- */
-function getSanitizedQuery(c: Context): Record<string, unknown> | null {
-  const params = new URL(c.req.url).searchParams;
-  const entries: Array<[string, unknown]> = [];
-  const keys = new Set<string>();
-
-  for (const [key, value] of params) {
-    // URLSearchParams preserves duplicate keys; rejecting them prevents a
-    // proxy/client disagreement about which value reaches the contract.
-    if (keys.has(key)) return null;
-    keys.add(key);
-    entries.push([key, sanitizeValue(value)]);
-  }
-
-  return Object.fromEntries(entries);
-}
 
 function invalidQueryResponse(c: Context) {
   return c.json(
@@ -961,7 +942,7 @@ adminRouter.get("/settings", adminReadLimiter, async (c) => {
  * Пагинация и фильтры — те же, что у остальных админ-списков.
  */
 adminRouter.get("/audit", adminReadLimiter, async (c) => {
-  const parsed = adminAuditQuerySchema.safeParse(sanitizeValue(c.req.query()));
+  const parsed = adminAuditQuerySchema.safeParse(getSanitizedQuery(c));
   if (!parsed.success) {
     return invalidQueryResponse(c);
   }
@@ -1329,6 +1310,7 @@ adminRouter.patch("/trips/:id/cancel", mutationLimiter, async (c) => {
   // Персистентные уведомления + WS-события пассажирам — ВНЕ транзакции
   // (паттерн водительской отмены). notifyUser глотает ошибки
   // внутри, поэтому параллелим безопасно.
+  // Повтор отмены уже отсечён по trip.id; тексты разных поездок могут совпасть.
   await Promise.all(
     passengerIds.map(async (pid) => {
       await notifyUser({
@@ -1344,6 +1326,7 @@ adminRouter.patch("/trips/:id/cancel", mutationLimiter, async (c) => {
         tripSnapshot: tripSnapshotOf(trip),
         // Получатели — пассажиры отменённой поездки.
         role: "passenger",
+        deduplicate: false,
       });
 
       wsManager.sendToUser(pid, {
@@ -1352,6 +1335,26 @@ adminRouter.patch("/trips/:id/cancel", mutationLimiter, async (c) => {
       });
     }),
   );
+
+  // Водителю — отдельное уведомление: его поездку отменили, и он должен
+  // узнать об этом из инбокса, а не только по опустевшему списку.
+  await notifyUser({
+    userId: trip.driverId,
+    type: "trip_status_changed",
+    title: "Поездка отменена",
+    body: `Ваша поездка ${trip.fromCity} → ${trip.toCity} отменена администрацией`,
+    fragment: `/trips/${trip.id}`,
+    actorName: "Администратор",
+    action: "cancelled",
+    tripSnapshot: tripSnapshotOf(trip),
+    role: "driver",
+    deduplicate: false,
+  });
+
+  wsManager.sendToUser(trip.driverId, {
+    type: "trip:status_changed",
+    payload: { tripId: trip.id, status: "cancelled" },
+  });
 
   logBusinessEvent("trip.cancelled", {
     tripId: trip.id,
@@ -1362,6 +1365,23 @@ adminRouter.patch("/trips/:id/cancel", mutationLimiter, async (c) => {
 
   return c.json(serializeAdminTrip(trip));
 });
+
+/** Заголовок inbox-уведомления пассажиру о решении админа по брони. */
+function adminBookingStatusNotice(status: string): {
+  title: string;
+  action: string;
+} {
+  switch (status) {
+    case "confirmed":
+      return { title: "Заявка подтверждена", action: "confirmed" };
+    case "declined":
+      return { title: "Заявка отклонена", action: "declined" };
+    case "cancelled":
+      return { title: "Заявка отменена", action: "cancelled" };
+    default:
+      return { title: "Заявка снова ожидает подтверждения", action: "changed" };
+  }
+}
 
 /**
  * Смена статуса брони администратором (pending/confirmed/declined/cancelled).
@@ -1403,6 +1423,7 @@ adminRouter.patch("/bookings/:id/status", mutationLimiter, async (c) => {
         }
 
         const oldStatus = booking.status;
+        const changed = oldStatus !== newStatus;
         const { trip } = booking;
 
         // Неактивная бронь снова становится активной — сначала проверяем,
@@ -1488,18 +1509,28 @@ adminRouter.patch("/bookings/:id/status", mutationLimiter, async (c) => {
 
         const updated = await tx.booking.update({
           where: { id },
-          data: { status: newStatus },
+          data: {
+            status: newStatus,
+            // Возврат в pending не должен наследовать expiresAt прошлой
+            // попытки: иначе воркер expirePendingBookings отклонит «свежую»
+            // бронь в течение суток.
+            ...(changed && newStatus === "pending"
+              ? { expiresAt: new Date(Date.now() + PENDING_BOOKING_TTL_MS) }
+              : {}),
+          },
           include: { trip: true, passenger: true },
         });
 
-        await recordAdminAudit(tx, {
-          action: "booking.status",
-          targetType: "booking",
-          targetId: updated.id,
-          metadata: { from: oldStatus, to: newStatus },
-        });
-
-        return { kind: "updated", booking: updated } as const;
+        // Повтор того же статуса не меняет состояние — не плодим аудит.
+        if (changed) {
+          await recordAdminAudit(tx, {
+            action: "booking.status",
+            targetType: "booking",
+            targetId: updated.id,
+            metadata: { from: oldStatus, to: newStatus },
+          });
+        }
+        return { kind: "updated", booking: updated, changed, oldStatus } as const;
       },
       { isolationLevel: "Serializable" },
     );
@@ -1515,7 +1546,49 @@ adminRouter.patch("/bookings/:id/status", mutationLimiter, async (c) => {
       return c.json({ code: result.code, message: result.message }, 409);
     }
 
-    return c.json(serializeAdminBooking(result.booking));
+    const { booking, changed, oldStatus } = result;
+
+    // Уведомления — ВНЕ транзакции и только при реальной смене статуса:
+    // повтор того же статуса не должен дублировать запись в инбоксе.
+    // Текст общий с водительской сменой статуса не переиспользуем:
+    // подписчик доменного события пишет «Водитель подтвердил…», а здесь
+    // действие совершил администратор.
+    if (changed) {
+      const notice = adminBookingStatusNotice(newStatus);
+
+      await notifyUser({
+        userId: booking.passengerId,
+        type: "booking_status_changed",
+        title: notice.title,
+        body: `Поездка ${booking.trip.fromCity} → ${booking.trip.toCity}: решение администратора`,
+        fragment: `/trips/${booking.tripId}`,
+        actorName: "Администратор",
+        action: notice.action,
+        tripSnapshot: tripSnapshotOf(booking.trip),
+        role: "passenger",
+        // changed отсекает повторы по booking.id, а не по тексту уведомления.
+        deduplicate: false,
+      });
+
+      wsManager.sendToUser(booking.passengerId, {
+        type: "booking:status_changed",
+        payload: {
+          bookingId: booking.id,
+          tripId: booking.tripId,
+          status: newStatus,
+        },
+      });
+
+      logBusinessEvent("booking.status_changed", {
+        bookingId: booking.id,
+        tripId: booking.tripId,
+        oldStatus,
+        newStatus,
+        actor: "admin",
+      });
+    }
+
+    return c.json(serializeAdminBooking(booking));
   } catch (error) {
     // Unique-конфликт partial-индексов (active_seat_booking /
     // active_passenger_booking): классифицируем по имени нарушенного
@@ -2034,35 +2107,71 @@ adminRouter.patch("/cities/:id", mutationLimiter, async (c) => {
 adminRouter.delete("/cities/:id", mutationLimiter, async (c) => {
   const id = c.req.param("id");
 
-  const existing = await db.city.findUnique({ where: { id } });
-  if (!existing) {
-    return c.json(
-      { code: ERROR_CODES.NOT_FOUND, message: "City not found" },
-      404,
-    );
-  }
+  try {
+    // Проверка и удаление — в одной Serializable-транзакции: иначе между
+    // чтением счётчика и delete успевает создаться поездка, ссылающаяся
+    // на город (счётчик вырастет, а город уже удалён).
+    const result = await db.$transaction(
+      async (tx) => {
+        const city = await tx.city.findUnique({ where: { id } });
+        if (!city) return { kind: "not_found" } as const;
+        if (city.tripsCount > 0) return { kind: "has_trips", city } as const;
 
-  if (existing.tripsCount > 0) {
-    return c.json(
-      {
-        code: ERROR_CODES.CONFLICT,
-        message: `Невозможно удалить город «${existing.name}»: на него ссылается ${existing.tripsCount} поездок`,
+        await tx.city.delete({ where: { id } });
+        await recordAdminAudit(tx, {
+          action: "city.delete",
+          targetType: "city",
+          targetId: id,
+          metadata: { name: city.name, tripsCount: city.tripsCount },
+        });
+        return { kind: "deleted", city } as const;
       },
-      409,
+      { isolationLevel: "Serializable" },
     );
-  }
 
-  await db.$transaction(async (tx) => {
-    await tx.city.delete({ where: { id } });
-    await recordAdminAudit(tx, {
-      action: "city.delete",
-      targetType: "city",
-      targetId: id,
-      metadata: { name: existing.name, tripsCount: existing.tripsCount },
+    if (result.kind === "not_found") {
+      return c.json(
+        { code: ERROR_CODES.NOT_FOUND, message: "City not found" },
+        404,
+      );
+    }
+
+    if (result.kind === "has_trips") {
+      return c.json(
+        {
+          code: ERROR_CODES.CONFLICT,
+          message: `Невозможно удалить город «${result.city.name}»: на него ссылается ${result.city.tripsCount} поездок`,
+        },
+        409,
+      );
+    }
+
+    logBusinessEvent("city.deleted", {
+      cityId: id,
+      name: result.city.name,
     });
-  });
-  logBusinessEvent("city.deleted", { cityId: id, name: existing.name });
-  return c.json({ ok: true, id });
+    return c.json({ ok: true, id });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2034") {
+        return c.json(
+          {
+            code: ERROR_CODES.CONFLICT,
+            message: "Город только что изменился, попробуйте ещё раз",
+            retryable: true,
+          },
+          409,
+        );
+      }
+      if (error.code === "P2025") {
+        return c.json(
+          { code: ERROR_CODES.NOT_FOUND, message: "City not found" },
+          404,
+        );
+      }
+    }
+    throw error;
+  }
 });
 
 /**
