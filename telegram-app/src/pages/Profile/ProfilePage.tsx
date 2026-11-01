@@ -210,7 +210,7 @@ export function ProfilePage() {
                     </IconContainer>
                   }
                   title="Отзывы"
-                  subtitle={`Мои отзывы и обо мне · ${profile.data.reviewsCount}`}
+                  subtitle="Мои отзывы и обо мне"
                   onClick={() => {
                     haptic.light();
                     navigate("/reviews");

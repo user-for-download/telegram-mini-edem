@@ -363,12 +363,13 @@ describe("ProfilePage terminal states", () => {
 });
 
 describe("ProfilePage: отзывы уехали в отдельную страницу", () => {
-  it("пункт меню «Отзывы» есть и несёт счётчик отзывов", () => {
+  it("пункт меню «Отзывы» без счётчика в подписи", () => {
     mockUseProfile.mockReturnValue(queryState({ data: makeProfile() }));
     const html = render(<ProfilePage />);
 
     expect(html).toContain("Отзывы");
     expect(html).toContain("Мои отзывы и обо мне");
+    expect(html).not.toContain("Мои отзывы и обо мне ·");
   });
 
   it("пункт ведёт на /reviews (исходник: SSR не рендерит onClick)", () => {

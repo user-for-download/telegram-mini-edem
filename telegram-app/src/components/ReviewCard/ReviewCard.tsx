@@ -105,14 +105,13 @@ export function ReviewCard({ review }: { review: Review | MyReview }) {
             адрес — «Вологда → Череповец»), а 66px надписи стоили ровно
             того, что маршрут обрезался на последней букве. */}
         <span className={styles.route}>{review.tripRoute}</span>
-        {badge ? (
+        {/* Публичный отзыв статуса не несёт: «Опубликован» и так
+            очевиден, а пилюля тратила место в строке маршрута. Показываем
+            только исключения — «На модерации» / «Отклонён». */}
+        {badge && (
           <StatusPill tone={badge.tone} className={SHRINK}>
             {badge.label}
           </StatusPill>
-        ) : (
-          <Text weight="2" Component="span" className={styles.published}>
-            Опубликован
-          </Text>
         )}
       </Caption>
     </Card>

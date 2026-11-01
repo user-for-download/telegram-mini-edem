@@ -115,3 +115,25 @@ describe("ReviewCard: оценка доступна скринридеру", () 
     expect(rating.querySelectorAll("svg")).toHaveLength(4);
   });
 });
+
+describe("ReviewCard: статус виден только у непубличных отзывов", () => {
+  it("published не пишет «Опубликован» — статуса нет вовсе", () => {
+    renderCard();
+
+    expect(screen.queryByText("Опубликован")).toBeNull();
+    // Маршрут на месте: строка foot осталась, пропал только статус.
+    expect(screen.getByText(REVIEW.tripRoute)).toBeTruthy();
+  });
+
+  it("pending показывает «На модерации»", () => {
+    renderCard({ ...REVIEW, status: "pending" });
+
+    expect(screen.getByText("На модерации")).toBeTruthy();
+  });
+
+  it("rejected показывает «Отклонён»", () => {
+    renderCard({ ...REVIEW, status: "rejected" });
+
+    expect(screen.getByText("Отклонён")).toBeTruthy();
+  });
+});

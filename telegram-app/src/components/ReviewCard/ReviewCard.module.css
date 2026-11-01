@@ -107,8 +107,3 @@
   overflow-wrap: anywhere;
 }
 
-/* Опубликован: деструктивно-зелёный текст, не сжимается. */
-.published {
-  flex-shrink: 0;
-  color: var(--app-success);
-}
