@@ -96,7 +96,7 @@ function updateLiveUser(
         return c.json(
           {
             code: ERROR_CODES.FORBIDDEN,
-            message: "Account is banned",
+            message: WS_TERMINAL_REASON.banned,
             banReason: user.banReason ?? null,
           },
           403,
