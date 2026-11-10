@@ -1,4 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { userSchema } from "@edem/contracts";
+import type { Prisma } from "../../src/generated/prisma/client.js";
+import { DEFAULT_AVATAR_URL } from "../../src/constants.js";
+import { ACCOUNT_DELETED_MESSAGE, ERROR_CODES } from "../../src/errors.js";
+import * as sanitizer from "../../src/middleware/sanitize.js";
 
 // ADMIN_TOKEN и лимиты (логин админки, мутации) читаются из env при импорте.
 // Задаём до импорта app; лимиты завышаем, чтобы тест не упёрся в 429.
@@ -64,6 +69,38 @@ function postOnboarding(token: string | null, body: unknown) {
   });
 }
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+function within<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timer!: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Timed out: ${label}`)), 5_000);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/** Pause after real auth/sanitization, before the handler's live-state check. */
+function pauseBody() {
+  const admitted = deferred();
+  const resume = deferred();
+  const original = sanitizer.getSanitizedBody;
+  const spy = vi.spyOn(sanitizer, "getSanitizedBody").mockImplementationOnce(async (c) => {
+    const body = await original(c);
+    admitted.resolve();
+    await within(resume.promise, "request release");
+    return body;
+  });
+  return {
+    wait: () => within(admitted.promise, "request admission"),
+    release: resume.resolve,
+    restore: () => spy.mockRestore(),
+  };
+}
+
 function extractAdminCookie(response: Response): string | null {
   const setCookieHeader = response.headers.get("set-cookie");
   if (!setCookieHeader) return null;
@@ -108,7 +145,7 @@ describe("POST /users/me/onboarding — completion", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; onboardingVersion: string | null };
+    const body = userSchema.parse(await res.json());
     expect(body.id).toBe(userId);
     expect(body.onboardingVersion).toBe("1");
     const dbUser = await db.user.findUnique({ where: { id: userId } });
@@ -131,8 +168,112 @@ describe("POST /users/me/onboarding — completion", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { onboardingVersion: string | null };
+    const body = userSchema.parse(await res.json());
     expect(body.onboardingVersion).toBe(version);
+  });
+
+  it("rejects admitted onboarding after real deletion commits without restoring PII or legal consent", async () => {
+    const userId = await createUser({ onboardingVersion: "1" });
+    await db.user.update({
+      where: { id: userId },
+      data: { about: "Original about", phone: "+79001234567", consentAcceptedAt: new Date("2026-01-01T00:00:00Z") },
+    });
+    const token = await signAccessToken(userId);
+    const gate = pauseBody();
+    const pending = Promise.resolve(postOnboarding(token, { version: "2" }));
+    try {
+      await gate.wait();
+      const deletion = await app.request("/api/v1/users/me", {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(deletion.status).toBe(200);
+      const deleted = await db.user.findUniqueOrThrow({ where: { id: userId } });
+      expect(deleted).toMatchObject({
+        deletedAt: expect.any(Date), name: "Удалённый пользователь", avatar: DEFAULT_AVATAR_URL,
+        about: null, phone: null, onboardingVersion: null, consentAcceptedAt: null,
+      });
+
+      gate.release();
+      const res = await pending;
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ code: ERROR_CODES.ACCOUNT_DELETED, message: ACCOUNT_DELETED_MESSAGE });
+      expect(await db.user.findUniqueOrThrow({ where: { id: userId } })).toEqual(deleted);
+    } finally {
+      gate.release();
+      await Promise.allSettled([pending]);
+      gate.restore();
+    }
+  });
+
+  it("rolls back an overlapping onboarding transaction when deletion wins", async () => {
+    const userId = await createUser({ onboardingVersion: "1" });
+    await db.user.update({
+      where: { id: userId }, data: { phone: "+79001234567", consentAcceptedAt: new Date("2026-01-01T00:00:00Z") },
+    });
+    const token = await signAccessToken(userId);
+    const admitted = deferred();
+    const resume = deferred();
+    const original = db.$transaction.bind(db);
+    const transaction = vi.spyOn(db, "$transaction").mockImplementationOnce(
+      <T>(run: (tx: Prisma.TransactionClient) => Promise<T>, options?: Parameters<typeof db.$transaction>[1]): Promise<T> =>
+        original(async (tx) => {
+          // Establish a real live snapshot, then execute the route's unchanged callback.
+          await tx.user.findUniqueOrThrow({ where: { id: userId } });
+          admitted.resolve();
+          await within(resume.promise, "onboarding transaction release");
+          return run(tx);
+        }, { ...options, timeout: 15_000 }),
+    );
+    const pending = Promise.resolve(postOnboarding(token, { version: "2" }));
+    try {
+      await within(admitted.promise, "onboarding transaction snapshot");
+      expect(transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" });
+      const deletion = await app.request("/api/v1/users/me", {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(deletion.status).toBe(200);
+      const deleted = await db.user.findUniqueOrThrow({ where: { id: userId } });
+
+      resume.resolve();
+      const res = await pending;
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        code: ERROR_CODES.CONFLICT, message: "Concurrent update conflict, please retry", retryable: true,
+      });
+      expect(deleted).toMatchObject({
+        deletedAt: expect.any(Date), name: "Удалённый пользователь", avatar: DEFAULT_AVATAR_URL,
+        about: null, phone: null, onboardingVersion: null, consentAcceptedAt: null,
+      });
+      expect(await db.user.findUniqueOrThrow({ where: { id: userId } })).toEqual(deleted);
+    } finally {
+      resume.resolve();
+      await Promise.allSettled([pending]);
+      transaction.mockRestore();
+    }
+  });
+
+  it("rejects admitted onboarding after a ban with banReason and no consent/version write", async () => {
+    const userId = await createUser({ onboardingVersion: "1" });
+    const token = await signAccessToken(userId);
+    const gate = pauseBody();
+    const pending = Promise.resolve(postOnboarding(token, { version: "2" }));
+    try {
+      await gate.wait();
+      const banned = await db.user.update({
+        where: { id: userId }, data: { bannedAt: new Date(), banReason: "Onboarding ban" },
+      });
+      gate.release();
+      const res = await pending;
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({
+        code: ERROR_CODES.FORBIDDEN, message: "Account is banned", banReason: "Onboarding ban",
+      });
+      expect(await db.user.findUniqueOrThrow({ where: { id: userId } })).toEqual(banned);
+    } finally {
+      gate.release();
+      await Promise.allSettled([pending]);
+      gate.restore();
+    }
   });
 
   it("requires auth: 401 without a token", async () => {

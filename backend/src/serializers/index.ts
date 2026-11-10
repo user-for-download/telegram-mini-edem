@@ -98,21 +98,23 @@ export function serializeUser(
       : {}),
     // Версия показанного онбординга (null — ещё не пройден или сброшен админом).
     onboardingVersion: user.onboardingVersion ?? null,
-    car: user.car
+    ...(!isDeleted && user.car
       ? {
-          model: user.car.model,
-          color: user.car.color,
-          // plate — приватное поле машины (fail-closed, opt-in): отдаётся
-          // только при явном `includePlate: true` — own-контексты (профиль,
-          // «мои брони») и подтверждённая сторона деталей поездки. Дефолт
-          // opt-in: чужому номер не уезжает (водителю — номер чужой машины
-          // пассажира). null не сериализуем: контракт carSchema допускает
-          // только string | undefined.
-          ...(options?.includePlate === true && user.car.plate != null
-            ? { plate: user.car.plate }
-            : {}),
+          car: {
+            model: user.car.model,
+            color: user.car.color,
+            // plate — приватное поле машины (fail-closed, opt-in): отдаётся
+            // только при явном `includePlate: true` — own-контексты (профиль,
+            // «мои брони») и подтверждённая сторона деталей поездки. Дефолт
+            // opt-in: чужому номер не уезжает (водителю — номер чужой машины
+            // пассажира). null не сериализуем: контракт carSchema допускает
+            // только string | undefined.
+            ...(options?.includePlate === true && user.car.plate != null
+              ? { plate: user.car.plate }
+              : {}),
+          },
         }
-      : undefined,
+      : {}),
     about: isDeleted ? undefined : (user.about ?? undefined),
     createdAt: user.createdAt.toISOString(),
   };
@@ -321,9 +323,7 @@ export function serializeReview(review: ReviewWithAuthor) {
     date: reviewDateFmt.format(review.createdAt),
     tripRoute: review.tripRoute,
     author: {
-      id: review.author.id,
-      name: review.author.name,
-      avatar: review.author.avatar || DEFAULT_AVATAR_URL,
+      ...serializeTripPassenger(review.author),
       rating: review.author.rating,
       reviewsCount: review.author.reviewsCount,
       tripsCount: review.author.tripsCount,

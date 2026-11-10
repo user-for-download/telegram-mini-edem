@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
 import { WS_TERMINAL_REASON, completeOnboardingBodySchema } from "@edem/contracts";
+import type { Prisma } from "../generated/prisma/client.js";
 import { db } from "../db.js";
 import { requireUser, type AuthEnv } from "../auth/middleware.js";
 import { serializeUser, serializePublicUser } from "../serializers/index.js";
@@ -13,7 +14,7 @@ import {
 import { getSanitizedBody } from "../middleware/sanitize.js";
 import { wsManager } from "../ws/manager.js";
 import { revokeAllActiveTokens } from "../auth/tokens.js";
-import { ERROR_CODES } from "../errors.js";
+import { ACCOUNT_DELETED_MESSAGE, ERROR_CODES } from "../errors.js";
 import { DEFAULT_AVATAR_URL } from "../constants.js";
 import { logBusinessEvent } from "../logger/business.js";
 import {
@@ -61,6 +62,59 @@ const updateNotificationSettingsSchema = z
     notificationsEnabled: z.boolean().optional(),
   })
   .strict();
+
+function updateLiveUser(
+  c: Context<AuthEnv>,
+  data: Pick<
+    Prisma.UserUpdateInput,
+    | "name"
+    | "about"
+    | "phone"
+    | "notificationsEnabled"
+    | "onboardingVersion"
+    | "consentAcceptedAt"
+  >,
+) {
+  const id = c.get("user").id;
+  // Auth's snapshot can predate deletion/ban; check and write must share SSI.
+  return db.$transaction(
+    async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id },
+        include: { car: true },
+      });
+      if (!user) {
+        return c.json({ code: ERROR_CODES.UNAUTHORIZED, message: "Unauthorized" }, 401);
+      }
+      if (user.deletedAt) {
+        return c.json(
+          { code: ERROR_CODES.ACCOUNT_DELETED, message: ACCOUNT_DELETED_MESSAGE },
+          403,
+        );
+      }
+      if (user.bannedAt) {
+        return c.json(
+          {
+            code: ERROR_CODES.FORBIDDEN,
+            message: "Account is banned",
+            banReason: user.banReason ?? null,
+          },
+          403,
+        );
+      }
+
+      const updated = Object.keys(data).length === 0
+        ? user
+        : await tx.user.update({
+            where: { id, deletedAt: null, bannedAt: null },
+            data,
+            include: { car: true },
+          });
+      return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
+    },
+    { isolationLevel: "Serializable" },
+  );
+}
 
 export const usersRouter = new Hono<AuthEnv>();
 
@@ -317,7 +371,6 @@ usersRouter.patch(
   requireUser,
   profileUpdateLimiter,
   async (c) => {
-    const user = c.get("user");
     const body = await getSanitizedBody(c);
     const parseResult = updateNotificationSettingsSchema.safeParse(body);
 
@@ -328,16 +381,7 @@ usersRouter.patch(
       );
     }
 
-    const updated = await db.user.update({
-      where: { id: user.id },
-      data: {
-        notificationsEnabled:
-          parseResult.data.notificationsEnabled ?? user.notificationsEnabled,
-      },
-      include: { car: true },
-    });
-
-    return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
+    return updateLiveUser(c, parseResult.data);
   },
 );
 
@@ -352,7 +396,6 @@ usersRouter.patch(
  * момент согласия (152-ФЗ ст. 9, доказуемость).
  */
 usersRouter.post("/me/onboarding", requireUser, mutationLimiter, async (c) => {
-  const user = c.get("user");
   const body = await getSanitizedBody(c);
   const parseResult = completeOnboardingBodySchema.safeParse(body);
 
@@ -363,30 +406,26 @@ usersRouter.post("/me/onboarding", requireUser, mutationLimiter, async (c) => {
     );
   }
 
-  const updated = await db.user.update({
-    where: { id: user.id },
-    data: {
-      onboardingVersion: parseResult.data.version,
-      consentAcceptedAt: new Date(),
-    },
-    include: { car: true },
+  return updateLiveUser(c, {
+    onboardingVersion: parseResult.data.version,
+    consentAcceptedAt: new Date(),
   });
-
-  return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
 });
 
 /**
  * Редактирование профиля текущего пользователя.
  */
 usersRouter.patch("/me", requireUser, profileUpdateLimiter, async (c) => {
-  const user = c.get("user");
-
   const body = await getSanitizedBody(c);
   const parseResult = updateProfileSchema.safeParse(body);
 
   if (!parseResult.success) {
     return c.json(
-      { message: "Invalid payload", errors: z.formatError(parseResult.error) },
+      {
+        code: ERROR_CODES.VALIDATION_FAILED,
+        message: "Invalid payload",
+        errors: z.formatError(parseResult.error),
+      },
       400,
     );
   }
@@ -394,27 +433,20 @@ usersRouter.patch("/me", requireUser, profileUpdateLimiter, async (c) => {
   const phone = normalizePhone(parseResult.data.phone);
   if (phone === false) {
     return c.json(
-      { message: "Invalid phone format", errors: { phone: ["Invalid"] } },
+      {
+        code: ERROR_CODES.VALIDATION_FAILED,
+        message: "Invalid phone format",
+        errors: { phone: ["Invalid"] },
+      },
       400,
     );
   }
 
-  const updated = await db.user.update({
-    where: { id: user.id },
-    data: {
-      name: parseResult.data.name ?? user.name,
-      about:
-        parseResult.data.about === undefined
-          ? user.about
-          : parseResult.data.about,
-      ...(phone === undefined ? {} : { phone }),
-    },
-    include: {
-      car: true,
-    },
+  return updateLiveUser(c, {
+    ...(parseResult.data.name === undefined ? {} : { name: parseResult.data.name }),
+    ...(parseResult.data.about === undefined ? {} : { about: parseResult.data.about }),
+    ...(phone === undefined ? {} : { phone }),
   });
-
-  return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
 });
 
 async function upsertCar(c: Context<AuthEnv>) {
