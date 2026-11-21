@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { authRouter } from "./auth/index.js";
+import { AccountStateError } from "./auth/liveUser.js";
 import { tripsRouter } from "./trips/index.js";
 import { bookingsRouter } from "./bookings/index.js";
 import { reviewsRouter } from "./reviews/index.js";
@@ -394,6 +395,14 @@ export function handleUnhandledError(error: Error, c: Context) {
   // onError не проходит через middleware заголовков — ставим их здесь,
   // иначе 500/404/409 уходили без CSP/nosniff/HSTS.
   applySecurityHeaders(c);
+
+  if (error instanceof AccountStateError) {
+    return c.json({
+      code: error.code,
+      message: error.message,
+      ...(error.banReason === undefined ? {} : { banReason: error.banReason }),
+    }, error.status);
+  }
 
   // Известные Prisma-ошибки, доехавшие сюда необработанными (гонки
   // check-then-act: запись по строке, удалённой параллельно). Контракт

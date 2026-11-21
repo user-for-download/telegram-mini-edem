@@ -23,6 +23,8 @@ import https from "node:https";
 import { SocksProxyAgent } from "socks-proxy-agent";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
+import { buildTelegramStartParam } from "@edem/contracts";
+import { resolveTelegramDeepLink } from "./telegramNotifications.js";
 
 export type SendOutcome =
   | { ok: true }
@@ -51,16 +53,23 @@ export function buildSendMessageBody(input: SendInput): Record<string, unknown> 
   // Кнопка «Открыть» — только при настроенном Mini App URL (ADR:
   // deep-link allowlist уже применён вызывающим кодом).
   if (input.deepLink && env.TELEGRAM_WEBAPP_URL) {
-    body.reply_markup = {
-      inline_keyboard: [
-        [
-          {
-            text: "Открыть",
-            web_app: { url: `${env.TELEGRAM_WEBAPP_URL}${input.deepLink}` },
-          },
-        ],
-      ],
-    };
+    try {
+      const url = new URL(env.TELEGRAM_WEBAPP_URL);
+      if (url.protocol !== "https:" || url.username || url.password) throw new Error("Invalid public URL");
+      const startParam = buildTelegramStartParam(resolveTelegramDeepLink(input.deepLink));
+      // Keep launch routing in the query: Telegram owns the fragment carrying signed initData.
+      url.searchParams.set("startapp", startParam);
+      url.hash = "";
+      const telegramLink = url.hostname === "t.me" || url.hostname === "telegram.me";
+      body.reply_markup = {
+        inline_keyboard: [[{
+          text: "Открыть",
+          ...(telegramLink ? { url: url.toString() } : { web_app: { url: url.toString() } }),
+        }]],
+      };
+    } catch {
+      logger.warn({ code: "invalid_webapp_url" }, "tg_send_invalid_webapp_url");
+    }
   }
   return body;
 }

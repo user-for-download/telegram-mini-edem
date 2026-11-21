@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { AdminUserDto } from "@edem/contracts";
+import { useSearch } from "@tanstack/react-router";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -65,8 +66,10 @@ function validateBanReason(raw: string): string | null {
 }
 
 export function UsersPage() {
+  const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
+  const routeId = typeof routeSearch.id === "string" ? routeSearch.id.trim() : "";
   const [search, setSearch] = useState("");
-  const [searchId, setSearchId] = useState("");
+  const [searchId, setSearchId] = useState(routeId);
   const [searchTelegramId, setSearchTelegramId] = useState("");
   const [searchPhone, setSearchPhone] = useState("");
   const [page, setPage] = useState(1);
@@ -76,6 +79,16 @@ export function UsersPage() {
     null
   );
   const [resetUser, setResetUser] = useState<AdminUserDto | null>(null);
+  const [appliedRouteId, setAppliedRouteId] = useState(routeId);
+  if (appliedRouteId !== routeId) {
+    setAppliedRouteId(routeId);
+    setSearchId(routeId);
+    setSearch("");
+    setSearchTelegramId("");
+    setSearchPhone("");
+    setDetailUserId(null);
+    setPage(1);
+  }
   const q = useDebouncedValue(search.trim());
   const id = useDebouncedValue(searchId.trim());
   const telegramUserId = useDebouncedValue(searchTelegramId.trim());

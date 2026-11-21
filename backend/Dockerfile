@@ -59,9 +59,6 @@ RUN mkdir -p /app/src && ln -s /app/dist/src/generated /app/src/generated
 # backend/node_modules содержит только symlink'и — копировать его поверх нельзя.
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 
-# @hono/node-ws npm 10 кладёт вложенно в workspace (из-за peerDependencies),
-# а рантайм резолвит из /app/node_modules — копируем его точечно.
-COPY --from=builder --chown=node:node /app/backend/node_modules/@hono/node-ws ./node_modules/@hono/node-ws
 COPY --from=builder --chown=node:node /app/backend/prisma ./prisma
 COPY --from=builder --chown=node:node /app/backend/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=node:node /app/backend/package.json ./

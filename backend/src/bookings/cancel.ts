@@ -3,6 +3,7 @@ import { Prisma } from "../generated/prisma/client.js";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { db } from "../db.js";
 import type { AuthEnv } from "../auth/middleware.js";
+import { AccountStateError, requireLiveUser } from "../auth/liveUser.js";
 import { logger } from "../logger.js";
 import { reportServerError } from "../client-errors/index.js";
 import { cancelBookingLimiter } from "../middleware/rateLimit.js";
@@ -10,6 +11,7 @@ import { ERROR_CODES } from "../errors.js";
 import { BookingError } from "./shared.js";
 import { logBusinessEvent } from "../logger/business.js";
 import { wsManager } from "../ws/manager.js";
+import { domainEvents } from "../events/domainEvents.js";
 
 export const cancelRouter = new Hono<AuthEnv>();
 
@@ -29,6 +31,7 @@ cancelRouter.patch("/:id/cancel", cancelBookingLimiter, async (c) => {
   try {
     const txResult = await db.$transaction(
       async (tx) => {
+        await requireLiveUser(tx, user.id);
         const booking = await tx.booking.findUnique({
           where: { id },
           include: {
@@ -92,7 +95,7 @@ cancelRouter.patch("/:id/cancel", cancelBookingLimiter, async (c) => {
           },
         });
 
-        return { tripId: booking.tripId, driverId: booking.trip.driverId };
+        return { tripId: booking.tripId, driverId: booking.trip.driverId, trip: booking.trip };
       },
       { isolationLevel: "Serializable" },
     );
@@ -102,6 +105,11 @@ cancelRouter.patch("/:id/cancel", cancelBookingLimiter, async (c) => {
       passengerId: user.id,
     });
 
+    await domainEvents.emit("booking.cancelled", {
+      bookingId: id, tripId: txResult.tripId, driverId: txResult.driverId,
+      passengerName: user.name, trip: txResult.trip,
+    });
+
     wsManager.sendToUser(txResult.driverId, {
       type: "booking:status_changed",
       payload: { bookingId: id, tripId: txResult.tripId, status: "cancelled" },
@@ -109,6 +117,7 @@ cancelRouter.patch("/:id/cancel", cancelBookingLimiter, async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
+    if (error instanceof AccountStateError) throw error;
     if (error instanceof BookingError) {
       return c.json(
         { code: error.code, message: error.message },

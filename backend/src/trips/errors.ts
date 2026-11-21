@@ -13,6 +13,7 @@ export const TripErrors = {
   notFound: (): TripErrorKind => ({ code: ERROR_CODES.NOT_FOUND, status: 404 }),
   forbidden: (): TripErrorKind => ({ code: ERROR_CODES.FORBIDDEN, status: 403 }),
   notActive: (): TripErrorKind => ({ code: ERROR_CODES.TRIP_NOT_ACTIVE, status: 400 }),
+  noCar: (): TripErrorKind => ({ code: ERROR_CODES.NO_CAR, status: 400 }),
   notStarted: (): TripErrorKind => ({ code: ERROR_CODES.TRIP_IN_PAST, status: 400 }),
   // Поездка уже уехала: состояние необратимо (409), в отличие от
   // notStarted — попытки создать/завершить поездку в прошлом (400).

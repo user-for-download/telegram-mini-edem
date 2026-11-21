@@ -13,6 +13,7 @@ import { db } from "../db.js";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
 import { requireUser, type AuthUser } from "../auth/middleware.js";
+import { requireLiveUser } from "../auth/liveUser.js";
 import { serializeTrip, serializeTripPassenger } from "../serializers/index.js";
 import {
   publicReadLimiter,
@@ -40,9 +41,9 @@ import {
 import { TripError, TripErrors } from "./errors.js";
 import {
   getTripRange,
-  rangesOverlap,
   type TimeRange,
 } from "../utils/overlap.js";
+import { hasTravelOverlap } from "./obligations.js";
 import { moscowDateBoundary } from "../utils/moscowTime.js";
 import { escapeLike } from "../utils/like.js";
 import { visiblePeerWhere } from "../blocks/visibility.js";
@@ -126,37 +127,7 @@ async function assertPassengersHaveNoBookingOverlap(
     return;
   }
 
-  const otherActiveBookings = await tx.booking.findMany({
-    where: {
-      passengerId: { in: passengerIds },
-      // Брони на ЭТУ поездку исключаем: сравниваем только с ДРУГИМИ поездками.
-      tripId: { not: tripId },
-      status: { in: [...ACTIVE_BOOKING_STATUSES] },
-      OR: [
-        { status: "confirmed" },
-        {
-          status: "pending",
-          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-        },
-      ],
-      trip: {
-        status: "active",
-        // Потенциально пересекаются только поездки, стартующие до конца
-        // нового интервала: остальные гарантированно не пересекаются.
-        departureAt: { lt: newRange.end },
-      },
-    },
-    include: {
-      trip: { select: { departureAt: true, durationMinutes: true } },
-    },
-  });
-
-  const hasOverlap = otherActiveBookings.some((booking) =>
-    rangesOverlap(
-      newRange,
-      getTripRange(booking.trip.departureAt, booking.trip.durationMinutes),
-    ),
-  );
+  const hasOverlap = await hasTravelOverlap(tx, passengerIds, newRange, tripId);
 
   if (hasOverlap) {
     throw new TripError(
@@ -167,21 +138,6 @@ async function assertPassengersHaveNoBookingOverlap(
 }
 
 export const tripsRouter = new Hono<{ Variables: { user?: AuthUser } }>();
-
-/**
- * Имя города справочника по id, либо null, если такого города нет.
- *
- * Сущность читается по ДВУМ полям (id + имя), поэтому для поиска по id это
- * единственный честный путь: имя из справочника попадает в уже проверенную
- * ветку подстрочного поиска, а неизвестный id даёт null (см. фильтр ниже).
- */
-async function cityNameById(id: string): Promise<string | null> {
-  const city = await db.city.findFirst({
-    where: { id },
-    select: { name: true },
-  });
-  return city?.name ?? null;
-}
 
 /**
  * Авторизованный список активных поездок: viewer нужен для взаимного
@@ -257,22 +213,15 @@ tripsRouter.get("/", requireUser, publicReadLimiter, async (c) => {
     where.toCity = { contains: escapeLike(toCity), mode: "insensitive" };
   }
 
-  // Фильтр по id города справочника — точная выборка, дополнение к подстрочному
-  // поиску выше (выбор владельцем решения 2026-10-03). Подстрока остаётся для
-  // случая «пользователь ещё не выбрал город».
-  //
-  // Именно СПРАВОЧНИК, а не `Trip.fromCityId` напрямую, и НЕ «просто не
-  // добавлять фильтр»: неизвестный id без фильтра отдавал бы ВСЕ поездки
-  // (поймал тест trips-search-city-id) — то есть сломанный id молча показал
-  // бы поездки из других городов. Неизвестный id обязан давать пусто.
+  // FK survives city renames; a name snapshot is only for display/text search.
   if (fromCityId) {
-    const name = await cityNameById(fromCityId);
-    where.fromCity = name ? { equals: name, mode: "insensitive" } : { in: [] };
+    where.fromCityId = fromCityId;
+    delete where.fromCity;
   }
 
   if (toCityId) {
-    const name = await cityNameById(toCityId);
-    where.toCity = name ? { equals: name, mode: "insensitive" } : { in: [] };
+    where.toCityId = toCityId;
+    delete where.toCity;
   }
 
   if (dateFrom) {
@@ -643,17 +592,6 @@ tripsRouter.post(
     const dto = parseResult.data;
     const driver = c.get("user")!;
 
-    // Водитель должен иметь автомобиль
-    if (!driver.car) {
-      return c.json(
-        {
-          code: ERROR_CODES.NO_CAR,
-          message: "You must add a car before creating a trip",
-        },
-        400,
-      );
-    }
-
     // Валидация: поездка не может быть в прошлом
     const departureDate = new Date(dto.departureAt);
     if (departureDate <= new Date()) {
@@ -674,25 +612,12 @@ tripsRouter.post(
       // вкладки создали бы два пересекающихся рейса).
       created = await db.$transaction(
         async (tx) => {
+          const liveDriver = await requireLiveUser(tx, driver.id);
+          if (!liveDriver.car) {
+            throw new TripError(TripErrors.noCar(), "You must add a car before creating a trip");
+          }
           const newRange = getTripRange(departureDate, dto.durationMinutes);
-
-          const driverActiveTrips = await tx.trip.findMany({
-            where: {
-              driverId: driver.id,
-              status: "active",
-              // Потенциально пересекаются только поездки, стартующие до конца
-              // новой: остальные гарантированно не пересекаются.
-              departureAt: { lt: newRange.end },
-            },
-            select: { departureAt: true, durationMinutes: true },
-          });
-
-          const hasOverlap = driverActiveTrips.some((t) =>
-            rangesOverlap(
-              newRange,
-              getTripRange(t.departureAt, t.durationMinutes),
-            ),
-          );
+          const hasOverlap = await hasTravelOverlap(tx, [driver.id], newRange);
 
           if (hasOverlap) {
             throw new TripError(
@@ -843,6 +768,7 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
   try {
     result = await db.$transaction(
       async (tx) => {
+        await requireLiveUser(tx, user.id);
         const trip = await tx.trip.findUnique({
           where: { id },
           include: { driver: { include: { car: true } } },
@@ -924,22 +850,7 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
 
           // Проверяем пересечение с другими active-поездками водителя,
           // исключая текущую (свою же поездку можно «пересекать»).
-          const otherActiveTrips = await tx.trip.findMany({
-            where: {
-              driverId: user.id,
-              status: "active",
-              id: { not: trip.id },
-              departureAt: { lt: newRange.end },
-            },
-            select: { departureAt: true, durationMinutes: true },
-          });
-
-          const hasOverlap = otherActiveTrips.some((t) =>
-            rangesOverlap(
-              newRange,
-              getTripRange(t.departureAt, t.durationMinutes),
-            ),
-          );
+          const hasOverlap = await hasTravelOverlap(tx, [user.id], newRange, trip.id);
 
           if (hasOverlap) {
             throw new TripError(
@@ -1047,7 +958,11 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
     (dto.fromAddress !== undefined &&
       trip.fromAddress !== updated.fromAddress) ||
     (dto.toAddress !== undefined && trip.toAddress !== updated.toAddress) ||
-    (dto.price !== undefined && trip.price !== updated.price);
+    (dto.price !== undefined && trip.price !== updated.price) ||
+    (dto.durationMinutes !== undefined && trip.durationMinutes !== updated.durationMinutes) ||
+    (dto.distanceKm !== undefined && trip.distanceKm !== updated.distanceKm) ||
+    (dto.comment !== undefined && (trip.comment ?? "") !== (updated.comment ?? "")) ||
+    (dto.tags !== undefined && JSON.stringify(trip.tags) !== JSON.stringify(updated.tags));
 
   if (importantFieldsChanged) {
     const confirmedBookings = await db.booking.findMany({
@@ -1071,6 +986,7 @@ tripsRouter.patch("/:id", requireUser, mutationLimiter, async (c) => {
           tripSnapshot: tripSnapshotOf(updated),
           // Получатели — пассажиры с confirmed-бронью.
           role: "passenger",
+          deduplicate: false,
         });
 
         wsManager.sendToUser(booking.passengerId, {
@@ -1115,6 +1031,7 @@ tripsRouter.patch("/:id/cancel", requireUser, cancelTripLimiter, async (c) => {
   try {
     result = await db.$transaction(
       async (tx) => {
+        await requireLiveUser(tx, user.id);
         const trip = await tx.trip.findUnique({
           where: { id },
           include: {
@@ -1308,6 +1225,7 @@ tripsRouter.patch(
     try {
       result = await db.$transaction(
         async (tx) => {
+          await requireLiveUser(tx, user.id);
           const trip = await tx.trip.findUnique({
             where: { id },
             include: {
@@ -1392,8 +1310,8 @@ tripsRouter.patch(
 
           // 4. Each confirmed passenger +1 tripsCount
           for (const passengerId of passengerIds) {
-            await tx.user.update({
-              where: { id: passengerId },
+            await tx.user.updateMany({
+              where: { id: passengerId, deletedAt: null },
               data: {
                 tripsCount: {
                   increment: 1,
@@ -1471,6 +1389,7 @@ tripsRouter.patch(
         tripSnapshot: tripSnapshotOf(updated),
         // Получатели — пассажиры завершённой поездки.
         role: "passenger",
+        deduplicate: false,
       });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
@@ -1495,6 +1414,7 @@ tripsRouter.patch(
         tripSnapshot: tripSnapshotOf(updated),
         // Получатели — пассажиры с отклонённой pending-заявкой.
         role: "passenger",
+        deduplicate: false,
       });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",

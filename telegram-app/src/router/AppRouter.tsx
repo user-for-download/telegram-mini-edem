@@ -45,6 +45,7 @@ import { BlockedUsersPage } from "@/pages/BlockedUsers/BlockedUsersPage";
 import {
   parseTripStartParam,
   resolveStartParamRoute,
+  readLaunchStartParam,
 } from "@/router/deepLinks";
 
 export { parseTripStartParam };
@@ -118,7 +119,7 @@ export function Shell() {
   const navigate = useNavigate();
   const didHandleStartParam = useRef(false);
   const launchParams = useLaunchParams(true);
-  const startParam = launchParams.tgWebAppStartParam;
+  const startParam = readLaunchStartParam(launchParams.tgWebAppStartParam, globalThis.location?.search ?? "");
   // Нативная кнопка «назад» и её видимость — по РЕАЛЬНОМУ адресу: пока
   // открыта шторка, Back обязан её закрыть, а не считаться «корнем».
   const isRoot = ROOT_ROUTES.has(location.pathname);

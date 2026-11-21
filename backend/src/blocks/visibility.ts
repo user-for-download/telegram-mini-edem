@@ -7,6 +7,8 @@ import type { Prisma } from "../generated/prisma/client.js";
  */
 export function visiblePeerWhere(viewerId: string): Prisma.UserWhereInput {
   return {
+    deletedAt: null,
+    bannedAt: null,
     blocksCreated: { none: { blockedId: viewerId } },
     blocksReceived: { none: { blockerId: viewerId } },
   };

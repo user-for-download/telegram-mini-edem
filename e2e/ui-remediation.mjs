@@ -9,9 +9,9 @@ const BASE = (process.env.E2E_TG_URL || 'http://localhost:3012').replace(/\/$/, 
 const OUT = '/tmp/opencode/telegram-ui-remediation';
 const FILTER = process.env.E2E_UI_FILTER ? new RegExp(process.env.E2E_UI_FILTER) : null;
 const NOW = new Date('2026-10-24T09:00:00.000Z');
-// Contract refinements also consult new Date() in Node, not just in Chromium.
+// Freeze only synchronous contract validation; Playwright's clock needs real Node time.
 const SystemDate = Date;
-globalThis.Date = class extends SystemDate {
+const FixtureDate = class extends SystemDate {
   constructor(...args) { super(...(args.length ? args : [NOW.getTime()])); }
   static now() { return NOW.getTime(); }
 };
@@ -49,7 +49,10 @@ const cursor = (items, value = null, limit = 50) => {
 };
 const checked = (name, value) => {
   assert.ok(contracts[name]?.parse, `Installed @edem/contracts lacks ${name}; build contracts first`);
-  contracts[name].parse(value);
+  const previousDate = globalThis.Date;
+  globalThis.Date = FixtureDate;
+  try { contracts[name].parse(value); }
+  finally { globalThis.Date = previousDate; }
   return value; // Keep read-only enrichment, rather than Zod-stripping it.
 };
 
@@ -225,14 +228,14 @@ async function session(config = { width: 390, theme: 'light', platform: 'base' }
   page.setDefaultTimeout(15000);
   page.on('pageerror', error => errors.push(error.message));
   page.on('dialog', async native => { errors.push(`Unexpected native ${native.type()}: ${native.message()}`); await native.dismiss(); });
-  if (config.clock) await page.clock.install({ time: NOW });
-  else await page.clock.setFixedTime(NOW);
+  // Date-based kit animations need a running clock; keep Date and timers coherent.
+  await page.clock.install({ time: NOW.getTime() });
   return { state, context, page, requests, held, unknown,
     async close() {
       held.forEach(h => h.resolve());
-      const rejections = await page.evaluate(() => window.__uiRejections || []).catch(() => []);
+      const rejections = await bounded(page.evaluate(() => window.__uiRejections || []), 'collect browser rejections')
+        .finally(() => context.close());
       results.pageErrors.push(...errors); results.rejections.push(...rejections);
-      await context.close();
       assert.equal(errors.length, 0, `Browser exceptions: ${errors.join('; ')}`);
       assert.equal(rejections.length, 0, `Unhandled rejection: ${rejections.join('; ')}`);
       assert.equal(unknown.length, 0, `Unstubbed API/WS: ${JSON.stringify(unknown)}`);
@@ -243,13 +246,18 @@ async function session(config = { width: 390, theme: 'light', platform: 'base' }
 const text = (page, value) => page.getByText(value, { exact: true });
 const dialog = (page, name) => page.getByRole('dialog', { name: name === 'Поездка' ? 'Детали поездки' : name, exact: true });
 const button = (scope, name) => scope.getByRole('button', { name: name === 'Автомобиль' ? /^Автомобиль\./ : name === 'Ищу попутку' ? 'Ищу попутку. Нужна попутка?' : name, exact: typeof name === 'string' && name !== 'Автомобиль' });
+function bounded(promise, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`Timed out: ${label}`)), 15000); });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 async function visible(locator) {
   await locator.waitFor({ state: 'visible' });
-  await locator.evaluate(async el => {
+  await bounded(locator.evaluate(async el => {
     const surface = el.closest('[role="dialog"]') || el;
     const finite = surface.getAnimations({ subtree: true }).filter(a => Number.isFinite(a.effect?.getComputedTiming().endTime));
     await Promise.all(finite.map(a => a.finished.catch(() => {}))); // Cancellation is normal during React replacement.
-  });
+  }), 'finish visible-surface animations');
 }
 async function disabled(locator) {
   await locator.and(locator.page().locator(':disabled')).waitFor({ state: 'visible' });
@@ -261,7 +269,7 @@ async function nav(page, path, expected, cold = false) {
   else await page.evaluate(path => { location.hash = path; }, path);
   // Hash/networkidle alone can still show the previous React page.
   await visible(expected(page));
-  await page.evaluate(async () => { await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
+  await bounded(page.evaluate(async () => { await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); }), 'fonts and first paint');
 }
 async function closeSheet(page, name) {
   const target = dialog(page, name);
@@ -304,7 +312,7 @@ const ROUTES = [
 
 // Page/sheet active-surface geometry; do not count the inert background behind a dialog.
 async function geometry(page, fraction) {
-  return page.evaluate(async ({ fraction, iosClass }) => {
+  return bounded(page.evaluate(async ({ fraction, iosClass }) => {
     const dialogs = [...document.querySelectorAll('[role="dialog"]')].filter(el => el.getAttribute('data-state') !== 'closed');
     const surface = dialogs.at(-1) || document.querySelector('main');
     if (!surface) throw new Error('Missing active main/dialog surface');
@@ -339,7 +347,7 @@ async function geometry(page, fraction) {
     const last = controls.at(-1);
     const lastHit = last ? (() => { const r = last.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!hit && (hit === last || last.contains(hit)); })() : false;
     return { fraction, platform: theme?.classList.contains(iosClass) ? 'ios' : 'base', scrollHeight: scroll.scrollHeight, scrollTop: scroll.scrollTop, scrollTarget: { tag: scroll.tagName, class: typeof scroll.className === 'string' ? scroll.className : '', clientHeight: scroll.clientHeight, scrollHeight: scroll.scrollHeight }, documentOverflow: document.documentElement.scrollWidth > innerWidth + 1, overflow, hits, controlCount: controls.length, lastControl: last ? { name: last.textContent?.trim() || last.id, visible: visible(last), hit: lastHit, rect: last.getBoundingClientRect().toJSON() } : null, tokens, dark: document.documentElement.classList.contains('dark'), cssRules: [...document.styleSheets].reduce((n, sheet) => { try { return n + sheet.cssRules.length; } catch { return n; } }, 0) };
-  }, { fraction, iosClass: IOS_ROOT_CLASS });
+  }, { fraction, iosClass: IOS_ROOT_CLASS }), 'measure rendered geometry');
 }
 
 async function contrast(page, selector = null) {
@@ -610,6 +618,34 @@ async function regressions() {
     assert.ok(await button(s.page, 'Все уведомления прочитаны').isDisabled());
     assert.deepEqual(s.requests.filter(r => r.path === '/notifications/read-all').map(r => r.status), [429, 200]);
   }, { width: 320, theme: 'dark', platform: 'base' });
+  await runCase('direct-webapp-startapp-route', 'Bot web_app query token reaches the entity sheet without consuming the Telegram fragment', async s => {
+    await s.page.goto(`${BASE}/?startapp=trip_${IDS.free}`, { waitUntil: 'domcontentloaded' });
+    await visible(dialog(s.page, 'Поездка').getByRole('button', { name: /Забронировать место/ }));
+    assert.ok(s.requests.some(r => r.method === 'GET' && r.path === `/trips/${IDS.free}`));
+    assert.ok(new URL(s.page.url()).hash.startsWith(`#/trips/${IDS.free}`));
+  });
+  await runCase('booking-selection-after-seat-count-refetch', 'A selected seat stays within the refreshed trip capacity before sending the booking', async s => {
+    await nav(s.page, `/trips/${IDS.free}`, p => dialog(p, 'Поездка').getByRole('button', { name: /Забронировать место/ }));
+    const root = dialog(s.page, 'Поездка');
+    await button(root, 'Выбрать место 3').click();
+    await visible(button(root, 'Место 3 выбрано'));
+    Object.assign(s.state.trips.get(IDS.free), { seatsTotal: 1, seatsAvailable: 1 });
+    await s.context.setOffline(true);
+    await visible(root.getByText(/Нет подключения/));
+    // Reconnect refetches stale queries; advance the installed clock past staleTime.
+    await s.page.clock.fastForward(61000);
+    const refetched = s.page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/trips/${IDS.free}`);
+    await s.context.setOffline(false);
+    assert.ok((await refetched).ok());
+    await visible(button(root, 'Место 1 выбрано'));
+    assert.equal(await button(root, 'Место 3 выбрано').count(), 0);
+    const [response] = await Promise.all([
+      s.page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === '/api/v1/bookings'),
+      root.getByRole('button', { name: /Забронировать место №1/ }).click(),
+    ]);
+    assert.ok(response.ok());
+    assert.equal(response.request().postDataJSON().seat, 1);
+  });
   for (const seats of [1, 2, 3]) await runCase(`booking-static-${seats}-seats`, 'Booking bar final normal flow; no seats means no submit', async (s, record) => {
     // Arrange
     Object.assign(s.state.trips.get(IDS.free), { seatsTotal: seats, seatsAvailable: seats });
@@ -844,7 +880,7 @@ async function regressions() {
     await nav(s.page, '/profile/support', p => button(p, 'Создать обращение'));
     const failure = { method: 'GET', path: api, status: 429 };
     s.state.failures.push(failure);
-    await s.page.clock.setFixedTime(new Date(NOW.getTime() + 61000));
+    await s.page.clock.fastForward(61000);
     const retry = name === 'profile' ? 'Повторить обновление профиля' : 'Повторить обновление уведомлений';
     await nav(s.page, path, p => button(p, retry));
     await visible(text(s.page, content));
@@ -956,5 +992,4 @@ finally {
   await writeFile(`${OUT}/browser-results.json`, JSON.stringify(results, null, 2));
   console.info(JSON.stringify({ status: results.status, ...results.summary, report: `${OUT}/browser-results.json` }, null, 2));
   if (results.status === 'failed') process.exitCode = 1;
-  globalThis.Date = SystemDate;
 }

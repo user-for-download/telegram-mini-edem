@@ -211,7 +211,7 @@ export async function createNotification(
 ): Promise<string | null> {
   try {
     const user = await db.user.findUnique({ where: { id: userId } });
-    if (!user) return null;
+    if (!user || user.deletedAt) return null;
     // Критичные уведомления создаются независимо от тумблера.
     // Некритичные (booking_created и др.)
     // подчиняются настройкам пользователя.
@@ -303,7 +303,7 @@ export interface NotifyUserInput {
   /** Роль получателя в момент события. Без неё — null (админ-события
    * без ролевого контекста, легаси-совместимость). */
   role?: NotificationRole;
-  /** По умолчанию дедуп текста; false — только для идемпотентных мутаций. */
+  /** Domain callers guard their transition; true explicitly enables legacy text dedup. */
   deduplicate?: boolean;
 }
 
@@ -331,7 +331,7 @@ export async function notifyUser(
     input.action,
     input.tripSnapshot,
     input.role,
-    input.deduplicate,
+    input.deduplicate ?? false,
   );
   if (id) {
     wsManager.sendToUser(input.userId, {

@@ -2416,8 +2416,8 @@ function validateSeedData(): void {
       if (booking.requestId === undefined) continue;
 
       // Консистентность Booking.requestId — ровно те условия, которые
-      // проверяет рантайм в closeRideRequestsForBooking/findClientRequest:
-      // заявка есть, принадлежит пассажиру, закрыта и подходит под поездку.
+      // проверяет рантайм: запрос принадлежит пассажиру; подтверждение
+      // закрывает поиск, а pending только хранит исходный requestId.
       const request = requestById.get(booking.requestId);
       if (!request) {
         throw new Error(
@@ -2429,9 +2429,9 @@ function validateSeedData(): void {
           `Seed booking ${trip.id}/${booking.passengerId} closes a request of another user (${request.id})`,
         );
       }
-      if (request.status !== "fulfilled") {
+      if (booking.status === "confirmed" && request.status !== "fulfilled") {
         throw new Error(
-          `Seed booking ${trip.id}/${booking.passengerId} links a request in status ${request.status ?? "active"}; runtime closes only fulfilled`,
+          `Confirmed seed booking ${trip.id}/${booking.passengerId} links an unfulfilled request (${request.status ?? "active"})`,
         );
       }
       if (

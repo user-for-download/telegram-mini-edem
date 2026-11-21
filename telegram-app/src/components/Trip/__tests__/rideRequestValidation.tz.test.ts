@@ -5,7 +5,7 @@
 // принудительный (паттерн createTripForm.tz.test.ts).
 process.env.TZ = "Asia/Dubai";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildRideRequestDraft,
   validateRideRequestWindow,
@@ -25,6 +25,12 @@ const DRAFT = {
   latest: "2026-11-20T20:00",
   seats: "2",
 } satisfies RideRequestDraft;
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-11-19T12:00:00.000Z"));
+});
+afterEach(() => vi.useRealTimers());
 
 describe("buildRideRequestDraft: окно заявки записывается по Москве, не по устройству", () => {
   it("кладёт в DTO московские моменты, а не сдвинутые зоной устройства", () => {

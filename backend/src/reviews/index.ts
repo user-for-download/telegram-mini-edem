@@ -6,6 +6,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { createReviewDtoSchema, paginatedReviewsResponseSchema } from "@edem/contracts";
 import { db } from "../db.js";
 import { requireUser, type AuthEnv } from "../auth/middleware.js";
+import { AccountStateError, requireLiveUser } from "../auth/liveUser.js";
 import { logger } from "../logger.js";
 import { reportServerError } from "../client-errors/index.js";
 import { serializeTrip, serializeReview, type TripWithDriver } from "../serializers/index.js";
@@ -80,6 +81,7 @@ async function createReviewTransaction(params: CreateReviewParams) {
   const run = () =>
     db.$transaction(
       async (tx) => {
+        await requireLiveUser(tx, params.authorId);
         const trip = await tx.trip.findUnique({ where: { id: params.tripId } });
         if (!trip || trip.status === "cancelled") {
           throw new ReviewError("Trip is no longer reviewable", 400, ERROR_CODES.TRIP_NOT_ACTIVE);
@@ -156,6 +158,7 @@ async function createReviewTransaction(params: CreateReviewParams) {
   try {
     return await run();
   } catch (error) {
+    if (error instanceof AccountStateError) throw error;
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2034"
@@ -613,6 +616,7 @@ reviewsRouter.post("/", requireUser, mutationLimiter, reviewsCreateLimiter, asyn
 
     return c.json(serializeReview(review), 201);
   } catch (error) {
+    if (error instanceof AccountStateError) throw error;
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2034"

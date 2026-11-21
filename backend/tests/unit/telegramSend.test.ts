@@ -118,7 +118,7 @@ describe("buildSendMessageBody — тело sendMessage", () => {
     });
   });
 
-  it("deepLink + TELEGRAM_WEBAPP_URL → кнопка «Открыть» (web_app)", () => {
+  it("t.me Mini App URL uses a startapp link, not an appended route", () => {
     envState.TELEGRAM_WEBAPP_URL = "https://t.me/edem_bot/app";
     try {
       const body = buildSendMessageBody({
@@ -130,13 +130,30 @@ describe("buildSendMessageBody — тело sendMessage", () => {
         inline_keyboard: [[
           {
             text: "Открыть",
-            web_app: { url: "https://t.me/edem_bot/app/bookings" },
+            url: "https://t.me/edem_bot/app?startapp=bookings",
           },
         ]],
       });
     } finally {
       envState.TELEGRAM_WEBAPP_URL = "";
     }
+  });
+
+  it("direct web_app URL preserves Telegram's initData fragment and carries the route in startapp", () => {
+    envState.TELEGRAM_WEBAPP_URL = "https://app.example.test/#/";
+    try {
+      const body = buildSendMessageBody({ chatId: 42, text: "T", deepLink: "/trips/123e4567-e89b-42d3-a456-426614174000" });
+      expect(body.reply_markup).toEqual({ inline_keyboard: [[{
+        text: "Открыть", web_app: { url: "https://app.example.test/?startapp=trip_123e4567-e89b-42d3-a456-426614174000" },
+      }]] });
+    } finally { envState.TELEGRAM_WEBAPP_URL = ""; }
+  });
+
+  it("unsafe or invalid configured URL leaves a usable text notification", () => {
+    envState.TELEGRAM_WEBAPP_URL = "javascript:alert(1)";
+    try {
+      expect(buildSendMessageBody({ chatId: 42, text: "T", deepLink: "/bookings" }).reply_markup).toBeUndefined();
+    } finally { envState.TELEGRAM_WEBAPP_URL = ""; }
   });
 
   it("deepLink без TELEGRAM_WEBAPP_URL → без кнопки", () => {

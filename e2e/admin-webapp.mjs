@@ -98,6 +98,7 @@ async function checkPrereqs() {
   } catch (error) {
     throw new Error(
       `webapp ${WEBAPP_URL} недоступен: ${error.message}. Запустите npm run dev --workspace=webapp`,
+      { cause: error },
     );
   }
   requireOk(`webapp ${WEBAPP_URL}`, web);
@@ -110,6 +111,7 @@ async function checkPrereqs() {
   } catch (error) {
     throw new Error(
       `backend ${API_URL} недоступен: ${error.message}. Запустите npm run dev:backend`,
+      { cause: error },
     );
   }
   requireOk(`backend ${API_URL}`, session);
@@ -404,6 +406,19 @@ try {
         await userDialog.getByRole("button", { name: "Закрыть" }).click();
         await userDialog.waitFor({ state: "detached" });
         return "stopped";
+      },
+    ],
+    [
+      "users: переход по ID из deep-link",
+      async () => {
+        await waitForAdminOk(page, "/users", { id: ids.USER_A }, () =>
+          page.goto(`${WEBAPP_URL}/users?id=${encodeURIComponent(ids.USER_A)}`, { waitUntil: "commit" }),
+        );
+        const input = page.locator("#users-search-id");
+        await input.waitFor();
+        if (await input.inputValue() !== ids.USER_A) throw new Error("URL id не применён к фильтру пользователей");
+        await page.getByRole("row").filter({ has: page.getByText(USER_A_NAME, { exact: true }) }).waitFor();
+        return "ID filter applied";
       },
     ],
     [

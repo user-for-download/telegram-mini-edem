@@ -376,6 +376,7 @@ async function processExpiredTrip(trip: ExpiredTrip, claim: ExpiryClaim) {
             await tx.$executeRaw`
             UPDATE "User" SET "tripsCount" = "tripsCount" + 1
             WHERE id IN (${Prisma.join(confirmedPassengerIds)})
+              AND "deletedAt" IS NULL
           `;
           }
 
@@ -431,6 +432,7 @@ async function processExpiredTrip(trip: ExpiredTrip, claim: ExpiryClaim) {
             tripSnapshot: tripSnapshotOf(trip),
             // Получатели — пассажиры автозавершённой поездки.
             role: "passenger",
+            deduplicate: false,
           });
           wsManager.sendToUser(pId, {
             type: "trip:status_changed",
@@ -453,6 +455,7 @@ async function processExpiredTrip(trip: ExpiredTrip, claim: ExpiryClaim) {
             tripSnapshot: tripSnapshotOf(trip),
             // Получатели — пассажиры с отклонённой pending-заявкой.
             role: "passenger",
+            deduplicate: false,
           });
           wsManager.sendToUser(pId, {
             type: "trip:status_changed",
@@ -475,6 +478,7 @@ async function processExpiredTrip(trip: ExpiredTrip, claim: ExpiryClaim) {
           tripSnapshot: tripSnapshotOf(trip),
           // Получатель — водитель автозавершённой поездки.
           role: "driver",
+          deduplicate: false,
         });
         wsManager.sendToUser(trip.driverId, {
           type: "trip:status_changed",

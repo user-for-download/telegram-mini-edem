@@ -27,15 +27,9 @@ export type BookingFull = Prisma.BookingGetPayload<{
   };
 }>;
 
-/**
- * Итог `POST /bookings`.
- *
- * У «created» есть `closedRequestIds` — заявки, закрытые этой же транзакцией
- * (слой 2 «заявка → поездка»). У «idempotent» их нет by design: повтор
- * запроса ничего не меняет, заявки закрыты были первой, реальной бронью.
- */
+/** Pending reserves a seat; ride requests are fulfilled only on confirmation. */
 export type CreateResult =
-  | { kind: "created"; booking: BookingFull; closedRequestIds: string[] }
+  | { kind: "created"; booking: BookingFull }
   | { kind: "idempotent"; booking: BookingFull };
 
 /**

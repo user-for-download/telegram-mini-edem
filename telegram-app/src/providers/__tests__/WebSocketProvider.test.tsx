@@ -499,7 +499,7 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
     expect(document.body.textContent).not.toContain("заблокирован");
   });
 
-  it("повтор того же события — дубликат: без повторной инвалидации и нотиса", async () => {
+  it("повторный status hint обновляет данные, но не дублирует нотис и хаптику", async () => {
     authenticate();
     await renderProvider();
     const ws = lastInstance();
@@ -519,7 +519,8 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
       ws.serverMessage(event);
     });
 
-    expect(invalidateCallsFor([...BOOKING_KEYS.my()])).toBe(1);
+    expect(invalidateCallsFor([...BOOKING_KEYS.my()])).toBe(2);
+    expect(invalidateCallsFor([...RIDE_REQUEST_KEYS.all])).toBe(2);
     const matches =
       document.body.textContent?.match(/Ваша заявка подтверждена!/g) ?? [];
     expect(matches).toHaveLength(1);
@@ -547,15 +548,15 @@ describe("WsProvider: handshake и ping/pong (ws.v1)", () => {
       ws.serverMessage(event);
       ws.serverMessage(event);
     });
-    expect(invalidateCallsFor([...TRIP_KEYS.detail("t-details-5")])).toBe(1);
+    expect(invalidateCallsFor([...TRIP_KEYS.detail("t-details-5")])).toBe(2);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(WS_REPEATABLE_EVENT_WINDOW_MS + 1);
       ws.serverMessage(event);
     });
 
-    expect(invalidateCallsFor([...TRIP_KEYS.detail("t-details-5")])).toBe(2);
-    expect(invalidateCallsFor([...TRIP_KEYS.my()])).toBe(2);
+    expect(invalidateCallsFor([...TRIP_KEYS.detail("t-details-5")])).toBe(3);
+    expect(invalidateCallsFor([...TRIP_KEYS.my()])).toBe(3);
     const notices =
       document.body.textContent?.match(/Детали поездки изменены/g) ?? [];
     expect(notices).toHaveLength(2);

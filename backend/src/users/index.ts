@@ -5,6 +5,7 @@ import { WS_TERMINAL_REASON, completeOnboardingBodySchema } from "@edem/contract
 import type { Prisma } from "../generated/prisma/client.js";
 import { db } from "../db.js";
 import { requireUser, type AuthEnv } from "../auth/middleware.js";
+import { requireLiveUser } from "../auth/liveUser.js";
 import { serializeUser, serializePublicUser } from "../serializers/index.js";
 import {
   publicReadLimiter,
@@ -14,9 +15,11 @@ import {
 import { getSanitizedBody } from "../middleware/sanitize.js";
 import { wsManager } from "../ws/manager.js";
 import { revokeAllActiveTokens } from "../auth/tokens.js";
-import { ACCOUNT_DELETED_MESSAGE, ERROR_CODES } from "../errors.js";
+import { ERROR_CODES } from "../errors.js";
 import { DEFAULT_AVATAR_URL } from "../constants.js";
 import { logBusinessEvent } from "../logger/business.js";
+import { domainEvents, type TripFacts } from "../events/domainEvents.js";
+import { decrementCityTripsCount } from "../cities/counters.js";
 import {
   notifyUser,
   tripSnapshotOf,
@@ -73,35 +76,14 @@ function updateLiveUser(
     | "notificationsEnabled"
     | "onboardingVersion"
     | "consentAcceptedAt"
+    | "car"
   >,
 ) {
   const id = c.get("user").id;
   // Auth's snapshot can predate deletion/ban; check and write must share SSI.
   return db.$transaction(
     async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id },
-        include: { car: true },
-      });
-      if (!user) {
-        return c.json({ code: ERROR_CODES.UNAUTHORIZED, message: "Unauthorized" }, 401);
-      }
-      if (user.deletedAt) {
-        return c.json(
-          { code: ERROR_CODES.ACCOUNT_DELETED, message: ACCOUNT_DELETED_MESSAGE },
-          403,
-        );
-      }
-      if (user.bannedAt) {
-        return c.json(
-          {
-            code: ERROR_CODES.FORBIDDEN,
-            message: WS_TERMINAL_REASON.banned,
-            banReason: user.banReason ?? null,
-          },
-          403,
-        );
-      }
+      const user = await requireLiveUser(tx, id);
 
       const updated = Object.keys(data).length === 0
         ? user
@@ -120,20 +102,12 @@ export const usersRouter = new Hono<AuthEnv>();
 
 usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
   const user = c.get("user");
-  // Имя для уведомлений фиксируем до обезличивания: после транзакции
-  // user.name уже «Удалённый пользователь», и получатели теряли бы
-  // осмысленное «кто завершил поездку».
-  const actorName = user.name;
   const now = new Date();
-  // Каскад вместо 409 ACCOUNT_HAS_ACTIVE_OBLIGATIONS: удаление завершает
-  // активные поездки водителя (forced complete — departure-гейт пропущен,
-  // аккаунт исчезает и поездки нельзя оставить висеть) и отменяет
-  // pending/confirmed брони пользователя на активных поездках.
-  // Семантика — зеркало рантайма: complete (PATCH /trips/:id/complete)
-  // отклоняет pending, оставляет confirmed историей, гасит места;
-  // cancel брони (PATCH /bookings/:id/cancel) возвращает место в пул.
+  // Будущие поездки отменяются; уже начавшиеся сохраняют участие и историю.
   const result = await db.$transaction(
     async (tx) => {
+      const liveUser = await requireLiveUser(tx, user.id);
+      const cancelledTrips: Array<TripFacts & { id: string; passengerIds: string[] }> = [];
       const completedTrips: Array<{
         id: string;
         fromCity: string;
@@ -151,9 +125,35 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
           toCity: true,
           price: true,
           departureAt: true,
+          fromCityId: true,
+          toCityId: true,
         },
       });
       for (const trip of ownTrips) {
+        if (trip.departureAt > now) {
+          const bookings = await tx.booking.findMany({
+            where: { tripId: trip.id, status: { in: ["pending", "confirmed"] } },
+            select: { passengerId: true },
+          });
+          await tx.booking.updateMany({
+            where: { tripId: trip.id, status: { in: ["pending", "confirmed"] } },
+            data: {
+              status: "cancelled", cancelledAt: now, cancelledByType: "user",
+              cancelledByUserId: user.id, cancellationReason: "Driver deleted account",
+            },
+          });
+          await tx.trip.update({
+            where: { id: trip.id },
+            data: {
+              status: "cancelled", seatsAvailable: 0, cancelledAt: now,
+              cancelledByType: "user", cancelledByUserId: user.id,
+              cancellationReason: "Driver deleted account",
+            },
+          });
+          await decrementCityTripsCount(tx, trip.fromCityId, trip.toCityId);
+          cancelledTrips.push({ ...trip, passengerIds: [...new Set(bookings.map((b) => b.passengerId))] });
+          continue;
+        }
         const pendings = await tx.booking.findMany({
           where: { tripId: trip.id, status: "pending" },
           select: { passengerId: true },
@@ -178,8 +178,8 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
           new Set(confirmed.map((b) => b.passengerId)),
         );
         for (const passengerId of confirmedPassengerIds) {
-          await tx.user.update({
-            where: { id: passengerId },
+          await tx.user.updateMany({
+            where: { id: passengerId, deletedAt: null },
             data: { tripsCount: { increment: 1 } },
           });
         }
@@ -205,7 +205,7 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
         where: {
           passengerId: user.id,
           status: { in: ["pending", "confirmed"] },
-          trip: { status: "active" },
+          trip: { status: "active", departureAt: { gt: now } },
         },
         select: {
           id: true,
@@ -215,11 +215,15 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
               driverId: true,
               seatsAvailable: true,
               seatsTotal: true,
+              fromCity: true,
+              toCity: true,
+              price: true,
+              departureAt: true,
             },
           },
         },
       });
-      const cancelledBookings: Array<{ id: string; tripId: string; driverId: string }> = [];
+      const cancelledBookings: Array<{ id: string; tripId: string; driverId: string; trip: TripFacts }> = [];
       for (const booking of ownBookings) {
         await tx.trip.update({
           where: { id: booking.tripId },
@@ -244,6 +248,7 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
           id: booking.id,
           tripId: booking.tripId,
           driverId: booking.trip.driverId,
+          trip: booking.trip,
         });
       }
 
@@ -288,11 +293,23 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
           consentAcceptedAt: null,
         },
       });
-      return { completedTrips, cancelledBookings };
+      return { completedTrips, cancelledTrips, cancelledBookings, actorName: liveUser.name };
     },
     { isolationLevel: "Serializable" },
   );
 
+  const { actorName } = result;
+  for (const trip of result.cancelledTrips) {
+    await domainEvents.emit("trip.cancelled", {
+      tripId: trip.id, driverName: actorName, passengerIds: trip.passengerIds, trip,
+    });
+    for (const passengerId of trip.passengerIds) {
+      wsManager.sendToUser(passengerId, {
+        type: "trip:status_changed", payload: { tripId: trip.id, status: "cancelled" },
+      });
+    }
+    logBusinessEvent("trip.cancelled", { tripId: trip.id, driverId: user.id });
+  }
   // Уведомления + WS вне транзакции (паттерн complete/cancel рантайма).
   for (const trip of result.completedTrips) {
     logBusinessEvent("trip.completed", {
@@ -314,6 +331,7 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
         tripSnapshot: tripSnapshotOf(trip),
         // Получатели — пассажиры завершённой поездки.
         role: "passenger",
+        deduplicate: false,
       });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
@@ -334,6 +352,7 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
         tripSnapshot: tripSnapshotOf(trip),
         // Получатели — пассажиры с отклонённой pending-заявкой.
         role: "passenger",
+        deduplicate: false,
       });
       wsManager.sendToUser(pid, {
         type: "trip:status_changed",
@@ -345,6 +364,10 @@ usersRouter.delete("/me", requireUser, mutationLimiter, async (c) => {
     logBusinessEvent("booking.cancelled", {
       bookingId: booking.id,
       passengerId: user.id,
+    });
+    await domainEvents.emit("booking.cancelled", {
+      bookingId: booking.id, tripId: booking.tripId, driverId: booking.driverId,
+      passengerName: actorName, trip: booking.trip,
     });
     wsManager.sendToUser(booking.driverId, {
       type: "booking:status_changed",
@@ -450,8 +473,6 @@ usersRouter.patch("/me", requireUser, profileUpdateLimiter, async (c) => {
 });
 
 async function upsertCar(c: Context<AuthEnv>) {
-  const user = c.get("user");
-
   const body = await getSanitizedBody(c);
   const parseResult = carFormSchema.safeParse(body);
 
@@ -466,22 +487,14 @@ async function upsertCar(c: Context<AuthEnv>) {
   // Пустой/пробельный номер → null (поле опционально, "" не храним).
   const normalizedPlate = plate?.trim() ? plate.trim() : null;
 
-  const updated = await db.user.update({
-    where: { id: user.id },
-    data: {
-      car: {
-        upsert: {
-          create: { ...rest, plate: normalizedPlate },
-          update: { ...rest, plate: normalizedPlate },
-        },
+  return updateLiveUser(c, {
+    car: {
+      upsert: {
+        create: { ...rest, plate: normalizedPlate },
+        update: { ...rest, plate: normalizedPlate },
       },
     },
-    include: {
-      car: true,
-    },
   });
-
-  return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
 }
 
 /**
@@ -513,49 +526,28 @@ usersRouter.patch("/me/car", requireUser, profileUpdateLimiter, upsertCar);
  * кэш и стор одним ответом.
  */
 usersRouter.delete("/me/car", requireUser, profileUpdateLimiter, async (c) => {
-  const user = c.get("user");
-
-  const activeTrip = await db.trip.findFirst({
-    where: { driverId: user.id, status: "active" },
-    select: { id: true },
-  });
-  if (activeTrip) {
-    return c.json(
-      {
-        code: ERROR_CODES.ACCOUNT_HAS_ACTIVE_OBLIGATIONS,
-        message: "Resolve active trips first",
-      },
-      409,
-    );
-  }
-
-  const existing = await db.car.findUnique({
-    where: { userId: user.id },
-    select: { id: true },
-  });
-  if (!existing) {
-    return c.json(
-      { code: ERROR_CODES.NOT_FOUND, message: "Car not found" },
-      404,
-    );
-  }
-
-  await db.car.delete({ where: { userId: user.id } });
-
-  const updated = await db.user.findUnique({
-    where: { id: user.id },
-    include: { car: true },
-  });
-
-  // requireUser только что вернул пользователя из БД — строка существует.
-  if (!updated) {
-    return c.json(
-      { code: ERROR_CODES.NOT_FOUND, message: "User not found" },
-      404,
-    );
-  }
-
-  return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
+  return db.$transaction(async (tx) => {
+    const user = await requireLiveUser(tx, c.get("user").id);
+    const activeTrip = await tx.trip.findFirst({
+      where: { driverId: user.id, status: "active" },
+      select: { id: true },
+    });
+    if (activeTrip) {
+      return c.json(
+        { code: ERROR_CODES.ACCOUNT_HAS_ACTIVE_OBLIGATIONS, message: "Resolve active trips first" },
+        409,
+      );
+    }
+    if (!user.car) {
+      return c.json({ code: ERROR_CODES.NOT_FOUND, message: "Car not found" }, 404);
+    }
+    await tx.car.delete({ where: { userId: user.id } });
+    const updated = await tx.user.findUnique({ where: { id: user.id }, include: { car: true } });
+    if (!updated) {
+      return c.json({ code: ERROR_CODES.NOT_FOUND, message: "User not found" }, 404);
+    }
+    return c.json(serializeUser(updated, { includePhone: true, includePlate: true }));
+  }, { isolationLevel: "Serializable" });
 });
 
 /**

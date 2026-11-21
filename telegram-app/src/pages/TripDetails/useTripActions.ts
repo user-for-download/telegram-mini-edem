@@ -97,7 +97,7 @@ export function useTripActions(item: Trip | undefined) {
       ).filter((seat) => !takenSeats.includes(seat))
     : [];
   const effectiveSeat =
-    selectedSeat !== null && !takenSeats.includes(selectedSeat)
+    selectedSeat !== null && availableSeats.includes(selectedSeat)
       ? selectedSeat
       : (availableSeats[0] ?? null);
 

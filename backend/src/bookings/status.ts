@@ -7,6 +7,7 @@ import {
 } from "@edem/contracts";
 import { db } from "../db.js";
 import type { AuthEnv } from "../auth/middleware.js";
+import { AccountStateError, requireLiveUser } from "../auth/liveUser.js";
 import { logger } from "../logger.js";
 import { reportServerError } from "../client-errors/index.js";
 import { serializeBooking } from "../serializers/index.js";
@@ -18,6 +19,9 @@ import { activeBookingWhere, BookingError } from "./shared.js";
 import { logBusinessEvent } from "../logger/business.js";
 import { domainEvents } from "../events/domainEvents.js";
 import { wsManager } from "../ws/manager.js";
+import { closeRideRequestsForBooking } from "./rideRequests.js";
+import { hasTravelOverlap } from "../trips/obligations.js";
+import { getTripRange } from "../utils/overlap.js";
 
 export const statusRouter = new Hono<AuthEnv>();
 
@@ -64,6 +68,7 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
   try {
     const updated = await db.$transaction(
       async (tx) => {
+        await requireLiveUser(tx, user.id);
         const booking = await tx.booking.findUnique({
           where: { id },
           include: {
@@ -140,6 +145,9 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
          * что на этом месте нет другого подтверждённого пассажира.
          */
         if (newStatus === "confirmed") {
+          if (await hasTravelOverlap(tx, [booking.passengerId], getTripRange(trip.departureAt, trip.durationMinutes), trip.id)) {
+            throw new BookingError("У пассажира уже есть поездка на это время", 409, ERROR_CODES.PASSENGER_BOOKING_OVERLAP);
+          }
           const confirmedConflict = await tx.booking.findFirst({
             where: {
               tripId: booking.tripId,
@@ -230,10 +238,17 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
           });
         }
 
+        const closedRequests = newStatus === "confirmed"
+          ? await closeRideRequestsForBooking(tx, {
+              trip, passengerId: booking.passengerId,
+              ...(booking.requestId ? { requestedRequestId: booking.requestId } : {}),
+            })
+          : null;
         const updatedBooking = await tx.booking.update({
           where: { id: booking.id },
           data: {
             status: newStatus,
+            ...(closedRequests?.stampedRequestId ? { requestId: closedRequests.stampedRequestId } : {}),
           },
           include: {
             trip: {
@@ -300,6 +315,7 @@ statusRouter.patch("/:id/status", bookingDecisionLimiter, async (c) => {
 
     return c.json(serializeBooking(updated.booking));
   } catch (error) {
+    if (error instanceof AccountStateError) throw error;
     if (error instanceof BookingError) {
       return c.json(
         { code: error.code, message: error.message },

@@ -340,7 +340,7 @@ describe("notifyUser — WS hint wiring (item 7)", () => {
     notificationFindFirst.mockResolvedValue({ id: "existing" });
 
     await expect(
-      notifyUser({ userId: "u1", type: "trip_cancelled", title: "T", body: "B" }),
+      notifyUser({ userId: "u1", type: "trip_cancelled", title: "T", body: "B", deduplicate: true }),
     ).resolves.toBeNull();
 
     expect(notificationCreate).not.toHaveBeenCalled();
@@ -360,7 +360,6 @@ describe("notifyUser — WS hint wiring (item 7)", () => {
       type: "booking_status_changed",
       title: "T",
       body: "B",
-      deduplicate: false,
     })).resolves.toBe("n1");
 
     expect(notificationFindFirst).not.toHaveBeenCalled();

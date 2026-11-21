@@ -37,6 +37,8 @@ Telegram mapping:
 - WebSocket is best effort: reconnect and resync from the inbox; it is never the source of truth.
 - Every notification has a stable event type, safe user-scoped payload, and a Telegram deep-link target (серверный allowlist, см. `resolveTelegramDeepLink`).
 - Delivery failure must not roll back booking, trip, review or support operations.
+- Passenger cancellation is persisted to the driver's inbox as `booking_status_changed`, including when optional notifications are disabled.
+- Domain mutations already guard their real state transition; identical notification text across different bookings/trips must not suppress events. Text-based dedup remains a separate policy for legacy/direct notification callers.
 
 ## Bot API option — approved (2026-09-14)
 
@@ -74,6 +76,10 @@ Engineering constraints for the enabled channel:
 - No Bot API background message outside this outbox path; the previous
   rule ("no production messaging worker ... implied by this ADR") is
   lifted strictly for this dispatcher.
+
+The first `/start` may precede Mini App login: the webhook preserves a minimal Telegram identity/consent record, and signed login fills its display profile. Deleted tombstones are never resubscribed. Infrastructure failure in recovery/claim is caught by the running dispatcher cycle and retried on the next tick.
+
+Bot buttons carry the shared `startapp` route token from `@edem/contracts`. A `t.me` Mini App URL is an ordinary URL button; a direct HTTPS URL uses `web_app` and the same query token. The client reads it alongside Telegram launch parameters, preserving Telegram's fragment for signed initData instead of appending a nested path or competing hash.
 
 ## Ownership
 

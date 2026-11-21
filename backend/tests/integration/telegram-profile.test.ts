@@ -480,7 +480,7 @@ describe("DELETE /users/me (telegram)", () => {
     expect(await db.user.count({ where: { telegramUserId: tgId } })).toBe(1);
   });
 
-  it("удаление завершает активную поездку водителя вместо 409", async () => {
+  it("удаление отменяет будущую поездку водителя вместо 409", async () => {
     const userId = await seedTelegramUser();
     const token = await signAccessToken(userId);
     const trip = await db.trip.create({
@@ -504,8 +504,8 @@ describe("DELETE /users/me (telegram)", () => {
     const res = await authed("DELETE", "/api/v1/users/me", token);
 
     expect(res.status).toBe(200);
-    const completed = await db.trip.findUnique({ where: { id: trip.id } });
-    expect(completed?.status).toBe("completed");
+    const cancelled = await db.trip.findUnique({ where: { id: trip.id } });
+    expect(cancelled?.status).toBe("cancelled");
   });
 
   it("удаление отменяет активную бронь; история не мешает", async () => {

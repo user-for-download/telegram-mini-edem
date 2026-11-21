@@ -460,9 +460,9 @@ let workerRun: Promise<unknown> | null = null;
 
 function runDispatcherCycle(): void {
   if (workerRun) return;
-  workerRun = pollOnce().finally(() => {
-    workerRun = null;
-  });
+  workerRun = pollOnce()
+    .catch(err => { logger.error({ err }, "tg_dispatch_cycle_failed"); })
+    .finally(() => { workerRun = null; });
 }
 
 export function startNotificationDispatcher(): void {

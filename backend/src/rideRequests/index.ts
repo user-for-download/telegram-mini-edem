@@ -9,6 +9,7 @@ import {
 } from "@edem/contracts";
 import { db } from "../db.js";
 import { requireUser, type AuthEnv } from "../auth/middleware.js";
+import { requireLiveUser } from "../auth/liveUser.js";
 import { getSanitizedBody, sanitizeValue } from "../middleware/sanitize.js";
 import {
   mutationLimiter,
@@ -104,6 +105,7 @@ rideRequestsRouter.post(
     try {
       result = await db.$transaction(
         async (tx) => {
+          await requireLiveUser(tx, userId);
           const activeCount = await tx.rideRequest.count({
             where: {
               userId,

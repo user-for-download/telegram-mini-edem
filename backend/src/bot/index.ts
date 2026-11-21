@@ -11,9 +11,7 @@
 // - /stop   → сброс согласия: tgChatJoinedAt = null. Немедленный стоп:
 //   политика читается в момент отправки, не кэшируется.
 //
-// Shadow mode: отправка ответных сообщений НЕ выполняется (Bot API
-// заблокирован ADR telegram-notification-delivery) — вебхук только
-// размечает согласие. Все ответы 200 OK, чтобы Telegram не ретраил.
+// Вебхук сохраняет согласие; отправка уведомлений идёт через outbox-диспетчер.
 //
 // Приватность: в логах только command + userId, без текста апдейта.
 import { Hono } from "hono";
@@ -24,6 +22,8 @@ import { logger } from "../logger.js";
 import { reportServerError } from "../client-errors/index.js";
 import { tokensEqual } from "../utils/timingSafeEqual.js";
 import { botWebhookLimiter } from "../middleware/rateLimit.js";
+import { Prisma } from "../generated/prisma/client.js";
+import { DEFAULT_AVATAR_URL } from "../constants.js";
 
 export const botRouter = new Hono();
 
@@ -31,7 +31,7 @@ export const botRouter = new Hono();
 const botUpdateSchema = z.object({
   message: z
     .object({
-      from: z.object({ id: z.number().int() }).passthrough(),
+      from: z.object({ id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) }).passthrough(),
       chat: z
         .object({ id: z.number().int(), type: z.string().optional() })
         .passthrough(),
@@ -40,7 +40,7 @@ const botUpdateSchema = z.object({
     .optional(),
   edited_message: z
     .object({
-      from: z.object({ id: z.number().int() }).passthrough(),
+      from: z.object({ id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) }).passthrough(),
       chat: z
         .object({ id: z.number().int(), type: z.string().optional() })
         .passthrough()
@@ -60,6 +60,32 @@ function parseBotCommand(text?: string): string | null {
   // синтаксис валиден везде).
   const command = token.split("@")[0] ?? "";
   return command || null;
+}
+
+async function grantTelegramConsent(telegramUserId: bigint): Promise<boolean> {
+  const run = () => db.$transaction(async tx => {
+    const existing = await tx.user.findUnique({ where: { telegramUserId }, select: { deletedAt: true } });
+    if (existing?.deletedAt) return false;
+    const now = new Date();
+    await tx.user.upsert({
+      where: { telegramUserId },
+      create: {
+        telegramUserId, name: `Пользователь Telegram ${telegramUserId}`,
+        avatar: DEFAULT_AVATAR_URL, tgChatJoinedAt: now, verifiedAt: now,
+      },
+      update: { tgChatJoinedAt: now },
+    });
+    return true;
+  }, { isolationLevel: "Serializable" });
+  try {
+    return await run();
+  } catch (error) {
+    // First bot start and first signed login can create the same identity concurrently.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
+      return run();
+    }
+    throw error;
+  }
 }
 
 botRouter.post("/webhook/:secret", botWebhookLimiter, async (c) => {
@@ -104,16 +130,14 @@ botRouter.post("/webhook/:secret", botWebhookLimiter, async (c) => {
   if (telegramId === undefined) {
     return c.json({ ok: true });
   }
+  if (!message || !("chat" in message) || message.chat?.id !== telegramId) {
+    return c.json({ ok: true });
+  }
 
   try {
     if (command === "start") {
-      // updateMany: не раскрываем наличие аккаунта ответом; консент
-      // ставится только реальному пользователю мини-аппа.
-      const result = await db.user.updateMany({
-        where: { telegramUserId: BigInt(telegramId), deletedAt: null },
-        data: { tgChatJoinedAt: new Date() },
-      });
-      if (result.count > 0) {
+      // /start usually precedes Mini App registration; keep that subscription.
+      if (await grantTelegramConsent(BigInt(telegramId))) {
         logger.info({ command, userId: telegramId }, "bot_consent_granted");
       }
     } else {

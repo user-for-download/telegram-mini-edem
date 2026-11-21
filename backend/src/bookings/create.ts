@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createBookingDtoSchema } from "@edem/contracts";
 import { db } from "../db.js";
 import type { AuthEnv } from "../auth/middleware.js";
+import { AccountStateError, requireLiveUser } from "../auth/liveUser.js";
 import { logger } from "../logger.js";
 import { reportServerError } from "../client-errors/index.js";
 import { serializeBooking } from "../serializers/index.js";
@@ -14,7 +15,8 @@ import {
 } from "../middleware/rateLimit.js";
 import { getSanitizedBody } from "../middleware/sanitize.js";
 import { ERROR_CODES } from "../errors.js";
-import { getTripRange, rangesOverlap } from "../utils/overlap.js";
+import { getTripRange } from "../utils/overlap.js";
+import { hasTravelOverlap } from "../trips/obligations.js";
 import { getUniqueConstraintName } from "../utils/prisma-errors.js";
 import {
   activeBookingWhere,
@@ -23,7 +25,7 @@ import {
   BookingError,
   type CreateResult,
 } from "./shared.js";
-import { closeRideRequestsForBooking } from "./rideRequests.js";
+import { prepareRideRequestForBooking } from "./rideRequests.js";
 import { logBusinessEvent } from "../logger/business.js";
 import { domainEvents } from "../events/domainEvents.js";
 import { wsManager } from "../ws/manager.js";
@@ -53,6 +55,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
   try {
     const result: CreateResult = await db.$transaction(
       async (tx) => {
+        await requireLiveUser(tx, passenger.id);
         const now = new Date();
         await releaseExpiredBookings(tx, now);
         // Адресный добор по этой поездке: глобальный sweep выше берёт лишь
@@ -65,6 +68,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
         await releaseExpiredBookings(tx, now, { tripId, limit: 100 });
         const trip = await tx.trip.findUnique({
           where: { id: tripId },
+          include: { driver: { select: { bannedAt: true, deletedAt: true } } },
         });
 
         if (!trip) {
@@ -74,7 +78,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
         // Проверяем ДО статуса/времени/мест: иначе прямой POST по известному
         // id превращается в оракул скрытой поездки (400 vs 404). Живая бронь —
         // сохранённое обязательство, её идемпотентный retry идёт дальше.
-        if (await isPairBlocked(tx, passenger.id, trip.driverId)) {
+        if (trip.driver.bannedAt || trip.driver.deletedAt || await isPairBlocked(tx, passenger.id, trip.driverId)) {
           const existingObligation = await tx.booking.findFirst({
             where: {
               tripId,
@@ -123,29 +127,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
         // активной броней пассажира (pending/confirmed на active-поездку).
         const newRange = getTripRange(trip.departureAt, trip.durationMinutes);
 
-        const passengerActiveBookings = await tx.booking.findMany({
-          where: {
-            passengerId: passenger.id,
-            // Исключаем брони на ЭТУ поездку: они обрабатываются ниже
-            // (идемпотентный retry / ALREADY_BOOKED).
-            tripId: { not: tripId },
-            ...activeBookingWhere(),
-            trip: {
-              status: "active",
-              departureAt: { lt: newRange.end },
-            },
-          },
-          include: {
-            trip: { select: { departureAt: true, durationMinutes: true } },
-          },
-        });
-
-        const hasOverlap = passengerActiveBookings.some((b) =>
-          rangesOverlap(
-            newRange,
-            getTripRange(b.trip.departureAt, b.trip.durationMinutes),
-          ),
-        );
+        const hasOverlap = await hasTravelOverlap(tx, [passenger.id], newRange, tripId);
 
         if (hasOverlap) {
           throw new BookingError(
@@ -250,16 +232,8 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
           },
         });
 
-        // Слой 2 «заявка → поездка»: заявка, породившая бронь, закрывается
-        // ЗДЕСЬ, в той же Serializable-транзакции, что и booking.create.
-        // Порядок именно такой: сначала закрытие (оно может бросить BookingError
-        // и откатить всё), потом вставка брони. Обратный порядок оставил бы
-        // пассажира с «бронь есть, заявка висит» при любой ошибке записи.
-        //
-        // Клиентский requestId приоритетнее серверного подбора; без него
-        // сервер закрывает все совпавшие активные заявки сам. Правила и
-        // обоснование — в closeRideRequestsForBooking.
-        const closedRequests = await closeRideRequestsForBooking(tx, {
+        // A pending reservation must not fulfill a search before the driver accepts it.
+        const bookingRequestId = await prepareRideRequestForBooking(tx, {
           trip,
           passengerId: passenger.id,
           ...(requestId !== undefined ? { requestedRequestId: requestId } : {}),
@@ -271,7 +245,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
             passengerId: passenger.id,
             // Трассировка «бронь ← заявка». null — бронь без заявки (обычный
             // случай: человек забронировал, ни разу не создавая заявку).
-            requestId: closedRequests.stampedRequestId,
+            requestId: bookingRequestId,
             seat,
             comment,
             status: "pending",
@@ -298,7 +272,6 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
         return {
           kind: "created",
           booking: created,
-          closedRequestIds: closedRequests.closedIds,
         };
       },
       { isolationLevel: "Serializable" },
@@ -355,6 +328,7 @@ createRouter.post("/", mutationLimiter, createBookingLimiter, async (c) => {
 
     return c.json(serializeBooking(booking), 201);
   } catch (error) {
+    if (error instanceof AccountStateError) throw error;
     // Ловим ошибку уникального индекса (гонка броней на уровне БД).
     // Prisma 7 (pg driver-адаптер) отдаёт имя нарушенного индекса:
     // meta.driverAdapterError.cause.constraint.index — «active_seat_booking»

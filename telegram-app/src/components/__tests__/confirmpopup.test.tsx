@@ -48,6 +48,14 @@ async function clickTrigger(root: Root, container: HTMLElement) {
   return document.body.textContent ?? "";
 }
 
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => {
+  // Vaul schedules close callbacks; flush them before jsdom destroys window.
+  act(() => vi.runOnlyPendingTimers());
+  expect(vi.getTimerCount()).toBe(0);
+  vi.useRealTimers();
+});
+
 describe("ConfirmPopup", () => {
   it("триггер с label, без описания до подтверждения", () => {
     const html = render();

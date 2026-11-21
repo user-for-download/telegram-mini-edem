@@ -91,6 +91,10 @@ import {
   recomputeCityTripsCount,
 } from "../cities/counters.js";
 import { PENDING_BOOKING_TTL_MS } from "../bookings/shared.js";
+import { closeRideRequestsForBooking } from "../bookings/rideRequests.js";
+import { hasTravelOverlap } from "../trips/obligations.js";
+import { getTripRange } from "../utils/overlap.js";
+import { isPairBlocked } from "../blocks/visibility.js";
 
 const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
 
@@ -1429,8 +1433,7 @@ adminRouter.patch("/bookings/:id/status", mutationLimiter, async (c) => {
         // Неактивная бронь снова становится активной — сначала проверяем,
         // что поездка вообще допускает активные брони (жизненный цикл).
         if (
-          !isActiveBookingStatus(oldStatus) &&
-          isActiveBookingStatus(newStatus)
+          changed && isActiveBookingStatus(newStatus)
         ) {
           if (trip.status !== "active") {
             return {
@@ -1446,13 +1449,28 @@ adminRouter.patch("/bookings/:id/status", mutationLimiter, async (c) => {
               message: "Trip has already departed",
             } as const;
           }
+          const [driver, passenger] = await Promise.all([
+            tx.user.findUnique({ where: { id: trip.driverId }, select: { bannedAt: true, deletedAt: true } }),
+            tx.user.findUnique({ where: { id: booking.passengerId }, select: { bannedAt: true, deletedAt: true } }),
+          ]);
+          if (!driver || driver.bannedAt || driver.deletedAt || !passenger || passenger.deletedAt ||
+              (!isActiveBookingStatus(oldStatus) && passenger.bannedAt)) {
+            return { kind: "conflict", code: ERROR_CODES.FORBIDDEN, message: "Участник поездки недоступен" } as const;
+          }
+          if (booking.seat > trip.seatsTotal || booking.passengerId === trip.driverId) {
+            return { kind: "conflict", code: ERROR_CODES.VALIDATION_FAILED, message: "Недопустимое место или участник поездки" } as const;
+          }
+          if ((!isActiveBookingStatus(oldStatus) && await isPairBlocked(tx, booking.passengerId, trip.driverId)) ||
+              await hasTravelOverlap(tx, [booking.passengerId], getTripRange(trip.departureAt, trip.durationMinutes), trip.id)) {
+            return { kind: "conflict", code: ERROR_CODES.CONFLICT, message: "Бронь конфликтует с другими обязательствами пассажира" } as const;
+          }
         }
 
         // Активная бронь становится неактивной — освобождаем место
         // (не выше seatsTotal: защита от рассинхрона счётчика).
         if (
           isActiveBookingStatus(oldStatus) &&
-          !isActiveBookingStatus(newStatus)
+          !isActiveBookingStatus(newStatus) && trip.status === "active"
         ) {
           await tx.trip.update({
             where: { id: trip.id },
@@ -1507,10 +1525,17 @@ adminRouter.patch("/bookings/:id/status", mutationLimiter, async (c) => {
           });
         }
 
+        const closedRequests = changed && newStatus === "confirmed"
+          ? await closeRideRequestsForBooking(tx, {
+              trip, passengerId: booking.passengerId,
+              ...(booking.requestId ? { requestedRequestId: booking.requestId } : {}),
+            })
+          : null;
         const updated = await tx.booking.update({
           where: { id },
           data: {
             status: newStatus,
+            ...(closedRequests?.stampedRequestId ? { requestId: closedRequests.stampedRequestId } : {}),
             // Возврат в pending не должен наследовать expiresAt прошлой
             // попытки: иначе воркер expirePendingBookings отклонит «свежую»
             // бронь в течение суток.
@@ -2116,6 +2141,11 @@ adminRouter.delete("/cities/:id", mutationLimiter, async (c) => {
         const city = await tx.city.findUnique({ where: { id } });
         if (!city) return { kind: "not_found" } as const;
         if (city.tripsCount > 0) return { kind: "has_trips", city } as const;
+        const request = await tx.rideRequest.findFirst({
+          where: { OR: [{ fromCityId: id }, { toCityId: id }] },
+          select: { id: true },
+        });
+        if (request) return { kind: "has_requests" } as const;
 
         await tx.city.delete({ where: { id } });
         await recordAdminAudit(tx, {
@@ -2146,6 +2176,10 @@ adminRouter.delete("/cities/:id", mutationLimiter, async (c) => {
       );
     }
 
+    if (result.kind === "has_requests") {
+      return c.json({ code: ERROR_CODES.CONFLICT, message: "Город используется в запросах попутки и их истории" }, 409);
+    }
+
     logBusinessEvent("city.deleted", {
       cityId: id,
       name: result.city.name,
@@ -2153,6 +2187,9 @@ adminRouter.delete("/cities/:id", mutationLimiter, async (c) => {
     return c.json({ ok: true, id });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2003") {
+        return c.json({ code: ERROR_CODES.CONFLICT, message: "Город используется в запросах попутки и их истории" }, 409);
+      }
       if (error.code === "P2034") {
         return c.json(
           {

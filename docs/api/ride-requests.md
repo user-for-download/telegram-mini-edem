@@ -18,6 +18,8 @@ Creation is performed in a serializable transaction. Concurrent quota conflicts 
 
 Matching is informational. The passenger must open the trip and submit the normal booking request explicitly.
 
+A pending booking reserves a seat but leaves the ride request active. Fulfillment happens in the same Serializable transaction as driver/admin confirmation. An explicit client `requestId` is validated and retained while pending; without it, confirmation closes the passenger's matching active requests and stamps the earliest into `Booking.requestId`. A pending booking's decline, cancellation or expiry does not falsely fulfill the search. A search paused/cancelled/edited while awaiting the decision does not prevent confirmation of the existing booking.
+
 ## Opting out: `matchingEnabled = false`
 
 A trip created with `matchingEnabled: false` is not offered to anyone: **no** `ride_request_match` notification is created when the trip is created.
@@ -27,5 +29,4 @@ This is the **only** surface of the switch — there is no driver-side demand sc
 The option is editable later through `PATCH /api/v1/trips/:id`; the gate reads the flag at notification time, so switching it off takes effect immediately.
 
 **The trip is not hidden from search.** `GET /api/v1/trips` is unaffected — passengers still find it and can book it themselves. Opting out suppresses *automatic suggestions*, not availability.
-
 

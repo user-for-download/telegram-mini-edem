@@ -92,14 +92,15 @@ describe("POST /bot/webhook/:secret — /start", () => {
     expect(user?.tgChatJoinedAt).not.toBeNull();
   });
 
-  it("start от неизвестного telegramId → 200, но ничего не меняется", async () => {
+  it("start до регистрации сохраняет подписку нового Telegram пользователя", async () => {
+    const tgId = tgSeq++;
     const res = await app.request(URL(SECRET), {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify({
         message: {
-          from: { id: 123456789 },
-          chat: { id: 123456789, type: "private" },
+          from: { id: Number(tgId) },
+          chat: { id: Number(tgId), type: "private" },
           text: "/start",
         },
       }),
@@ -107,9 +108,11 @@ describe("POST /bot/webhook/:secret — /start", () => {
 
     expect(res.status).toBe(200);
     const user = await db.user.findFirst({
-      where: { telegramUserId: 123456789n },
+      where: { telegramUserId: tgId },
     });
-    expect(user).toBeNull();
+    if (user) createdUserIds.push(user.id);
+    expect(user?.tgChatJoinedAt).toBeInstanceOf(Date);
+    expect(user?.onboardingVersion).toBeNull();
   });
 
   it("start с параметром (deep-link ?start=notify) → тоже согласие", async () => {

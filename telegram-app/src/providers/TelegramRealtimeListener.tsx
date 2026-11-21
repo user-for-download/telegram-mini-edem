@@ -156,8 +156,7 @@ export const TelegramRealtimeListener: FC = () => {
   });
 
   useWsEvent("booking:status_changed", ({ bookingId, tripId, status }) => {
-    if (claimEvent("booking:status_changed", { bookingId, tripId, status }) === null)
-      return;
+    const eventKey = claimEvent("booking:status_changed", { bookingId, tripId, status });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.my() });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.history() });
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.trip(tripId) });
@@ -168,6 +167,9 @@ export const TelegramRealtimeListener: FC = () => {
     // У водителя из сводки уходит обработанная/отменённая заявка.
     void queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.driver() });
 
+    void queryClient.invalidateQueries({ queryKey: RIDE_REQUEST_KEYS.all });
+    // A hint can repeat after an admin restores the same status; always resync data.
+    if (eventKey === null) return;
     if (status === "confirmed") {
       notifyHaptic("success");
       enqueueNotice({
@@ -229,12 +231,12 @@ export const TelegramRealtimeListener: FC = () => {
     // Тип помечен repeatable (WS_EVENT_DEDUP_POLICY), поэтому ключ несёт
     // временное окно: N правок дают N инвалидаций и N тостов.
     const eventKey = claimEvent("trip:details_changed", { tripId });
-    if (eventKey === null) return;
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.detail(tripId) });
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.my() });
     // Публичные списки (поиск/главная) тоже могут показывать изменённые
     // маршрут/цену/время — инвалидируем, чтобы не отдавать устаревшее.
     void queryClient.invalidateQueries({ queryKey: TRIP_KEYS.lists() });
+    if (eventKey === null) return;
     enqueueNotice({
       // Ключ нотиса = ключ дедупликации: у этого типа он различает правки
       // окном, поэтому вторая правка не молчит, как это было с

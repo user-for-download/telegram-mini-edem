@@ -210,6 +210,8 @@ npm run prisma:validate   # Валидация schema.prisma
 
 Подключение — через pg driver-адаптер `@prisma/adapter-pg` (`backend/src/db.ts`): URL из `DATABASE_URL`. Конфигурация CLI — `backend/prisma.config.ts`. Сгенерированный клиент (`backend/src/generated/`) компилируется tsc в `dist`; после `git pull` с изменённой схемой выполните `npm run db:generate`. В Docker-образе исходников нет, поэтому скрипты из `backend/prisma/` находят клиент по симлинку `/app/src/generated → /app/dist/src/generated` (см. `backend/Dockerfile`).
 
+Для `@prisma/config@7.10.1` в корневом `package.json` задан точечный override `effect: 3.22.1`: upstream фиксирует уязвимую версию `3.20.0` ([GHSA-7589-6fvf-x4pw](https://github.com/advisories/GHSA-7589-6fvf-x4pw)). При обновлении Prisma проверьте этот override и удалите его, когда upstream перейдёт на исправленную версию.
+
 Быстрый старт на свежей БД:
 ```bash
 cd backend
@@ -323,7 +325,7 @@ LOG_LEVEL=debug
 | POST | `/api/v1/reports` | Создать жалобу на связанного пользователя, поездку или бронь (окно: с начала поездки и 7 дней после её окончания; лимит: 1 жалоба навсегда на связку автор+объект — повтор → `409`) |
 | GET | `/api/v1/reports` | Мои жалобы |
 | GET | `/api/v1/reports/targets` | Объекты, доступные для жалобы (поездки, брони, люди с общей бронью в окне жалобы) — список для формы подачи |
-| DELETE | `/api/v1/users/me` | Soft-delete и анонимизация профиля; операция каскадная (завершает свои поездки, отменяет будущие брони), отдельного гейта «есть обязательства» больше нет |
+| DELETE | `/api/v1/users/me` | Soft-delete и анонимизация профиля: будущие свои поездки отменяются без начисления счётчиков, уже начавшиеся завершаются с сохранением подтверждённого участия; свои брони отменяются только до отправления. Отдельного гейта «есть обязательства» нет |
 | POST | `/api/v1/admin/auth/login` | Вход админ-панели по `ADMIN_TOKEN` (5 req/5 мин, `ADMIN_LOGIN_RATE_*`); ставит httpOnly cookie `edem_admin_jwt` |
 | GET | `/api/v1/admin/auth/session` | Состояние админ-сессии (всегда 200; httpOnly cookie недоступен JS) |
 | POST | `/api/v1/admin/auth/logout` | Выход из админ-панели (очистка cookie) |
@@ -356,7 +358,7 @@ LOG_LEVEL=debug
 | GET | `/api/v1/admin/cities` | Справочник точек (поиск `q`, пагинация) |
 | POST | `/api/v1/admin/cities` | Создать точку (409 на дубликат имени) |
 | PATCH | `/api/v1/admin/cities/:id` | Переименовать точку (409 на дубликат имени) |
-| DELETE | `/api/v1/admin/cities/:id` | Удалить точку (409, если `tripsCount > 0`) |
+| DELETE | `/api/v1/admin/cities/:id` | Удалить точку (409, если `tripsCount > 0` или есть связанные запросы попутки) |
 | POST | `/api/v1/admin/cities/recompute-trips-count` | Полный пересчёт `City.tripsCount` по FK и статусу поездок; идемпотентно, чинит дрейф счётчика. Возвращает `{ ok: true, updated }` |
 | GET | `/api/v1/admin/audit` | Append-only журнал админ-мутаций: фильтры `action`/`targetType`/`targetId`, пагинация; metadata без PII |
 | GET | `/api/v1/admin/settings` | Read-only снимок rate-limit'ов и флагов env |
@@ -387,6 +389,8 @@ LOG_LEVEL=debug
 - **Ограничение тела запроса**: 100 KB.
 - **Время**: даты сериализуются в `Europe/Moscow` (в контейнере задано через `TZ`).
 - **Критичные уведомления** (смена статуса брони/поездки) создаются всегда, независимо от настройки `notificationsEnabled` пользователя.
+- **Согласованные обязательства**: поездки и брони проверяются на пересечение в обеих ролях пользователя. Pending-бронь не завершает поиск попутки — запрос становится `fulfilled` при подтверждении. Поиск по справочнику использует FK города и переживает его переименование.
+- **Ссылки бота**: `TELEGRAM_WEBAPP_URL` — прямой HTTPS URL или `t.me/<bot>/<app>`; кнопка несёт общий `startapp`-токен маршрута. Прямой URL оставляет Telegram fragment для initData, а mini-app разрешает query-токен в HashRouter.
 - **Sentry (опционально, `SENTRY_DSN`)**: перед отправкой события очищаются от PII — `user` обнуляется, в `request` остаются только url/method, из `extra` вырезаются чувствительные ключи (token/password/secret/cookie и т.д.); без DSN хелперы деградируют в обычные логи.
 
 ## 📡 WebSocket
@@ -441,7 +445,7 @@ Reaper (`startWsReaper`/`stopWsReaper`): каждые 30 с сервер зак�
 1. Бэкап или проверенная точка восстановления PostgreSQL.
 2. `docker compose config --quiet` — не печатать интерполированный вывод: в нём секреты.
 3. `BACKEND_BIND_ADDR` и `WEBAPP_BIND_ADDR` — `127.0.0.1`, если reverse proxy на том же хосте. Если `0.0.0.0` — закройте порты 3000/3014 firewall-правилами, кроме адреса прокси.
-4. `npm audit --omit=dev --audit-level=high`. Текущие транзитивные зависимости Prisma дают high; `npm audit fix --force` на выкате не запускать — он откатывает Prisma и требует отдельного изменения зависимостей.
+4. `npm audit --omit=dev --audit-level=high` после `npm ci` — проверка должна пройти без уязвимостей. Для Prisma учитывается override `effect` из раздела «База данных». `npm audit fix --force` на выкате не запускать — обновления зависимостей проверяются отдельным изменением.
 
 ### Шаги деплоя
 

@@ -35,6 +35,8 @@ async function onBookingCreated(
     tripSnapshot: tripSnapshotOf(payload.trip),
     // Получатель — водитель поездки.
     role: "driver",
+    // Mutations emit only after a real change; matching text is not an event identity.
+    deduplicate: false,
   });
 }
 
@@ -57,6 +59,22 @@ async function onBookingStatusChanged(
     tripSnapshot: tripSnapshotOf(payload.trip),
     // Получатель — пассажир (автор заявки).
     role: "passenger",
+    deduplicate: false,
+  });
+}
+
+async function onBookingCancelled(payload: DomainEvents["booking.cancelled"]): Promise<void> {
+  await notifyUser({
+    userId: payload.driverId,
+    type: "booking_status_changed",
+    title: "Бронь отменена пассажиром",
+    body: `Пассажир отменил бронь в поездке ${payload.trip.fromCity} → ${payload.trip.toCity}`,
+    fragment: `/trips/${payload.tripId}`,
+    actorName: payload.passengerName,
+    action: "cancelled",
+    role: "driver",
+    tripSnapshot: tripSnapshotOf(payload.trip),
+    deduplicate: false,
   });
 }
 
@@ -82,6 +100,7 @@ async function onTripCancelled(
         tripSnapshot: tripSnapshotOf(payload.trip),
         // Получатели — пассажиры отменённой поездки.
         role: "passenger",
+        deduplicate: false,
       }),
     ),
   );
@@ -98,6 +117,7 @@ export function registerNotificationSubscribers(): void {
   if (registered) return;
   registered = true;
   domainEvents.on("booking.created", onBookingCreated);
+  domainEvents.on("booking.cancelled", onBookingCancelled);
   domainEvents.on("booking.status_changed", onBookingStatusChanged);
   domainEvents.on("trip.cancelled", onTripCancelled);
 }

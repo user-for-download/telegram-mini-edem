@@ -4,7 +4,7 @@
 // без токена внешнего вызова нет, с токеном — реальный sendMock.
 // Мокаем db/env (паттерн telegramNotifications.test),
 // fetch-шпион следит, что api.telegram.org не зовётся НИКОГДА.
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const updateManyAndReturn = vi.fn();
 const updateMany = vi.fn();
@@ -447,9 +447,37 @@ describe("pollOnce — захват очереди", () => {
     );
   });
 
-  it("обработка не бросает наружу даже при катастрофе в claim", async () => {
+  it("прямой вызов отдаёт ошибку claim вызывающему", async () => {
     updateManyAndReturn.mockRejectedValue(new Error("conn lost"));
     await expect(pollOnce()).rejects.toThrow("conn lost");
+  });
+});
+
+describe("dispatcher survives infrastructure failure and retries its next cycle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    findManyStuck.mockResolvedValue([]);
+    updateManyAndReturn.mockResolvedValue([]);
+  });
+  afterEach(async () => {
+    await stopNotificationDispatcher();
+    vi.useRealTimers();
+  });
+
+  it.each(["claim", "recovery"])("catches a %s failure without an unhandled rejection", async phase => {
+    const error = new Error("temporary database outage");
+    if (phase === "claim") updateManyAndReturn.mockRejectedValueOnce(error);
+    else findManyStuck.mockRejectedValueOnce(error);
+    startNotificationDispatcher();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(logger.error).toHaveBeenCalledWith({ err: error }, "tg_dispatch_cycle_failed");
+    await vi.advanceTimersByTimeAsync(envState.TG_NOTIFICATION_DISPATCH_INTERVAL_MS);
+    expect(findManyStuck).toHaveBeenCalledTimes(2);
+    expect(updateManyAndReturn).toHaveBeenCalledTimes(phase === "claim" ? 2 : 1);
+    await stopNotificationDispatcher();
+    await vi.advanceTimersByTimeAsync(envState.TG_NOTIFICATION_DISPATCH_INTERVAL_MS);
+    expect(findManyStuck).toHaveBeenCalledTimes(2);
   });
 });
 

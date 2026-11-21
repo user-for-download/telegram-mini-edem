@@ -98,6 +98,7 @@ describe("DELETE /api/v1/users/me", () => {
   it.each([
     { path: "/api/v1/users/me", payload: { phone: "+7 (900) 123-45-67" } },
     { path: "/api/v1/users/me/notification-settings", payload: { notificationsEnabled: false } },
+    { path: "/api/v1/users/me/car", payload: { model: "Private car", color: "red", plate: "PRIVATE" } },
   ])("rejects admitted PATCH $path after real deletion commits without restoring fields", async ({ path, payload }) => {
     await db.user.update({
       where: { id: userId },
@@ -281,7 +282,7 @@ describe("DELETE /api/v1/users/me", () => {
     }
   });
 
-  it("completes own active trips on deletion (pending declined, confirmed kept)", async () => {
+  it("cancels future trips on deletion without completed-trip credit", async () => {
     const ownTrip = await db.trip.create({ data: { driverId: userId, fromCity: "Москва", fromAddress: "A", toCity: "Тула", toAddress: "B", departureAt: new Date("2030-01-01T10:00:00Z"), durationMinutes: 120, distanceKm: 180, price: 700, seatsTotal: 3, seatsAvailable: 1, tags: [] } });
     const suffix = Date.now() + Math.floor(Math.random() * 1000);
     // active_passenger_booking: одна активная бронь на связку
@@ -299,15 +300,15 @@ describe("DELETE /api/v1/users/me", () => {
       const response = await app.request("/api/v1/users/me", { method: "DELETE", headers: { Authorization: `Bearer ${devMockAccessToken(userId)}` } });
       expect(response.status).toBe(200);
       const trip = await db.trip.findUnique({ where: { id: ownTrip.id } });
-      expect(trip?.status).toBe("completed");
+      expect(trip?.status).toBe("cancelled");
       expect(trip?.seatsAvailable).toBe(0);
       const bookings = await db.booking.findMany({ where: { tripId: ownTrip.id } });
-      expect(bookings.find((b) => b.seat === 1)?.status).toBe("declined");
-      expect(bookings.find((b) => b.seat === 2)?.status).toBe("confirmed");
+      expect(bookings.find((b) => b.seat === 1)?.status).toBe("cancelled");
+      expect(bookings.find((b) => b.seat === 2)?.status).toBe("cancelled");
       const confirmedAfter = await db.user.findUnique({ where: { id: paxConfirmed.id } });
-      expect(confirmedAfter?.tripsCount).toBe(1);
+      expect(confirmedAfter?.tripsCount).toBe(0);
       const notification = await db.notification.findFirst({
-        where: { userId: paxConfirmed.id, type: "trip_status_changed" },
+        where: { userId: paxConfirmed.id, type: "trip_cancelled" },
       });
       // Имя фиксируется до обезличивания: иначе получатель увидел бы
       // «Удалённый пользователь» вместо имени водителя.

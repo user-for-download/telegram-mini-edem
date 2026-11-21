@@ -44,15 +44,13 @@
     "load:test": "node scripts/load-test.mjs"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.11",
+    "@hono/node-server": "^2.1.11",
     "@tanstack/react-query": "^5.102.8",
-    "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
-    "hono": "^4.13.5",
+    "hono": "^4.13.19",
     "jose": "^6.2.10",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "vitest": "^4.1.11",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
@@ -60,8 +58,9 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
-    "concurrently": "^10.0.4",
-    "eslint": "^10.11.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "concurrently": "^10.0.7",
+    "eslint": "^10.15.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.12.0",
@@ -69,12 +68,16 @@
     "prettier": "^3.9.7",
     "tsx": "^4.23.13",
     "typescript": "~5.8.2",
-    "typescript-eslint": "^8.71.0",
-    "vite": "^8.2.2"
+    "typescript-eslint": "^8.73.0",
+    "vite": "~8.2.4",
+    "vitest": "~4.1.12"
   },
   "overrides": {
+    "@prisma/config@7.10.1": {
+      "effect": "3.22.1"
+    },
     "eslint-plugin-jsx-a11y": {
-      "eslint": "^10.11.0"
+      "eslint": "^10.15.0"
     }
   }
 }

@@ -192,14 +192,15 @@ raise `TG_AUTH_RATE_MAX` on the dev backend.
 собираются и тоже валят прогон; после падения шага в `e2e/shots-admin/`
 остаётся скриншот, машинный результат — `e2e/results-admin.json`.
 
-### Test Flow (`admin-webapp.mjs` runSteps in order, 6)
+### Test Flow (`admin-webapp.mjs` runSteps in order, 7)
 
 1. Auth: `/login`, `ADMIN_TOKEN`, редирект на `/dashboard`
 2. Users: поиск по имени, карточка с телефоном и `Telegram: подключён`
 3. Users: `Остановить Telegram` → подтверждение → тост и `Telegram: нет`
-4. Reports: фильтр `targetType=user`, карточка жалобы с описанием
-5. Feedback: поиск + `answered=false`, карточка обращения
-6. Auth: logout → `/login`, cookie больше не даёт сессию
+4. Users: `/users?id=…` применяет точный ID к фильтру и запросу API
+5. Reports: фильтр `targetType=user`, карточка жалобы с описанием
+6. Feedback: поиск + `answered=false`, карточка обращения
+7. Auth: logout → `/login`, cookie больше не даёт сессию
 
 ## Test Flow (`telegram-parity.mjs` runSteps in order, 17)
 

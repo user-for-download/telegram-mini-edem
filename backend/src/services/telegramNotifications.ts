@@ -43,6 +43,7 @@ const TELEGRAM_EXACT_ROUTES: ReadonlySet<string> = new Set([
   "/trips/my/new",
   "/bookings",
   "/bookings/history",
+  "/profile/history",
   "/profile/ride-requests",
   "/profile",
   "/reviews",

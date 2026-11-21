@@ -11,7 +11,7 @@
 // анимации нет — портал остаётся смонтированным. Это ровно то же окно,
 // что и живая анимация закрытия: на старом коде (`{target ? … : null}`)
 // текст после закрытия исчезал (count 0), на новом — остаётся.
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { AppRoot } from "@telegram-apps/telegram-ui";
 import type { Report } from "@edem/contracts";
@@ -58,8 +58,12 @@ vi.mock("@/components/Toast/ToastProvider", () => ({
   useToast: () => ({ show: vi.fn() }),
 }));
 
+beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
   cleanup();
+  // Vaul schedules close callbacks; flush them before jsdom destroys window.
+  act(() => vi.runOnlyPendingTimers());
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 

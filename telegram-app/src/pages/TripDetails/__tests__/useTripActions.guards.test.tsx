@@ -6,7 +6,7 @@
 // ранними return TripDetailsPage, но хук обязан врать и прямому потребителю.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
-import { cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@tma.js/sdk-react", () => ({
@@ -121,5 +121,28 @@ describe("useTripActions: дефолты без данных", () => {
     });
 
     expect(result.current.isDriver).toBe(false);
+  });
+
+  it("сбрасывает выбранное место за пределами обновлённого числа мест", () => {
+    setUser(OTHER_ID);
+    const trip = makeTrip(DRIVER_ID);
+    const { result, rerender } = renderHook(({ item }) => useTripActions(item), {
+      wrapper, initialProps: { item: trip },
+    });
+    act(() => result.current.setSelectedSeat(3));
+    expect(result.current.effectiveSeat).toBe(3);
+    rerender({ item: { ...trip, seatsTotal: 1, seatsAvailable: 1 } });
+    expect(result.current.effectiveSeat).toBe(1);
+  });
+
+  it("сбрасывает выбранное место, занятое другой бронью при refetch", () => {
+    setUser(OTHER_ID);
+    const trip = makeTrip(DRIVER_ID);
+    const { result, rerender } = renderHook(({ item }) => useTripActions(item), {
+      wrapper, initialProps: { item: trip },
+    });
+    act(() => result.current.setSelectedSeat(3));
+    rerender({ item: { ...trip, bookedSeats: [3] } });
+    expect(result.current.effectiveSeat).toBe(1);
   });
 });

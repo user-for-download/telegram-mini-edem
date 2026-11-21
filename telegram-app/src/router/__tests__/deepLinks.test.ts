@@ -4,6 +4,7 @@ import {
   START_PARAM_ROUTES,
   parseTripStartParam,
   resolveStartParamRoute,
+  readLaunchStartParam,
 } from "@/router/deepLinks";
 
 const UUID = "123e4567-e89b-12d3-a456-426614174000";
@@ -22,6 +23,9 @@ const KNOWN_ROUTES = new Set([
   "/profile/support",
   "/notifications",
   "/settings",
+  "/vehicle",
+  "/profile/reports",
+  "/profile/ride-requests",
 ]);
 
 describe("parseTripStartParam", () => {
@@ -72,6 +76,16 @@ describe("START_PARAM_ROUTES (контракт)", () => {
 });
 
 describe("resolveStartParamRoute", () => {
+  it("direct web_app startapp query resolves to the same route as Telegram launch parameters", () => {
+    const token = readLaunchStartParam(undefined, `?startapp=trip_${UUID}`);
+    expect(resolveStartParamRoute(token)).toBe(`/trips/${UUID}`);
+    expect(readLaunchStartParam("bookings", "?startapp=reviews")).toBe("bookings");
+    expect(readLaunchStartParam(undefined, "")).toBeUndefined();
+  });
+
+  it("driver-request launch token resolves to its route-backed sheet", () => {
+    expect(resolveStartParamRoute(`requests_${UUID}`)).toBe(`/trips/my/${UUID}/requests`);
+  });
   it("trip_токен ведёт на детали поездки", () => {
     expect(resolveStartParamRoute(`trip_${UUID}`)).toBe(`/trips/${UUID}`);
     expect(resolveStartParamRoute(UUID)).toBe(`/trips/${UUID}`);

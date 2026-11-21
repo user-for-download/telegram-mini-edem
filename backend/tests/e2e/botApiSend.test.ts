@@ -116,12 +116,12 @@ describe("E2E real-send: happy path", () => {
       "Поездка отменена\n\nПоездка Москва → Казань отменена",
     );
     expect(body.disable_web_page_preview).toBe(true);
-    // Кнопка «Открыть»: web_app URL = TELEGRAM_WEBAPP_URL + deep-link.
+    // t.me buttons launch the Mini App with the shared startapp token.
     expect(body.reply_markup).toEqual({
       inline_keyboard: [[
         {
           text: "Открыть",
-          web_app: { url: "https://t.me/edem_bot/app/bookings" },
+          url: "https://t.me/edem_bot/app?startapp=bookings",
         },
       ]],
     });

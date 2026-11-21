@@ -23,6 +23,15 @@ const FULFILLED = "fulfilled";
  */
 const MAX_CLOSED_REQUESTS = 10;
 
+function ownedMatchingWhere(trip: TripRouteWindow, passengerId: string) {
+  const route = withRoute(trip);
+  if (!route) return null;
+  const where = matchingRideRequestWhere(route);
+  // Existing reservations survive peer blocks; fulfillment concerns only the owner's search.
+  delete where.user;
+  return { ...where, userId: passengerId };
+}
+
 /** Итог закрытия заявок при одной брони. */
 export type ClosedRideRequests = {
   /** Заявка, которую проставляем в `Booking.requestId` (одна на бронь). */
@@ -44,20 +53,13 @@ async function findClientRequest(
   tx: Prisma.TransactionClient,
   params: { requestId: string; passengerId: string; trip: TripRouteWindow },
 ) {
-  const route = withRoute(params.trip);
-  if (!route) return null;
+  const where = ownedMatchingWhere(params.trip, params.passengerId);
+  if (!where) return null;
 
   return tx.rideRequest.findFirst({
     where: {
-      // Порядок КРИТИЧЕН: спред идёт ПЕРВЫМ. `matchingRideRequestWhere`
-      // возвращает `userId: { not: driverId }`, и раскладка после равенства
-      // `userId` затирала бы его — поиск нашёл бы чужую заявку, и бронь
-      // одного пассажира закрыла бы пожелание другого.
-      ...matchingRideRequestWhere(route),
+      ...where,
       id: params.requestId,
-      // Владелец — равенство, а не «не водитель»: закрывать можно только
-      // собственную заявку пассажира.
-      userId: params.passengerId,
     },
     select: { id: true },
   });
@@ -73,16 +75,11 @@ function findMatchingRequests(
   tx: Prisma.TransactionClient,
   params: { passengerId: string; trip: TripRouteWindow },
 ) {
-  const route = withRoute(params.trip);
-  if (!route) return [];
+  const where = ownedMatchingWhere(params.trip, params.passengerId);
+  if (!where) return [];
 
   return tx.rideRequest.findMany({
-    where: {
-      // Спред первым: его `userId: { not: driverId }` не должен затирать
-      // равенство владельца ниже (см. findClientRequest).
-      ...matchingRideRequestWhere(route),
-      userId: params.passengerId,
-    },
+    where,
     select: { id: true },
     orderBy: { createdAt: "asc" },
     take: MAX_CLOSED_REQUESTS,
@@ -118,40 +115,20 @@ async function fulfill(
   }
 }
 
-/**
- * Слой 2 «заявка → поездка»: бронь закрывает заявку, из которой выросла, и
- * получает её id в `Booking.requestId`.
- *
- * Вызывается ИЗНУТРИ той же транзакции, что и `booking.create`. Вне неё
- * пассажир получил бы «бронь подтверждена, заявка висит» — состояние, которого
- * в продукте быть не должно (см. Layer 2 в плане 2026-10-07-ride-request-intersection).
- *
- * Правила отбора (осознанные, не «как получится»):
- *
- * 1. Клиентский `requestId` — приоритетный: закрывается ровно та заявка,
- *    которую назвал клиент, после проверки владельца, активности и совпадения
- *    по предикату. Остальные заявки пассажира остаются активными: клиент
- *    выбрал конкретную, и догадываться за него — значит закрыть то, что он
- *    закрывать не собирался.
- * 2. Без `requestId` сервер закрывает ВСЕ совпавшие активные заявки
- *    пассажира. Каждая из них — пожелание «посади меня в это окно по этому
- *    маршруту», и одна бронь это окно удовлетворяет; оставлять такую заявку
- *    активной значило бы второй раз показать человеку в «Моих заявках» то,
- *    что он уже уехал. В `Booking.requestId` идёт самая ранняя по `createdAt`
- *    (детерминированно, а не «какая попалась»).
- * 3. Условия совпадения берутся из `matchingRideRequestWhere` — своей копии
- *    здесь быть не может, иначе «что закрылось» разошлось бы с «что показали
- *    в уведомлениях».
- * 4. Пассажир без заявок (обычный случай) — no-op: пустой массив, пустой
- *    `updateMany`, `stampedRequestId: null`. Не ошибка.
- *
- * Про просроченные (`expiresAt <= now`) заявки: предикат их отсекает, поэтому
- * автозакрытие их не трогает — закрывать нечего, просроченная заявка и так
- * выпадает из подбора.
- *
- * Про `seats` заявки: не сверяется с запрошенным местом. Заявка — пожелание о
- * маршруте и окне, а не бронь конкретного места; место пассажир выбирает сам.
- */
+/** Validate the explicit client choice without closing a still-pending ride search. */
+export async function prepareRideRequestForBooking(
+  tx: Prisma.TransactionClient,
+  params: { trip: TripRouteWindow; passengerId: string; requestedRequestId?: string },
+): Promise<string | null> {
+  if (params.requestedRequestId === undefined) return null;
+  const request = await findClientRequest(tx, {
+    requestId: params.requestedRequestId, passengerId: params.passengerId, trip: params.trip,
+  });
+  if (!request) throw new BookingError("Ride request not found", 404, ERROR_CODES.NOT_FOUND);
+  return request.id;
+}
+
+/** Fulfill owned matching requests in the same transaction as booking confirmation. */
 export async function closeRideRequestsForBooking(
   tx: Prisma.TransactionClient,
   params: {
@@ -168,13 +145,8 @@ export async function closeRideRequestsForBooking(
       passengerId,
       trip,
     });
-    if (!client) {
-      throw new BookingError(
-        "Ride request not found",
-        404,
-        ERROR_CODES.NOT_FOUND,
-      );
-    }
+    // The passenger may have paused/cancelled/edited the search while awaiting a decision.
+    if (!client) return { stampedRequestId: null, closedIds: [] };
     await fulfill(tx, [client.id]);
     return { stampedRequestId: client.id, closedIds: [client.id] };
   }

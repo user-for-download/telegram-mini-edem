@@ -6,8 +6,8 @@ import { devMockAccessToken } from "../dev-mock-auth.js";
 
 /**
  * Слой 2 «заявка → поездка»: бронь закрывает заявку, из которой выросла,
- * и получает её id в `Booking.requestId` — в той же транзакции, что и сама
- * бронь (`bookings/create.ts` → `bookings/rideRequests.ts`).
+ * и получает её id в `Booking.requestId` — в транзакции подтверждения;
+ * pending оставляет поиск активным.
  *
  * Что здесь зафиксировано (каждое «не» — тоже контракт):
  * - без клиентского `requestId` сервер сам закрывает ВСЕ совпавшие активные
@@ -109,7 +109,7 @@ type BookingResponse = {
   message?: string;
 };
 
-describe("booking closes its ride request: POST /bookings", () => {
+describe("booking confirmation fulfills its ride request", () => {
   let driverId: string;
   let passengerId: string;
   let strangerId: string;
@@ -194,6 +194,14 @@ describe("booking closes its ride request: POST /bookings", () => {
     return body.id;
   }
 
+  async function confirm(body: BookingResponse) {
+    const res = await app.request(`/api/v1/bookings/${bookingIdOf(body)}/status`, {
+      method: "PATCH", headers: { ...JSON_HEADERS, ...auth(driverId) },
+      body: JSON.stringify({ status: "confirmed" }),
+    });
+    expect(res.status).toBe(200);
+  }
+
   /** Заявка, подходящая под поездку: тот же маршрут, окно шире рейса. */
   function matchingRequestParams(userId: string) {
     return {
@@ -241,6 +249,8 @@ describe("booking closes its ride request: POST /bookings", () => {
     // Assert: бронь создана, заявка из неё выросла — помечена в requestId.
     expect(status).toBe(201);
     expect(body.id).toBeDefined();
+    expect(await statusOf(requestId)).toBe("active");
+    await confirm(body);
     expect(await stampedRequestId(bookingIdOf(body))).toBe(requestId);
     expect(await statusOf(requestId)).toBe("fulfilled");
   });
@@ -264,6 +274,7 @@ describe("booking closes its ride request: POST /bookings", () => {
     // Assert: обе закрыты (одна бронь удовлетворяет одно и то же окно), а в
     // requestId — витринная, самая ранняя.
     expect(status).toBe(201);
+    await confirm(body);
     expect(await statusOf(earlierId)).toBe("fulfilled");
     expect(await statusOf(laterId)).toBe("fulfilled");
     expect(await stampedRequestId(bookingIdOf(body))).toBe(earlierId);
@@ -304,6 +315,8 @@ describe("booking closes its ride request: POST /bookings", () => {
 
     // Assert: явный выбор клиента — приоритетный, за остальные не догадываемся.
     expect(status).toBe(201);
+    expect(await statusOf(chosenId)).toBe("active");
+    await confirm(body);
     expect(await stampedRequestId(bookingIdOf(body))).toBe(chosenId);
     expect(await statusOf(chosenId)).toBe("fulfilled");
     expect(await statusOf(otherId)).toBe("active");
@@ -384,6 +397,7 @@ describe("booking closes its ride request: POST /bookings", () => {
 
     // Assert: закрылась только совпавшая, остальные — как были.
     expect(status).toBe(201);
+    await confirm(body);
     expect(await stampedRequestId(bookingIdOf(body))).toBe(matchingId);
     expect(await statusOf(matchingId)).toBe("fulfilled");
     expect(await statusOf(otherRouteId)).toBe("active");
@@ -412,37 +426,34 @@ describe("booking closes its ride request: POST /bookings", () => {
 
     // Assert: закрыта только своя заявка.
     expect(status).toBe(201);
+    await confirm(body);
     expect(await stampedRequestId(bookingIdOf(body))).toBe(mineId);
     expect(await statusOf(mineId)).toBe("fulfilled");
     expect(await statusOf(strangerRequestId)).toBe("active");
   });
 
-  it("rolls back the request closure together with the booking on failure", async () => {
+  it("rolls back request fulfillment together with confirmation on failure", async () => {
     // Arrange
     const requestId = await createRequest(matchingRequestParams(passengerId));
+    const pending = await book({ passengerId });
+    expect(pending.status).toBe(201);
+    const bookingId = bookingIdOf(pending.body);
 
-    // Act: та же последовательность, что в bookings/create.ts, но с
-    // принудительным сбоем ПОСЛЕ вставки брони.
+    // Fail after fulfillment and confirmation inside the same transaction.
     const attempt = db.$transaction(
       async (tx) => {
         const trip = await tx.trip.findUniqueOrThrow({
           where: { id: tripId },
         });
-        await tx.trip.update({
-          where: { id: tripId },
-          data: { seatsAvailable: { decrement: 1 } },
-        });
         const closed = await closeRideRequestsForBooking(tx, {
           trip,
           passengerId,
         });
-        await tx.booking.create({
+        await tx.booking.update({
+          where: { id: bookingId },
           data: {
-            tripId,
-            passengerId,
             requestId: closed.stampedRequestId,
-            seat: 1,
-            status: "pending",
+            status: "confirmed",
           },
         });
         throw new Error("forced failure after closing the request");
@@ -454,10 +465,9 @@ describe("booking closes its ride request: POST /bookings", () => {
       "forced failure after closing the request",
     );
 
-    // Assert: состояние не осталось частичным — ни брони, ни закрытой заявки,
-    // ни съеденного места.
-    expect(await db.booking.count({ where: { tripId } })).toBe(0);
+    // The pending reservation and its held seat survive; the search remains active.
+    expect((await db.booking.findUniqueOrThrow({ where: { id: bookingId } })).status).toBe("pending");
     expect(await statusOf(requestId)).toBe("active");
-    expect(await seatsAvailable()).toBe(3);
+    expect(await seatsAvailable()).toBe(2);
   });
 });

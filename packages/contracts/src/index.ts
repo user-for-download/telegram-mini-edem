@@ -29,3 +29,4 @@ export * from "./dto/report.dto.js";
 export * from "./dto/admin-audit.dto.js";
 export * from "./dto/user-block.dto.js";
 export * from "./ws.js";
+export * from "./telegram-links.js";

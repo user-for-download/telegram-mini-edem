@@ -19,24 +19,21 @@
 // через startapp. Неизвестный/битый параметр — безопасный fallback на
 // FALLBACK_ROUTE.
 
-export const FALLBACK_ROUTE = "/trips";
+import {
+  parseTelegramTripStartParam,
+  resolveTelegramStartParam,
+  TELEGRAM_START_FALLBACK_ROUTE,
+  TELEGRAM_START_PARAM_ROUTES,
+} from "@edem/contracts";
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const TRIP_PREFIX = "trip_";
+export const FALLBACK_ROUTE = TELEGRAM_START_FALLBACK_ROUTE;
 
 /**
  * UUID поездки из startapp-токена `trip_<uuid>` (голый UUID тоже
  * принимается — совместимость с существующим поведением AppRouter).
  * Мусор и не-UUID отклоняются (null), в запросы ничего не прокидывается.
  */
-export function parseTripStartParam(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const candidate = value.startsWith(TRIP_PREFIX)
-    ? value.slice(TRIP_PREFIX.length)
-    : value;
-  return UUID_PATTERN.test(candidate) ? candidate : null;
-}
+export const parseTripStartParam = parseTelegramTripStartParam;
 
 /**
  * Статические section-токены → существующие TG-маршруты AppRouter.
@@ -44,22 +41,11 @@ export function parseTripStartParam(value: unknown): string | null {
  * profile/reviews/support), плюс точки входа inbox/settings и «Мои поездки»
  * (раздел назначения booking_created по контракту).
  */
-export const START_PARAM_ROUTES: Readonly<Record<string, string>> = {
-  trips: "/trips",
-  // Алиасы из референса (App.tsx): явный вход в поиск и создание поездки.
-  // /trips и есть поиск; создание — шторка /trips/my/new поверх водителя.
-  search: "/trips",
-  create: "/trips/my/new",
-  new: "/trips/my/new",
-  bookings: "/bookings",
-  history: "/profile/history",
-  my_trips: "/bookings?segment=driving",
-  profile: "/profile",
-  reviews: "/reviews",
-  support: "/profile/support",
-  notifications: "/notifications",
-  settings: "/settings",
-};
+export const START_PARAM_ROUTES = TELEGRAM_START_PARAM_ROUTES;
+
+export function readLaunchStartParam(platformValue: string | undefined, search: string): string | undefined {
+  return platformValue || new URLSearchParams(search).get("startapp") || undefined;
+}
 
 /**
  * Полное разрешение startapp-параметра во внутренний маршрут.
@@ -70,16 +56,12 @@ export const START_PARAM_ROUTES: Readonly<Record<string, string>> = {
  */
 export function resolveStartParamRoute(value: unknown): string | null {
   if (typeof value !== "string" || value.length === 0) return null;
-  const tripId = parseTripStartParam(value);
-  if (tripId) return `/trips/${tripId}`;
-  const route = START_PARAM_ROUTES[value];
-  // typeof-гарда достаточно и против прототипных ключей (`__proto__` —
-  // объект, не строка, и уйдёт в fallback).
-  if (typeof route === "string" && route.length > 0) return route;
+  const route = resolveTelegramStartParam(value);
+  if (route !== FALLBACK_ROUTE || Object.hasOwn(START_PARAM_ROUTES, value)) return route;
   // Неизвестный токен: поведение — безопасный fallback (по дизайну), в dev
   // подсвечиваем битую ссылку для диагностики (в проде тихо).
   if (import.meta.env.DEV) {
     console.warn(`[DeepLinks] Unknown startapp token: ${value}`);
   }
-  return FALLBACK_ROUTE;
+  return route;
 }

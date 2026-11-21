@@ -53,6 +53,13 @@ export type DomainEvents = {
     passengerName: string;
     trip: TripFacts;
   };
+  "booking.cancelled": {
+    bookingId: string;
+    tripId: string;
+    driverId: string;
+    passengerName: string;
+    trip: TripFacts;
+  };
   /** Водитель сменил статус заявки: уведомить пассажира. */
   "booking.status_changed": {
     bookingId: string;
